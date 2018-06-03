@@ -35,6 +35,33 @@ char get_direction(uint32_t direction)
     throw std::runtime_error(es() % "bad direction: " % direction);
 }
 
+int64_t operator-(ttime_t l, ttime_t r)
+{
+    if(l.value > r.value)
+        return int64_t(l.value - r.value);
+    else
+        return -int64_t(r.value - l.value);
+}
+
+struct print_dt
+{
+    int64_t value;
+    print_dt(int64_t value) :  value(value)
+    {
+    }
+};
+template<typename stream>
+stream& operator<<(stream& s, print_dt v)
+{
+    bool minus = false;
+    if(v.value < 0) {
+        minus = true;
+        v.value = -v.value;
+    }
+    s << (minus ? "-" : "") << (v.value / 1000000) << "." << mlog_fixed<6>(v.value % 1000000);
+    return s;
+}
+
 struct mirror::impl
 {
     const uint32_t security_id, refresh_rate;
@@ -43,12 +70,16 @@ struct mirror::impl
     order_books ob;
     std::deque<message_trade> trades;
     message_instr mi;
+    std::string head_msg;
+    uint32_t orders_sz;
+
     window w;
     bool m;
   
     std::stringstream s;
     uint32_t trades_from;
 
+    int64_t dE, dP;
     void print_trades()
     {
         while(w.cols <= trades.size())
@@ -60,6 +91,12 @@ struct mirror::impl
             s << brief_time(v.etime) << " " << brief_time(v.time) << " " << v.price << " " << v.count << " " << get_direction(v.direction);
             e = mvwaddstr(w, i++, trades_from, s.str().c_str());
         }
+    }
+
+    void set_instrument(const message_instr& i)
+    {
+        mi = i;
+        head_msg = std::string(mi.exchange_id) + "/" + mi.feed_id + "/" + mi.security + " " + std::to_string(orders_sz);
     }
     
     void print_pips(const char* ib, uint32_t sz, uint32_t width)
@@ -77,8 +114,9 @@ struct mirror::impl
     
     impl(uint32_t security_id, uint32_t refresh_rate_ms, bool m)
         : security_id(security_id), refresh_rate(refresh_rate_ms * 1000),
-        print_time(), m(m)
+        print_time(), m(m), dE(), dP()
     {
+        orders_sz = 0;
         refresh();
     }
 
@@ -86,10 +124,11 @@ struct mirror::impl
     {
         ob.compact();
         auto& v = ob.get_orders(security_id);
+        orders_sz = v.size();
         //we reject levels that not fit to our window
         //TODO: rework for keyboard manipulation
         auto it = v.begin(), ie = v.end();
-        for(uint32_t i = 0; i != w.rows && it != ie; ++i, ++it)
+        for(uint32_t i = 0; i != w.rows - 1 && it != ie; ++i, ++it)
         {
             s.str("");
             s << brief_time(it->second.time) << " " << it->first << " " << it->second.count;
@@ -101,7 +140,12 @@ struct mirror::impl
     
     void print_head()
     {
-        e = mvwaddstr(w, w.rows - 1, 0, mi.security);
+        e = mvwaddnstr(w, w.rows - 1, 0, &w.blank_row[0], w.blank_row.size() - 1);
+        e = mvwaddstr(w, w.rows - 1, 0, head_msg.c_str());
+        std::stringstream str;
+        str << "dE: " << print_dt(dE) << ", dP: " << print_dt(dP);
+        std::string s = str.str();
+        e = mvwaddstr(w, w.rows - 1, w.cols - 1 - s.size(), s.c_str());
     }
 
     void print_mirror();
@@ -128,11 +172,18 @@ struct mirror::impl
     {
         if(is_security_equal(m, security_id)) {
             if(m.id == msg_instr)
-                mi = m.mi;
-            if(m.id == msg_trade)
+                set_instrument(m.mi);
+            if(m.id == msg_trade) {
                 trades.push_back(m.mt);
-            else
+                ttime_t ct = get_cur_ttime();
+                dE = ct - m.mt.etime;
+                dP = ct - m.mt.time;
+            }
+            else {
                 ob.proceed(m);
+                if(m.id == msg_book)
+                    dP = get_cur_ttime() - m.mb.time;
+            }
             if(!refresh_rate)
                 refresh();
         }

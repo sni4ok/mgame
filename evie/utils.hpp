@@ -9,20 +9,7 @@
 #include <fstream>
 #include <cassert>
 
-template <typename type>
-type lexical_cast(const std::string& str)
-{
-    type var;
-    std::istringstream iss;
-    iss.str(str);
-    iss >> var;
-    return var;
-}
-
-inline void throw_system_failure(const char* msg)
-{
-    throw std::runtime_error(msg);
-}
+#include <errno.h>
 
 struct noncopyable
 {
@@ -71,6 +58,29 @@ public:
         return s.c_str();
     }
 };
+
+inline void throw_system_failure(const char* msg)
+{
+    throw std::runtime_error(es() % (errno ? strerror(errno) : "") % ", " % msg);
+}
+
+template <typename type>
+type lexical_cast(const std::string& str)
+{
+    type var;
+    std::istringstream iss;
+    iss.str(str);
+    iss >> var;
+    if(!iss.eof())
+        throw std::runtime_error(es() % "bad params for lexical_cast: " % str);
+    return var;
+}
+
+template<>
+inline std::string lexical_cast<std::string>(const std::string& str)
+{
+    return str;
+}
 
 
 template<typename string>

@@ -5,16 +5,23 @@
 #include "server.hpp"
 #include "engine.hpp"
 
+#include <evie/socket.hpp>
+
 #include <vector>
 #include <thread>
 #include <condition_variable>
-
-#include <evie/socket.hpp>
 
 static const uint32_t max_connections = 32;
 static const uint32_t recv_buf_size = 128 * 1024;
 static const uint32_t recv_buf_crit = 1024;
 static const uint32_t timeout = 30; //in seconds
+
+//sockets now, later possible will be moved to zeromq
+
+const char* server_name()
+{
+    return config::instance().name.c_str();
+}
 
 struct server::impl : stack_singleton<server::impl>
 {
@@ -86,7 +93,7 @@ struct server::impl : stack_singleton<server::impl>
             std::unique_lock<std::mutex> lock(mutex);
             ++count;
             if(count == max_connections)
-                mlog(mlog::warning) << "server() max_connections exceed on client " << client;
+                mlog(mlog::warning) << "server(" << server_name() << ") max_connections exceed on client " << client;
             if(count > max_connections)
                 throw std::runtime_error("limit connections exceed");
             initialized = true;
@@ -95,13 +102,13 @@ struct server::impl : stack_singleton<server::impl>
             mlog() << "server() thread for " << client << " started";
             work_thread_impl(socket, client);
         } catch(std::exception& e) {
-            mlog(mlog::error) << "server() client " << client << " " << e;
+            mlog(mlog::error) << "server(" << server_name() << ") client " << client << " " << e;
         }
         std::unique_lock<std::mutex> lock(mutex);
         --count;
         initialized = true;
         cond.notify_all();
-        mlog() << "server() thread for " << client << " ended";
+        mlog() << "server(" << server_name() << ") thread for " << client << " ended";
     }
     void accept_loop(volatile bool& can_run_external)
     {
@@ -112,7 +119,7 @@ struct server::impl : stack_singleton<server::impl>
                 cond.wait_for(lock, std::chrono::microseconds(50 * 1000));
             try {
                 lock.unlock();
-                int socket = my_accept_async(config::instance().port, false/*local*/, false/*sync*/, &client, &can_run_external);
+                int socket = my_accept_async(config::instance().port, false/*local*/, false/*sync*/, &client, &can_run_external, server_name());
                 volatile bool initialized = false;
                 std::thread thrd(&impl::work_thread, this, socket, client, std::ref(initialized));
                 lock.lock();
@@ -120,7 +127,7 @@ struct server::impl : stack_singleton<server::impl>
                     cond.wait_for(lock, std::chrono::microseconds(50 * 1000));
                 thrd.detach();
             } catch(std::exception& e) {
-                mlog(mlog::error) << "server() accept " << e;
+                mlog(mlog::error) << "server(" << server_name() << ") accept " << e;
                 //we don't need infinite log file here
                 if(can_run_external)
                     sleep(5);

@@ -34,7 +34,7 @@ struct viktor : stack_singleton<viktor>
             ty.reset(new tyra(host));
     }
 
-    void sight(const message& m)
+    void proceed(const message& m)
     {
         if(m.id == msg_book) {
             auto& v = reinterpret_cast<const tyra_msg<message_book>& >(m);
@@ -56,11 +56,6 @@ struct viktor : stack_singleton<viktor>
             ty->flush();
         }
     }
-    
-    void normal(const message&)
-    {
-        throw std::runtime_error("viktor::normal() write me");
-    }
 };
 
 void* viktor_init(std::string params)
@@ -73,9 +68,9 @@ void viktor_destroy(void* v)
     delete (viktor*)(v);
 }
 
-void viktor_sight(const message& m)
+void viktor_proceed(const message& m)
 {
-    viktor::instance().sight(m);
+    viktor::instance().proceed(m);
 }
 
 extern "C"
@@ -85,7 +80,7 @@ extern "C"
         log_set(sl);
         m->init = &viktor_init;
         m->destroy = &viktor_destroy;
-        m->proceed = &viktor_sight;
+        m->proceed = &viktor_proceed;
     }
 }
 
