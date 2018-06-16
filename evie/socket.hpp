@@ -1,7 +1,12 @@
+/*
+    author: Ilya Andronov <sni4ok@yandex.ru>
+*/
+
 #pragma once
 
 #include "utils.hpp"
-#include "log.hpp"
+#include "mlog.hpp"
+#include "profiler.hpp"
 
 #include <string>
 
@@ -112,6 +117,7 @@ static uint32_t try_socket_send(int socket, const char* ptr, uint32_t sz)
     while(sz) {
         int ret = ::send(socket, ptr, sz, 0);
         if(ret == -1) {
+            //MPROFILE("send_EAGAIN")
             return sended;
         }
         else if(ret == 0)
@@ -130,6 +136,7 @@ static void socket_send_async(int socket, const char* ptr, uint32_t sz)
     while(sz) {
         int ret = ::send(socket, ptr, sz, 0);
         if(ret == -1) {
+            MPROFILE("send_EAGAIN")
             pollfd pfd = pollfd();
             pfd.events = POLLOUT;
             pfd.fd = socket;
@@ -158,7 +165,7 @@ static void socket_send_async(int socket, buf_stream& ostream)
     ostream.clear();
 }
 
-std::string name_fmt(const char* name)
+static std::string name_fmt(const char* name)
 {
     if(!name || !strlen(name))
         return std::string();

@@ -8,7 +8,7 @@
 
 #include "tyra/tyra.hpp"
 
-struct viktor : stack_singleton<viktor>
+struct viktor
 {
     std::string host;
     std::unique_ptr<tyra> ty;
@@ -68,9 +68,9 @@ void viktor_destroy(void* v)
     delete (viktor*)(v);
 }
 
-void viktor_proceed(const message& m)
+void viktor_proceed(void* v, const message& m)
 {
-    viktor::instance().proceed(m);
+    ((viktor*)(v))->proceed(m);
 }
 
 extern "C"

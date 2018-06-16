@@ -1,0 +1,439 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+MESSAGE_BEG	engine.cpp	283;"	d	file:
+MESSAGE_CONS_BEG	engine.cpp	299;"	d	file:
+MESSAGE_CONS_END	engine.cpp	306;"	d	file:
+MESSAGE_END	engine.cpp	293;"	d	file:
+TTIME_T_DEFINED	messages.hpp	47;"	d
+accept_loop	server.cpp	/^    void accept_loop(volatile bool& can_run_external)$/;"	f	struct:server::impl	access:public	signature:(volatile bool& can_run_external)
+accept_loop	server.cpp	/^void server::accept_loop(volatile bool& can_run)$/;"	f	class:server	signature:(volatile bool& can_run)
+accept_loop	server.hpp	/^    void accept_loop(volatile bool& can_run);$/;"	p	struct:server	access:public	signature:(volatile bool& can_run)
+acs	engine.cpp	/^    actives acs;$/;"	m	struct:context	file:	access:public
+actives	engine.cpp	/^    actives() : last_value()$/;"	f	struct:actives	access:public	signature:()
+actives	engine.cpp	/^struct actives : noncopyable$/;"	s	file:	inherits:noncopyable
+actives::actives	engine.cpp	/^    actives() : last_value()$/;"	f	struct:actives	access:public	signature:()
+actives::data	engine.cpp	/^    std::vector<type> data;$/;"	m	struct:actives	file:	access:private
+actives::get	engine.cpp	/^    type& get(uint32_t security_id)$/;"	f	struct:actives	access:public	signature:(uint32_t security_id)
+actives::insert	engine.cpp	/^    type& insert(uint32_t security_id)$/;"	f	struct:actives	access:public	signature:(uint32_t security_id)
+actives::last_value	engine.cpp	/^    type* last_value;$/;"	m	struct:actives	file:	access:private
+actives::on_disconnect	engine.cpp	/^    void on_disconnect();$/;"	p	struct:actives	file:	access:public	signature:()
+actives::on_disconnect	engine.cpp	/^void actives::on_disconnect()$/;"	f	class:actives	signature:()
+actives::tmp	engine.cpp	/^    type tmp;$/;"	m	struct:actives	file:	access:private
+actives::type	engine.cpp	/^    struct type$/;"	s	struct:actives	file:	access:public
+actives::type::disconnected	engine.cpp	/^        bool disconnected;$/;"	m	struct:actives::type	file:	access:public
+actives::type::operator <	engine.cpp	/^        bool operator < (const type& r) const {$/;"	f	struct:actives::type	access:public	signature:(const type& r) const
+actives::type::security_id	engine.cpp	/^        uint32_t security_id;$/;"	m	struct:actives::type	file:	access:public
+actives::type::time	engine.cpp	/^        ttime_t time; \/\/last parser time for current security_id$/;"	m	struct:actives::type	file:	access:public
+add	order_book.hpp	/^    orders_t& add(const message_book& mb)$/;"	f	struct:order_books	access:public	signature:(const message_book& mb)
+books	order_book.hpp	/^    std::map<uint32_t, orders_t> books;$/;"	m	struct:order_books	access:public
+brief_time	types.hpp	/^    brief_time(ttime_t time) : ttime_t(time)$/;"	f	struct:brief_time	access:public	signature:(ttime_t time)
+brief_time	types.hpp	/^struct brief_time : ttime_t$/;"	s	inherits:ttime_t
+brief_time::brief_time	types.hpp	/^    brief_time(ttime_t time) : ttime_t(time)$/;"	f	struct:brief_time	access:public	signature:(ttime_t time)
+can_run	engine.cpp	/^    volatile bool can_run;$/;"	m	struct:engine::impl	file:	access:private
+can_run	makoa.cpp	/^volatile bool can_run = true;$/;"	v
+can_run	server.cpp	/^    volatile bool can_run;$/;"	m	struct:server::impl	file:	access:public
+check	engine.cpp	/^    actives::type& check(uint32_t security_id, ttime_t time)$/;"	f	struct:context	access:public	signature:(uint32_t security_id, ttime_t time)
+check_clean	engine.cpp	/^    void check_clean(const message_clean& mc)$/;"	f	struct:context	access:public	signature:(const message_clean& mc)
+clear	order_book.hpp	/^    orders_t& clear(uint32_t security_id)$/;"	f	struct:order_books	access:public	signature:(uint32_t security_id)
+cnt	engine.cpp	/^    std::atomic<uint32_t> cnt;$/;"	m	struct:counter	file:	access:public
+compact	order_book.hpp	/^    void compact() \/\/remove levels with zero count$/;"	f	struct:order_books	access:public	signature:()
+cond	engine.cpp	/^    std::condition_variable cond;$/;"	m	struct:engine::impl	file:	access:private
+cond	server.cpp	/^    std::condition_variable cond;$/;"	m	struct:server::impl	file:	access:public
+config	config.cpp	/^config::config(const char* fname)$/;"	f	class:config	signature:(const char* fname)
+config	config.hpp	/^    config(const char* fname);$/;"	p	struct:config	access:public	signature:(const char* fname)
+config	config.hpp	/^struct config : stack_singleton<config>$/;"	s	inherits:stack_singleton
+config::config	config.cpp	/^config::config(const char* fname)$/;"	f	class:config	signature:(const char* fname)
+config::config	config.hpp	/^    config(const char* fname);$/;"	p	struct:config	access:public	signature:(const char* fname)
+config::exports	config.hpp	/^    std::vector<std::string> exports;$/;"	m	struct:config	access:public
+config::log_exporter	config.hpp	/^    bool log_exporter;$/;"	m	struct:config	access:public
+config::name	config.hpp	/^    std::string name;$/;"	m	struct:config	access:public
+config::port	config.hpp	/^    uint16_t port;$/;"	m	struct:config	access:public
+config::print	config.cpp	/^void config::print()$/;"	f	class:config	signature:()
+config::print	config.hpp	/^    void print();$/;"	p	struct:config	access:public	signature:()
+consumers	engine.cpp	/^    uint32_t consumers;$/;"	m	struct:engine::impl	file:	access:private
+context	engine.cpp	/^    context()$/;"	f	struct:context	access:public	signature:()
+context	engine.cpp	/^struct context$/;"	s	file:
+context::acs	engine.cpp	/^    actives acs;$/;"	m	struct:context	file:	access:public
+context::check	engine.cpp	/^    actives::type& check(uint32_t security_id, ttime_t time)$/;"	f	struct:context	access:public	signature:(uint32_t security_id, ttime_t time)
+context::check_clean	engine.cpp	/^    void check_clean(const message_clean& mc)$/;"	f	struct:context	access:public	signature:(const message_clean& mc)
+context::context	engine.cpp	/^    context()$/;"	f	struct:context	access:public	signature:()
+context::insert	engine.cpp	/^    void insert(uint32_t security_id, ttime_t time)$/;"	f	struct:context	access:public	signature:(uint32_t security_id, ttime_t time)
+context::~context	engine.cpp	/^    ~context()$/;"	f	struct:context	access:public	signature:()
+context_holder	engine.cpp	/^context_holder::context_holder()$/;"	f	class:context_holder	signature:()
+context_holder	engine.hpp	/^    context_holder();$/;"	p	struct:context_holder	access:public	signature:()
+context_holder	engine.hpp	/^struct context_holder : noncopyable$/;"	s	inherits:noncopyable
+context_holder::context_holder	engine.cpp	/^context_holder::context_holder()$/;"	f	class:context_holder	signature:()
+context_holder::context_holder	engine.hpp	/^    context_holder();$/;"	p	struct:context_holder	access:public	signature:()
+context_holder::ctx	engine.hpp	/^    context* ctx;$/;"	m	struct:context_holder	access:public
+context_holder::~context_holder	engine.cpp	/^context_holder::~context_holder()$/;"	f	class:context_holder	signature:()
+context_holder::~context_holder	engine.hpp	/^    ~context_holder();$/;"	p	struct:context_holder	access:public	signature:()
+count	messages.hpp	/^    count_t count; \/\/this new counts for level price$/;"	m	struct:message_book	access:public
+count	messages.hpp	/^    count_t count;$/;"	m	struct:message_trade	access:public
+count	order_book.hpp	/^        count_t count;$/;"	m	struct:order_books::node	access:public
+count	server.cpp	/^    uint32_t count;$/;"	m	struct:server::impl	file:	access:public
+count_frac	types.hpp	/^static const uint32_t count_frac = 100000000;$/;"	v
+count_t	messages.hpp	/^struct count_t$/;"	s
+count_t::exponent	messages.hpp	/^    static const int32_t exponent = -8;$/;"	m	struct:count_t	access:public
+count_t::value	messages.hpp	/^    int64_t value;$/;"	m	struct:count_t	access:public
+counter	engine.cpp	/^    counter()$/;"	f	struct:counter	access:public	signature:()
+counter	engine.cpp	/^struct counter : type$/;"	s	file:	inherits:type
+counter::cnt	engine.cpp	/^    std::atomic<uint32_t> cnt;$/;"	m	struct:counter	file:	access:public
+counter::counter	engine.cpp	/^    counter()$/;"	f	struct:counter	access:public	signature:()
+create_exporter_with_params	engine.cpp	/^std::unique_ptr<lib_exporter> create_exporter_with_params(const std::string& m)$/;"	f	signature:(const std::string& m)
+ctx	engine.hpp	/^    context* ctx;$/;"	m	struct:context_holder	access:public
+data	engine.cpp	/^    std::vector<type> data;$/;"	m	struct:actives	file:	access:private
+destroy	exports.hpp	/^    void (*destroy)(void*);$/;"	m	struct:hole_exporter	access:public
+direction	messages.hpp	/^    uint32_t direction;$/;"	m	struct:message_trade	access:public
+disconnected	engine.cpp	/^        bool disconnected;$/;"	m	struct:actives::type	file:	access:public
+dl_holder	exports.cpp	/^    dl_holder() : handle()$/;"	f	struct:dl_holder	access:public	signature:()
+dl_holder	exports.cpp	/^struct dl_holder$/;"	s	file:
+dl_holder::dl_holder	exports.cpp	/^    dl_holder() : handle()$/;"	f	struct:dl_holder	access:public	signature:()
+dl_holder::handle	exports.cpp	/^    void* handle;$/;"	m	struct:dl_holder	file:	access:public
+dl_holder::~dl_holder	exports.cpp	/^    ~dl_holder()$/;"	f	struct:dl_holder	access:public	signature:()
+dratuti	order_book.hpp	/^        message_hello dratuti;$/;"	m	union:message_bytes::__anon1	access:public
+engine	engine.cpp	/^engine::engine()$/;"	f	class:engine	signature:()
+engine	engine.hpp	/^    engine();$/;"	p	struct:engine	access:public	signature:()
+engine	engine.hpp	/^struct engine \/\/ wrapper for control lifetime of consumers$/;"	s
+engine::engine	engine.cpp	/^engine::engine()$/;"	f	class:engine	signature:()
+engine::engine	engine.hpp	/^    engine();$/;"	p	struct:engine	access:public	signature:()
+engine::impl	engine.cpp	/^struct engine::impl : stack_singleton<engine::impl>$/;"	s	class:engine	file:	inherits:stack_singleton
+engine::impl::can_run	engine.cpp	/^    volatile bool can_run;$/;"	m	struct:engine::impl	file:	access:private
+engine::impl::cond	engine.cpp	/^    std::condition_variable cond;$/;"	m	struct:engine::impl	file:	access:private
+engine::impl::consumers	engine.cpp	/^    uint32_t consumers;$/;"	m	struct:engine::impl	file:	access:private
+engine::impl::impl	engine.cpp	/^    impl() : can_run(true)$/;"	f	struct:engine::impl	access:public	signature:()
+engine::impl::init	engine.cpp	/^    void init()$/;"	f	struct:engine::impl	access:public	signature:()
+engine::impl::ll	engine.cpp	/^    llist ll;$/;"	m	struct:engine::impl	file:	access:public
+engine::impl::llist	engine.cpp	/^    typedef linked_list<counter<message> > llist;$/;"	t	struct:engine::impl	file:	access:public
+engine::impl::log_and_throw_error	engine.cpp	/^    static void log_and_throw_error(const uint8_t* data, uint32_t size, const char* reason)$/;"	f	struct:engine::impl	file:	access:private	signature:(const uint8_t* data, uint32_t size, const char* reason)
+engine::impl::mutex	engine.cpp	/^    std::mutex mutex;$/;"	m	struct:engine::impl	file:	access:private
+engine::impl::proceed	engine.cpp	/^    uint32_t proceed(const uint8_t* data, uint32_t size, context* ctx)$/;"	f	struct:engine::impl	access:public	signature:(const uint8_t* data, uint32_t size, context* ctx)
+engine::impl::push_clean	engine.cpp	/^    void push_clean(uint32_t security_id, ttime_t parser_time, bool flush) \/\/when parser disconnected all OrdersBooks cleans$/;"	f	struct:engine::impl	access:public	signature:(uint32_t security_id, ttime_t parser_time, bool flush)
+engine::impl::threads	engine.cpp	/^    std::vector<std::thread> threads; \/\/consume workers, one thread for each exporter$/;"	m	struct:engine::impl	file:	access:private
+engine::impl::work_thread	engine.cpp	/^    void work_thread(std::unique_ptr<consumer> p)$/;"	f	struct:engine::impl	file:	access:private	signature:(std::unique_ptr<consumer> p)
+engine::impl::~impl	engine.cpp	/^    ~impl()$/;"	f	struct:engine::impl	access:public	signature:()
+engine::pimpl	engine.hpp	/^    std::unique_ptr<impl> pimpl;$/;"	m	struct:engine	access:private
+engine::~engine	engine.cpp	/^engine::~engine()$/;"	f	class:engine	signature:()
+engine::~engine	engine.hpp	/^    ~engine();$/;"	p	struct:engine	access:public	signature:()
+etime	messages.hpp	/^    ttime_t etime; \/\/exchange time$/;"	m	struct:message_trade	access:public
+exchange_id	messages.hpp	/^    char exchange_id[16];$/;"	m	struct:message_instr	access:public
+exp	engine.cpp	/^    exports exp;$/;"	m	struct:lib_exporter	file:	access:public
+exponent	messages.hpp	/^    static const int32_t exponent = -5;$/;"	m	struct:price_t	access:public
+exponent	messages.hpp	/^    static const int32_t exponent = -8;$/;"	m	struct:count_t	access:public
+exports	config.hpp	/^    std::vector<std::string> exports;$/;"	m	struct:config	access:public
+exports	exports.cpp	/^exports::exports(const std::string& module)$/;"	f	class:exports	signature:(const std::string& module)
+exports	exports.cpp	/^exports::exports(const std::string& module, const std::string& params)$/;"	f	class:exports	signature:(const std::string& module, const std::string& params)
+exports	exports.hpp	/^    exports(const std::string& module);$/;"	p	struct:exports	access:public	signature:(const std::string& module)
+exports	exports.hpp	/^    exports(const std::string& module, const std::string& params);$/;"	p	struct:exports	access:public	signature:(const std::string& module, const std::string& params)
+exports	exports.hpp	/^struct exports$/;"	s
+exports::exports	exports.cpp	/^exports::exports(const std::string& module)$/;"	f	class:exports	signature:(const std::string& module)
+exports::exports	exports.cpp	/^exports::exports(const std::string& module, const std::string& params)$/;"	f	class:exports	signature:(const std::string& module, const std::string& params)
+exports::exports	exports.hpp	/^    exports(const std::string& module);$/;"	p	struct:exports	access:public	signature:(const std::string& module)
+exports::exports	exports.hpp	/^    exports(const std::string& module, const std::string& params);$/;"	p	struct:exports	access:public	signature:(const std::string& module, const std::string& params)
+exports::impl	exports.cpp	/^struct exports::impl : dl_holder$/;"	s	class:exports	file:	inherits:dl_holder
+exports::impl::impl	exports.cpp	/^    impl(const std::string& module, void (*&proceed)(const message& m), const std::string& params) : p()$/;"	f	struct:exports::impl	access:public	signature:(const std::string& module, void (*&proceed)(const message& m), const std::string& params)
+exports::impl::m	exports.cpp	/^    hole_exporter m;$/;"	m	struct:exports::impl	file:	access:public
+exports::impl::p	exports.cpp	/^    void* p;$/;"	m	struct:exports::impl	file:	access:public
+exports::impl::~impl	exports.cpp	/^    ~impl()$/;"	f	struct:exports::impl	access:public	signature:()
+exports::pimpl	exports.hpp	/^    std::unique_ptr<impl> pimpl;$/;"	m	struct:exports	access:private
+exports::proceed	exports.hpp	/^    void (*proceed)(const message& m);$/;"	m	struct:exports	access:public
+exports::~exports	exports.cpp	/^exports::~exports()$/;"	f	class:exports	signature:()
+exports::~exports	exports.hpp	/^    ~exports();$/;"	p	struct:exports	access:public	signature:()
+feed_id	messages.hpp	/^    char feed_id[16];$/;"	m	struct:message_instr	access:public
+flush	order_book.hpp	/^    bool flush; \/\/when it set, all data from stream is consumed$/;"	m	struct:message	access:public
+get	engine.cpp	/^    type& get(uint32_t security_id)$/;"	f	struct:actives	access:public	signature:(uint32_t security_id)
+get_orders	order_book.hpp	/^    orders_t& get_orders(uint32_t security_id)$/;"	f	struct:order_books	access:public	signature:(uint32_t security_id)
+get_security_id	securities.cpp	/^uint32_t get_security_id(const message_instr& is, bool check_equal)$/;"	f	signature:(const message_instr& is, bool check_equal)
+get_security_id	securities.hpp	/^uint32_t get_security_id(const message_instr& is, bool check_equal); \/\/when check_equal is set function will throw exception$/;"	p	signature:(const message_instr& is, bool check_equal)
+handle	exports.cpp	/^    void* handle;$/;"	m	struct:dl_holder	file:	access:public
+hole_exporter	exports.hpp	/^struct hole_exporter$/;"	s
+hole_exporter::destroy	exports.hpp	/^    void (*destroy)(void*);$/;"	m	struct:hole_exporter	access:public
+hole_exporter::init	exports.hpp	/^    void* (*init)(std::string params);$/;"	m	struct:hole_exporter	access:public
+hole_exporter::proceed	exports.hpp	/^    void (*proceed)(const message& m);$/;"	m	struct:hole_exporter	access:public
+id	messages.hpp	/^    uint32_t id, size;$/;"	m	struct:msg_head	access:public
+id	securities.cpp	/^    uint32_t id(const message_instr& is) {$/;"	f	struct:securities::impl	access:public	signature:(const message_instr& is)
+impl	engine.cpp	/^    impl() : can_run(true)$/;"	f	struct:engine::impl	access:public	signature:()
+impl	engine.cpp	/^struct engine::impl : stack_singleton<engine::impl>$/;"	s	class:engine	file:	inherits:stack_singleton
+impl	exports.cpp	/^    impl(const std::string& module, void (*&proceed)(const message& m), const std::string& params) : p()$/;"	f	struct:exports::impl	access:public	signature:(const std::string& module, void (*&proceed)(const message& m), const std::string& params)
+impl	exports.cpp	/^struct exports::impl : dl_holder$/;"	s	class:exports	file:	inherits:dl_holder
+impl	securities.cpp	/^    impl() {$/;"	f	struct:securities::impl	access:public	signature:()
+impl	securities.cpp	/^struct securities::impl : stack_singleton<securities::impl>$/;"	s	class:securities	file:	inherits:stack_singleton
+impl	server.cpp	/^    impl() : can_run(true), count() {$/;"	f	struct:server::impl	access:public	signature:()
+impl	server.cpp	/^struct server::impl : stack_singleton<server::impl>$/;"	s	class:server	file:	inherits:stack_singleton
+init	engine.cpp	/^    void init()$/;"	f	struct:engine::impl	access:public	signature:()
+init	exports.hpp	/^    void* (*init)(std::string params);$/;"	m	struct:hole_exporter	access:public
+insert	engine.cpp	/^    type& insert(uint32_t security_id)$/;"	f	struct:actives	access:public	signature:(uint32_t security_id)
+insert	engine.cpp	/^    void insert(uint32_t security_id, ttime_t time)$/;"	f	struct:context	access:public	signature:(uint32_t security_id, ttime_t time)
+last_value	engine.cpp	/^    type* last_value;$/;"	m	struct:actives	file:	access:private
+last_value	order_book.hpp	/^    std::pair<uint32_t, orders_t*> last_value;$/;"	m	struct:order_books	access:public
+lib_exporter	engine.cpp	/^    lib_exporter(const std::string& module) : module(module), exp(module)$/;"	f	struct:lib_exporter	access:public	signature:(const std::string& module)
+lib_exporter	engine.cpp	/^    lib_exporter(const std::string& module, const std::string& params) : module(module), exp(module, params)$/;"	f	struct:lib_exporter	access:public	signature:(const std::string& module, const std::string& params)
+lib_exporter	engine.cpp	/^struct lib_exporter$/;"	s	file:
+lib_exporter::exp	engine.cpp	/^    exports exp;$/;"	m	struct:lib_exporter	file:	access:public
+lib_exporter::lib_exporter	engine.cpp	/^    lib_exporter(const std::string& module) : module(module), exp(module)$/;"	f	struct:lib_exporter	access:public	signature:(const std::string& module)
+lib_exporter::lib_exporter	engine.cpp	/^    lib_exporter(const std::string& module, const std::string& params) : module(module), exp(module, params)$/;"	f	struct:lib_exporter	access:public	signature:(const std::string& module, const std::string& params)
+lib_exporter::module	engine.cpp	/^    std::string module;$/;"	m	struct:lib_exporter	file:	access:public
+lib_exporter::name	engine.cpp	/^    const char* name() const$/;"	f	struct:lib_exporter	access:public	signature:() const
+lib_exporter::proceed	engine.cpp	/^    void (*proceed)(const message& m);$/;"	m	struct:lib_exporter	file:	access:public
+linked_list	engine.cpp	/^    linked_list() : tail(&root)$/;"	f	struct:linked_list	access:public	signature:()
+linked_list	engine.cpp	/^struct linked_list : fast_alloc<linked_node<tt> >$/;"	s	file:	inherits:fast_alloc
+linked_list::linked_list	engine.cpp	/^    linked_list() : tail(&root)$/;"	f	struct:linked_list	access:public	signature:()
+linked_list::next	engine.cpp	/^    type* next(type* prev) \/\/can return nullptr, but next time caller should used latest not nullptr value$/;"	f	struct:linked_list	access:public	signature:(type* prev)
+linked_list::push	engine.cpp	/^    void push(type* t) \/\/push element in list, always success$/;"	f	struct:linked_list	access:public	signature:(type* t)
+linked_list::root	engine.cpp	/^    type root;$/;"	m	struct:linked_list	file:	access:private
+linked_list::tail	engine.cpp	/^    std::atomic<type*> tail;$/;"	m	struct:linked_list	file:	access:private
+linked_list::type	engine.cpp	/^    typedef linked_node<tt> type;$/;"	t	struct:linked_list	file:	access:public
+linked_node	engine.cpp	/^    linked_node() : next()$/;"	f	struct:linked_node	access:public	signature:()
+linked_node	engine.cpp	/^struct linked_node : type$/;"	s	file:	inherits:type
+linked_node::linked_node	engine.cpp	/^    linked_node() : next()$/;"	f	struct:linked_node	access:public	signature:()
+linked_node::next	engine.cpp	/^    linked_node* next;$/;"	m	struct:linked_node	file:	access:public
+ll	engine.cpp	/^    llist ll;$/;"	m	struct:engine::impl	file:	access:public
+llist	engine.cpp	/^    typedef linked_list<counter<message> > llist;$/;"	t	struct:engine::impl	file:	access:public
+log_and_throw_error	engine.cpp	/^    static void log_and_throw_error(const uint8_t* data, uint32_t size, const char* reason)$/;"	f	struct:engine::impl	file:	access:private	signature:(const uint8_t* data, uint32_t size, const char* reason)
+log_exporter	config.hpp	/^    bool log_exporter;$/;"	m	struct:config	access:public
+log_exporter	engine.cpp	/^    log_exporter()$/;"	f	struct:log_exporter	access:public	signature:()
+log_exporter	engine.cpp	/^struct log_exporter$/;"	s	file:
+log_exporter::log_exporter	engine.cpp	/^    log_exporter()$/;"	f	struct:log_exporter	access:public	signature:()
+log_exporter::name	engine.cpp	/^    static const char* name()$/;"	f	struct:log_exporter	access:public	signature:()
+log_exporter::proceed	engine.cpp	/^    void proceed(const message& m)$/;"	f	struct:log_exporter	access:public	signature:(const message& m)
+m	exports.cpp	/^    hole_exporter m;$/;"	m	struct:exports::impl	file:	access:public
+main	makoa.cpp	/^int main(int argc, char** argv)$/;"	f	signature:(int argc, char** argv)
+max_connections	server.cpp	/^static const uint32_t max_connections = 32;$/;"	v	file:
+mb	order_book.hpp	/^        message_book mb;$/;"	m	union:message_bytes::__anon1	access:public
+mc	order_book.hpp	/^        message_clean mc;$/;"	m	union:message_bytes::__anon1	access:public
+message	order_book.hpp	/^struct message : message_bytes$/;"	s	inherits:message_bytes
+message::flush	order_book.hpp	/^    bool flush; \/\/when it set, all data from stream is consumed$/;"	m	struct:message	access:public
+message::mtime	order_book.hpp	/^    ttime_t mtime; \/\/makoa server time$/;"	m	struct:message	access:public
+message_book	messages.hpp	/^struct message_book$/;"	s
+message_book::count	messages.hpp	/^    count_t count; \/\/this new counts for level price$/;"	m	struct:message_book	access:public
+message_book::msg_id	messages.hpp	/^    static const uint32_t msg_id = msg_book, size = 32;$/;"	m	struct:message_book	access:public
+message_book::price	messages.hpp	/^    price_t price; $/;"	m	struct:message_book	access:public
+message_book::reserved	messages.hpp	/^    uint32_t reserved;$/;"	m	struct:message_book	access:public
+message_book::security_id	messages.hpp	/^    uint32_t security_id;$/;"	m	struct:message_book	access:public
+message_book::size	messages.hpp	/^    static const uint32_t msg_id = msg_book, size = 32;$/;"	m	struct:message_book	access:public
+message_book::time	messages.hpp	/^    ttime_t time;  \/\/parser time$/;"	m	struct:message_book	access:public
+message_bytes	order_book.hpp	/^struct message_bytes : msg_head$/;"	s	inherits:msg_head
+message_bytes::__anon1::dratuti	order_book.hpp	/^        message_hello dratuti;$/;"	m	union:message_bytes::__anon1	access:public
+message_bytes::__anon1::mb	order_book.hpp	/^        message_book mb;$/;"	m	union:message_bytes::__anon1	access:public
+message_bytes::__anon1::mc	order_book.hpp	/^        message_clean mc;$/;"	m	union:message_bytes::__anon1	access:public
+message_bytes::__anon1::mi	order_book.hpp	/^        message_instr mi;$/;"	m	union:message_bytes::__anon1	access:public
+message_bytes::__anon1::mp	order_book.hpp	/^        message_ping mp;$/;"	m	union:message_bytes::__anon1	access:public
+message_bytes::__anon1::mt	order_book.hpp	/^        message_trade mt;$/;"	m	union:message_bytes::__anon1	access:public
+message_clean	messages.hpp	/^struct message_clean$/;"	s
+message_clean::msg_id	messages.hpp	/^    static const uint32_t msg_id = msg_clean, size = 16;$/;"	m	struct:message_clean	access:public
+message_clean::security_id	messages.hpp	/^    uint32_t security_id;$/;"	m	struct:message_clean	access:public
+message_clean::size	messages.hpp	/^    static const uint32_t msg_id = msg_clean, size = 16;$/;"	m	struct:message_clean	access:public
+message_clean::source	messages.hpp	/^    uint32_t source; \/\/0 from parsers, 1 from disconnect events$/;"	m	struct:message_clean	access:public
+message_clean::time	messages.hpp	/^    ttime_t time;$/;"	m	struct:message_clean	access:public
+message_hello	messages.hpp	/^struct message_hello$/;"	s
+message_hello::msg_id	messages.hpp	/^    static const uint32_t msg_id = msg_hello, size = 32;$/;"	m	struct:message_hello	access:public
+message_hello::name	messages.hpp	/^    char name[16];$/;"	m	struct:message_hello	access:public
+message_hello::reserved	messages.hpp	/^    uint64_t reserved;$/;"	m	struct:message_hello	access:public
+message_hello::size	messages.hpp	/^    static const uint32_t msg_id = msg_hello, size = 32;$/;"	m	struct:message_hello	access:public
+message_hello::time	messages.hpp	/^    ttime_t time;$/;"	m	struct:message_hello	access:public
+message_instr	messages.hpp	/^struct message_instr$/;"	s
+message_instr::exchange_id	messages.hpp	/^    char exchange_id[16];$/;"	m	struct:message_instr	access:public
+message_instr::feed_id	messages.hpp	/^    char feed_id[16];$/;"	m	struct:message_instr	access:public
+message_instr::msg_id	messages.hpp	/^    static const uint32_t msg_id = msg_instr, size = 72;$/;"	m	struct:message_instr	access:public
+message_instr::security	messages.hpp	/^    char security[28];$/;"	m	struct:message_instr	access:public
+message_instr::security_id	messages.hpp	/^    uint32_t security_id; \/\/ = crc32(exchange_id, feed_id, security) now$/;"	m	struct:message_instr	access:public
+message_instr::size	messages.hpp	/^    static const uint32_t msg_id = msg_instr, size = 72;$/;"	m	struct:message_instr	access:public
+message_instr::time	messages.hpp	/^    ttime_t time;  \/\/parser time$/;"	m	struct:message_instr	access:public
+message_ping	messages.hpp	/^struct message_ping$/;"	s
+message_ping::msg_id	messages.hpp	/^    static const uint32_t msg_id = msg_hello, size = 8;$/;"	m	struct:message_ping	access:public
+message_ping::size	messages.hpp	/^    static const uint32_t msg_id = msg_hello, size = 8;$/;"	m	struct:message_ping	access:public
+message_ping::time	messages.hpp	/^    ttime_t time;$/;"	m	struct:message_ping	access:public
+message_trade	messages.hpp	/^struct message_trade$/;"	s
+message_trade::count	messages.hpp	/^    count_t count;$/;"	m	struct:message_trade	access:public
+message_trade::direction	messages.hpp	/^    uint32_t direction;$/;"	m	struct:message_trade	access:public
+message_trade::etime	messages.hpp	/^    ttime_t etime; \/\/exchange time$/;"	m	struct:message_trade	access:public
+message_trade::msg_id	messages.hpp	/^    static const uint32_t msg_id = msg_trade, size = 40;$/;"	m	struct:message_trade	access:public
+message_trade::price	messages.hpp	/^    price_t price;$/;"	m	struct:message_trade	access:public
+message_trade::security_id	messages.hpp	/^    uint32_t security_id;$/;"	m	struct:message_trade	access:public
+message_trade::size	messages.hpp	/^    static const uint32_t msg_id = msg_trade, size = 40;$/;"	m	struct:message_trade	access:public
+message_trade::time	messages.hpp	/^    ttime_t time;  \/\/parser time$/;"	m	struct:message_trade	access:public
+mi	order_book.hpp	/^        message_instr mi;$/;"	m	union:message_bytes::__anon1	access:public
+module	engine.cpp	/^    std::string module;$/;"	m	struct:lib_exporter	file:	access:public
+mp	order_book.hpp	/^        message_ping mp;$/;"	m	union:message_bytes::__anon1	access:public
+msg_book	messages.hpp	/^                        , msg_book  = 13$/;"	v
+msg_clean	messages.hpp	/^                        , msg_clean = 12$/;"	v
+msg_head	messages.hpp	/^struct msg_head$/;"	s
+msg_head::id	messages.hpp	/^    uint32_t id, size;$/;"	m	struct:msg_head	access:public
+msg_head::size	messages.hpp	/^    uint32_t id, size;$/;"	m	struct:msg_head	access:public
+msg_hello	messages.hpp	/^                        , msg_hello = 42$/;"	v
+msg_id	messages.hpp	/^    static const uint32_t msg_id = msg_book, size = 32;$/;"	m	struct:message_book	access:public
+msg_id	messages.hpp	/^    static const uint32_t msg_id = msg_clean, size = 16;$/;"	m	struct:message_clean	access:public
+msg_id	messages.hpp	/^    static const uint32_t msg_id = msg_hello, size = 32;$/;"	m	struct:message_hello	access:public
+msg_id	messages.hpp	/^    static const uint32_t msg_id = msg_hello, size = 8;$/;"	m	struct:message_ping	access:public
+msg_id	messages.hpp	/^    static const uint32_t msg_id = msg_instr, size = 72;$/;"	m	struct:message_instr	access:public
+msg_id	messages.hpp	/^    static const uint32_t msg_id = msg_trade, size = 40;$/;"	m	struct:message_trade	access:public
+msg_instr	messages.hpp	/^                        , msg_instr = 11$/;"	v
+msg_ping	messages.hpp	/^                          msg_ping  = 69$/;"	v
+msg_trade	messages.hpp	/^                        , msg_trade = 10$/;"	v
+mt	order_book.hpp	/^        message_trade mt;$/;"	m	union:message_bytes::__anon1	access:public
+mtime	order_book.hpp	/^    ttime_t mtime; \/\/makoa server time$/;"	m	struct:message	access:public
+mutex	engine.cpp	/^    std::mutex mutex;$/;"	m	struct:engine::impl	file:	access:private
+mutex	server.cpp	/^    std::mutex mutex;$/;"	m	struct:server::impl	file:	access:public
+name	config.hpp	/^    std::string name;$/;"	m	struct:config	access:public
+name	engine.cpp	/^    const char* name() const$/;"	f	struct:lib_exporter	access:public	signature:() const
+name	engine.cpp	/^    static const char* name()$/;"	f	struct:log_exporter	access:public	signature:()
+name	messages.hpp	/^    char name[16];$/;"	m	struct:message_hello	access:public
+next	engine.cpp	/^    linked_node* next;$/;"	m	struct:linked_node	file:	access:public
+next	engine.cpp	/^    type* next(type* prev) \/\/can return nullptr, but next time caller should used latest not nullptr value$/;"	f	struct:linked_list	access:public	signature:(type* prev)
+node	order_book.hpp	/^        node() : count(), time(){$/;"	f	struct:order_books::node	access:public	signature:()
+node	order_book.hpp	/^    struct node$/;"	s	struct:order_books	access:public
+on_disconnect	engine.cpp	/^    void on_disconnect();$/;"	p	struct:actives	file:	access:public	signature:()
+on_disconnect	engine.cpp	/^void actives::on_disconnect()$/;"	f	class:actives	signature:()
+on_signal	makoa.cpp	/^void on_signal(int sign)$/;"	f	signature:(int sign)
+operator !=	types.hpp	/^inline bool operator!=(price_t l, price_t r)$/;"	f	signature:(price_t l, price_t r)
+operator <	engine.cpp	/^        bool operator < (const type& r) const {$/;"	f	struct:actives::type	access:public	signature:(const type& r) const
+operator <	types.hpp	/^inline bool operator<(price_t l, price_t r)$/;"	f	signature:(price_t l, price_t r)
+operator <<	order_book.hpp	/^stream& operator<<(stream& s, const order_books::orders_t& o)$/;"	f	signature:(stream& s, const order_books::orders_t& o)
+operator <<	types.hpp	/^stream& operator<<(stream& s, const brief_time& t)$/;"	f	signature:(stream& s, const brief_time& t)
+operator <<	types.hpp	/^stream& operator<<(stream& s, const count_t& c)$/;"	f	signature:(stream& s, const count_t& c)
+operator <<	types.hpp	/^stream& operator<<(stream& s, const message_book& t)$/;"	f	signature:(stream& s, const message_book& t)
+operator <<	types.hpp	/^stream& operator<<(stream& s, const message_clean& c)$/;"	f	signature:(stream& s, const message_clean& c)
+operator <<	types.hpp	/^stream& operator<<(stream& s, const message_instr& i)$/;"	f	signature:(stream& s, const message_instr& i)
+operator <<	types.hpp	/^stream& operator<<(stream& s, const message_trade& t)$/;"	f	signature:(stream& s, const message_trade& t)
+operator <<	types.hpp	/^stream& operator<<(stream& s, const price_t& p)$/;"	f	signature:(stream& s, const price_t& p)
+order_books	order_book.hpp	/^struct order_books$/;"	s
+order_books::add	order_book.hpp	/^    orders_t& add(const message_book& mb)$/;"	f	struct:order_books	access:public	signature:(const message_book& mb)
+order_books::books	order_book.hpp	/^    std::map<uint32_t, orders_t> books;$/;"	m	struct:order_books	access:public
+order_books::clear	order_book.hpp	/^    orders_t& clear(uint32_t security_id)$/;"	f	struct:order_books	access:public	signature:(uint32_t security_id)
+order_books::compact	order_book.hpp	/^    void compact() \/\/remove levels with zero count$/;"	f	struct:order_books	access:public	signature:()
+order_books::get_orders	order_book.hpp	/^    orders_t& get_orders(uint32_t security_id)$/;"	f	struct:order_books	access:public	signature:(uint32_t security_id)
+order_books::last_value	order_book.hpp	/^    std::pair<uint32_t, orders_t*> last_value;$/;"	m	struct:order_books	access:public
+order_books::node	order_book.hpp	/^    struct node$/;"	s	struct:order_books	access:public
+order_books::node::count	order_book.hpp	/^        count_t count;$/;"	m	struct:order_books::node	access:public
+order_books::node::node	order_book.hpp	/^        node() : count(), time(){$/;"	f	struct:order_books::node	access:public	signature:()
+order_books::node::time	order_book.hpp	/^        ttime_t time;$/;"	m	struct:order_books::node	access:public
+order_books::orders_t	order_book.hpp	/^    typedef fmap<price_t, node> orders_t;$/;"	t	struct:order_books	access:public
+order_books::proceed	order_book.hpp	/^    orders_t& proceed(const message& m)$/;"	f	struct:order_books	access:public	signature:(const message& m)
+order_books::set	order_book.hpp	/^    orders_t& set(const message_book& mb)$/;"	f	struct:order_books	access:public	signature:(const message_book& mb)
+order_books::tmp	order_book.hpp	/^    mvector<orders_t::pair> tmp;$/;"	m	struct:order_books	access:public
+orders_t	order_book.hpp	/^    typedef fmap<price_t, node> orders_t;$/;"	t	struct:order_books	access:public
+p	exports.cpp	/^    void* p;$/;"	m	struct:exports::impl	file:	access:public
+pimpl	engine.hpp	/^    std::unique_ptr<impl> pimpl;$/;"	m	struct:engine	access:private
+pimpl	exports.hpp	/^    std::unique_ptr<impl> pimpl;$/;"	m	struct:exports	access:private
+pimpl	securities.hpp	/^    std::unique_ptr<impl> pimpl;$/;"	m	struct:securities	access:private
+pimpl	server.hpp	/^    std::unique_ptr<impl> pimpl;$/;"	m	struct:server	access:private
+port	config.hpp	/^    uint16_t port;$/;"	m	struct:config	access:public
+price	messages.hpp	/^    price_t price; $/;"	m	struct:message_book	access:public
+price	messages.hpp	/^    price_t price;$/;"	m	struct:message_trade	access:public
+price_frac	types.hpp	/^static const uint32_t price_frac = 100000;$/;"	v
+price_t	messages.hpp	/^struct price_t$/;"	s
+price_t::exponent	messages.hpp	/^    static const int32_t exponent = -5;$/;"	m	struct:price_t	access:public
+price_t::value	messages.hpp	/^    int64_t value;$/;"	m	struct:price_t	access:public
+print	config.cpp	/^void config::print()$/;"	f	class:config	signature:()
+print	config.hpp	/^    void print();$/;"	p	struct:config	access:public	signature:()
+proceed	engine.cpp	/^    uint32_t proceed(const uint8_t* data, uint32_t size, context* ctx)$/;"	f	struct:engine::impl	access:public	signature:(const uint8_t* data, uint32_t size, context* ctx)
+proceed	engine.cpp	/^    void (*proceed)(const message& m);$/;"	m	struct:lib_exporter	file:	access:public
+proceed	engine.cpp	/^    void proceed(const message& m)$/;"	f	struct:log_exporter	access:public	signature:(const message& m)
+proceed	exports.hpp	/^    void (*proceed)(const message& m);$/;"	m	struct:exports	access:public
+proceed	exports.hpp	/^    void (*proceed)(const message& m);$/;"	m	struct:hole_exporter	access:public
+proceed	order_book.hpp	/^    orders_t& proceed(const message& m)$/;"	f	struct:order_books	access:public	signature:(const message& m)
+proceed_data	engine.cpp	/^uint32_t proceed_data(const uint8_t* data, uint32_t size, context* ctx)$/;"	f	signature:(const uint8_t* data, uint32_t size, context* ctx)
+proceed_data	engine.hpp	/^uint32_t proceed_data(const uint8_t* data, uint32_t size, context* ctx);$/;"	p	signature:(const uint8_t* data, uint32_t size, context* ctx)
+push	engine.cpp	/^    void push(type* t) \/\/push element in list, always success$/;"	f	struct:linked_list	access:public	signature:(type* t)
+push_clean	engine.cpp	/^    void push_clean(uint32_t security_id, ttime_t parser_time, bool flush) \/\/when parser disconnected all OrdersBooks cleans$/;"	f	struct:engine::impl	access:public	signature:(uint32_t security_id, ttime_t parser_time, bool flush)
+recv_buf_crit	server.cpp	/^static const uint32_t recv_buf_crit = 1024;$/;"	v	file:
+recv_buf_size	server.cpp	/^static const uint32_t recv_buf_size = 128 * 1024;$/;"	v	file:
+reserved	messages.hpp	/^    uint32_t reserved;$/;"	m	struct:message_book	access:public
+reserved	messages.hpp	/^    uint64_t reserved;$/;"	m	struct:message_hello	access:public
+root	engine.cpp	/^    type root;$/;"	m	struct:linked_list	file:	access:private
+securities	securities.cpp	/^securities::securities()$/;"	f	class:securities	signature:()
+securities	securities.hpp	/^    securities();$/;"	p	struct:securities	access:public	signature:()
+securities	securities.hpp	/^struct securities $/;"	s
+securities::impl	securities.cpp	/^struct securities::impl : stack_singleton<securities::impl>$/;"	s	class:securities	file:	inherits:stack_singleton
+securities::impl::id	securities.cpp	/^    uint32_t id(const message_instr& is) {$/;"	f	struct:securities::impl	access:public	signature:(const message_instr& is)
+securities::impl::impl	securities.cpp	/^    impl() {$/;"	f	struct:securities::impl	access:public	signature:()
+securities::pimpl	securities.hpp	/^    std::unique_ptr<impl> pimpl;$/;"	m	struct:securities	access:private
+securities::securities	securities.cpp	/^securities::securities()$/;"	f	class:securities	signature:()
+securities::securities	securities.hpp	/^    securities();$/;"	p	struct:securities	access:public	signature:()
+securities::~securities	securities.cpp	/^securities::~securities()$/;"	f	class:securities	signature:()
+securities::~securities	securities.hpp	/^    ~securities();$/;"	p	struct:securities	access:public	signature:()
+security	messages.hpp	/^    char security[28];$/;"	m	struct:message_instr	access:public
+security_id	engine.cpp	/^        uint32_t security_id;$/;"	m	struct:actives::type	file:	access:public
+security_id	messages.hpp	/^    uint32_t security_id; \/\/ = crc32(exchange_id, feed_id, security) now$/;"	m	struct:message_instr	access:public
+security_id	messages.hpp	/^    uint32_t security_id;$/;"	m	struct:message_book	access:public
+security_id	messages.hpp	/^    uint32_t security_id;$/;"	m	struct:message_clean	access:public
+security_id	messages.hpp	/^    uint32_t security_id;$/;"	m	struct:message_trade	access:public
+server	server.cpp	/^server::server()$/;"	f	class:server	signature:()
+server	server.hpp	/^    server();$/;"	p	struct:server	access:public	signature:()
+server	server.hpp	/^struct server$/;"	s
+server::accept_loop	server.cpp	/^void server::accept_loop(volatile bool& can_run)$/;"	f	class:server	signature:(volatile bool& can_run)
+server::accept_loop	server.hpp	/^    void accept_loop(volatile bool& can_run);$/;"	p	struct:server	access:public	signature:(volatile bool& can_run)
+server::impl	server.cpp	/^struct server::impl : stack_singleton<server::impl>$/;"	s	class:server	file:	inherits:stack_singleton
+server::impl::accept_loop	server.cpp	/^    void accept_loop(volatile bool& can_run_external)$/;"	f	struct:server::impl	access:public	signature:(volatile bool& can_run_external)
+server::impl::can_run	server.cpp	/^    volatile bool can_run;$/;"	m	struct:server::impl	file:	access:public
+server::impl::cond	server.cpp	/^    std::condition_variable cond;$/;"	m	struct:server::impl	file:	access:public
+server::impl::count	server.cpp	/^    uint32_t count;$/;"	m	struct:server::impl	file:	access:public
+server::impl::impl	server.cpp	/^    impl() : can_run(true), count() {$/;"	f	struct:server::impl	access:public	signature:()
+server::impl::mutex	server.cpp	/^    std::mutex mutex;$/;"	m	struct:server::impl	file:	access:public
+server::impl::work_thread	server.cpp	/^    void work_thread(int socket, std::string client, volatile bool& initialized)$/;"	f	struct:server::impl	access:public	signature:(int socket, std::string client, volatile bool& initialized)
+server::impl::work_thread_impl	server.cpp	/^    void work_thread_impl(int socket, const std::string& client)$/;"	f	struct:server::impl	access:public	signature:(int socket, const std::string& client)
+server::impl::~impl	server.cpp	/^    ~impl()$/;"	f	struct:server::impl	access:public	signature:()
+server::pimpl	server.hpp	/^    std::unique_ptr<impl> pimpl;$/;"	m	struct:server	access:private
+server::server	server.cpp	/^server::server()$/;"	f	class:server	signature:()
+server::server	server.hpp	/^    server();$/;"	p	struct:server	access:public	signature:()
+server::~server	server.cpp	/^server::~server()$/;"	f	class:server	signature:()
+server::~server	server.hpp	/^    ~server();$/;"	p	struct:server	access:public	signature:()
+server_name	server.cpp	/^const std::string& server_name()$/;"	f	signature:()
+set	order_book.hpp	/^    orders_t& set(const message_book& mb)$/;"	f	struct:order_books	access:public	signature:(const message_book& mb)
+size	messages.hpp	/^    static const uint32_t msg_id = msg_book, size = 32;$/;"	m	struct:message_book	access:public
+size	messages.hpp	/^    static const uint32_t msg_id = msg_clean, size = 16;$/;"	m	struct:message_clean	access:public
+size	messages.hpp	/^    static const uint32_t msg_id = msg_hello, size = 32;$/;"	m	struct:message_hello	access:public
+size	messages.hpp	/^    static const uint32_t msg_id = msg_hello, size = 8;$/;"	m	struct:message_ping	access:public
+size	messages.hpp	/^    static const uint32_t msg_id = msg_instr, size = 72;$/;"	m	struct:message_instr	access:public
+size	messages.hpp	/^    static const uint32_t msg_id = msg_trade, size = 40;$/;"	m	struct:message_trade	access:public
+size	messages.hpp	/^    uint32_t id, size;$/;"	m	struct:msg_head	access:public
+sizeof	messages.hpp	/^static_assert(sizeof(message_book) == 32, "protocol agreement");$/;"	p	signature:(message_book)
+sizeof	messages.hpp	/^static_assert(sizeof(message_clean) == 16, "protocol agreement");$/;"	p	signature:(message_clean)
+sizeof	messages.hpp	/^static_assert(sizeof(message_hello) == 32, "protocol agreement");$/;"	p	signature:(message_hello)
+sizeof	messages.hpp	/^static_assert(sizeof(message_instr) == 72, "protocol agreement");$/;"	p	signature:(message_instr)
+sizeof	messages.hpp	/^static_assert(sizeof(message_ping) == 8, "protocol agreement");$/;"	p	signature:(message_ping)
+sizeof	messages.hpp	/^static_assert(sizeof(message_trade) == 40, "protocol agreement");$/;"	p	signature:(message_trade)
+sizeof	messages.hpp	/^static_assert(sizeof(msg_head) == 8, "protocol agreement");$/;"	p	signature:(msg_head)
+source	messages.hpp	/^    uint32_t source; \/\/0 from parsers, 1 from disconnect events$/;"	m	struct:message_clean	access:public
+tail	engine.cpp	/^    std::atomic<type*> tail;$/;"	m	struct:linked_list	file:	access:private
+term_signal	makoa.cpp	/^void term_signal(int sign)$/;"	f	signature:(int sign)
+threads	engine.cpp	/^    std::vector<std::thread> threads; \/\/consume workers, one thread for each exporter$/;"	m	struct:engine::impl	file:	access:private
+time	engine.cpp	/^        ttime_t time; \/\/last parser time for current security_id$/;"	m	struct:actives::type	file:	access:public
+time	messages.hpp	/^    ttime_t time;  \/\/parser time$/;"	m	struct:message_book	access:public
+time	messages.hpp	/^    ttime_t time;  \/\/parser time$/;"	m	struct:message_instr	access:public
+time	messages.hpp	/^    ttime_t time;  \/\/parser time$/;"	m	struct:message_trade	access:public
+time	messages.hpp	/^    ttime_t time;$/;"	m	struct:message_clean	access:public
+time	messages.hpp	/^    ttime_t time;$/;"	m	struct:message_hello	access:public
+time	messages.hpp	/^    ttime_t time;$/;"	m	struct:message_ping	access:public
+time	order_book.hpp	/^        ttime_t time;$/;"	m	struct:order_books::node	access:public
+timeout	server.cpp	/^static const uint32_t timeout = 30; \/\/in seconds$/;"	v	file:
+tmp	engine.cpp	/^    type tmp;$/;"	m	struct:actives	file:	access:private
+tmp	order_book.hpp	/^    mvector<orders_t::pair> tmp;$/;"	m	struct:order_books	access:public
+ttime_t	messages.hpp	/^struct ttime_t$/;"	s
+ttime_t::value	messages.hpp	/^    uint64_t value;$/;"	m	struct:ttime_t	access:public
+type	engine.cpp	/^    struct type$/;"	s	struct:actives	file:	access:public
+type	engine.cpp	/^    typedef linked_node<tt> type;$/;"	t	struct:linked_list	file:	access:public
+value	messages.hpp	/^    int64_t value;$/;"	m	struct:count_t	access:public
+value	messages.hpp	/^    int64_t value;$/;"	m	struct:price_t	access:public
+value	messages.hpp	/^    uint64_t value;$/;"	m	struct:ttime_t	access:public
+work_thread	engine.cpp	/^    void work_thread(std::unique_ptr<consumer> p)$/;"	f	struct:engine::impl	file:	access:private	signature:(std::unique_ptr<consumer> p)
+work_thread	server.cpp	/^    void work_thread(int socket, std::string client, volatile bool& initialized)$/;"	f	struct:server::impl	access:public	signature:(int socket, std::string client, volatile bool& initialized)
+work_thread_impl	server.cpp	/^    void work_thread_impl(int socket, const std::string& client)$/;"	f	struct:server::impl	access:public	signature:(int socket, const std::string& client)
+~context	engine.cpp	/^    ~context()$/;"	f	struct:context	access:public	signature:()
+~context_holder	engine.cpp	/^context_holder::~context_holder()$/;"	f	class:context_holder	signature:()
+~context_holder	engine.hpp	/^    ~context_holder();$/;"	p	struct:context_holder	access:public	signature:()
+~dl_holder	exports.cpp	/^    ~dl_holder()$/;"	f	struct:dl_holder	access:public	signature:()
+~engine	engine.cpp	/^engine::~engine()$/;"	f	class:engine	signature:()
+~engine	engine.hpp	/^    ~engine();$/;"	p	struct:engine	access:public	signature:()
+~exports	exports.cpp	/^exports::~exports()$/;"	f	class:exports	signature:()
+~exports	exports.hpp	/^    ~exports();$/;"	p	struct:exports	access:public	signature:()
+~impl	engine.cpp	/^    ~impl()$/;"	f	struct:engine::impl	access:public	signature:()
+~impl	exports.cpp	/^    ~impl()$/;"	f	struct:exports::impl	access:public	signature:()
+~impl	server.cpp	/^    ~impl()$/;"	f	struct:server::impl	access:public	signature:()
+~securities	securities.cpp	/^securities::~securities()$/;"	f	class:securities	signature:()
+~securities	securities.hpp	/^    ~securities();$/;"	p	struct:securities	access:public	signature:()
+~server	server.cpp	/^server::~server()$/;"	f	class:server	signature:()
+~server	server.hpp	/^    ~server();$/;"	p	struct:server	access:public	signature:()

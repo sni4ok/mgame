@@ -51,7 +51,7 @@ struct message_ping
 {
     ttime_t time;
 
-    static const uint32_t msg_id = msg_hello, size = 8;
+    static const uint32_t msg_id = msg_ping, size = 8;
 };
 static_assert(sizeof(message_ping) == 8, "protocol agreement");
 

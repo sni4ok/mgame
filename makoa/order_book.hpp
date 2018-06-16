@@ -7,10 +7,10 @@
 #include "messages.hpp"
 #include "types.hpp"
 
-//#include <boost/container/flat_map.hpp>
-#include <map>
+#include "evie/fmap.hpp"
 
-//TODO: move orders_t to sorted vector
+#include <map>
+#include <algorithm>
 
 struct message_bytes : msg_head
 {
@@ -42,11 +42,11 @@ struct order_books
         node() : count(), time(){
         }
     };
-    //typedef boost::container::flat_map<price_t, node> orders_t;
-    typedef std::map<price_t, node> orders_t;
+    typedef fmap<price_t, node> orders_t;
 
     std::map<uint32_t, orders_t> books;
     std::pair<uint32_t, orders_t*> last_value;
+    mvector<orders_t::pair> tmp;
 
     orders_t& get_orders(uint32_t security_id)
     {
@@ -93,13 +93,33 @@ struct order_books
     {
         for(auto& o: books)
         {
-            auto i = o.second.begin();
-            while(i != o.second.end())
-            {
-                if(!i->second.count.value)
-                    i = o.second.erase(i);
-                else
-                    ++i;
+            uint32_t cnt = 0;
+            auto it = o.second.begin(), ie = o.second.end();
+            for(; it != ie; ++it) {
+                if(it->second.count.value == 0) {
+                    ++cnt;
+                    if(cnt == 2)
+                        break;
+                }
+            }
+            if(cnt != 0) {
+                it = o.second.begin();
+                if(cnt == 1) {
+                    it = std::find_if(it, ie, [] (auto&& v) {
+                        return v.second.count.value == 0;
+                    });
+                    o.second.erase(it);
+                }
+                else {
+                    //cnt == 2
+                    tmp.clear();
+                    tmp.reserve(o.second.size());
+                    for(; it != ie; ++it) {
+                        if(it->second.count.value)
+                            tmp.push_back(*it);
+                    }
+                    o.second.swap(tmp);
+                }
             }
         }
     }

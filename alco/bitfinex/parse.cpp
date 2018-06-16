@@ -22,11 +22,9 @@ struct binary_dumper : stack_singleton<binary_dumper>
     }
     void init(const std::string& fname)
     {
-        if(!s) {
-            s.open(fname, std::ofstream::out | std::ofstream::trunc);
-            if(!s)
-                throw std::runtime_error(es() % "open file \"" % fname % "\" error");
-        }
+        s.open(fname, std::ofstream::out | std::ofstream::trunc | std::ios::binary);
+        if(!s)
+            throw std::runtime_error(es() % "open file \"" % fname % "\" error");
     }
     void write(const char* ptr, uint32_t size)
     {
@@ -68,23 +66,36 @@ void proceed_error(const char* ptr, uint32_t size)
 
 price_t get_price(const char* f, const char* t)
 {
-    //todo: rewrite it without atof
-    return {atof(f) * (1. + std::numeric_limits<double>::epsilon()) * double(price_frac)};
+    return {int64_t(my_cvt::atoi<uint64_t>(f, t - f)) * price_frac};
 }
 
 count_t get_count(const char* f, const char* t)
 {
-    return {atof(f) * (1. + std::numeric_limits<double>::epsilon()) * double(count_frac)};
+    bool minus = false;
+    if(*f == '-') {
+        minus = true;
+        ++f;
+    }
+    const char* p = std::find(f, t, '.');
+    int64_t v = my_cvt::atoi<uint32_t>(f, p - f);
+    if(p == t)
+        return {minus ? (-v * count_frac) : (v * count_frac)};
+    ++p;
+    uint32_t sz = t - p;
+    int64_t c = my_cvt::atoi<uint32_t>(p, sz);
+    for(uint32_t i = sz; i < 8; ++i)
+        c *= 10;
+    return {minus ? (-v * count_frac - c) : (v * count_frac + c)};
 }
 
 int32_t get_amount(const char* f, const char* t)
 {
-    return atoi(f);
+    return {my_cvt::atoi<int32_t>(f, t - f)};
 }
 
 struct parser : stack_singleton<parser>
 {
-    void* v;
+    void* vik;
 
     struct security
     {
@@ -103,29 +114,29 @@ struct parser : stack_singleton<parser>
             ct(curl_easy_init(), &curl_easy_cleanup)
         {
         }
-        void proceed_book(price_t p, count_t c, bool flush)
+        void proceed_book(void* vik, price_t p, count_t c, bool flush)
         {
             tyra_msg<message_book>& tb = (tyra_msg<message_book>&)mb;
             tb.price = p;
             tb.count = c;
             tb.time = get_cur_ttime();
             mb.flush = flush;
-            viktor_proceed(mb);
+            viktor_proceed(vik, mb);
         }
-        void push_flush()
+        void push_flush(void* vik)
         {
             if(cur_ob.empty())
                 return;
             for(auto& v: old_ob)
-                v.second.value = - v.second.value;
+                v.second.value = 0;
             for(const auto& v: cur_ob)
                 old_ob[v.first].value = v.second.value;
 
             uint32_t sz = old_ob.size();
-            mlog() << "sz:" << sz;
+            //mlog() << "sz:" << sz;
             if(sz) {
                 for(auto& v: old_ob) {
-                    proceed_book(v.first, v.second, !(--sz));
+                    proceed_book(vik, v.first, v.second, !(--sz));
                 }
             }
             old_ob.clear();
@@ -136,7 +147,7 @@ struct parser : stack_singleton<parser>
 
     parser()
     {
-        v = viktor_init(config::instance().push);
+        vik = viktor_init(config::instance().push);
     }
 
     uint32_t init(const std::string& ticker)
@@ -173,7 +184,7 @@ struct parser : stack_singleton<parser>
         mc.security_id = m.security_id;
 
         mi.time = get_cur_ttime();
-        viktor_proceed(sec.mi);
+        viktor_proceed(vik, sec.mi);
 
         secs.push_back(std::move(sec));
         return secs.size() - 1;
@@ -182,12 +193,12 @@ struct parser : stack_singleton<parser>
     void proceed_book(uint32_t sec_id, price_t p, count_t c, bool flush)
     {
         security& sec = secs[sec_id];
-        sec.proceed_book(p, c, flush);
+        sec.proceed_book(vik, p, c, flush);
     }
 
     ~parser()
     {
-        viktor_destroy(v);
+        viktor_destroy(vik);
     }
 };
 
@@ -204,14 +215,13 @@ size_t proceed_book(uint32_t sec_id, char* ptr, uint32_t size)
     auto ie = ptr + size;
     if(ptr[1] == '['){
         if(*ptr == '[')
-            sec.push_flush();
+            sec.push_flush(parser::instance().vik);
         ++ptr;
     }
 
     price_t p;
-    int32_t a = 0;
     count_t c;
-    bool flush;
+    //bool flush;
     for(;;) {
         assert(*ptr == '[');
         auto i = std::find(ptr, ie, ']');
@@ -233,10 +243,10 @@ size_t proceed_book(uint32_t sec_id, char* ptr, uint32_t size)
         *z3 = char(); //remove
         c = get_count(z2, z3);
         
-        if((ie - z3) > 30)
-            flush = false;
-        else
-            flush = std::find(z3, ie, ']') == ie;
+        //if((ie - z3) > 30)
+        //    flush = false;
+        //else
+        //    flush = std::find(z3, ie, ']') == ie;
         //parser::instance().proceed_book(sec_id, p, c, flush);
         ob[p] = c;
 
@@ -262,8 +272,6 @@ size_t callback_book(void *contents, size_t sz, size_t nmemb, void* p)
     auto& tail = sec.tail_book;
     auto& tail_sz = sec.tail_book_sz;
 
-    auto& ob = sec.cur_ob;
-
     size_t size = sz * nmemb;
     char *ptr = (char*)contents, *ie = ptr + size;
     
@@ -274,7 +282,7 @@ size_t callback_book(void *contents, size_t sz, size_t nmemb, void* p)
 
     if(tail_sz) {
         auto p = std::find(ptr, ie, ']');
-        if(p == ie || (p - ptr) > (sizeof(tail) - 1 - tail_sz))
+        if(p == ie || (p - ptr) + 1 + tail_sz > sizeof(tail))
             throw std::runtime_error(es() % "bad msg, tail: " % std::string(tail, tail + tail_sz));
         ++p;
         std::copy(ptr, p, &tail[tail_sz]);
@@ -298,7 +306,7 @@ size_t callback_book(void *contents, size_t sz, size_t nmemb, void* p)
         while(c != size && *(ptr + c) == ']')
             ++c, ++nc;
         if(nc >= 2)
-            sec.push_flush();
+            sec.push_flush(parser::instance().vik);
 
         std::copy(ptr + c, ptr + size, tail);
         tail_sz = size - c;
@@ -309,6 +317,24 @@ size_t callback_book(void *contents, size_t sz, size_t nmemb, void* p)
 
 const std::string api = "https://api.bitfinex.com/v2";
 curl_err e;
+size_t callback_trades(void *contents, size_t sz, size_t nmemb, void* p)
+{
+    uint32_t sec_id = get_sec_id(p);
+    auto& sec = (parser::instance().secs)[sec_id];
+    auto& tail = sec.tail_trades;
+    auto& tail_sz = sec.tail_trades_sz;
+    
+    size_t size = sz * nmemb;
+    char *ptr = (char*)contents;
+    
+    if(config::instance().curl_log) {
+        mlog() << "proceed_trade: " << sz << "x" << nmemb << ", tail_sz: " << tail_sz << ", tail: " << std::string(tail, tail + tail_sz);
+        binary_dumper::instance().write(ptr, size);
+    }
+    
+    return size;
+}
+
 void init_book(uint32_t sec_id, const std::string& symbol, volatile bool& can_run)
 {
     //uint32_t sec_id = parser::instance().init(symbol);
@@ -326,54 +352,8 @@ void init_book(uint32_t sec_id, const std::string& symbol, volatile bool& can_ru
     while(can_run) {
         e = curl_easy_perform(c);
         usleep(config::instance().sleep_time * 1000);
-        mlog() << "sleep";
+        mlog() << "sleep(" << config::instance().sleep_time << ")";
     }
-}
-
-struct parse_pp
-{
-    //[[a,b,c,d],[a,b,c,d]]
-    char tail[128];
-    size_t tail_sz;
-    
-    char *it, *ie;
-
-    void set(char *ptr, size_t size)
-    {
-    }
-    
-    template<typename type>
-    bool get(type& v)
-    {
-        return false;
-        //char* i = std::find(it, ie, ']');
-    }
-
-    //template<typename type, typename ... types>
-    //bool get()
-    //{
-    //}
-
-    bool is_end()
-    {
-    }
-};
-
-size_t callback_trades(void *contents, size_t sz, size_t nmemb, void* p)
-{
-    uint32_t sec_id = get_sec_id(p);
-    auto& sec = (parser::instance().secs)[sec_id];
-    auto& tail = sec.tail_trades;
-    auto& tail_sz = sec.tail_trades_sz;
-    
-    size_t size = sz * nmemb;
-    char *ptr = (char*)contents, *ie = ptr + size;
-    
-    if(config::instance().curl_log) {
-        mlog() << "proceed_trade: " << sz << "x" << nmemb << ", tail_sz: " << tail_sz << ", tail: " << std::string(tail, tail + tail_sz);
-        binary_dumper::instance().write(ptr, size);
-    }
-
 }
 
 void init_trades(uint32_t sec_id, const std::string& symbol, volatile bool& can_run)
@@ -385,12 +365,12 @@ void init_trades(uint32_t sec_id, const std::string& symbol, volatile bool& can_
     parser::security& s = parser::instance().secs[sec_id];
     CURL* c = s.ct.get();
     e = curl_easy_setopt(c, CURLOPT_URL, req.c_str());
-    e = curl_easy_setopt(c, CURLOPT_WRITEFUNCTION, callback_book);
+    e = curl_easy_setopt(c, CURLOPT_WRITEFUNCTION, callback_trades);
     e = curl_easy_setopt(c, CURLOPT_WRITEDATA, (void*)sec_id);
     while(can_run) {
         e = curl_easy_perform(c);
         usleep(config::instance().sleep_time * 1000);
-        mlog() << "sleep";
+        mlog() << "sleep(" << config::instance().sleep_time << ")";
     }
 }
 
@@ -400,13 +380,22 @@ void proceed_bitfinex(volatile bool& can_run)
     const config& cfg = config::instance();
     if(cfg.curl_log)
         bd.init(cfg.curl_logname);
-    parser p;
-    for(auto symbol: cfg.symbols) {
-        uint32_t sec_id = parser::instance().init(symbol);
-        if(cfg.book)
-            init_book(sec_id, symbol, can_run);
-        if(cfg.trades)
-            init_trades(sec_id, symbol, can_run);
+    while(can_run) {
+        try {
+            parser p;
+            for(auto symbol: cfg.symbols) {
+                uint32_t sec_id = parser::instance().init(symbol);
+                if(cfg.book)
+                    init_book(sec_id, symbol, can_run);
+                //if(cfg.trades)
+                //    init_trades(sec_id, symbol, can_run);
+            }
+        }
+        catch(std::exception& e) {
+            mlog() << "proceed_bitfinex " << e;
+            if(can_run)
+                usleep(5000 * 1000);
+        }
     }
 }
 

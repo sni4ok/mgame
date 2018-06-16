@@ -41,7 +41,7 @@ class window
 	std::unique_ptr<WINDOW, decltype(&end_win)> w;
     ncurses_err e;
 
-    uint32_t log_par;
+    long log_par;
 
 public:
     uint32_t rows, cols;
@@ -50,7 +50,7 @@ public:
     window() : w(initscr(), &end_win)
     {
         log_par = log_params();
-        log_params() ^= mlog::cout;
+        log_params() ^= mlog::always_cout;
         
         winsize size;
         if(ioctl(0, TIOCGWINSZ, (char *)&size) < 0)

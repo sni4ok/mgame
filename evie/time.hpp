@@ -1,4 +1,10 @@
+/*
+    author: Ilya Andronov <sni4ok@yandex.ru>
+*/
+
 #pragma once
+
+#include "mlog.hpp"
 
 #include <cstdint>
 
@@ -30,3 +36,14 @@ inline bool operator<(ttime_t l, ttime_t r)
 {
     return l.value < r.value;
 }
+
+template<typename stream>
+stream& operator<<(stream& s, const ttime_t& t)
+{
+    char buf[20];
+    time_t tt = t.value / 1000000;
+    strftime(buf, 20, "%Y-%m-%d %H:%M:%S", localtime(&tt));
+    s << buf << "." << mlog_fixed<6>(t.value % 1000000);
+    return s;
+}
+

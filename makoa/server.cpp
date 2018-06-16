@@ -16,11 +16,9 @@ static const uint32_t recv_buf_size = 128 * 1024;
 static const uint32_t recv_buf_crit = 1024;
 static const uint32_t timeout = 30; //in seconds
 
-//sockets now, later possible will be moved to zeromq
-
-const char* server_name()
+const std::string& server_name()
 {
-    return config::instance().name.c_str();
+    return config::instance().name;
 }
 
 struct server::impl : stack_singleton<server::impl>
@@ -37,7 +35,7 @@ struct server::impl : stack_singleton<server::impl>
     {
         context_holder ctx;
         pollfd pfd = pollfd();
-        pfd.events = POLLOUT;
+        pfd.events = POLLIN;
         pfd.fd = socket;
 
         std::vector<uint8_t> buf(recv_buf_size);
@@ -46,7 +44,7 @@ struct server::impl : stack_singleton<server::impl>
 
         while(can_run)
         {
-            int ret = poll(&pfd, 1, 50 * 1000);
+            int ret = poll(&pfd, 1, 50);
             if(ret < 0)
                 throw_system_failure("poll() error");
             if(ret == 0) {
@@ -59,6 +57,7 @@ struct server::impl : stack_singleton<server::impl>
             ret = ::recv(socket, cur, recv_buf_size - (cur - beg), 0);
             if(ret == -1) {
                 if(errno == EAGAIN || errno == EWOULDBLOCK) {
+                    MPROFILE("server_EAGAIN");
                     continue;
                 }
                 else
@@ -88,15 +87,15 @@ struct server::impl : stack_singleton<server::impl>
     }
     void work_thread(int socket, std::string client, volatile bool& initialized)
     {
-        socket_holder ss(socket);
         try {
+            socket_holder ss(socket);
             std::unique_lock<std::mutex> lock(mutex);
             ++count;
+            initialized = true;
             if(count == max_connections)
                 mlog(mlog::warning) << "server(" << server_name() << ") max_connections exceed on client " << client;
             if(count > max_connections)
                 throw std::runtime_error("limit connections exceed");
-            initialized = true;
             cond.notify_all();
             lock.unlock();
             mlog() << "server() thread for " << client << " started";
@@ -105,10 +104,9 @@ struct server::impl : stack_singleton<server::impl>
             mlog(mlog::error) << "server(" << server_name() << ") client " << client << " " << e;
         }
         std::unique_lock<std::mutex> lock(mutex);
-        --count;
-        initialized = true;
         cond.notify_all();
         mlog() << "server(" << server_name() << ") thread for " << client << " ended";
+        --count;
     }
     void accept_loop(volatile bool& can_run_external)
     {
@@ -119,7 +117,7 @@ struct server::impl : stack_singleton<server::impl>
                 cond.wait_for(lock, std::chrono::microseconds(50 * 1000));
             try {
                 lock.unlock();
-                int socket = my_accept_async(config::instance().port, false/*local*/, false/*sync*/, &client, &can_run_external, server_name());
+                int socket = my_accept_async(config::instance().port, false/*local*/, false/*sync*/, &client, &can_run_external, server_name().c_str());
                 volatile bool initialized = false;
                 std::thread thrd(&impl::work_thread, this, socket, client, std::ref(initialized));
                 lock.lock();

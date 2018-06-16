@@ -6,7 +6,7 @@
 #include "mirror.hpp"
 #include "makoa/exports.hpp"
 
-struct ying : stack_singleton<ying>
+struct ying
 {
     mirror m;
 
@@ -31,9 +31,9 @@ void ying_destroy(void* w)
     delete (ying*)(w);
 }
 
-void ying_proceed(const message& m)
+void ying_proceed(void* w, const message& m)
 {
-    ying::instance().proceed(m);
+    ((ying*)(w))->proceed(m);
 }
 
 extern "C"

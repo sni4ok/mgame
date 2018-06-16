@@ -1,3 +1,7 @@
+/*
+    author: Ilya Andronov <sni4ok@yandex.ru>
+*/
+
 #pragma once
 
 #include "string.hpp"
@@ -20,42 +24,26 @@ private:
 };
 
 template<typename base>
-class stack_singleton : noncopyable
+class stack_singleton
 {
-    static base*& get_impl() {
+    static base*& get_impl(){
         static base* value = 0;
         return value;
     }
+    stack_singleton(const stack_singleton&) = delete;
 public:
-    static void set_instance(base* instance) {
+    static void set_instance(base* instance){
         assert((!get_impl() || get_impl() == instance) && "singleton already initialized");
         get_impl() = instance;
     }
-    static base& instance() {
+    static base& instance(){
         return *get_impl();
     }
-    stack_singleton() {
+    stack_singleton(){
         set_instance(static_cast<base*>(this));
     }
-    ~stack_singleton() {
+    ~stack_singleton(){
         get_impl() = 0;
-    }
-};
-
-class es
-{
-    //this class used for formating exceptions
-    std::string s;
-    std::stringstream ss;
-public:
-    template<typename t>
-    es& operator%(const t& v) {
-        ss << v;
-        return *this;
-    }
-    operator const char*() {
-        s = ss.str();
-        return s.c_str();
     }
 };
 
@@ -80,28 +68,6 @@ template<>
 inline std::string lexical_cast<std::string>(const std::string& str)
 {
     return str;
-}
-
-
-template<typename string>
-void read_file(string& buf, const char* fname, bool can_empty = false)
-{
-    uint32_t buf_size = buf.size();
-    std::ifstream f(fname);
-    if(f) {
-        f.exceptions(std::ios::badbit);
-        std::copy(std::istreambuf_iterator<char>(f),std::istreambuf_iterator<char>(), std::back_inserter(buf));
-    }
-    if(!can_empty && buf_size == buf.size())
-        throw std::runtime_error(es() % "read \"" % fname % "\" error");
-}
-
-template<typename string>
-string read_file(const char* fname, bool can_empty = false)
-{
-    string buf;
-    read_file(buf, fname, can_empty);
-    return std::move(buf);
 }
 
 static std::vector<std::string> split(const std::string& str, char sep = ',')

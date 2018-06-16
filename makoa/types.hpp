@@ -7,7 +7,7 @@
 #include "messages.hpp"
 
 #include "evie/time.hpp"
-#include "evie/log.hpp"
+#include "evie/mlog.hpp"
 
 static const uint32_t price_frac = 100000;
 static const uint32_t count_frac = 100000000;
@@ -78,13 +78,12 @@ stream& operator<<(stream& s, const message_book& t)
     return s;
 }
 
-namespace std
+inline bool operator<(price_t l, price_t r)
 {
-    template<> struct less<price_t>
-    {
-       bool operator()(const price_t& l, const price_t& r) const {
-           return l.value < r.value;
-       }
-    };
+    return l.value < r.value;
 }
 
+inline bool operator!=(price_t l, price_t r)
+{
+    return l.value != r.value;
+}

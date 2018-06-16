@@ -10,11 +10,11 @@
 #include "server.hpp"
 #include "securities.hpp"
 
-#include "evie/log.hpp"
+#include "evie/mlog.hpp"
+#include "evie/profiler.hpp"
 
 #include <iostream>
-
-#include <signal.h>
+#include <csignal>
 
 volatile bool can_run = true;
 
@@ -31,18 +31,18 @@ void on_signal(int sign)
 
 int main(int argc, char** argv)
 {
-    signal(SIGTERM, &term_signal);
-    signal(SIGINT, &term_signal);
-    signal(SIGHUP, &on_signal);
-    signal(SIGPIPE, SIG_IGN);
+    std::signal(SIGTERM, &term_signal);
+    std::signal(SIGINT, &term_signal);
+    std::signal(SIGHUP, &on_signal);
     if(argc > 2) {
         std::cout << "Usage: ./makoa_server [config file]" << std::endl;
         return 1;
     }
-    log_init li(argc == 1 ? "makoa_server.log" : get_log_name(argv[1]), mlog::cout | mlog::info);
+    log_raii li(argc == 1 ? "makoa_server.log" : get_log_name(argv[1]), mlog::store_tid | mlog::always_cout | mlog::lock_file);
+    profilerinfo pff_info;
     std::string name;
     try {
-        mlog(mlog::cout) << "makoa started";
+        mlog(mlog::always_cout) << "makoa started";
         print_init(argc, argv);
         config cfg(argc == 1 ? "makoa_server.conf" : argv[1]);
         cfg.print();
@@ -52,10 +52,10 @@ int main(int argc, char** argv)
         server sv;
         sv.accept_loop(can_run);
     } catch(std::exception& e) {
-        mlog(mlog::error | mlog::cout) << "makoa(" << name << ") ended with " << e;
+        mlog(mlog::error | mlog::always_cout) << "makoa(" << name << ") ended with " << e;
         return 1;
     }
-    mlog(mlog::cout) << "makoa (" << name << ") successfully ended";
+    mlog(mlog::always_cout) << "makoa (" << name << ") successfully ended";
     return 0;
 }
 

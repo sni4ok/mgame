@@ -6,7 +6,7 @@
 #pragma once
 
 #include "evie/config.hpp"
-#include "evie/log.hpp"
+#include "evie/mlog.hpp"
 
 struct config : stack_singleton<config>
 {

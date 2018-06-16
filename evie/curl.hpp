@@ -1,3 +1,7 @@
+/*
+    author: Ilya Andronov <sni4ok@yandex.ru>
+*/
+
 #pragma once
 
 #include "evie/utils.hpp"

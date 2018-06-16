@@ -1,7 +1,11 @@
+/*
+    author: Ilya Andronov <sni4ok@yandex.ru>
+*/
+
 #pragma once
 
 #include "utils.hpp"
-#include "log.hpp"
+#include "mlog.hpp"
 
 #include <string>
 #include <vector>
@@ -27,7 +31,9 @@ iterator found_tag(iterator it_b, iterator it_e, const std::string& tag_)
 
         if(it != it_b) {
             iterator it_tmp = it - 1;
-            for(; it_tmp != it_b && !is_endl(*it_tmp); --it_tmp) {
+            if(!is_endl(*it_tmp) && *it_tmp != ' ' && *it_tmp != '\t')
+                found = false;
+            else for(; it_tmp != it_b && !is_endl(*it_tmp); --it_tmp) {
                 if(*it_tmp != ' ' && *it_tmp != '\t') {
                     found = false;
                     break;
@@ -99,7 +105,7 @@ static void print_init(int argc, char** argv)
     for(int i = 0; i != argc; ++i) {
         if(i)
             l << " ";
-        l << argv[i];
+        l << str_holder(argv[i]);
     }
 }
 

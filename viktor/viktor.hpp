@@ -10,5 +10,5 @@
 
 void* viktor_init(std::string params);
 void viktor_destroy(void* v);
-void viktor_proceed(const message& m);
+void viktor_proceed(void* v, const message& m);
 

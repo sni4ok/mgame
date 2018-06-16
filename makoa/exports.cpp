@@ -26,7 +26,7 @@ struct exports::impl : dl_holder
 {
     void* p;
     hole_exporter m;
-    impl(const std::string& module, void (*&proceed)(const message& m), const std::string& params) : p()
+    impl(const std::string& module, const std::string& params) : p()
     {
         std::string lib = "./lib" + module + ".so";
         handle = dlopen(lib.c_str(), RTLD_LAZY);
@@ -38,22 +38,30 @@ struct exports::impl : dl_holder
             throw_system_failure(es() % "not found create_hole() in '" % lib % "'");
         hole(&m, log_get());
         p = m.init(params);
-        proceed = m.proceed;
     }
+    void proceed(const message& me) {
+        m.proceed(p, me);
+    }
+
     ~impl()
     {
         m.destroy(p);
     }
 };
 
+void exports::proceed(const message& m)
+{
+    return pimpl->proceed(m);
+}
+
 exports::exports(const std::string& module)
 {
-    pimpl = std::make_unique<impl>(module, proceed, std::string());
+    pimpl = std::make_unique<impl>(module, std::string());
 }
 
 exports::exports(const std::string& module, const std::string& params)
 {
-    pimpl = std::make_unique<impl>(module, proceed, params);
+    pimpl = std::make_unique<impl>(module, params);
 }
 
 exports::~exports()

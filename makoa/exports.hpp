@@ -14,7 +14,7 @@
 struct exports
 {
     struct impl;
-    void (*proceed)(const message& m);
+    void proceed(const message& m);
     exports(const std::string& module);
     exports(const std::string& module, const std::string& params);
     ~exports();
@@ -27,6 +27,6 @@ struct hole_exporter
 {
     void* (*init)(std::string params);
     void (*destroy)(void*);
-    void (*proceed)(const message& m);
+    void (*proceed)(void*, const message& m);
 };
 

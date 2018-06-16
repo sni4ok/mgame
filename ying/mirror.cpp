@@ -3,10 +3,15 @@
 */
 
 #include "mirror.hpp"
-
 #include "ncurses.hpp"
 
+#include "evie/utils.hpp"
+
 #include <deque>
+#include <mutex>
+#include <thread>
+
+#include <unistd.h>
 
 ncurses_err e;
 
@@ -46,7 +51,7 @@ int64_t operator-(ttime_t l, ttime_t r)
 struct print_dt
 {
     int64_t value;
-    print_dt(int64_t value) :  value(value)
+    explicit print_dt(int64_t value) :  value(value)
     {
     }
 };
@@ -66,7 +71,6 @@ struct mirror::impl
 {
     const uint32_t security_id, refresh_rate;
     
-    ttime_t print_time;
     order_books ob;
     std::deque<message_trade> trades;
     message_instr mi;
@@ -74,12 +78,12 @@ struct mirror::impl
     uint32_t orders_sz;
 
     window w;
-    bool m;
   
     std::stringstream s;
     uint32_t trades_from;
 
     int64_t dE, dP;
+
     void print_trades()
     {
         while(w.cols <= trades.size())
@@ -112,12 +116,19 @@ struct mirror::impl
         }
     }
     
-    impl(uint32_t security_id, uint32_t refresh_rate_ms, bool m)
-        : security_id(security_id), refresh_rate(refresh_rate_ms * 1000),
-        print_time(), m(m), dE(), dP()
+    volatile bool can_run;
+    std::mutex mutex;
+    std::thread refresh_thrd;
+    impl(uint32_t security_id, uint32_t refresh_rate_ms) :
+        security_id(security_id), refresh_rate(refresh_rate_ms * 1000),
+        orders_sz(), dE(), dP(), can_run(true), refresh_thrd(&impl::refresh_thread, this)
     {
-        orders_sz = 0;
-        refresh();
+    }
+
+    ~impl()
+    {
+        can_run = false;
+        refresh_thrd.join();
     }
 
     void print_order_book()
@@ -148,29 +159,36 @@ struct mirror::impl
         e = mvwaddstr(w, w.rows - 1, w.cols - 1 - s.size(), s.c_str());
     }
 
-    void print_mirror();
-
     void refresh()
     {
-        ttime_t cur_time = get_cur_ttime();
-        if(print_time.value + refresh_rate <=  cur_time.value)
-        {
-            print_time = cur_time;
-
-            w.clear();
-            print_order_book();
-            print_trades();
-            print_head();
-            if(m)
-                print_mirror();
-            move(w.rows - 1, 0);
-            ::refresh();
+        std::unique_lock<std::mutex> lock(mutex);
+        w.clear();
+        print_order_book();
+        print_trades();
+        print_head();
+        lock.unlock();
+        move(w.rows - 1, 0);
+        ::refresh();
+    }
+    void refresh_thread()
+    {
+        try {
+            while(can_run) {
+                refresh();
+                usleep(refresh_rate);
+            }
+        }
+        catch(std::exception& e) {
+            mlog() << "mirror_refresh_thread " << e;
         }
     }
 
     void proceed(const message& m)
     {
+        if(m.id == msg_ping)
+            return;
         if(is_security_equal(m, security_id)) {
+            std::unique_lock<std::mutex> lock(mutex);
             if(m.id == msg_instr)
                 set_instrument(m.mi);
             if(m.id == msg_trade) {
@@ -184,28 +202,25 @@ struct mirror::impl
                 if(m.id == msg_book)
                     dP = get_cur_ttime() - m.mb.time;
             }
-            if(!refresh_rate)
-                refresh();
         }
-        if(refresh_rate)
-            refresh();
     }
 };
 
 mirror::mirror(uint32_t security_id, uint32_t refresh_rate)
 {
-    pimpl = std::make_unique<impl>(security_id, refresh_rate, false);
+    pimpl = std::make_unique<impl>(security_id, refresh_rate);
 }
 
 mirror::mirror(const std::string& params)
 {
-    bool m;
     auto p = split(params, ' ');
-    if((m = (p.size() != 2)) && (p.size() != 3 || p[2] != "\x6Di\x52r\x30☯"))
+    if(p.size() != 2)
         throw std::runtime_error(es() % "mirror::mirror() bad params: " % params);
     uint32_t security_id = atoi(p[0].c_str());
     uint32_t refresh_rate = atoi(p[1].c_str());
-    pimpl = std::make_unique<impl>(security_id, refresh_rate, m);
+    if(!refresh_rate)
+        throw std::runtime_error(es() % "mirror::mirror() bad params: " % params % ", refresh_rate should be at least 1");
+    pimpl = std::make_unique<impl>(security_id, refresh_rate);
 }
 
 mirror::~mirror()
@@ -220,15 +235,5 @@ void mirror::proceed(const message& m)
 void mirror::refresh()
 {
     pimpl->refresh();
-}
-
-void mirror::impl::print_mirror()
-{
-    const char l1[] = "\
-       _..oo888888b.._\n     .88888888o.    \"Yb.\n   .d888Y8878888b      \"b.\n  o88888    88888)       \"b\n d888888b..d8888P         'b\n\
- 88881888888888\"           8\n(888888888888P             8)\n 8888888888P               8\n Y88888888P     ee        .P\n  Y898888(     8888      oP\n\
-   \"Y88188b     \"\"     oP\"\n     \"Y888mo._     _.oP\"\n       `\"\"Y888boodP\"\"'";
-
-    print_pips(l1, sizeof(l1), 29);
 }
 

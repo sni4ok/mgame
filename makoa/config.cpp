@@ -5,6 +5,8 @@
 
 #include "config.hpp"
 
+#include "evie/mfile.hpp"
+
 config::config(const char* fname)
 {
     std::string cs = read_file<std::string>(fname);

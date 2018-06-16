@@ -9,7 +9,7 @@
 #include "types.hpp"
 
 #include "evie/fast_alloc.hpp"
-#include "evie/log.hpp"
+#include "evie/mlog.hpp"
 #include "evie/time.hpp"
 
 #include <vector>
@@ -179,19 +179,19 @@ struct lib_exporter
 {
     std::string module;
     exports exp;
-    void (*proceed)(const message& m);
-
+    void proceed(const message& m)
+    {
+        exp.proceed(m);
+    }
     const char* name() const
     {
         return module.c_str();
     }
     lib_exporter(const std::string& module) : module(module), exp(module)
     {
-        proceed = exp.proceed;
     }
     lib_exporter(const std::string& module, const std::string& params) : module(module), exp(module, params)
     {
-        proceed = exp.proceed;
     }
 };
 
@@ -221,12 +221,17 @@ private:
     {
         try{
             llist::type *prev = nullptr, *ptmp;
+            time_t ptime = 0;
+            message mp;
+            static_cast<msg_head&>(mp) = msg_head{message_ping::msg_id, message_ping::size};
+            mp.flush = false;
             while(can_run)
             {
                 //lockfree when queue not empty
                 ptmp = ll.next(prev);
                 if(ptmp){
                     p->proceed(*ptmp);
+                    ptime = time(NULL);
                     if(prev){
                         //we release prev here
                         uint32_t consumers_left = --(prev->cnt);
@@ -238,21 +243,28 @@ private:
                     prev = ptmp;
                 }
                 else{
-                    //here queue is empty, so wait on mutex for new messages
-                    std::unique_lock<std::mutex> lock(mutex);
-                    cond.wait_for(lock, std::chrono::microseconds(50 * 1000));
+                    time_t ct = time(NULL);
+                    if(ct != ptime) {
+                        p->proceed(mp);
+                        ptime = ct;
+                    }
+                    else {
+                        //here queue is empty, so wait on mutex for new messages
+                        std::unique_lock<std::mutex> lock(mutex);
+                        cond.wait_for(lock, std::chrono::microseconds(50 * 1000));
+                    }
                 }
             }
         }
         catch(std::exception& e){
-            mlog(mlog::error) << p->name() << " " << e;
+            mlog(mlog::error) << str_holder(p->name()) << " " << e;
             //TODO: close connection for market data provider for current message
             //this should be done in server::impl::work_thread
         }
     }
     static void log_and_throw_error(const uint8_t* data, uint32_t size, const char* reason)
     {
-        mlog() << "bad message (" << reason << "!): " << print_binary(data, std::min<uint32_t>(32, size));
+        mlog() << "bad message (" << str_holder(reason) << "!): " << print_binary(data, std::min<uint32_t>(32, size));
         throw std::runtime_error("bad message");
     }
 public:
@@ -374,6 +386,7 @@ engine::~engine()
 
 void actives::on_disconnect()
 {
+    mlog() << "actives::on_disconnect";
     auto it = data.begin(), ie = data.end();
     for(; it != ie; ++it) {
         engine::impl::instance().push_clean(it->security_id, it->time, it + 1 == ie);
