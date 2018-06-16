@@ -7,6 +7,7 @@ makoa with ying exporter should running in personal console
 test zero:
 generate configs:
     lua make_zero.lua 25
+where 25 is number of instances
 
      M    MY
       \  /
@@ -25,7 +26,6 @@ generate configs:
 
 P - M - M - M - MY
 
-how to run: start 2 consoles:
 in first console:
 ./run_oneY.sh
 and in second:
