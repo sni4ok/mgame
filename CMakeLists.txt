@@ -11,7 +11,7 @@ ENDIF("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror=uninitialized -Wno-unused-function -march=native -std=c++14")
 
-SUBDIRS(evie makoa ying tyra viktor)
+SUBDIRS(evie makoa ying tyra viktor alco)
 
 IF(NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release CACHE STRING
