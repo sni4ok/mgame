@@ -89,7 +89,7 @@ public:
     void timed_uwait(uint32_t usec) {
         my_mutex::scoped_lock lock(mutex);
         if(!notify_on)
-            condition.timed_wait(lock, usec);
+            condition.timed_uwait(lock, usec);
         notify_on = false;
     }
 };
