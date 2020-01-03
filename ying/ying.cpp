@@ -21,7 +21,7 @@ struct ying
     }
 };
 
-void* ying_init(std::string params)
+void* ying_init(const char* params)
 {
     return new ying(params);
 }

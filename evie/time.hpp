@@ -13,7 +13,8 @@
 #ifndef TTIME_T_DEFINED
 struct ttime_t
 {
-    //value equals (unix_time * 10^6 + microseconds)
+    //value equals (unix_time * 10^9 + nanoseconds)
+    static const uint32_t frac = 1000000000;
     uint64_t value;
 };
 #define TTIME_T_DEFINED
@@ -24,7 +25,7 @@ inline ttime_t get_cur_ttime()
     timespec t;
 	clock_gettime(CLOCK_REALTIME, &t);
 
-    return ttime_t{uint64_t(t.tv_sec) * 1000000 + t.tv_nsec / 1000};
+    return ttime_t{uint64_t(t.tv_sec) * ttime_t::frac + t.tv_nsec};
 }
 
 inline bool operator>(ttime_t l, ttime_t r)
@@ -40,10 +41,7 @@ inline bool operator<(ttime_t l, ttime_t r)
 template<typename stream>
 stream& operator<<(stream& s, const ttime_t& t)
 {
-    char buf[20];
-    time_t tt = t.value / 1000000;
-    strftime(buf, 20, "%Y-%m-%d %H:%M:%S", localtime(&tt));
-    s << buf << "." << mlog_fixed<6>(t.value % 1000000);
+    s << t.value;
     return s;
 }
 

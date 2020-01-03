@@ -34,6 +34,7 @@ int main(int argc, char** argv)
     std::signal(SIGTERM, &term_signal);
     std::signal(SIGINT, &term_signal);
     std::signal(SIGHUP, &on_signal);
+    std::signal(SIGPIPE, &on_signal);
     if(argc > 2) {
         std::cout << "Usage: ./makoa_server [config file]" << std::endl;
         return 1;

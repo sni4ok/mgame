@@ -83,7 +83,7 @@ static std::vector<std::string> split(const std::string& str, char sep = ',')
             it = i;
         }
     }
-    return std::move(ret);
+    return ret;
 }
 
 class crc32_table : noncopyable

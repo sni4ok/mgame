@@ -68,7 +68,7 @@ mtime_time_duration get_mtime_time_duration(const mtime& time)
 namespace
 {
     static const uint32_t buf_size = 1000;
-    static const uint32_t pre_alloc = 1024;
+    static const uint32_t pre_alloc = 4 * 1024;
     class my_pool
     {
         lockfree_queue<void*, pre_alloc> queue;
@@ -80,17 +80,15 @@ namespace
         }
         void* malloc() {
             void* p;
-            if(!queue.pop(p))
-                p = ::malloc(buf_size + 1);
+            queue.pop_strong(p);
             return p;
         }
         void free(void* p) {
-            while(!queue.push(p)) {
-            }
+            queue.push(p);
         }
         ~my_pool() {
             void* p;
-            while(queue.pop(p))
+            while(queue.pop_weak(p))
                 ::free(p);
         }
     };
@@ -182,8 +180,7 @@ class simple_log
             for(;;){
                 uint32_t all_sz = all_size - writed_sz;
                 for(uint32_t cur_i = 0; cur_i != all_sz; ++cur_i){
-                    if(!strs.pop(data))
-                        throw std::runtime_error("strs::pop item not selected");
+                    strs.pop_strong(data);
                     write_impl(data.buf, data.size, data.extra_param, all_sz, cur_i);
                     ++writed_sz;
                     pool.free(data.buf);

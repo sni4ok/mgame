@@ -11,17 +11,6 @@
 
 namespace my_cvt
 {
-    template<uint32_t v>
-    struct pow10
-    {
-        static const uint64_t result = pow10<v - 1>::result * 10;
-    };
-
-    template<> struct pow10<1>
-    {
-        static const uint64_t result = 10;
-    };
-
     template<uint32_t digits_s>
     struct itoa_prealloc
     {

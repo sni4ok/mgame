@@ -6,9 +6,10 @@
 
 #include "makoa/messages.hpp"
 
-#include <string>
-
-void* viktor_init(std::string params);
-void viktor_destroy(void* v);
-void viktor_proceed(void* v, const message& m);
+extern "C"
+{
+    void* viktor_init(const char* params);
+    void viktor_destroy(void* v);
+    void viktor_proceed(void* v, const message& m);
+}
 

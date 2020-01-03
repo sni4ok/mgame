@@ -22,6 +22,14 @@ public:
         static_assert(std::is_trivially_copy_assignable<type>::value, "mvector::mvector()");
         reserve(64);
     }
+    mvector& operator=(const mvector& r)
+    {
+        if(size_)
+            throw std::logic_error("mvector& operator=(), size_ not 0");
+        resize(r.size());
+        memmove(&buf[0], &r.buf[0], (r.size()) * sizeof(type));
+        return *this;
+    }
     void resize(uint32_t new_size) {
         if(new_size == size_)
             return;

@@ -41,7 +41,8 @@ static const uint32_t
 #ifndef TTIME_T_DEFINED
 struct ttime_t
 {
-    //value equals (unix_time * 10^6 + microseconds)
+    //value equals (unix_time * 10^9 + nanoseconds)
+    static const uint32_t frac = 1000000000;
     uint64_t value;
 };
 #define TTIME_T_DEFINED
@@ -68,12 +69,14 @@ static_assert(sizeof(message_hello) == 32, "protocol agreement");
 struct price_t
 {
     static const int32_t exponent = -5;
+    static const uint32_t frac = 100000;
     int64_t value;
 };
 
 struct count_t
 {
     static const int32_t exponent = -8;
+    static const uint32_t frac = 100000000;
     int64_t value;
 };
 
@@ -93,16 +96,16 @@ static_assert(sizeof(message_trade) == 40, "protocol agreement");
 //message_instr clean OrderBook for instrument
 struct message_instr
 {
-    char exchange_id[16];
-    char feed_id[16];
-    char security[28];
+    char exchange_id[8];
+    char feed_id[4];
+    char security[16];
     
     uint32_t security_id; // = crc32(exchange_id, feed_id, security) now
     ttime_t time;  //parser time
 
-    static const uint32_t msg_id = msg_instr, size = 72;
+    static const uint32_t msg_id = msg_instr, size = 40;
 };
-static_assert(sizeof(message_instr) == 72, "protocol agreement");
+static_assert(sizeof(message_instr) == 40, "protocol agreement");
 
 struct message_clean
 {
@@ -119,8 +122,33 @@ struct message_book
     uint32_t reserved;
     price_t price; 
     count_t count; //this new counts for level price
+    ttime_t etime; //exchange time
     ttime_t time;  //parser time
-    static const uint32_t msg_id = msg_book, size = 32;
+    static const uint32_t msg_id = msg_book, size = 40;
 };
-static_assert(sizeof(message_book) == 32, "protocol agreement");
+static_assert(sizeof(message_book) == 40, "protocol agreement");
+
+struct message_bytes : msg_head
+{
+    union
+    {
+        message_book mb;
+        message_trade mt;
+        message_clean mc;
+        message_instr mi;
+
+        //ping and hello not proceed to export from makoa_server
+        //message_ping using for flush
+        message_ping mp;
+        message_hello dratuti;
+    };
+};
+
+struct message : message_bytes
+{
+    ttime_t mtime; //makoa server time
+    bool flush; //when it set, all data from stream is consumed
+};
+
+static_assert(sizeof(message) == 64);
 

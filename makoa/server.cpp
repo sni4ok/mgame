@@ -117,7 +117,7 @@ struct server::impl : stack_singleton<server::impl>
                 cond.wait_for(lock, std::chrono::microseconds(50 * 1000));
             try {
                 lock.unlock();
-                int socket = my_accept_async(config::instance().port, false/*local*/, false/*sync*/, &client, &can_run_external, server_name().c_str());
+                int socket = my_accept_async(config::instance().port, true/*local*/, false/*sync*/, &client, &can_run_external, server_name().c_str());
                 volatile bool initialized = false;
                 std::thread thrd(&impl::work_thread, this, socket, client, std::ref(initialized));
                 lock.lock();

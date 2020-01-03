@@ -25,7 +25,7 @@ private:
 
 struct hole_exporter
 {
-    void* (*init)(std::string params);
+    void* (*init)(const char* params);
     void (*destroy)(void*);
     void (*proceed)(void*, const message& m);
 };

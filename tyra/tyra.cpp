@@ -7,7 +7,7 @@
 #include "evie/socket.hpp"
 #include "evie/time.hpp"
 
-tyra::tyra(const std::string& host) : bs(buf, buf + sizeof(buf)), cur(buf), need_flush(false) 
+tyra::tyra(const std::string& host) : send_from_call(), send_from_buffer(), bf(buf), bt(buf + sizeof(buf)), c(buf), e(buf) 
 {
     mlog() << "tyra() " << host;
     auto ie = host.end(), i = std::find(host.begin(), ie, ':');
@@ -22,7 +22,7 @@ tyra::tyra(const std::string& host) : bs(buf, buf + sizeof(buf)), cur(buf), need
 
 tyra::~tyra()
 {
-    mlog() << "~tyra()";
+    mlog() << "~tyra() sfc: " << send_from_call << ", sfb: " << send_from_buffer;
     close(socket);
 }
 
@@ -31,39 +31,37 @@ template<typename type> void tyra::send_impl(type& t)
     const char* ptr = (const char*) (&t);
     const uint32_t sz = sizeof(t);
 
-    if(need_flush) {
-        bs.write(ptr, sz);
-        uint32_t s_s = bs.size() - (cur - &buf[0]);
-        //mlog() << "p1 " << print_binary((uint8_t*)cur, std::min<int>(24, sz));
-        uint32_t s = try_socket_send(socket, cur, s_s);
-        if(s == s_s) {
-            cur = &buf[0];
-            bs.clear();
-            need_flush = false;
+    if(c != e) {
+        if(unlikely(bt - e > sz))
+            throw std::runtime_error("tyra::send_impl() buffer overloaded");
+        std::copy(ptr, ptr + sz, e);
+        e += sz;
+
+        uint32_t s = try_socket_send(socket, c, e - c);
+        send_from_buffer += s;
+        if(s == e - c) {
+            c = bf;
+            e = bf;
         } else {
-            cur += s;
+            c += s;
         }
     } else {
-        //mlog() << "p2 " << print_binary((uint8_t*)ptr, std::min<int>(24, sz));
         uint32_t s = try_socket_send(socket, ptr, sz);
+        send_from_call += s;
         if(s != sz) {
-            assert(!bs.size() && cur == &buf[0]);
-            bs.write(ptr + s, sz - s);
-            need_flush = true;
+            std::copy(ptr + s, ptr + sz, e);
+            e += (sz - s);
         }
     }
 }
 
 void tyra::flush()
 {
-    if(need_flush) {
-        const char* ptr = cur;
-        uint32_t s_s = bs.size() - (cur - &buf[0]);
-        cur = &buf[0];
-        bs.clear();
-        need_flush = false;
-        //mlog() << "p3 " << print_binary((uint8_t*)ptr, std::min<int>(24, s_s));
-        socket_send_async(socket, ptr, s_s);
+    if(c != e) {
+        socket_send_async(socket, c, e - c);
+        send_from_buffer += (e - c);
+        c = bf;
+        e = bf;
     }
 }
 
@@ -98,10 +96,50 @@ void tyra::send(const tyra_msg<message_book>& b)
     send_impl(b);
 }
 
+template<typename message>
+void tyra::send(const tyra_msg<message>* mb, uint32_t count)
+{
+    const char* ptr = (const char*)(mb);
+    const uint32_t sz = count * sizeof(tyra_msg<message>);
+    if(c != e) {
+        if(unlikely(bt - e > sz))
+            throw std::runtime_error("tyra::send_impl() buffer overloaded");
+        std::copy(ptr, ptr + sz, e);
+        e += sz;
+        flush();
+    } else {
+        uint32_t s = try_socket_send(socket, ptr, sz);
+        send_from_call += s;
+        if(s != sz) {
+            std::copy(ptr + s, ptr + sz, e);
+            e += (sz - s);
+        }
+    }
+}
+
+template void tyra::send<message_book>(const tyra_msg<message_book>* mb, uint32_t count);
+template void tyra::send<message_trade>(const tyra_msg<message_trade>* mb, uint32_t count);
+
 void tyra::send(tyra_msg<message_ping>& p)
 {
-    p.time = get_cur_ttime();
-    send_impl(p);
-    flush();
+    if(c != e) {
+        flush();
+    }
+    else {
+        const char* ptr = (const char*)(&p);
+        const uint32_t sz = sizeof(p);
+        p.time = get_cur_ttime();
+        uint32_t s = try_socket_send(socket, ptr, sz);
+        send_from_call += s;
+        if(s && s != sz) {
+            std::copy(ptr + s, ptr + sz, e);
+            e += (sz - s);
+        }
+    }
+}
+
+void tyra::ping()
+{
+    send(mp);
 }
 

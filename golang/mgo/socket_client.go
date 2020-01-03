@@ -56,7 +56,7 @@ func (s SocketClient) InitInstrument(sec Instrument) (uint32, error) {
 func (s SocketClient) SendBook(book Book) error {
     err := s.send(MsgBook, uint32(unsafe.Sizeof(book)), book)
     if s.log_makoa {
-        Log(">book|", book.SecId, "|", Price(book.Price), "|", Count(book.Count), "|", Time(book.Time), "|")
+        Log(">book|", book.SecId, "|", Price(book.Price), "|", Count(book.Count), "|", Time(book.Etime), Time(book.Time), "|")
     }
     return err
 }

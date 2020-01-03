@@ -5,13 +5,11 @@
 #include "parse.hpp"
 #include "config.hpp"
 
-#include "makoa/order_book.hpp"
-#include "viktor/viktor.hpp"
-#include "tyra/tyra.hpp"
+#include "../alco.hpp"
+
 #include "evie/curl.hpp"
 
-#include "memory"
-
+#include <memory>
 #include <unistd.h>
 
 struct binary_dumper : stack_singleton<binary_dumper>
@@ -66,7 +64,7 @@ void proceed_error(const char* ptr, uint32_t size)
 
 price_t get_price(const char* f, const char* t)
 {
-    return {int64_t(my_cvt::atoi<uint64_t>(f, t - f)) * price_frac};
+    return {int64_t(my_cvt::atoi<uint64_t>(f, t - f)) * price_t::frac};
 }
 
 count_t get_count(const char* f, const char* t)
@@ -79,13 +77,13 @@ count_t get_count(const char* f, const char* t)
     const char* p = std::find(f, t, '.');
     int64_t v = my_cvt::atoi<uint32_t>(f, p - f);
     if(p == t)
-        return {minus ? (-v * count_frac) : (v * count_frac)};
+        return {minus ? (-v * count_t::frac) : (v * count_t::frac)};
     ++p;
     uint32_t sz = t - p;
     int64_t c = my_cvt::atoi<uint32_t>(p, sz);
     for(uint32_t i = sz; i < 8; ++i)
         c *= 10;
-    return {minus ? (-v * count_frac - c) : (v * count_frac + c)};
+    return {minus ? (-v * count_t::frac - c) : (v * count_t::frac + c)};
 }
 
 int32_t get_amount(const char* f, const char* t)
@@ -95,15 +93,12 @@ int32_t get_amount(const char* f, const char* t)
 
 struct parser : stack_singleton<parser>
 {
-    void* vik;
-
-    struct security
+    tyra t;
+    parser() : t(config::instance().push)
     {
-        message mb;
-        message mt;
-        message mc;
-        message mi;
-        
+    }
+    struct security : ::security
+    {
         char tail_book[128], tail_trades[128];
         size_t tail_book_sz, tail_trades_sz;
 
@@ -114,16 +109,7 @@ struct parser : stack_singleton<parser>
             ct(curl_easy_init(), &curl_easy_cleanup)
         {
         }
-        void proceed_book(void* vik, price_t p, count_t c, bool flush)
-        {
-            tyra_msg<message_book>& tb = (tyra_msg<message_book>&)mb;
-            tb.price = p;
-            tb.count = c;
-            tb.time = get_cur_ttime();
-            mb.flush = flush;
-            viktor_proceed(vik, mb);
-        }
-        void push_flush(void* vik)
+        void push_flush()
         {
             if(cur_ob.empty())
                 return;
@@ -136,7 +122,10 @@ struct parser : stack_singleton<parser>
             //mlog() << "sz:" << sz;
             if(sz) {
                 for(auto& v: old_ob) {
-                    proceed_book(vik, v.first, v.second, !(--sz));
+                    proceed_book(parser::instance().t, v.first, v.second, ttime_t());
+                    --sz;
+                    if(!sz)
+                        parser::instance().t.flush();
                 }
             }
             old_ob.clear();
@@ -145,60 +134,14 @@ struct parser : stack_singleton<parser>
     };
     std::vector<security> secs;
 
-    parser()
-    {
-        vik = viktor_init(config::instance().push);
-    }
-
     uint32_t init(const std::string& ticker)
     {
         security sec;
-        tyra_msg<message_book>& mb = (tyra_msg<message_book>&)sec.mb;
-        mb = tyra_msg<message_book>();
-
-        tyra_msg<message_trade>& mt = (tyra_msg<message_trade>&)sec.mt;
-        mt = tyra_msg<message_trade>();
-
-        tyra_msg<message_clean>& mc = (tyra_msg<message_clean>&)sec.mc;
-        mc = tyra_msg<message_clean>();
-
-        tyra_msg<message_instr>& mi = (tyra_msg<message_instr>&)sec.mi;
-        mi = tyra_msg<message_instr>();
-
-        message_instr& m = mi;
-        
-        memset(&m.exchange_id, 0, sizeof(m.exchange_id));
-        memset(&m.feed_id, 0, sizeof(m.feed_id));
-        memset(&m.security, 0, sizeof(m.security));
-
-        strcpy(m.exchange_id, "bitfinex");
-        strcpy(m.feed_id, config::instance().feed.c_str());
-        strcpy(m.security, ticker.c_str());
-
-        crc32 crc(0);
-        crc.process_bytes((const char*)(&m), sizeof(message_instr) - 12);
-        m.security_id = crc.checksum();
-
-        mb.security_id = m.security_id;
-        mt.security_id = m.security_id;
-        mc.security_id = m.security_id;
-
-        mi.time = get_cur_ttime();
-        viktor_proceed(vik, sec.mi);
+        sec.init("bitfinex", config::instance().feed, ticker);
+        t.send(sec.mi);
 
         secs.push_back(std::move(sec));
         return secs.size() - 1;
-    }
-
-    void proceed_book(uint32_t sec_id, price_t p, count_t c, bool flush)
-    {
-        security& sec = secs[sec_id];
-        sec.proceed_book(vik, p, c, flush);
-    }
-
-    ~parser()
-    {
-        viktor_destroy(vik);
     }
 };
 
@@ -215,7 +158,7 @@ size_t proceed_book(uint32_t sec_id, char* ptr, uint32_t size)
     auto ie = ptr + size;
     if(ptr[1] == '['){
         if(*ptr == '[')
-            sec.push_flush(parser::instance().vik);
+            sec.push_flush();
         ++ptr;
     }
 
@@ -306,7 +249,7 @@ size_t callback_book(void *contents, size_t sz, size_t nmemb, void* p)
         while(c != size && *(ptr + c) == ']')
             ++c, ++nc;
         if(nc >= 2)
-            sec.push_flush(parser::instance().vik);
+            sec.push_flush();
 
         std::copy(ptr + c, ptr + size, tail);
         tail_sz = size - c;
@@ -350,9 +293,10 @@ void init_book(uint32_t sec_id, const std::string& symbol, volatile bool& can_ru
     e = curl_easy_setopt(c, CURLOPT_WRITEFUNCTION, callback_book);
     e = curl_easy_setopt(c, CURLOPT_WRITEDATA, (void*)sec_id);
     while(can_run) {
+        mlog() << "init_book";
         e = curl_easy_perform(c);
-        usleep(config::instance().sleep_time * 1000);
         mlog() << "sleep(" << config::instance().sleep_time << ")";
+        usleep(config::instance().sleep_time * 1000);
     }
 }
 
@@ -369,8 +313,8 @@ void init_trades(uint32_t sec_id, const std::string& symbol, volatile bool& can_
     e = curl_easy_setopt(c, CURLOPT_WRITEDATA, (void*)sec_id);
     while(can_run) {
         e = curl_easy_perform(c);
-        usleep(config::instance().sleep_time * 1000);
         mlog() << "sleep(" << config::instance().sleep_time << ")";
+        usleep(config::instance().sleep_time * 1000);
     }
 }
 

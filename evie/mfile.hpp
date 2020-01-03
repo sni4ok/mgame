@@ -41,6 +41,6 @@ string read_file(const char* fname, bool can_empty = false)
 {
     string buf;
     read_file(buf, fname, can_empty);
-    return std::move(buf);
+    return buf;
 }
 

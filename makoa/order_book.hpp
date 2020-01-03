@@ -12,27 +12,6 @@
 #include <map>
 #include <algorithm>
 
-struct message_bytes : msg_head
-{
-    union
-    {
-        message_book mb;
-        message_trade mt;
-        message_clean mc;
-        message_instr mi;
-
-        //ping and hello not proceed to export from makoa_server
-        message_ping mp;
-        message_hello dratuti;
-    };
-};
-
-struct message : message_bytes
-{
-    ttime_t mtime; //makoa server time
-    bool flush; //when it set, all data from stream is consumed
-};
-
 struct order_books
 {
     struct node
@@ -94,21 +73,19 @@ struct order_books
         for(auto& o: books)
         {
             uint32_t cnt = 0;
-            auto it = o.second.begin(), ie = o.second.end();
+            orders_t::iterator it = o.second.begin(), ie = o.second.end(), itt;
             for(; it != ie; ++it) {
                 if(it->second.count.value == 0) {
                     ++cnt;
                     if(cnt == 2)
                         break;
+                    itt = it;
                 }
             }
             if(cnt != 0) {
                 it = o.second.begin();
                 if(cnt == 1) {
-                    it = std::find_if(it, ie, [] (auto&& v) {
-                        return v.second.count.value == 0;
-                    });
-                    o.second.erase(it);
+                    o.second.erase(itt);
                 }
                 else {
                     //cnt == 2

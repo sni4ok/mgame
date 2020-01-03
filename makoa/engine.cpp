@@ -20,15 +20,6 @@
 #include <cstring>
 
 template<typename type>
-struct counter : type
-{
-    std::atomic<uint32_t> cnt;
-    counter()
-    {
-    }
-};
-
-template<typename type>
 struct linked_node : type
 {
     linked_node() : next()
@@ -38,26 +29,36 @@ struct linked_node : type
 };
 
 template<typename tt>
-struct linked_list : fast_alloc<linked_node<tt> >
+struct linked_list : fast_alloc<linked_node<tt>, 64 * 1024>
 {
     typedef linked_node<tt> type;
 
 private:
     type root;
     std::atomic<type*> tail;
+    
+    std::mutex& mutex;
+    std::condition_variable& cond;
 
 public:
-    linked_list() : tail(&root)
+    linked_list(std::mutex& mutex, std::condition_variable& cond) : tail(&root), mutex(mutex), cond(cond)
     {
     }
     void push(type* t) //push element in list, always success
     {
+        bool flush = t->flush;
         type* expected = tail;
-        while(!tail.compare_exchange_weak(expected, t))
-        {
+        while(!tail.compare_exchange_weak(expected, t)) {
             expected = tail;
         }
         expected->next = t;
+
+        if(flush) {
+            bool lock = mutex.try_lock();
+            cond.notify_all();
+            if(lock)
+                mutex.unlock();
+        }
     }
     type* next(type* prev) //can return nullptr, but next time caller should used latest not nullptr value
     {
@@ -92,7 +93,7 @@ public:
     {
         tmp = {security_id, ttime_t(), false};
         auto it = std::lower_bound(data.begin(), data.end(), tmp);
-        if(it != data.end() && it->security_id == security_id) {
+        if(unlikely(it != data.end() && it->security_id == security_id)) {
             if(!it->disconnected)
                 throw std::runtime_error(es() % "activites, security_id " % security_id % " already in active list");
             else {
@@ -112,7 +113,7 @@ public:
 
         tmp.security_id = security_id;
         auto it = std::lower_bound(data.begin(), data.end(), tmp);
-        if(it == data.end() || it->security_id != security_id)
+        if(unlikely(it == data.end() || it->security_id != security_id))
             throw std::runtime_error(es() % "activites, security_id " % security_id % " not found in active list");
 
         last_value = &(*it);
@@ -134,7 +135,7 @@ struct context
     actives::type& check(uint32_t security_id, ttime_t time)
     {
         auto& m = acs.get(security_id);
-        if(m.time > time)
+        if(unlikely(m.time > time))
             throw std::runtime_error(es() % "context::check() m.time: " % m.time % " > time: " % time);
         m.time = time;
         return m;
@@ -204,15 +205,24 @@ std::unique_ptr<lib_exporter> create_exporter_with_params(const std::string& m)
         return std::make_unique<lib_exporter>(std::string(ib, it), std::string(it + 1, ie));
 }
 
-struct engine::impl : stack_singleton<engine::impl>
+class engine::impl : public stack_singleton<engine::impl>
 {
-    typedef linked_list<counter<message> > llist;
-    llist ll;
-
-private:
     volatile bool can_run;
     std::mutex mutex;
     std::condition_variable cond;
+
+    template<typename type>
+    struct counter : type
+    {
+        std::atomic<uint32_t> cnt;
+        counter()
+        {
+        }
+    };
+
+    typedef linked_list<counter<message> > llist;
+    llist ll;
+
 
     std::vector<std::thread> threads; //consume workers, one thread for each exporter
     uint32_t consumers;
@@ -222,16 +232,20 @@ private:
         try{
             llist::type *prev = nullptr, *ptmp;
             time_t ptime = 0;
-            message mp;
+            message mp = message();
             static_cast<msg_head&>(mp) = msg_head{message_ping::msg_id, message_ping::size};
             mp.flush = false;
+            bool flush = true;
             while(can_run)
             {
                 //lockfree when queue not empty
                 ptmp = ll.next(prev);
+        repeat:
                 if(ptmp){
                     p->proceed(*ptmp);
-                    ptime = time(NULL);
+                    flush = ptmp->flush;
+                    if(flush)
+                        ptime = time(NULL);
                     if(prev){
                         //we release prev here
                         uint32_t consumers_left = --(prev->cnt);
@@ -242,16 +256,24 @@ private:
                     }
                     prev = ptmp;
                 }
-                else{
+                else if(flush){
                     time_t ct = time(NULL);
                     if(ct != ptime) {
+                        mp.mtime = get_cur_ttime();
                         p->proceed(mp);
                         ptime = ct;
                     }
                     else {
                         //here queue is empty, so wait on mutex for new messages
-                        std::unique_lock<std::mutex> lock(mutex);
-                        cond.wait_for(lock, std::chrono::microseconds(50 * 1000));
+                        bool lock = mutex.try_lock();
+                        if(lock) {
+                            std::unique_lock<std::mutex> lock(mutex, std::adopt_lock_t());
+                            ptmp = ll.next(prev);
+                            if(ptmp)
+                                goto repeat;
+                            else
+                                cond.wait_for(lock, std::chrono::microseconds(100 * 1000));
+                        }
                     }
                 }
             }
@@ -268,7 +290,7 @@ private:
         throw std::runtime_error("bad message");
     }
 public:
-    impl() : can_run(true)
+    impl() : can_run(true), ll(mutex, cond)
     {
     }
     void init()
@@ -281,12 +303,13 @@ public:
     }
     uint32_t proceed(const uint8_t* data, uint32_t size, context* ctx)
     {
+        //MPROFILE("engine::proceed()")
         //mlog() << "proceed " << size << " bytes";
         uint32_t consumed = 0;
 
         while(size)
         {
-            if(size < sizeof(msg_head))
+            if(unlikely(size < sizeof(msg_head)))
                 break;
             alloc_holder<llist> tm(ll);
             msg_head& mh = *tm;
@@ -295,7 +318,7 @@ public:
 #define MESSAGE_BEG(mes, member) \
             else if(mh.id == mes::msg_id) { \
                 static const uint32_t cur_msg_size = mes::size; \
-                if(mh.size != cur_msg_size ) \
+                if(unlikely(mh.size != cur_msg_size)) \
                     log_and_throw_error(data, size, es() % "cur_msg_size: " % cur_msg_size % ", mh.size: " % mh.size); \
                 if(size < msg_sz) \
                     break; \
@@ -311,7 +334,7 @@ public:
 #define MESSAGE_CONS_BEG(mes, member) \
             MESSAGE_BEG(mes, member) \
                 tm->mtime = get_cur_ttime(); \
-                if(!t->time.value) \
+                if(unlikely(!t->time.value)) \
                     throw std::runtime_error("field time not set"); \
                 tm->flush = !(size - msg_sz);
 
@@ -325,6 +348,7 @@ public:
 
             MESSAGE_CONS_BEG(message_book, mb)
                 ctx->check(t->security_id, t->time);
+                //mlog() << "|" << *t;
             MESSAGE_CONS_END()
 
             MESSAGE_CONS_BEG(message_trade, mt)
@@ -341,7 +365,7 @@ public:
             MESSAGE_CONS_END()
 
             MESSAGE_BEG(message_ping, mp)
-                mlog() << "<ping|" << t->time << "|";
+                //mlog() << "<ping|" << t->time << "|";
             MESSAGE_END()
 
             MESSAGE_BEG(message_hello, dratuti)

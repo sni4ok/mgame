@@ -45,7 +45,7 @@ public:
 
 static int socket_connect(const std::string& host, uint16_t port, uint32_t timeout = 3/*in seconds*/)
 {
-    bool local = (host == "127.0.0.1");
+    bool local = (host == "127.0.0.1") || (host == "localhost");
     int socket = ::socket(AF_INET, local ? AF_LOCAL : SOCK_STREAM /*| SOCK_NONBLOCK*/, IPPROTO_TCP);
     if(socket < 0)
         throw_system_failure("Open socket error");
@@ -116,7 +116,7 @@ static uint32_t try_socket_send(int socket, const char* ptr, uint32_t sz)
     uint32_t sended = 0;
     while(sz) {
         int ret = ::send(socket, ptr, sz, 0);
-        if(ret == -1) {
+        if(ret == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
             //MPROFILE("send_EAGAIN")
             return sended;
         }

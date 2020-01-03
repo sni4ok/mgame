@@ -14,8 +14,8 @@ class mirror
     std::unique_ptr<impl> pimpl;
 
 public:
-    mirror(uint32_t security_id, uint32_t refresh_rate_ms);
-    mirror(const std::string& params); //like "837037107 50"
+    mirror(const std::string& params); //like "837037107 100"
+                                       //  or  "BTCUSD 100"
 
     void proceed(const message& m); //proceed call refresh by self, but refresh can be call independently
     void refresh();

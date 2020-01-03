@@ -19,6 +19,8 @@ struct fmap
     };
 
     typedef pair value_type;
+    typedef value_type* iterator;
+    typedef const value_type* const_iterator;
 
     fmap(){
     }
@@ -42,6 +44,14 @@ struct fmap
         }
         return it->second;
     }
+    value_type* find(key k) {
+        v.first = k;
+        auto ie = data.end();
+        auto it = std::lower_bound(data.begin(), ie, v);
+        if(it != ie && it->first == k)
+            return it;
+        return ie;
+    }
     const value_type* begin() const {
         return data.begin();
     }
@@ -63,7 +73,7 @@ struct fmap
     void erase(value_type* it) {
         data.erase(it);
     }
-
+    
 private:
     value_type v;
     mvector<value_type> data;

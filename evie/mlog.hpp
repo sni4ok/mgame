@@ -12,8 +12,8 @@
 
 class simple_log;
 static const str_holder mlog_fixed_str[] = {
-   str_holder(""), str_holder("0"), str_holder("00"), str_holder("000"),
-   str_holder("0000"), str_holder("00000"), str_holder("000000"), str_holder("0000000")
+   str_holder(""), str_holder("0"), str_holder("00"), str_holder("000"), str_holder("0000"),
+   str_holder("00000"), str_holder("000000"), str_holder("0000000"), str_holder("00000000")
 };
 
 template<uint32_t sz>
@@ -21,7 +21,7 @@ struct mlog_fixed
 {
    mlog_fixed(uint32_t value) : value(value)
    {
-      static_assert(sz <= 8, "out of range");
+      static_assert(sz <= 9, "out of range");
    }
    const str_holder& str() const
    {
@@ -36,8 +36,6 @@ struct mlog_fixed
    }
    const uint32_t value;
 };
-
-#include "time.hpp"
 
 template<typename stream, uint32_t sz>
 stream& operator<<(stream& log, const mlog_fixed<sz>& v)
@@ -107,7 +105,7 @@ struct mlog
     {
         static_assert(sizeof(v[0]) == 1, "char array");
         uint32_t sz = sizeof(v);
-        if(v[sz - 1] == char())
+        while(sz && v[sz - 1] == char())
             --sz;
         write_string(&v[0], sz);
         return *this;
@@ -197,5 +195,4 @@ struct log_raii
         log_destroy(sl);
     }
 };
-
 

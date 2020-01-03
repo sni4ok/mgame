@@ -37,7 +37,7 @@ struct exports::impl : dl_holder
         if(!hole)
             throw_system_failure(es() % "not found create_hole() in '" % lib % "'");
         hole(&m, log_get());
-        p = m.init(params);
+        p = m.init(params.c_str());
     }
     void proceed(const message& me) {
         m.proceed(p, me);

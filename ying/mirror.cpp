@@ -15,19 +15,32 @@
 
 ncurses_err e;
 
-bool is_security_equal(const message& m, uint32_t security_id)
+struct security_filter
 {
-    if(m.id == msg_book)
-        return m.mb.security_id == security_id;
-    if(m.id == msg_trade)
-        return m.mt.security_id == security_id;
-    if(m.id == msg_clean)
-        return m.mc.security_id == security_id;
-    if(m.id == msg_instr)
-        return m.mi.security_id == security_id;
+    std::string security;
+    uint32_t security_id;
 
-    throw std::logic_error("is_security_equal() unsupported msg type");
-}
+    security_filter(const std::string& s) : security(s), security_id() {
+        uint32_t sid = atoi(s.c_str());
+        std::string sec = std::to_string(sid);
+        if(sec == s)
+            security_id = sid;
+    }
+    bool equal(const message& m) {
+        if(m.id == msg_book)
+            return m.mb.security_id == security_id;
+        if(m.id == msg_trade)
+            return m.mt.security_id == security_id;
+        if(m.id == msg_clean)
+            return m.mc.security_id == security_id;
+        if(m.id == msg_instr) {
+            if(!security_id && security == m.mi.security)
+                security_id = m.mi.security_id;
+            return m.mi.security_id == security_id;
+        }
+        throw std::logic_error("security_filter() unsupported msg type");
+    }
+};
 
 char get_direction(uint32_t direction)
 {
@@ -55,6 +68,7 @@ struct print_dt
     {
     }
 };
+
 template<typename stream>
 stream& operator<<(stream& s, print_dt v)
 {
@@ -63,13 +77,14 @@ stream& operator<<(stream& s, print_dt v)
         minus = true;
         v.value = -v.value;
     }
-    s << (minus ? "-" : "") << (v.value / 1000000) << "." << mlog_fixed<6>(v.value % 1000000);
+    s << (minus ? "-" : "") << (v.value / ttime_t::frac) << "." << mlog_fixed<9>(v.value % ttime_t::frac);
     return s;
 }
 
 struct mirror::impl
 {
-    const uint32_t security_id, refresh_rate;
+    security_filter sec;
+    uint32_t refresh_rate;
     
     order_books ob;
     std::deque<message_trade> trades;
@@ -100,7 +115,7 @@ struct mirror::impl
     void set_instrument(const message_instr& i)
     {
         mi = i;
-        head_msg = std::string(mi.exchange_id) + "/" + mi.feed_id + "/" + mi.security + " " + std::to_string(orders_sz);
+        head_msg = array_to_string(mi.exchange_id) + "/" + array_to_string(mi.feed_id) + "/" + array_to_string(mi.security) + " " + std::to_string(orders_sz);
     }
     
     void print_pips(const char* ib, uint32_t sz, uint32_t width)
@@ -119,8 +134,8 @@ struct mirror::impl
     volatile bool can_run;
     std::mutex mutex;
     std::thread refresh_thrd;
-    impl(uint32_t security_id, uint32_t refresh_rate_ms) :
-        security_id(security_id), refresh_rate(refresh_rate_ms * 1000),
+    impl(const std::string& sec, uint32_t refresh_rate_ms) :
+        sec(sec), refresh_rate(refresh_rate_ms * 1000),
         orders_sz(), dE(), dP(), can_run(true), refresh_thrd(&impl::refresh_thread, this)
     {
     }
@@ -133,9 +148,13 @@ struct mirror::impl
 
     void print_order_book()
     {
+        if(!sec.security_id)
+            return;
         ob.compact();
-        auto& v = ob.get_orders(security_id);
+        auto& v = ob.get_orders(sec.security_id);
         orders_sz = v.size();
+        if(orders_sz)
+            mlog() << "book size: " << orders_sz;
         //we reject levels that not fit to our window
         //TODO: rework for keyboard manipulation
         auto it = v.begin(), ie = v.end();
@@ -187,7 +206,7 @@ struct mirror::impl
     {
         if(m.id == msg_ping)
             return;
-        if(is_security_equal(m, security_id)) {
+        if(sec.equal(m)) {
             std::unique_lock<std::mutex> lock(mutex);
             if(m.id == msg_instr)
                 set_instrument(m.mi);
@@ -206,21 +225,15 @@ struct mirror::impl
     }
 };
 
-mirror::mirror(uint32_t security_id, uint32_t refresh_rate)
-{
-    pimpl = std::make_unique<impl>(security_id, refresh_rate);
-}
-
 mirror::mirror(const std::string& params)
 {
     auto p = split(params, ' ');
     if(p.size() != 2)
         throw std::runtime_error(es() % "mirror::mirror() bad params: " % params);
-    uint32_t security_id = atoi(p[0].c_str());
     uint32_t refresh_rate = atoi(p[1].c_str());
     if(!refresh_rate)
         throw std::runtime_error(es() % "mirror::mirror() bad params: " % params % ", refresh_rate should be at least 1");
-    pimpl = std::make_unique<impl>(security_id, refresh_rate);
+    pimpl = std::make_unique<impl>(p[0], refresh_rate);
 }
 
 mirror::~mirror()

@@ -4,10 +4,11 @@
 
 #include "config.hpp"
 #include "../main.hpp"
-#include "parse.hpp"
+
+void proceed_plaza(volatile bool& can_run);
 
 int main(int argc, char** argv)
 {
-    return parser_main(argc, argv, "bitfinex", proceed_bitfinex);
+    return parser_main(argc, argv, "plaza", proceed_plaza);
 }
 

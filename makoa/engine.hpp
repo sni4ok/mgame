@@ -12,7 +12,7 @@
 struct engine // wrapper for control lifetime of consumers
               // used modules: logger, config
 {
-    struct impl;
+    class impl;
     engine();
     ~engine();
 

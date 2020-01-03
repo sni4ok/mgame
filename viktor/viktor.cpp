@@ -2,11 +2,14 @@
     author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
+#include "viktor.hpp"
 #include "makoa/engine.hpp"
 #include "makoa/exports.hpp"
 #include "makoa/types.hpp"
 
 #include "tyra/tyra.hpp"
+
+namespace {
 
 struct viktor
 {
@@ -52,29 +55,35 @@ struct viktor
             auto& v = reinterpret_cast<const tyra_msg<message_instr>& >(m);
             ty->send(v);
         }
+        else if(m.id == msg_ping) {
+            tyra_msg<message_ping>& v = (tyra_msg<message_ping>&)m;
+            ty->send(v);
+        }
         if(m.flush) {
             ty->flush();
         }
     }
 };
 
-void* viktor_init(std::string params)
-{
-    return new viktor(params);
-}
-
-void viktor_destroy(void* v)
-{
-    delete (viktor*)(v);
-}
-
-void viktor_proceed(void* v, const message& m)
-{
-    ((viktor*)(v))->proceed(m);
 }
 
 extern "C"
 {
+    void* viktor_init(const char* params)
+    {
+        return new viktor(params);
+    }
+
+    void viktor_destroy(void* v)
+    {
+        delete (viktor*)(v);
+    }
+
+    void viktor_proceed(void* v, const message& m)
+    {
+        ((viktor*)(v))->proceed(m);
+    }
+
     void create_hole(hole_exporter* m, simple_log* sl)
     {
         log_set(sl);

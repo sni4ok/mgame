@@ -147,28 +147,37 @@ class lockfree_queue : noncopyable
         return idx % capacity;
     }
 public:
-    bool push(const type& t) {
-        return push(type(t));
+    void push(const type& t) {
+        push(type(t));
     }
-    bool push(type&& t) {
+    void push(type&& t) {
         node& n = elems[get_idx(push_cnt++)];
         uint32_t status = 0;
-        if(!n.status.compare_exchange_weak(status, 1))
+        if(!n.status.compare_exchange_strong(status, 1))
             throw std::runtime_error("lockfree_queue overloaded");
         n.elem = std::move(t);
         status = 1;
-        if(!n.status.compare_exchange_weak(status, 2))
+        if(!n.status.compare_exchange_strong(status, 2))
             throw std::runtime_error("lockfree_queue internal push error");
-        return true;
     }
-    bool pop(type& t) {
+    void pop_strong(type& t) {
+        node& n = elems[get_idx(pop_cnt++)];
+        uint32_t status = 2;
+        if(!n.status.compare_exchange_strong(status, 3))
+            throw std::runtime_error("lockfree_queue::pop_strong() lock error");
+        t = std::move(n.elem);
+        status = 3;
+        if(!n.status.compare_exchange_strong(status, 0))
+            throw std::runtime_error("lockfree_queue::pop_strong() internal error");
+    }
+    bool pop_weak(type& t) {
         node& n = elems[get_idx(pop_cnt)];
         uint32_t status = 2;
-        if(n.status.compare_exchange_weak(status, 3)) {
+        if(n.status.compare_exchange_strong(status, 3)) {
             ++pop_cnt;
             t = std::move(n.elem);
             status = 3;
-            if(!n.status.compare_exchange_weak(status, 0))
+            if(!n.status.compare_exchange_strong(status, 0))
                 throw std::runtime_error("lockfree_queue internal pop error");
             return true;
         }
@@ -212,8 +221,7 @@ struct fast_alloc
     type* alloc()
     {
         type* p;
-        if(!elems.pop(p))
-            throw std::bad_alloc();
+        elems.pop_strong(p);
         return p;
     }
     void free(type* m)
@@ -223,7 +231,7 @@ struct fast_alloc
     ~fast_alloc()
     {
         type* p;
-        while(elems.pop(p))
+        while(elems.pop_weak(p))
             delete p;
     }
 };

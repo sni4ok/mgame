@@ -1,7 +1,12 @@
 INCLUDE_DIRECTORIES(../)
 PROJECT(viktor)
 ADD_LIBRARY(viktor SHARED viktor.cpp)
+ADD_LIBRARY(mysql SHARED mysql.cpp)
+ADD_LIBRARY(file SHARED efile.cpp)
+ADD_LIBRARY(stat SHARED estat.cpp)
 
-#viktor and tyra like sid and nancy or bonnie and clyde 
 TARGET_LINK_LIBRARIES(viktor tyra evie)
+TARGET_LINK_LIBRARIES(file evie)
+TARGET_LINK_LIBRARIES(stat evie)
+TARGET_LINK_LIBRARIES(mysql evie mysqlclient)
 

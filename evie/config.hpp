@@ -82,7 +82,7 @@ std::vector<type> get_config_params(const buf& cfg, const std::string& tag)
             it = ii;
         }
     }
-    return std::move(ret);
+    return ret;
 }
 
 static std::string get_log_name(const std::string& fname)

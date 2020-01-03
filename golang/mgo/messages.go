@@ -31,9 +31,9 @@ type Trade struct {
 }
 
 type Instrument struct {
-    ExchangeId [16]byte
-    FeedId [16]byte
-    Security [28]byte
+    ExchangeId [8]byte
+    FeedId [4]byte
+    Security [16]byte
     SecId uint32
     Time uint64
 }
@@ -47,6 +47,6 @@ type BookClean struct {
 type Book struct {
     SecId, Reserved uint32
     Price, Count int64
-    Time uint64
+    Etime, Time uint64
 }
 
