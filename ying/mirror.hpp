@@ -15,7 +15,7 @@ class mirror
 
 public:
     mirror(const std::string& params); //like "837037107 100"
-                                       //  or  "BTCUSD 100"
+                                       //  or  "tBTCUSD 100"
 
     void proceed(const message& m); //proceed call refresh by self, but refresh can be call independently
     void refresh();

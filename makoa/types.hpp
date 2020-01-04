@@ -82,6 +82,11 @@ inline bool operator<(price_t l, price_t r)
     return l.value < r.value;
 }
 
+inline bool operator>(price_t l, price_t r)
+{
+    return l.value > r.value;
+}
+
 inline bool operator!=(price_t l, price_t r)
 {
     return l.value != r.value;
@@ -90,6 +95,11 @@ inline bool operator!=(price_t l, price_t r)
 inline bool operator<(count_t l, count_t r)
 {
     return l.value < r.value;
+}
+
+inline bool operator>(count_t l, count_t r)
+{
+    return l.value > r.value;
 }
 
 inline bool operator!=(count_t l, count_t r)

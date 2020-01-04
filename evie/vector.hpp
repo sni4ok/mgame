@@ -5,6 +5,7 @@
 #pragma once
 
 #include <type_traits>
+#include <stdexcept>
 
 template<typename type>
 class mvector

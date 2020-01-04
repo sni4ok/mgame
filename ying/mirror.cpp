@@ -77,7 +77,9 @@ stream& operator<<(stream& s, print_dt v)
         minus = true;
         v.value = -v.value;
     }
-    s << (minus ? "-" : "") << (v.value / ttime_t::frac) << "." << mlog_fixed<9>(v.value % ttime_t::frac);
+    if(minus)
+        s << "-";
+    s << (v.value / ttime_t::frac) << "." << mlog_fixed<9>(v.value % ttime_t::frac);
     return s;
 }
 
@@ -86,98 +88,106 @@ struct mirror::impl
     security_filter sec;
     uint32_t refresh_rate;
     
-    order_books ob;
+    order_book ob;
     std::deque<message_trade> trades;
     message_instr mi;
     std::string head_msg;
-    uint32_t orders_sz;
 
-    window w;
-  
-    std::stringstream s;
+    price_t top_order_p;
+    typedef order_book::const_iterator iterator;
     uint32_t trades_from;
 
+    window w;
+    char buf[512];
+    buf_stream bs;
+ 
     int64_t dE, dP;
-
-    void print_trades()
-    {
-        while(w.cols <= trades.size())
-            trades.pop_front();
-        uint32_t i = 0;
-        for(auto&& v : trades)
-        {
-            s.str("");
-            s << brief_time(v.etime) << " " << brief_time(v.time) << " " << v.price << " " << v.count << " " << get_direction(v.direction);
-            e = mvwaddstr(w, i++, trades_from, s.str().c_str());
-        }
-    }
-
-    void set_instrument(const message_instr& i)
-    {
-        mi = i;
-        head_msg = array_to_string(mi.exchange_id) + "/" + array_to_string(mi.feed_id) + "/" + array_to_string(mi.security) + " " + std::to_string(orders_sz);
-    }
-    
-    void print_pips(const char* ib, uint32_t sz, uint32_t width)
-    {
-        const char *ie = ib + sz;
-        for(uint32_t i = 0; ib != ie; ++i)
-        {
-            auto ii = std::find(ib, ie, '\n');
-            e = mvwaddnstr(w, i, w.cols - width, ib, ii - ib);
-            if(ii != ie)
-                ++ii;
-            ib = ii;
-        }
-    }
     
     volatile bool can_run;
     std::mutex mutex;
     std::thread refresh_thrd;
+
+    const char empty[10];
     impl(const std::string& sec, uint32_t refresh_rate_ms) :
         sec(sec), refresh_rate(refresh_rate_ms * 1000),
-        orders_sz(), dE(), dP(), can_run(true), refresh_thrd(&impl::refresh_thread, this)
+        top_order_p(), trades_from(), bs(buf, buf + sizeof(buf) - 1),
+        dE(), dP(), can_run(true), refresh_thrd(&impl::refresh_thread, this),
+        empty("         ")
     {
+        e = start_color()
+            & init_pair(1, COLOR_WHITE, COLOR_BLACK)
+            & init_pair(2, COLOR_BLUE, COLOR_YELLOW)
+            & init_pair(3, COLOR_BLUE, COLOR_CYAN);
     }
-
     ~impl()
     {
         can_run = false;
         refresh_thrd.join();
     }
+    void set_instrument(const message_instr& i)
+    {
+        mi = i;
+        head_msg = array_to_string(mi.exchange_id) + "/" + array_to_string(mi.feed_id) + "/" + array_to_string(mi.security);
+    }
+   iterator get_top_order()
+    {
+        if(!top_order_p.value)
+            return  ob.begin();
 
+        iterator it = ob.lower_bound(top_order_p);
+        iterator ib = ob.begin(), ie = ob.end();
+        while(it != ie && it > ib && !it->second.count.value)
+            --it;
+        if(it != ie)
+            top_order_p = it->first;
+        
+        return it;
+    }
+    void print_trades()
+    {
+        while(w.rows <= trades.size())
+            trades.pop_front();
+        uint32_t i = 0;
+        for(auto&& v : trades)
+        {
+            bs << brief_time(v.etime) << " " << brief_time(v.time) << " " << v.price << " " << v.count << " " << get_direction(v.direction) << '\0';
+            e = mvwaddstr(w, i++, trades_from, bs.begin());
+            bs.clear();
+        }
+    }
     void print_order_book()
     {
         if(!sec.security_id)
             return;
-        ob.compact();
-        auto& v = ob.get_orders(sec.security_id);
-        orders_sz = v.size();
-        if(orders_sz)
-            mlog() << "book size: " << orders_sz;
-        //we reject levels that not fit to our window
-        //TODO: rework for keyboard manipulation
-        auto it = v.begin(), ie = v.end();
-        for(uint32_t i = 0; i != w.rows - 1 && it != ie; ++i, ++it)
+        iterator it = get_top_order(), ie = ob.end();
+        e = attron(A_BOLD);
+        for(uint32_t i = 0; i != w.rows - 1; ++i, ++it)
         {
-            s.str("");
-            s << brief_time(it->second.time) << " " << it->first << " " << it->second.count;
-            std::string v = s.str();
-            trades_from = std::max<uint32_t>(trades_from, v.size() + 4);
-            e = mvwaddstr(w, i, 0, v.c_str());
+            while((it != ie) && !it->second.count.value)
+                ++it;
+            if(it == ie)
+                break;
+
+            e = attron(COLOR_PAIR(it->second.count.value < 0 ? 3 : 2));
+            bs << brief_time(it->second.time) << " " << it->first << " " << it->second.count;
+            if(trades_from > bs.size() + 5)
+                bs.write(empty, trades_from - bs.size() - 5);
+            bs << '\0';
+            e = mvwaddstr(w, i, 0, bs.begin());
+            trades_from = std::max<uint32_t>(trades_from, bs.size() + 4);
+            bs.clear();
         }
+        e = attroff(A_BOLD);
+        e = attron(COLOR_PAIR(1));
     }
-    
     void print_head()
     {
         e = mvwaddnstr(w, w.rows - 1, 0, &w.blank_row[0], w.blank_row.size() - 1);
         e = mvwaddstr(w, w.rows - 1, 0, head_msg.c_str());
-        std::stringstream str;
-        str << "dE: " << print_dt(dE) << ", dP: " << print_dt(dP);
-        std::string s = str.str();
-        e = mvwaddstr(w, w.rows - 1, w.cols - 1 - s.size(), s.c_str());
+        bs << "dE: " << print_dt(dE) << ", dP: " << print_dt(dP) << '\0';
+        e = mvwaddstr(w, w.rows - 1, w.cols - bs.size(), bs.begin());
+        bs.clear();
     }
-
     void refresh()
     {
         std::unique_lock<std::mutex> lock(mutex);
@@ -189,19 +199,69 @@ struct mirror::impl
         move(w.rows - 1, 0);
         ::refresh();
     }
+    void wait_input()
+    {
+        uint32_t c = refresh_rate / 20000;
+        int key = -1;
+        for(uint32_t i = 0; i != c; ++i)
+        {
+            key = getch();
+            if(key == -1)
+                usleep(20000);
+            else
+            {
+                mlog() << "key: " << key;
+                if(key == 259 || key == 339) // arrow up and page up
+                {
+                    uint32_t r = (key == 259 ? 1 : w.rows);
+                    std::unique_lock<std::mutex> lock(mutex);
+                    iterator it = get_top_order(), ib = ob.begin();
+
+                    for(uint32_t i = 0; i != r; ++i) {
+                        if(it != ib) {
+                            --it;
+                            while(it != ib && !it->second.count.value)
+                                --it;
+                        }
+                    }
+                    top_order_p = it->first;
+                }
+                else if(key == 258 || key == 338) //arrow down or page down
+                {
+                    std::unique_lock<std::mutex> lock(mutex);
+                    iterator it = ob.upper_bound(top_order_p), ie = ob.end() - 1;
+                    while(it < ie && !it->second.count.value)
+                        ++it;
+                    uint32_t r = (key == 258 ? 0 : w.rows - 1);
+                    for(uint32_t i = 0; i != r; ++i) {
+                        if(it != ie) {
+                            ++it;
+                            while(it < ie && !it->second.count.value)
+                                ++it;
+                        }
+                    }
+
+                    if(it != ie + 1)
+                        top_order_p = it->first;
+                }
+                break;
+            }
+        }
+
+    }
     void refresh_thread()
     {
         try {
             while(can_run) {
                 refresh();
-                usleep(refresh_rate);
+                wait_input();
+                //usleep(refresh_rate);
             }
         }
         catch(std::exception& e) {
-            mlog() << "mirror_refresh_thread " << e;
+            mlog() << "mirror::refresh_thread() " << e;
         }
     }
-
     void proceed(const message& m)
     {
         if(m.id == msg_ping)

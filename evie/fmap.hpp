@@ -13,7 +13,7 @@ struct fmap
     {
         key first;
         value second;
-        bool operator<(const pair& r) {
+        bool operator<(const pair& r) const {
             return first < r.first;
         }
     };
@@ -22,7 +22,7 @@ struct fmap
     typedef value_type* iterator;
     typedef const value_type* const_iterator;
 
-    fmap(){
+    fmap() : v(){
     }
     fmap(const fmap&) = delete;
     void clear() {
@@ -34,6 +34,14 @@ struct fmap
     bool empty() const {
         return data.empty();
     }
+    value& at(key k) {
+        v.first = k;
+        auto ie = data.end();
+        auto it = std::lower_bound(data.begin(), ie, v);
+        if(unlikely(it == ie || it->first != k))
+            throw std::runtime_error("fmap::at() error");
+        return it->second;
+    }
     value& operator[](key k) {
         v.first = k;
         auto ie = data.end();
@@ -43,6 +51,14 @@ struct fmap
             it = data.insert(it, v);
         }
         return it->second;
+    }
+    const value_type* lower_bound(key k) {
+        v.first = k;
+        return std::lower_bound(data.begin(), data.end(), v);
+    }
+    const value_type* upper_bound(key k) {
+        v.first = k;
+        return std::upper_bound(data.begin(), data.end(), v);
     }
     value_type* find(key k) {
         v.first = k;
@@ -75,7 +91,7 @@ struct fmap
     }
     
 private:
-    value_type v;
+    mutable value_type v;
     mvector<value_type> data;
 };
 

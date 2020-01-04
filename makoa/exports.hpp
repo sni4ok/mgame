@@ -6,8 +6,7 @@
 
 #pragma once
 
-#include "engine.hpp"
-#include "order_book.hpp"
+#include "messages.hpp"
 
 #include <memory>
 

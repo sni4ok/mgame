@@ -6,6 +6,7 @@
 #include "exports.hpp"
 
 #include "evie/utils.hpp"
+#include "evie/mlog.hpp"
 
 #include <dlfcn.h>
 

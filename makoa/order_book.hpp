@@ -8,106 +8,47 @@
 #include "types.hpp"
 
 #include "evie/fmap.hpp"
+#include "evie/myitoa.hpp"
 
-#include <map>
-#include <algorithm>
-
-struct order_books
+struct order_book : fmap<price_t, message_book>
 {
-    struct node
+    uint32_t orders;
+
+    order_book() : orders()
     {
-        count_t count;
-        ttime_t time;
-        node() : count(), time(){
+    }
+
+    void set(const message_book& mb)
+    {
+        message_book& m = (*this)[mb.price];
+        if(!m.security_id) {
+            m.security_id = mb.security_id;
+            m.price = mb.price;
+            ++orders;
+        } else {
+            if(unlikely(m.security_id != mb.security_id))
+                throw std::runtime_error(es() % "order_book cross securities detected, old: " % m.security_id % ", new: " % mb.security_id);
+
+            if(m.count.value && !mb.count.value)
+                --orders;
+            else if(!m.count.value && mb.count.value)
+                ++orders;
         }
-    };
-    typedef fmap<price_t, node> orders_t;
-
-    std::map<uint32_t, orders_t> books;
-    std::pair<uint32_t, orders_t*> last_value;
-    mvector<orders_t::pair> tmp;
-
-    orders_t& get_orders(uint32_t security_id)
-    {
-        if(security_id == last_value.first)
-            return *last_value.second;
-        orders_t& o = books[security_id];
-        last_value = {security_id, &o};
-        return o;
+        m.count = mb.count;
+        m.etime = mb.etime;
+        m.time = mb.time;
     }
-    orders_t& add(const message_book& mb)
+    void proceed(const message& m)
     {
-        orders_t& o = get_orders(mb.security_id);
-        node& n = o[mb.price];
-        n.count.value += mb.count.value;
-        n.time = mb.time;
-        return o;
-    }
-    orders_t& set(const message_book& mb)
-    {
-        orders_t& o = get_orders(mb.security_id);
-        node& n = o[mb.price];
-        n.count.value = mb.count.value;
-        n.time = mb.time;
-        return o;
-    }
-    orders_t& clear(uint32_t security_id)
-    {
-        orders_t& o = get_orders(security_id);
-        o.clear();
-        return o;
-    }
-    orders_t& proceed(const message& m)
-    {
-        if(m.id == msg_book)
+		if(m.id == msg_book)
             return set(m.mb);
-        else if(m.id == msg_clean)
-            return clear(m.mc.security_id);
-        else if(m.id == msg_instr)
-            return clear(m.mi.security_id);
+        else if(m.id == msg_clean || m.id == msg_instr) {
+            clear();
+            orders = 0;
+        }
         else
             throw std::runtime_error(es() % "order_book::proceed() unsupported message type: " % m.id);
-    }
-    void compact() //remove levels with zero count
-    {
-        for(auto& o: books)
-        {
-            uint32_t cnt = 0;
-            orders_t::iterator it = o.second.begin(), ie = o.second.end(), itt;
-            for(; it != ie; ++it) {
-                if(it->second.count.value == 0) {
-                    ++cnt;
-                    if(cnt == 2)
-                        break;
-                    itt = it;
-                }
-            }
-            if(cnt != 0) {
-                it = o.second.begin();
-                if(cnt == 1) {
-                    o.second.erase(itt);
-                }
-                else {
-                    //cnt == 2
-                    tmp.clear();
-                    tmp.reserve(o.second.size());
-                    for(; it != ie; ++it) {
-                        if(it->second.count.value)
-                            tmp.push_back(*it);
-                    }
-                    o.second.swap(tmp);
-                }
-            }
-        }
+
     }
 };
-
-template<typename stream>
-stream& operator<<(stream& s, const order_books::orders_t& o)
-{
-    s << "order_book [" << o.size() << "]";
-    for(auto&& v: o)
-        s << "\n  " << v.second.time << " " << v.first << " " << v.second.count;
-    return s;
-}
 
