@@ -3,20 +3,11 @@
 */
 
 #include "config.hpp"
-#include "../alco.hpp"
 #include "evie/profiler.hpp"
 
+#include "../alco.hpp"
+#include "../lws.hpp"
 #include "utils.hpp"
-
-#include <libwebsockets.h>
-
-struct parser : stack_singleton<parser>
-{
-    tyra t;
-    parser() : t(config::instance().push)
-    {
-    }
-};
 
 void test_impl(const char* a1, const char* a2)
 {
@@ -41,13 +32,9 @@ void amount_test()
     my_unused(c);
 }
 
-struct lws_i : parser
+struct lws_i : lws_impl
 {
-    volatile bool& can_run;
-    lws_context* context;
     zlibe zlib;
-    char buf[512];
-    buf_stream bs;
 
     char ch[13];
     char ts[7];
@@ -71,22 +58,12 @@ struct lws_i : parser
     char ping[7];
     char error[16];
 
-    typedef const char* iterator;
-    template<typename str>
-    void skip_fixed(iterator& it, const str& v)
-    {
-        static_assert(std::is_array<str>::value);
-        bool eq = std::equal(it, it + sizeof(v) - 1, v);
-        if(unlikely(!eq))
-            throw std::runtime_error(es() % "bad message: " % str_holder(it, 100));
-        it += sizeof(v) - 1;
-    }
     typedef my_basic_string<char, 64> string;
     struct impl;
     typedef void (lws_i::*func)(impl& i, ttime_t etime, iterator& it, iterator ie);
     struct impl
     {
-        impl() : ask_price(), bid_price(), ask_count(), bid_count(), m_b(), m_t()
+        impl() : ask_price(), bid_price(), ask_count(), bid_count()
         {
         }
         impl(string&& symbol, security* sec, func f) : impl()
@@ -94,8 +71,10 @@ struct lws_i : parser
             this->symbol = symbol;
             this->sec = sec;
             this->f = f;
+            security_id = this->sec->mi.security_id;
         }
         string symbol;
+        uint32_t security_id;
         security* sec;
         func f;
 
@@ -103,7 +82,6 @@ struct lws_i : parser
         price_t ask_price, bid_price;
         count_t ask_count, bid_count;
 
-        uint32_t m_b, m_t;
         bool operator<(const impl& i) const {
             return symbol < i.symbol;
         }
@@ -111,50 +89,9 @@ struct lws_i : parser
             return symbol < s;
         }
     };
-    void add_order(impl& i, price_t price, count_t count, ttime_t etime, ttime_t time)
-    {
-        if(unlikely(i.m_b == pre_alloc))
-            send_book(i);
-
-        tyra_msg<message_book>& m = mb[i.m_b++];
-        m.security_id = i.sec->mb.security_id;
-        m.price = price;
-        m.count = count;
-        m.etime = etime;
-        m.time = time;
-    }
-    void add_trade(impl& i, price_t price, count_t count, uint32_t direction, ttime_t etime, ttime_t time)
-    {
-        if(unlikely(i.m_t == pre_alloc))
-            send_trades(i);
-
-        tyra_msg<message_trade>& m = mt[i.m_t++];
-        m.security_id = i.sec->mt.security_id;
-        m.direction = direction;
-        m.price = price;
-        m.count = count;
-        m.etime = etime;
-        m.time = time;
-    }
-    void send_book(impl& i)
-    {
-        if(i.m_b) {
-            MPROFILE("send_book")
-            t.send(mb, i.m_b);
-            i.m_b = 0;
-        }
-    }
-    void send_trades(impl& i)
-    {
-        if(i.m_t) {
-            MPROFILE("send_trades")
-            t.send(mt, i.m_t);
-            i.m_t = 0;
-        }
-    }
     void parse_bbo(impl& i, ttime_t etime, iterator& it, iterator ie)
     {
-        MPROFILE("parse_bbo")
+        //MPROFILE("parse_bbo")
 
         it = std::find(it, ie, ',');
         skip_fixed(it, ask);
@@ -176,16 +113,16 @@ struct lws_i : parser
 
         ttime_t time = get_cur_ttime();
         if(i.ask_price != ask_price && i.ask_count != count_t())
-            add_order(i, i.ask_price, count_t(), etime, time);
+            add_order(i.security_id, i.ask_price, count_t(), etime, time);
         if(i.ask_price != ask_price || i.ask_count != ask_count)
-            add_order(i, ask_price, ask_count, etime, time);
+            add_order(i.security_id, ask_price, ask_count, etime, time);
 
         if(i.bid_price != bid_price && i.bid_count != count_t())
-            add_order(i, i.bid_price, count_t(), etime, time);
+            add_order(i.security_id, i.bid_price, count_t(), etime, time);
         if(i.bid_price != bid_price || i.bid_count != bid_count)
-            add_order(i, bid_price, bid_count, etime, time);
+            add_order(i.security_id, bid_price, bid_count, etime, time);
        
-        send_book(i);
+        send_book();
         i.ask_price = ask_price;
         i.ask_count = ask_count;
         i.bid_price = bid_price;
@@ -203,7 +140,7 @@ struct lws_i : parser
             if(a)
                 c.value = -c.value;
             skip_fixed(it, "]");
-            add_order(i, p, c, etime, time);
+            add_order(i.security_id, p, c, etime, time);
             if(*it != ',') {
                 skip_fixed(it, "]");
                 break;
@@ -227,27 +164,29 @@ struct lws_i : parser
         else
             ++it;
     }
-    void parse_orders(impl& i,ttime_t etime, iterator& it, iterator ie)
+    void parse_orders(impl& i, ttime_t etime, iterator& it, iterator ie)
     {
-        MPROFILE("parse_orders")
+        //MPROFILE("parse_orders")
+
         parse_orders_impl(i, etime, get_cur_ttime(), it, ie);
         skip_fixed(it, end);
-        send_book(i);
+        send_book();
     }
     void parse_snapshot(impl& i, ttime_t etime, iterator& it, iterator ie)
     {
-        MPROFILE("parse_snapshot")
+        //MPROFILE("parse_snapshot")
+
         ttime_t time = get_cur_ttime();
         parse_orders_impl(i, etime, time, it, ie);
         it = std::find(it, ie, '}');
         skip_fixed(it, end);
         i.sec->mc.time = time;
         t.send(i.sec->mc);
-        send_book(i);
+        send_book();
     }
     void parse_trades(impl& i, ttime_t etime, iterator& it, iterator ie)
     {
-        MPROFILE("parse_trades")
+        //MPROFILE("parse_trades")
 
         ttime_t time = get_cur_ttime();
         it = std::find(it, ie, '[') + 1;
@@ -272,7 +211,7 @@ struct lws_i : parser
                 skip_fixed(it, buy);
                 dir = 1;
             }
-            add_trade(i, p, c, dir, etime, time);
+            add_trade(i.security_id, p, c, dir, etime, time);
 
             if(*it != ',') {
                 skip_fixed(it, "]");
@@ -282,17 +221,12 @@ struct lws_i : parser
         }
 
         skip_fixed(it, end);
-        send_trades(i);
+        send_trades();
     }
     std::vector<security> securities;
     std::vector<impl> parsers;
 
-    static const uint32_t pre_alloc = 150;
-    tyra_msg<message_book> mb[pre_alloc];
-    tyra_msg<message_trade> mt[pre_alloc];
-    
-    std::vector<std::string> subscribes;
-    lws_i(volatile bool& can_run) : can_run(can_run), context(), bs(buf, buf + sizeof(buf) - 1),
+    lws_i() :
         ch("ch\":\"market."),
         ts(",\"ts\":"),
         tick(",\"tick\":{\""),
@@ -310,9 +244,7 @@ struct lws_i : parser
         ping("ping\":"),
         error("status\":\"error\"")
     {
-        bs.resize(LWS_PRE);
         config& c = config::instance();
-        securities.reserve(c.tickers.size());
         for(auto& v: c.tickers) {
             security sec;
             sec.init(c.exchange_id, c.feed_id, v);
@@ -339,36 +271,13 @@ struct lws_i : parser
         }
         std::sort(parsers.begin(), parsers.end());
     }
-    void send(lws* wsi)
-    {
-        if(bs.size() != LWS_PRE) {
-            int sz = bs.size() - LWS_PRE;
-            char* ptr = bs.from + LWS_PRE;
-            if(config::instance().log_lws)
-                mlog(mlog::critical) << "lws_write " << str_holder(ptr, sz);
-            int n = lws_write(wsi, (unsigned char*)ptr, sz, LWS_WRITE_TEXT);
-                
-            if(unlikely(sz != n)) {
-                mlog(mlog::critical) << "lws_write ret: " << n << ", sz: " << sz;
-                return;
-            }
-            bs.resize(LWS_PRE);
-        }
-    }
-    void init(lws* wsi)
-    {
-        for(auto& s: subscribes) {
-            bs << s;
-            send(wsi);
-        }
-    }
-    void proceed_impl(lws* wsi, void* in, size_t len)
+    int proceed(lws* wsi, void* in, size_t len)
     {
         str_holder str = zlib.decompress(in, len);
         if(config::instance().log_lws)
             mlog() << "lws proceed: " << str;
         if(unlikely(!str.size))
-            return;
+            return 0;
         iterator it = str.str, ie = str.str + str.size;
         if(unlikely(*it != '{' || *(it + 1) != '\"'))
             throw std::runtime_error(es() % "bad message: " % str);
@@ -401,96 +310,19 @@ struct lws_i : parser
             bs.write(it, 13);
             bs << "}";
             send(wsi);
-            return;
         }
         else if(unlikely(std::equal(error, error + sizeof(error) - 1, it)))
             throw std::runtime_error(es() % "error message: " % str);
         else {
             mlog(mlog::critical) << "unsupported message: " << str;
         }
-    }
-    int proceed(lws* wsi, void* in, size_t len)
-    {
-        try {
-            proceed_impl(wsi, in, len);
-        }
-        catch(std::exception& e) {
-            mlog() << "lws_i::proceed() " << e;
-            throw;
-            return -1;
-        }
         return 0;
-    }
-    ~lws_i()
-    {
-        lws_context_destroy(context);
     }
 };
 
-static int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len)
-{
-    switch (reason)
-    {
-        case LWS_CALLBACK_CLIENT_ESTABLISHED:
-        {
-            mlog() << "lws connection established";
-            ((lws_i*)user)->init(wsi);
-            break;
-        }
-        case LWS_CALLBACK_CLIENT_RECEIVE:
-        {
-            if(config::instance().log_lws)
-                mlog() << "lws receive len: " << len;
-            return ((lws_i*)user)->proceed(wsi, in, len);
-        }
-        case LWS_CALLBACK_CLIENT_CLOSED:
-        {
-            mlog() << "lws closed";
-            return -1;
-        }
-        case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
-        {
-            lwsl_user("closed... \n");
-            return 1;
-        }
-        default:
-        {
-            if(config::instance().log_lws)
-                mlog() << "lws callback: " << int(reason) << ", len: " << len;
-            break;
-        }
-    }
-    return 0;
-}
-
-lws_context* create_context()
-{
-    int logs = LLL_ERR | LLL_WARN ;
-    lws_set_log_level(logs, NULL);
-    lws_context_creation_info info;
-    memset(&info, 0, sizeof (info));
-    info.port = CONTEXT_PORT_NO_LISTEN;
-
-    lws_protocols protocols[] =
-    {
-        {"example-protocol", lws_event_cb, 0, 4096 * 100, 0, 0, 0},
-        lws_protocols()
-    };
-
-    info.protocols = protocols;
-    info.gid = -1;
-    info.uid = -1;
-    info.options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
-    info.client_ssl_ca_filepath = "cert.pem";
-    lws_context* context = lws_create_context(&info);
-    if(!context)
-        throw std::runtime_error("lws_create_context error");
-    return context;
-}
-
 void connect(lws_i& ls)
 {
-	lws_client_connect_info ccinfo =lws_client_connect_info();
+	lws_client_connect_info ccinfo = lws_client_connect_info();
 	ccinfo.context = ls.context;
 	ccinfo.address = "api.huobi.pro";
 	ccinfo.port = 443;
@@ -509,22 +341,21 @@ void proceed_huobi(volatile bool& can_run)
     size_t msz = sizeof(message);
     my_unused(msz);
     amount_test();
-    try {
-        while(can_run) {
-            lws_i ls(can_run);
-            ls.context = create_context();
+    while(can_run) {
+        try {
+            lws_i ls;
+            ls.context = create_context<lws_i>();
             connect(ls);
 
             int n = 0;
             while(can_run && n >= 0) {
                 n = lws_service(ls.context, 0);
             }
+        } catch(std::exception& e) {
+            mlog() << "proceed_huobi " << e;
+            if(can_run)
+                usleep(5000 * 1000);
         }
-    }
-    catch(std::exception& e) {
-        mlog() << "proceed_huobi " << e;
-        if(can_run)
-            usleep(5000 * 1000);
     }
 }
 

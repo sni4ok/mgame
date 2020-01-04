@@ -4,7 +4,8 @@
 
 #include "config.hpp"
 #include "../main.hpp"
-#include "parse.hpp"
+
+void proceed_bitfinex(volatile bool& can_run);
 
 int main(int argc, char** argv)
 {

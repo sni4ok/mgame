@@ -13,6 +13,8 @@ struct config : stack_singleton<config>
     std::string step; //for snapshot, possible values: step0, step1, step2, step3, step4, step5
     std::string levels; //for orders, possible values: 150
     
+    std::string ssl_ca_file; //https://github.com/HuobiRDCenter/huobi_Cpp/tree/master/cert/cert.pem
+
     std::string exchange_id, feed_id;
     std::string push;
     bool log_lws;
