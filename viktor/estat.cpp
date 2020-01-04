@@ -6,6 +6,7 @@
 */
 
 #include "makoa/exports.hpp"
+#include "makoa/types.hpp"
 
 #include <math.h>
 

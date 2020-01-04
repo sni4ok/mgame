@@ -8,7 +8,9 @@
 */
 
 #include "makoa/exports.hpp"
+#include "makoa/types.hpp"
 #include "tyra/tyra.hpp"
+#include "evie/mlog.hpp"
 
 #include <string>
 
