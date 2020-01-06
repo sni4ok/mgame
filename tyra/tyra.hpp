@@ -8,14 +8,6 @@
 
 #include "evie/utils.hpp"
 
-template<typename message_type>
-struct tyra_msg : msg_head, message_type
-{
-    tyra_msg() : msg_head{message_type::msg_id, message_type::size}
-    {
-    }
-};
-
 class tyra
 {
     uint64_t send_from_call, send_from_buffer;
@@ -25,26 +17,22 @@ class tyra
     char *bf, *bt;
     char *c, *e; 
 
-    template<typename type> 
-    void send_impl(type& t);
-
     tyra(const tyra&) = delete;
-    tyra_msg<message_ping> mp;
+    message_ping mp;
 
 public:
     tyra(const std::string& host);
 
-    uint32_t send_i(tyra_msg<message_instr>& i);
+    void send(const message& m);
+    void send(const message* m, uint32_t count);
 
-    void send(const tyra_msg<message_instr>& i);
-    void send(const tyra_msg<message_trade>& t);
-    void send(const tyra_msg<message_clean>& c);
-    void send(const tyra_msg<message_book>& b);
-    
-    template<typename message>
-    void send(const tyra_msg<message>* messages, uint32_t count);
+    template<typename message_type>
+    void send(const message_type& m)
+    {
+        static_assert(sizeof(message_type) == sizeof(message));
+        return send(reinterpret_cast<const message&>(m));
+    }
 
-    void send(tyra_msg<message_ping>& p); //this method set time by self
     void flush();
     void ping();
 

@@ -12,14 +12,48 @@
 #include <condition_variable>
 
 static const uint32_t max_connections = 32;
-static const uint32_t recv_buf_size = 128 * 1024;
-static const uint32_t recv_buf_crit = 1024;
 static const uint32_t timeout = 30; //in seconds
 
 const std::string& server_name()
 {
     return config::instance().name;
 }
+
+str_holder alloc_buffer();
+void free_buffer(str_holder buf, context* ctx);
+void proceed_data(str_holder& buf, context* ctx);
+
+//#define BUFS_CHECK
+
+#if BUFS_CHECK
+struct bufs_check
+{
+    std::vector<char> data;
+    bufs_check() : data(1024 * 1024)
+    {
+    }
+
+    void proceed(str_holder& buf, context* ctx)
+    {
+        uint32_t sz = buf.size;
+        std::copy(buf.str, buf.str + sz, &data[0]);
+
+        const char* ptr = &data[0];
+        while(sz)
+        {
+            int rnd = rand() % (5 * message_size);
+            if(rnd > sz)
+                rnd = sz;
+            std::copy(ptr, ptr + sz, (char*)buf.str);
+            ptr += rnd;
+            sz -= rnd;
+            buf.size = rnd;
+            proceed_data(buf, ctx);
+        }
+
+    }
+};
+#endif
 
 struct server::impl : stack_singleton<server::impl>
 {
@@ -31,17 +65,29 @@ struct server::impl : stack_singleton<server::impl>
 
     impl() : can_run(true), count() {
     }
-    void work_thread_impl(int socket, const std::string& client)
+    void work_thread_impl(int socket, const std::string&)
     {
         context_holder ctx;
         pollfd pfd = pollfd();
         pfd.events = POLLIN;
         pfd.fd = socket;
 
-        std::vector<uint8_t> buf(recv_buf_size);
         time_t recv_time = time(NULL);
-        uint8_t *cur = &buf[0], *readed = cur, *beg = cur, *end = cur + recv_buf_size;
+        struct buf_h
+        {
+            context* ctx;
+            str_holder buf;
+            buf_h(context* ctx) : ctx(ctx), buf(alloc_buffer()) {
+            }
+            ~buf_h() {
+                free_buffer(buf, ctx);
+            }
+        };
+        buf_h buf(ctx.ctx);
 
+#if BUFS_CHECK
+        bufs_check check;
+#endif
         while(can_run)
         {
             int ret = poll(&pfd, 1, 50);
@@ -54,7 +100,7 @@ struct server::impl : stack_singleton<server::impl>
 
                 continue;
             }
-            ret = ::recv(socket, cur, recv_buf_size - (cur - beg), 0);
+            ret = ::recv(socket, (void*)buf.buf.str, buf.buf.size, 0);
             if(ret == -1) {
                 if(errno == EAGAIN || errno == EWOULDBLOCK) {
                     MPROFILE("server_EAGAIN");
@@ -67,21 +113,12 @@ struct server::impl : stack_singleton<server::impl>
                 throw_system_failure("socket closed");
             else if(ret < 0)
                 throw_system_failure("socket error");
-            cur += ret;
-            try {
-                readed += proceed_data(readed, cur - readed, ctx.ctx);
-            } catch(std::exception& e) {
-                //don't care about type
-                throw std::runtime_error(es() % e.what() % ", msg: " % print_binary(readed, 20));
-            }
-
-            if(cur == readed) {
-                cur = beg;
-                readed = beg;
-            }
-            else if((end - readed) < recv_buf_crit) {
-                mlog(mlog::warning) << "buffers almost overloaded for " << client << ", head msg: " << print_binary(readed, 32);
-            }
+            buf.buf.size = ret;
+#if BUFS_CHECK
+            check.proceed(buf.buf, ctx.ctx);
+#else
+            proceed_data(buf.buf, ctx.ctx);
+#endif
             recv_time = time(NULL);
         }
     }

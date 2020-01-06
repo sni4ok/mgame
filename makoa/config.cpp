@@ -10,7 +10,6 @@
 config::config(const char* fname)
 {
     std::string cs = read_file<std::string>(fname);
-    log_exporter = get_config_param<bool>(cs, "log_exporter", true, false);
     port = get_config_param<uint16_t>(cs, "port");
     name = get_config_param<std::string>(cs, "name");
 
@@ -23,7 +22,7 @@ config::config(const char* fname)
 void config::print()
 {
     mlog ml;
-    ml << "config params:\n  log_exporter: " << log_exporter << "\n"
+    ml << "config params:\n"
         << "  port: " << port << "\n"
         << "  name: " << name << "\n";
     if(!exports.empty()) {

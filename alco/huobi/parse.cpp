@@ -3,7 +3,6 @@
 */
 
 #include "config.hpp"
-#include "evie/profiler.hpp"
 
 #include "../alco.hpp"
 #include "../lws.hpp"
@@ -26,6 +25,7 @@ void amount_test()
     test_impl("-5.6", "-0.56E1");
     test_impl("-0.56", "-5.6E-1");
     test_impl("560", "56E1");
+    test_impl("5e-7", "0.5E-6");
 
     const char* v = "9.79380846343861E-4";
     count_t c = read_count(v, v + strlen(v));
@@ -60,7 +60,7 @@ struct lws_i : lws_impl
 
     typedef my_basic_string<char, 64> string;
     struct impl;
-    typedef void (lws_i::*func)(impl& i, ttime_t etime, iterator& it, iterator ie);
+    typedef void (lws_i::*func)(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie);
     struct impl
     {
         impl() : ask_price(), bid_price(), ask_count(), bid_count()
@@ -89,7 +89,7 @@ struct lws_i : lws_impl
             return symbol < s;
         }
     };
-    void parse_bbo(impl& i, ttime_t etime, iterator& it, iterator ie)
+    void parse_bbo(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie)
     {
         //MPROFILE("parse_bbo")
 
@@ -111,7 +111,6 @@ struct lws_i : lws_impl
         it = std::find(it, ie, '}');
         skip_fixed(it, end);
 
-        ttime_t time = get_cur_ttime();
         if(i.ask_price != ask_price && i.ask_count != count_t())
             add_order(i.security_id, i.ask_price, count_t(), etime, time);
         if(i.ask_price != ask_price || i.ask_count != ask_count)
@@ -122,7 +121,7 @@ struct lws_i : lws_impl
         if(i.bid_price != bid_price || i.bid_count != bid_count)
             add_order(i.security_id, bid_price, bid_count, etime, time);
        
-        send_book();
+        send_messages();
         i.ask_price = ask_price;
         i.ask_count = ask_count;
         i.bid_price = bid_price;
@@ -164,31 +163,22 @@ struct lws_i : lws_impl
         else
             ++it;
     }
-    void parse_orders(impl& i, ttime_t etime, iterator& it, iterator ie)
+    void parse_orders(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie)
     {
-        //MPROFILE("parse_orders")
-
-        parse_orders_impl(i, etime, get_cur_ttime(), it, ie);
+        parse_orders_impl(i, etime, time, it, ie);
         skip_fixed(it, end);
-        send_book();
+        send_messages();
     }
-    void parse_snapshot(impl& i, ttime_t etime, iterator& it, iterator ie)
+    void parse_snapshot(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie)
     {
-        //MPROFILE("parse_snapshot")
-
-        ttime_t time = get_cur_ttime();
         parse_orders_impl(i, etime, time, it, ie);
         it = std::find(it, ie, '}');
         skip_fixed(it, end);
-        i.sec->mc.time = time;
-        t.send(i.sec->mc);
-        send_book();
+        add_clean(i.security_id, etime, time);
+        send_messages();
     }
-    void parse_trades(impl& i, ttime_t etime, iterator& it, iterator ie)
+    void parse_trades(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie)
     {
-        //MPROFILE("parse_trades")
-
-        ttime_t time = get_cur_ttime();
         it = std::find(it, ie, '[') + 1;
         for(;;)
         {
@@ -221,7 +211,7 @@ struct lws_i : lws_impl
         }
 
         skip_fixed(it, end);
-        send_trades();
+        send_messages();
     }
     std::vector<security> securities;
     std::vector<impl> parsers;
@@ -250,7 +240,7 @@ struct lws_i : lws_impl
             sec.init(c.exchange_id, c.feed_id, v);
             securities.push_back(std::move(sec));
             security& s = securities.back();
-            t.send(s.mi);
+            add_instrument(s.mi);
 
             if(c.snapshot) {
                 parsers.push_back({v + ".depth." + c.step, &s, &lws_i::parse_snapshot});
@@ -269,10 +259,12 @@ struct lws_i : lws_impl
                 subscribes.push_back("{\"sub\":\"market." + v + ".trade.detail\",\"id\":\"trades_" + v + "\"}");
             }
         }
+        send_messages();
         std::sort(parsers.begin(), parsers.end());
     }
     int proceed(lws* wsi, void* in, size_t len)
     {
+        ttime_t time = get_cur_ttime();
         str_holder str = zlib.decompress(in, len);
         if(config::instance().log_lws)
             mlog() << "lws proceed: " << str;
@@ -296,7 +288,7 @@ struct lws_i : lws_impl
             ttime_t etime = {my_cvt::atoi<uint64_t>(ne, 13) * (ttime_t::frac / 1000)};
             ne += 13;
             skip_fixed(ne, tick);
-            ((this)->*(i->f))(*i, etime, ne, ie);
+            ((this)->*(i->f))(*i, etime, time, ne, ie);
             if(ne != ie)
                 throw std::runtime_error(es() % "parsing market message error: " % str);
         }

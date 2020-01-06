@@ -8,24 +8,37 @@
 
 #include "messages.hpp"
 
-#include <memory>
+#include "evie/utils.hpp"
 
-struct exports
-{
-    struct impl;
-    void proceed(const message& m);
-    exports(const std::string& module);
-    exports(const std::string& module, const std::string& params);
-    ~exports();
-
-private:
-    std::unique_ptr<impl> pimpl;
-};
+#include <list>
+#include <map>
 
 struct hole_exporter
 {
-    void* (*init)(const char* params);
-    void (*destroy)(void*);
-    void (*proceed)(void*, const message& m);
+    void* (*init)(const char* params) = 0;
+    void (*destroy)(void*) = 0;
+    void (*proceed)(void* v, const message* m, uint32_t count) = 0;
 };
+
+struct exporter
+{
+    void *p;
+    hole_exporter he;
+    exporter() : p(), he()
+    {
+    }
+    exporter(const std::string& params);
+
+    exporter(exporter&& r);
+    void operator=(exporter&& r);
+    ~exporter() {
+        if(he.destroy)
+            he.destroy(p);
+    }
+    void proceed(const message* m, uint32_t count) {
+        he.proceed(p, m, count);
+    }
+};
+
+uint32_t register_exporter(const std::string& module, hole_exporter he);
 

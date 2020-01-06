@@ -88,13 +88,14 @@ namespace {
         //  ttime_t ctime; //cur estat time
         struct mstat
         {
-            stat et, tm, mc, ec;
+            stat et, tm, mc, tc, ec;
 
             void print(mlog& ml, std::string name) const
             {
                 et.print(ml, name + "_et");
                 tm.print(ml, name + "_tm");
                 mc.print(ml, name + "_mc");
+                tc.print(ml, name + "_tc");
                 ec.print(ml, name + "_ec");
             }
             void add(ttime_t etime, ttime_t time, ttime_t mtime, ttime_t ctime)
@@ -102,6 +103,7 @@ namespace {
                 et.add(etime, time);
                 tm.add(time, mtime);
                 mc.add(mtime, ctime);
+                tc.add(time, ctime);
                 ec.add(etime, ctime);
             }
 
@@ -112,32 +114,38 @@ namespace {
         {
             if(count) {
                 mlog ml;
-                ml << "stat" << name << " proceed " << count << " messages";
+                ml << "\nstat " << name << " proceed " << count << " messages";
                 mb.print(ml, "book");
                 mt.print(ml, "trades");
                 mc.print(ml, "clear");
                 mi.print(ml, "instr");
                 mp.print(ml, "ping");
+                ml << '\n';
             }
         }
         estat(std::string params) : name(params), count()
         {
             mlog() << "stat " << params << " initialized";
         }
-        void proceed(const message& m)
+        void proceed(const message* mes, uint32_t count)
         {
-            ++count;
-            ttime_t ctime = get_cur_ttime();
-            if(m.id == msg_book)
-                mb.add(m.mb.etime, m.mb.time, m.mtime, ctime);
-            else if(m.id == msg_trade)
-                mt.add(m.mt.etime, m.mt.time, m.mtime, ctime);
-            else if(m.id == msg_clean)
-                mc.add(ttime_t(), m.mc.time, m.mtime, ctime);
-            else if(m.id == msg_instr)
-                mi.add(ttime_t(), m.mi.time, m.mtime, ctime);
-            else if(m.id == msg_ping)
-                mp.add(ttime_t(), m.mp.time, m.mtime, ctime);
+            this->count += count;
+            ttime_t mtime = ttime_t();
+
+            for(uint32_t i = 0; i != count; ++i, ++mes){
+                const message& m = *mes;
+                ttime_t ctime = get_cur_ttime();
+                if(m.id == msg_book)
+                    mb.add(m.mb.etime, m.mb.time, mtime, ctime);
+                else if(m.id == msg_trade)
+                    mt.add(m.mt.etime, m.mt.time, mtime, ctime);
+                else if(m.id == msg_clean)
+                    mc.add(m.mc.etime, m.mc.time, mtime, ctime);
+                else if(m.id == msg_instr)
+                    mi.add(ttime_t(), m.mi.time, mtime, ctime);
+                else if(m.id == msg_ping)
+                    mp.add(m.mp.etime, m.mp.time, mtime, ctime);
+            }
         }
         ~estat() {
             print();
@@ -152,9 +160,9 @@ namespace {
     {
         delete (estat*)(v);
     }
-    void estat_proceed(void* v, const message& m)
+    void estat_proceed(void* v, const message* m, uint32_t count)
     {
-        ((estat*)(v))->proceed(m);
+        ((estat*)(v))->proceed(m, count);
     }
 }
 

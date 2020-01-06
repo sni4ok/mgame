@@ -3,41 +3,13 @@
    author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
-#include "mirror.hpp"
+#include "evie/mlog.hpp"
 
 #include "makoa/exports.hpp"
 
-#include "evie/mlog.hpp"
-
-struct ying
-{
-    mirror m;
-
-    ying(const std::string& params) : m(params)
-    {
-        mlog() << "ying " << params << " started";
-    }
-
-    void proceed(const message& mes)
-    {
-        m.proceed(mes);
-    }
-};
-
-void* ying_init(const char* params)
-{
-    return new ying(params);
-}
-
-void ying_destroy(void* w)
-{
-    delete (ying*)(w);
-}
-
-void ying_proceed(void* w, const message& m)
-{
-    ((ying*)(w))->proceed(m);
-}
+void* ying_init(const char* params);
+void ying_destroy(void* w);
+void ying_proceed(void* w, const message* m, uint32_t count);
 
 extern "C"
 {

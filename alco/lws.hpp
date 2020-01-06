@@ -1,21 +1,21 @@
+#include "makoa/exports.hpp"
 
 #include <libwebsockets.h>
 
 struct lws_impl : stack_singleton<lws_impl>
 {
-    tyra t;
+    exporter e;
     char buf[512];
     buf_stream bs;
     typedef const char* iterator;
 
     static const uint32_t pre_alloc = 150;
-    tyra_msg<message_book> mb[pre_alloc];
-    tyra_msg<message_trade> mt[pre_alloc];
-    uint32_t m_b, m_t;
+    message ms[pre_alloc];
+    uint32_t m_s;
     
     std::vector<std::string> subscribes;
     
-    lws_impl() : t(config::instance().push), bs(buf, buf + sizeof(buf) - 1), m_b(), m_t()
+    lws_impl() : e(config::instance().push), bs(buf, buf + sizeof(buf) - 1), m_s()
     {
         bs.resize(LWS_PRE);
     }
@@ -40,43 +40,56 @@ struct lws_impl : stack_singleton<lws_impl>
             bs.resize(LWS_PRE);
         }
     }
+    void add_instrument(const message_instr& mi)
+    {
+        if(unlikely(m_s == pre_alloc))
+            send_messages();
+        ms[m_s++].mi = mi;
+    }
+    void add_clean(uint32_t security_id, ttime_t etime, ttime_t time)
+    {
+        if(unlikely(m_s == pre_alloc))
+            send_messages();
+        
+        message_clean& c = ms[m_s++].mc;
+        c.time = time;
+        c.etime = etime;
+        c.id = msg_clean;
+        c.security_id = security_id;
+        c.source = 0;
+    }
     void add_order(uint32_t security_id, price_t price, count_t count, ttime_t etime, ttime_t time)
     {
-        if(unlikely(m_b == pre_alloc))
-            send_book();
+        if(unlikely(m_s == pre_alloc))
+            send_messages();
 
-        tyra_msg<message_book>& m = mb[m_b++];
+        message_book& m = ms[m_s++].mb;
+        m.time = time;
+        m.etime = etime;
+        m.id = msg_book;
         m.security_id = security_id;
         m.price = price;
         m.count = count;
-        m.etime = etime;
-        m.time = time;
     }
     void add_trade(uint32_t security_id, price_t price, count_t count, uint32_t direction, ttime_t etime, ttime_t time)
     {
-        if(unlikely(m_t == pre_alloc))
-            send_trades();
+        if(unlikely(m_s == pre_alloc))
+            send_messages();
 
-        tyra_msg<message_trade>& m = mt[m_t++];
-        m.security_id = security_id;
+        message_trade& m = ms[m_s++].mt;
+        m.time = time;
+        m.etime = etime;
+        m.id = msg_trade;
         m.direction = direction;
+        m.security_id = security_id;
         m.price = price;
         m.count = count;
-        m.etime = etime;
-        m.time = time;
     }
-    void send_book()
+    void send_messages()
     {
-        if(m_b) {
-            t.send(mb, m_b);
-            m_b = 0;
-        }
-    }
-    void send_trades()
-    {
-        if(m_t) {
-            t.send(mt, m_t);
-            m_t = 0;
+        if(m_s) {
+            e.proceed(ms, m_s);
+            m_s = 0;
         }
     }
     ~lws_impl()
@@ -131,7 +144,7 @@ int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user, void* i
         }
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         {
-            lwsl_user("closed... \n");
+            mlog() << "lws closed...";
             return 1;
         }
         default:

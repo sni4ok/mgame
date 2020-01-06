@@ -6,20 +6,17 @@
 
 #include "makoa/order_book.hpp"
 
-#include <memory>
-
-class mirror
+struct mirror
 {
     struct impl;
-    std::unique_ptr<impl> pimpl;
-
-public:
+    
     mirror(const std::string& params); //like "837037107 100"
                                        //  or  "tBTCUSD 100"
 
-    void proceed(const message& m); //proceed call refresh by self, but refresh can be call independently
-    void refresh();
-
+    void proceed(const message* m, uint32_t count);
     ~mirror();
+
+private:
+    impl* pimpl;
 };
 

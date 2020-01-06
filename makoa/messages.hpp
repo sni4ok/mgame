@@ -1,21 +1,10 @@
 /*
     This file contains definition of messages processed by makoa server with parsers
-    every message should start with msg_head: 
-    uint32_t msg_id;
-    uint32_t msg_size;
-    ---- message ----
-    -----------------
-
-    all messages contains field:
-        ttime_t time;  //parser time
-
-    for ping, hello it should contains current parser time, so when its differs from makoa server time on 3h or -2 sec
-        server will close connection
-
-    for instr, trade, clean, book messages (they contains security_id field) this field can contains any time
-        from 'have data for parsing' till 'send data to makoa' by parser decision
-        this messages should be monotonically nondecreasing by time for certain security_id
     
+    ttime_t time;  //parser in time
+    ttime_t etime; //exchange time
+    uint8_t msg_id;
+
     author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
@@ -23,13 +12,7 @@
 
 #include <cstdint>
 
-struct msg_head
-{
-    uint32_t id, size;
-};
-static_assert(sizeof(msg_head) == 8, "protocol agreement");
-
-static const uint32_t 
+static const uint8_t 
                           msg_ping  = 69
                         , msg_hello = 42
                         , msg_trade = 10
@@ -37,6 +20,8 @@ static const uint32_t
                         , msg_clean = 12
                         , msg_book  = 13
 ;
+
+static const uint32_t message_size = 40, message_bsize = message_size - 17;
 
 #ifndef TTIME_T_DEFINED
 struct ttime_t
@@ -48,23 +33,40 @@ struct ttime_t
 #define TTIME_T_DEFINED
 #endif
 
-struct message_ping
+struct message_times
 {
     ttime_t time;
-
-    static const uint32_t msg_id = msg_ping, size = 8;
+    ttime_t etime;
 };
-static_assert(sizeof(message_ping) == 8, "protocol agreement");
 
-struct message_hello
+struct message_id
 {
+    char _[16];
+    uint8_t id;
+
+    bool operator==(uint8_t i) const {
+        return id == i;
+    }
+};
+
+struct message_ping : message_times
+{
+    uint8_t id;
+    uint8_t unused[message_bsize];
+
+    static const uint32_t msg_id = msg_ping;
+};
+static_assert(sizeof(message_ping) == message_size, "protocol agreement");
+
+struct message_hello : message_times
+{
+    uint8_t id;
+    uint8_t unused[message_bsize - 16];
+
     char name[16];
-    uint64_t reserved;
-    ttime_t time;
-
-    static const uint32_t msg_id = msg_hello, size = 32;
+    static const uint32_t msg_id = msg_hello;
 };
-static_assert(sizeof(message_hello) == 32, "protocol agreement");
+static_assert(sizeof(message_hello) == message_size, "protocol agreement");
 
 struct price_t
 {
@@ -80,75 +82,73 @@ struct count_t
     int64_t value;
 };
 
-struct message_trade
+struct message_trade : message_times
 {
-    uint32_t security_id;
+    uint8_t id;
+    uint8_t unused;
+
     //enum direction{unknown = 0, buy = 1, sell = 2};
-    uint32_t direction;
+    uint16_t direction;
+    uint32_t security_id;
     price_t price;
     count_t count;
-    ttime_t etime; //exchange time
-    ttime_t time;  //parser time
-    static const uint32_t msg_id = msg_trade, size = 40;
+    static const uint32_t msg_id = msg_trade;
 };
-static_assert(sizeof(message_trade) == 40, "protocol agreement");
+static_assert(sizeof(message_trade) == message_size, "protocol agreement");
 
 //message_instr clean OrderBook for instrument
 struct message_instr
 {
+    ttime_t time;
     char exchange_id[8];
+    uint8_t id;
+
     char feed_id[4];
-    char security[16];
+    char security[15];
     
     uint32_t security_id; // = crc32(exchange_id, feed_id, security) now
-    ttime_t time;  //parser time
 
-    static const uint32_t msg_id = msg_instr, size = 40;
+    static const uint32_t msg_id = msg_instr;
 };
-static_assert(sizeof(message_instr) == 40, "protocol agreement");
+static_assert(sizeof(message_instr) == message_size, "protocol agreement");
 
-struct message_clean
+struct message_clean : message_times
 {
+    uint8_t id;
+    uint8_t unused[message_bsize - 8];
+
     uint32_t security_id;
     uint32_t source; //0 from parsers, 1 from disconnect events
-    ttime_t time;
-    static const uint32_t msg_id = msg_clean, size = 16;
+    static const uint32_t msg_id = msg_clean;
 };
-static_assert(sizeof(message_clean) == 16, "protocol agreement");
+static_assert(sizeof(message_clean) == message_size, "protocol agreement");
 
-struct message_book
+struct message_book : message_times
 {
+    uint8_t id;
+    uint8_t unused[3];
+
     uint32_t security_id;
-    uint32_t reserved;
     price_t price; 
     count_t count; //this new counts for level price
-    ttime_t etime; //exchange time
-    ttime_t time;  //parser time
-    static const uint32_t msg_id = msg_book, size = 40;
+    static const uint32_t msg_id = msg_book;
 };
-static_assert(sizeof(message_book) == 40, "protocol agreement");
+static_assert(sizeof(message_book) == message_size, "protocol agreement");
 
-struct message_bytes : msg_head
+struct message
 {
     union
     {
+        message_id id;
+        message_times t;
         message_book mb;
         message_trade mt;
         message_clean mc;
         message_instr mi;
-
-        //ping and hello not proceed to export from makoa_server
-        //message_ping using for flush
         message_ping mp;
         message_hello dratuti;
     };
 };
 
-struct message : message_bytes
-{
-    ttime_t mtime; //makoa server time
-    bool flush; //when it set, all data from stream is consumed
-};
-
-static_assert(sizeof(message) == 64);
+static_assert(sizeof(message) == message_size);
 

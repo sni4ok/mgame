@@ -97,7 +97,6 @@ struct mirror::impl
     typedef order_book::const_iterator iterator;
     uint32_t trades_from;
 
-    window w;
     char buf[512];
     buf_stream bs;
  
@@ -114,10 +113,6 @@ struct mirror::impl
         dE(), dP(), can_run(true), refresh_thrd(&impl::refresh_thread, this),
         empty("         ")
     {
-        e = start_color()
-            & init_pair(1, COLOR_WHITE, COLOR_BLACK)
-            & init_pair(2, COLOR_BLUE, COLOR_YELLOW)
-            & init_pair(3, COLOR_BLUE, COLOR_CYAN);
     }
     ~impl()
     {
@@ -143,7 +138,7 @@ struct mirror::impl
         
         return it;
     }
-    void print_trades()
+    void print_trades(window& w)
     {
         while(w.rows <= trades.size())
             trades.pop_front();
@@ -155,7 +150,7 @@ struct mirror::impl
             bs.clear();
         }
     }
-    void print_order_book()
+    void print_order_book(window& w)
     {
         if(!sec.security_id)
             return;
@@ -180,7 +175,7 @@ struct mirror::impl
         e = attroff(A_BOLD);
         e = attron(COLOR_PAIR(1));
     }
-    void print_head()
+    void print_head(window& w)
     {
         e = mvwaddnstr(w, w.rows - 1, 0, &w.blank_row[0], w.blank_row.size() - 1);
         e = mvwaddstr(w, w.rows - 1, 0, head_msg.c_str());
@@ -188,18 +183,18 @@ struct mirror::impl
         e = mvwaddstr(w, w.rows - 1, w.cols - bs.size(), bs.begin());
         bs.clear();
     }
-    void refresh()
+    void refresh(window& w)
     {
         std::unique_lock<std::mutex> lock(mutex);
         w.clear();
-        print_order_book();
-        print_trades();
-        print_head();
+        print_order_book(w);
+        print_trades(w);
+        print_head(w);
         lock.unlock();
         move(w.rows - 1, 0);
         ::refresh();
     }
-    void wait_input()
+    void wait_input(window& w)
     {
         uint32_t c = refresh_rate / 20000;
         int key = -1;
@@ -252,10 +247,15 @@ struct mirror::impl
     void refresh_thread()
     {
         try {
+            window w;
+            e = start_color()
+                & init_pair(1, COLOR_WHITE, COLOR_BLACK)
+                & init_pair(2, COLOR_BLUE, COLOR_YELLOW)
+                & init_pair(3, COLOR_BLUE, COLOR_CYAN);
+
             while(can_run) {
-                refresh();
-                wait_input();
-                //usleep(refresh_rate);
+                refresh(w);
+                wait_input(w);
             }
         }
         catch(std::exception& e) {
@@ -283,9 +283,14 @@ struct mirror::impl
             }
         }
     }
+    void proceed(const message* m, uint32_t count)
+    {
+        for(uint32_t i = 0; i != count; ++i, ++m)
+            proceed(*m);
+    }
 };
 
-mirror::mirror(const std::string& params)
+inline mirror::impl* create_mirror(const std::string& params)
 {
     auto p = split(params, ' ');
     if(p.size() != 2)
@@ -293,20 +298,37 @@ mirror::mirror(const std::string& params)
     uint32_t refresh_rate = atoi(p[1].c_str());
     if(!refresh_rate)
         throw std::runtime_error(es() % "mirror::mirror() bad params: " % params % ", refresh_rate should be at least 1");
-    pimpl = std::make_unique<impl>(p[0], refresh_rate);
+    return new mirror::impl(p[0], refresh_rate);
+}
+
+mirror::mirror(const std::string& params)
+{
+    pimpl = create_mirror(params);
 }
 
 mirror::~mirror()
 {
+    delete pimpl;
 }
 
-void mirror::proceed(const message& m)
+void mirror::proceed(const message* m, uint32_t count)
 {
-    pimpl->proceed(m);
+    pimpl->proceed(m, count);
 }
-    
-void mirror::refresh()
+
+void* ying_init(const char* params)
 {
-    pimpl->refresh();
+    mlog() << "ying " << str_holder(params) << " started";
+    return create_mirror(params);
+}
+
+void ying_destroy(void* w)
+{
+    delete ((mirror::impl*)(w));
+}
+
+void ying_proceed(void* w, const message* m, uint32_t count)
+{
+    ((mirror::impl*)(w))->proceed(m, count);
 }
 

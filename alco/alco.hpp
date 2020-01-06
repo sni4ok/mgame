@@ -10,10 +10,10 @@
 
 struct security
 {
-    tyra_msg<message_book> mb;
-    tyra_msg<message_trade> mt;
-    tyra_msg<message_clean> mc;
-    tyra_msg<message_instr> mi;
+    message_book mb;
+    message_trade mt;
+    message_clean mc;
+    message_instr mi;
 
     void proceed_book(tyra& t, price_t price, count_t count, ttime_t etime)
     {
@@ -39,10 +39,14 @@ struct security
     }
     void init(const std::string& exchange_id, const std::string& feed_id, const std::string& ticker)
     {
-        mb = tyra_msg<message_book>();
-        mt = tyra_msg<message_trade>();
-        mc = tyra_msg<message_clean>();
-        mi = tyra_msg<message_instr>();
+        mb = message_book();
+        mb.id = msg_book;
+        mt = message_trade();
+        mt.id = msg_trade;
+        mc = message_clean();
+        mc.id = msg_clean;
+        mi = message_instr();
+        mi.id = msg_instr;
 
         memset(&mi.exchange_id, 0, sizeof(mi.exchange_id));
         memset(&mi.feed_id, 0, sizeof(mi.feed_id));
@@ -60,9 +64,7 @@ struct security
             throw std::runtime_error(es() % "security too big: " % ticker);
         std::copy(ticker.begin(), ticker.end(), &mi.security[0]);
 
-        crc32 crc(0);
-        crc.process_bytes((const char*)(&(static_cast<message_instr&>(mi))), sizeof(message_instr) - 12);
-        mi.security_id = crc.checksum();
+        mi.security_id = calc_crc(mi);
         mi.time = get_cur_ttime();
 
         mb.security_id = mi.security_id;

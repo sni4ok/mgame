@@ -47,7 +47,7 @@ struct order_book : fmap<price_t, message_book>
             orders = 0;
         }
         else
-            throw std::runtime_error(es() % "order_book::proceed() unsupported message type: " % m.id);
+            throw std::runtime_error(es() % "order_book::proceed() unsupported message type: " % m.id.id);
 
     }
 };

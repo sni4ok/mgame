@@ -19,7 +19,7 @@ struct lws_i : lws_impl
     char event[9];
 
     struct impl;
-    typedef void (lws_i::*func)(impl& i, iterator& it, iterator ie);
+    typedef void (lws_i::*func)(impl& i, ttime_t time, iterator& it, iterator ie);
     struct impl
     {
         uint32_t security_id;
@@ -29,8 +29,9 @@ struct lws_i : lws_impl
         {
         }
     };
-    const uint32_t ping;
-    time_t ping_t;
+    const uint64_t ping;
+    ttime_t ping_t;
+    message_ping mp = {ttime_t(), ttime_t(), msg_ping, ""};
 
     fmap<uint32_t, impl> parsers; //channel, impl
     lws_i() :
@@ -39,7 +40,7 @@ struct lws_i : lws_impl
         book("\"book\",\"chanId\":"),
         symbol("\"symbol\":\""),
         event("\"event\":"),
-        ping(config::instance().ping), ping_t(time(NULL))
+        ping(uint64_t(config::instance().ping) * ttime_t::frac), ping_t(get_cur_ttime())
     {
         config& c = config::instance();
         for(auto& v: c.tickers) {
@@ -47,7 +48,7 @@ struct lws_i : lws_impl
             sec.init(c.exchange_id, c.feed_id, v);
             securities.push_back(std::move(sec));
             security& s = securities.back();
-            t.send(s.mi);
+            add_instrument(s.mi);
 
             if(c.trades) {
                 subscribes.push_back("{\"event\":\"subscribe\",\"channel\":\"trades\",\"symbol\":\"" + v + "\"}");
@@ -57,10 +58,10 @@ struct lws_i : lws_impl
                     + v + "\",\"prec\":\"" + c.precision + "\",\"freq\":\"" + c.frequency + "\",\"len\":\"" + c.length + "\"}");
             }
         }
+        send_messages();
     }
-    void parse_trades(impl& i, iterator& it, iterator ie)
+    void parse_trades(impl& i, ttime_t time, iterator& it, iterator ie)
     {
-        mlog() << "parse_trades: " << str_holder(it, ie - it);
         if(*(it + 1) == '[')
         {
             //trade book after initialize
@@ -92,20 +93,18 @@ struct lws_i : lws_impl
         
         if(id > i.high)
         {
-            add_trade(i.security_id, price, count, dir, etime, get_cur_ttime());
+            add_trade(i.security_id, price, count, dir, etime, time);
             i.high = id;
-            send_trades();
+            send_messages();
         }
     }
-    void parse_orders(impl& i, iterator& it, iterator ie)
+    void parse_orders(impl& i, ttime_t time, iterator& it, iterator ie)
     {
-        mlog() << "parse_orders: " << str_holder(it, ie - it);
         bool one = *(it + 1) != '[';
 
         if(!one)
             skip_fixed(it, "[");
         iterator ne;
-        ttime_t ctime = get_cur_ttime();
         for(;;)
         {
             skip_fixed(it, "[");
@@ -114,7 +113,7 @@ struct lws_i : lws_impl
             ne = std::find(ne + 1, ie, ',') + 1; //skip count (number orders on current price level)
             it = std::find(ne, ie, ']');
             count_t count = read_count(ne, it);
-            add_order(i.security_id, price, count, ttime_t(), ctime);
+            add_order(i.security_id, price, count, ttime_t(), time);
             ++it;
             if(*it != ',')
                 break;
@@ -125,7 +124,7 @@ struct lws_i : lws_impl
             skip_fixed(it, "]");
         else
             skip_fixed(it, "]]");
-        send_book();
+        send_messages();
     }
     void add_channel(uint32_t channel, str_holder ticker, bool is_trades)
     {
@@ -146,6 +145,7 @@ struct lws_i : lws_impl
     }
     int proceed(lws* wsi, void* in, size_t len)
     {
+        ttime_t time = get_cur_ttime();
         if(config::instance().log_lws)
             mlog() << "lws proceed: " << str_holder((const char*)in, len);
         iterator it = (iterator)in, ie = it + len;
@@ -160,13 +160,13 @@ struct lws_i : lws_impl
 
             if(likely(ne != ie)) {
                 impl& i = parsers.at(channel);
-                ((this)->*(i.f))(i, ne, ie);
+                ((this)->*(i.f))(i, time, ne, ie);
                 if(ne != ie)
                     throw std::runtime_error(es() % "parsing market message error: " % str_holder((const char*)in, len));
             }
             else {
                 //possible "hb" message
-                t.ping();
+                e.proceed((const message*)&mp, 1);
             }
         }
         else if(*it == '{')
@@ -201,10 +201,9 @@ struct lws_i : lws_impl
             mlog(mlog::critical) << "unsupported message: " << str_holder(it, len);
 
         if(ping) {
-            time_t cur_t = time(NULL);
-            if(cur_t > ping_t + ping) {
-                ping_t = cur_t;
-                bs << "{\"event\":\"ping\",\"cid\":\"" << ping_t << "\"}";
+            if(time.value > ping_t.value + ping) {
+                ping_t = time;
+                bs << "{\"event\":\"ping\",\"cid\":\"" << ping_t.value / ttime_t::frac << "\"}";
                 send(wsi);
             }
         }

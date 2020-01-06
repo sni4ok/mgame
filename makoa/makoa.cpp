@@ -8,7 +8,6 @@
 
 #include "engine.hpp"
 #include "server.hpp"
-#include "securities.hpp"
 
 #include "evie/mlog.hpp"
 #include "evie/profiler.hpp"
@@ -48,7 +47,6 @@ int main(int argc, char** argv)
         config cfg(argc == 1 ? "makoa_server.conf" : argv[1]);
         cfg.print();
         name = cfg.name;
-        securities sec;
         engine en;
         server sv;
         sv.accept_loop(can_run);

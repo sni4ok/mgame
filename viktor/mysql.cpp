@@ -9,10 +9,10 @@
 
 #include "makoa/exports.hpp"
 #include "makoa/types.hpp"
-#include "tyra/tyra.hpp"
 #include "evie/mlog.hpp"
 
 #include <string>
+#include <memory>
 
 #include <mysql/mysql.h>
 
@@ -155,37 +155,34 @@ struct mysql
             bso << ',';
         bso << '(' << security_id << ",NULL,0,0," << time << ')';
     }
-    void proceed(const message& m)
+    void proceed(const message* m, uint32_t count)
     {
-        if(m.id == msg_book) {
-            auto& v = reinterpret_cast<const tyra_msg<message_book>& >(m);
-            if(bso.size() != so)
-                bso << ',';
-            bso << '(' << v.security_id << ',' << v.price << ',' << v.count << ',' << v.etime << ',' << v.time << ')';
+        for(uint32_t i = 0; i != count; ++i, ++m) {
+            if(m->id == msg_book) {
+                message_book &v = (message_book&)*m;
+                if(bso.size() != so)
+                    bso << ',';
+                bso << '(' << v.security_id << ',' << v.price << ',' << v.count << ',' << v.etime << ',' << v.time << ')';
+            }
+            else if(m->id == msg_trade) {
+                message_trade &v = (message_trade&)*m;
+                if(bst.size() != st)
+                    bst << ',';
+                bst << '(' << v.security_id << ',' << v.direction << ',' << v.price << ',' << v.count << ',' << v.etime << ',' << v.time << ')';
+            }
+            else if(m->id == msg_clean) {
+                message_clean &v = (message_clean&)*m;
+                clean(v.security_id, v.time);
+            }
+            else if(m->id == msg_instr) {
+                message_instr &v = (message_instr&)*m;
+                if(bsi.size() != si)
+                    bsi << ',';
+                bsi << "(\'" << v.exchange_id << "\',\'" << v.feed_id << "\',\'" << v.security << "\'," << v.security_id << ',' << v.time << ')';
+                clean(v.security_id, v.time);
+            }
         }
-        else if(m.id == msg_trade) {
-            auto& v = reinterpret_cast<const tyra_msg<message_trade>& >(m);
-            if(bst.size() != st)
-                bst << ',';
-            bst << '(' << v.security_id << ',' << v.direction << ',' << v.price << ',' << v.count << ',' << v.etime << ',' << v.time << ')';
-        }
-        else if(m.id == msg_clean) {
-            auto& v = reinterpret_cast<const tyra_msg<message_clean>& >(m);
-            clean(v.security_id, v.time);
-        }
-        else if(m.id == msg_instr) {
-            auto& v = reinterpret_cast<const tyra_msg<message_instr>& >(m);
-            if(bsi.size() != si)
-                bsi << ',';
-            bsi << "(\'" << v.exchange_id << "\',\'" << v.feed_id << "\',\'" << v.security << "\'," << v.security_id << ',' << v.time << ')';
-            clean(v.security_id, v.time);
-        }
-        else if(m.id == msg_ping) {
-            flush();
-        }
-        if(m.flush) {
-            flush();
-        }
+        flush();
     }
 };
 
@@ -199,9 +196,9 @@ void mysql_destroy(void* v)
     delete (mysql*)(v);
 }
 
-void mysql_proceed(void* v, const message& m)
+void mysql_proceed(void* v, const message* m, uint32_t count)
 {
-    ((mysql*)(v))->proceed(m);
+    ((mysql*)(v))->proceed(m, count);
 }
 
 }

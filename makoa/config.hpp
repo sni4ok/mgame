@@ -10,7 +10,6 @@
 
 struct config : stack_singleton<config>
 {
-    bool log_exporter;
     uint16_t port;
     std::string name;
 

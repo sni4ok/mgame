@@ -5,6 +5,7 @@
 #include "evie/mlog.hpp"
 #include "evie/utils.hpp"
 #include "evie/profiler.hpp"
+#include "evie/config.hpp"
 
 #include <csignal>
 

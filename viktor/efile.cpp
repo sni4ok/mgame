@@ -9,7 +9,6 @@
 
 #include "makoa/exports.hpp"
 #include "makoa/types.hpp"
-#include "tyra/tyra.hpp"
 #include "evie/mlog.hpp"
 
 #include <string>
@@ -79,67 +78,45 @@ struct efile
     }
     void write_csv(const message_book& m)
     {
-        bs << "b," <<  m.security_id << ',' << m.price << ',' << m.count << ',' << m.etime << ',' << m.time << '\n';
+        bs << "b," <<  m.security_id << ',' << m.price << ',' << m.count
+            << ',' << m.etime << ',' << m.time << '\n';
     }
     void write_csv(const message_trade& m)
     {
-        bs << "t," <<  m.security_id << ',' << m.direction << ',' << m.price << ',' << m.count << ',' << m.etime << ',' << m.time << '\n';
+        bs << "t," <<  m.security_id << ',' << m.direction << ',' << m.price << ',' << m.count
+            << ',' << m.etime << ',' << m.time << '\n';
     }
     void write_csv(const message_clean& m)
     {
-        bs << "c," <<  m.security_id << ',' << m.source << ',' << m.time << '\n';
+        bs << "c," <<  m.security_id << ',' << m.source
+            << ',' << m.etime << ',' << m.time << '\n';
     }
     void write_csv(const message_instr& m)
     {
-        bs << "i," <<  m.exchange_id << ',' << m.feed_id << ',' << m.security_id << ',' << m.time << '\n';
+        bs << "i," <<  m.exchange_id << ',' << m.feed_id << ',' << m.security_id
+            << ',' << m.time << '\n';
     }
-    void proceed_bin(const message& m)
+    void proceed_csv(const message* m, uint32_t count)
     {
-        if(!m.flush) {
-            bs.write((const char*)&m, sizeof(m));
-        }
-        else {
-            if(bs.size()) {
-                bs.write((const char*)&m, sizeof(m));
-                flush();
+        for(uint32_t i = 0; i != count; ++i, ++m) {
+            if(m->id == msg_book)
+                write_csv((message_book&)*m);
+            else if(m->id == msg_trade)
+                write_csv((message_trade&)*m);
+            else if(m->id == msg_clean)
+                write_csv((message_clean&)*m);
+            else if(m->id == msg_instr) {
+                write_csv((message_instr&)*m);
             }
-            else {
-                write((const char*)&m, sizeof(m));
-            }
         }
+        flush();
     }
-    void proceed_csv(const message& m)
-    {
-        if(m.id == msg_book) {
-            auto& v = reinterpret_cast<const tyra_msg<message_book>& >(m);
-            write_csv(v);
-        }
-        else if(m.id == msg_trade) {
-            auto& v = reinterpret_cast<const tyra_msg<message_trade>& >(m);
-            write_csv(v);
-        }
-        else if(m.id == msg_clean) {
-            auto& v = reinterpret_cast<const tyra_msg<message_clean>& >(m);
-            write_csv(v);
-        }
-        else if(m.id == msg_instr) {
-            auto& v = reinterpret_cast<const tyra_msg<message_instr>& >(m);
-            write_csv(v);
-        }
-        else if(m.id == msg_ping) {
-            flush();
-        }
-        if(m.flush) {
-            flush();
-        }
-    }
-
-    void proceed(const message& m)
+    void proceed(const message* m, uint32_t count)
     {
         if(bin)
-            proceed_bin(m);
+            write((const char*)m, message_size * count);
         else
-            proceed_csv(m);
+            proceed_csv(m, count);
     }
     ~efile()
     {
@@ -157,9 +134,9 @@ void efile_destroy(void* v)
     delete (efile*)(v);
 }
 
-void efile_proceed(void* v, const message& m)
+void efile_proceed(void* v, const message* m, uint32_t count)
 {
-    ((efile*)(v))->proceed(m);
+    ((efile*)(v))->proceed(m, count);
 }
 
 }

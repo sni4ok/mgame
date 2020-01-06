@@ -30,5 +30,3 @@ struct context_holder : noncopyable
     ~context_holder();
 };
 
-uint32_t proceed_data(const uint8_t* data, uint32_t size, context* ctx);
-

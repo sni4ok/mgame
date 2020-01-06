@@ -8,6 +8,7 @@
 
 #include "evie/time.hpp"
 #include "evie/mlog.hpp"
+#include "evie/utils.hpp"
 
 template<typename stream>
 stream& operator<<(stream& s, const price_t& p)
@@ -49,23 +50,24 @@ template<typename stream>
 stream& operator<<(stream& s, const message_trade& t)
 {
     s << "trade|"<< t.security_id << "|" << t.direction << "|"
-        << t.price << "|" << t.count << "|" << t.etime
-        << "|" << t.time << "|";
+        << t.price << "|" << t.count
+        << "|" << t.etime << "|" << t.time << "|";
     return s;
 }
 
 template<typename stream>
 stream& operator<<(stream& s, const message_instr& i)
 {
-    s << "instr|"<< i.exchange_id << "|" << i.feed_id << "|" << i.security << "|"
-        << i.security_id << "|" << i.time;
+    s << "instr|"<< i.exchange_id << "|" << i.feed_id << "|" << i.security << "|" << i.security_id
+        << "|" << i.time;
     return s;
 }
 
 template<typename stream>
 stream& operator<<(stream& s, const message_clean& c)
 {
-    s << "clean|"<< c.security_id << "|" << c.source << "|" << c.time << "|";
+    s << "clean|"<< c.security_id << "|" << c.source
+        << "|" << c.etime << "|" << c.time << "|";
     return s;
 }
 
@@ -74,6 +76,22 @@ stream& operator<<(stream& s, const message_book& t)
 {
     s << "book|"<< t.security_id << "|" << t.price << "|" << t.count
         << "|" << t.etime << "|" << t.time << "|";
+    return s;
+}
+
+template<typename stream>
+stream& operator<<(stream& s, const message_ping& p)
+{
+    s << "ping|"
+        << p.etime << "|" << p.time << "|";
+    return s;
+}
+
+template<typename stream>
+stream& operator<<(stream& s, const message_hello& h)
+{
+    s << "ping|" << h.name
+        << "|" << h.etime << "|" << h.time << "|";
     return s;
 }
 
@@ -122,7 +140,10 @@ inline decimal read_decimal(const char* it, const char* ie)
     if(minus)
         ++it;
     const char* p = std::find(it, ie, '.');
-    const char* E = std::find((p == ie ? it : p + 1), ie, 'E');
+    const char* E = std::find_if((p == ie ? it : p + 1), ie,
+            [](char c) {
+                return c == 'E' || c == 'e';
+                });
 
     decimal ret;
     ret.value = my_cvt::atoi<int64_t>(it, std::min(p, E) - it);
@@ -167,5 +188,14 @@ inline price_t read_price(const char* it, const char* ie)
 inline count_t read_count(const char* it, const char* ie)
 {
     return read_decimal<count_t>(it, ie);
+}
+
+inline uint32_t calc_crc(const message_instr& i)
+{
+    crc32 crc(0);
+    crc.process_bytes(i.exchange_id, sizeof(i.exchange_id) - 1);
+    crc.process_bytes(i.feed_id, sizeof(i.feed_id) - 1);
+    crc.process_bytes(i.security, sizeof(i.security) - 1);
+    return crc.checksum();
 }
 

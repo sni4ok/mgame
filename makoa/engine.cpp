@@ -5,7 +5,6 @@
 
 #include "engine.hpp"
 #include "exports.hpp"
-#include "securities.hpp"
 #include "types.hpp"
 
 #include "evie/fast_alloc.hpp"
@@ -19,8 +18,18 @@
 #include <atomic>
 #include <cstring>
 
-template<typename type>
-struct linked_node : type
+struct messages
+{
+    messages()
+    {
+    }
+    ttime_t mtime;
+    message m[50];
+    uint32_t count;
+    std::atomic<uint32_t> cnt;
+};
+
+struct linked_node : messages
 {
     linked_node() : next()
     {
@@ -28,13 +37,9 @@ struct linked_node : type
     linked_node* next;
 };
 
-template<typename tt>
-struct linked_list : fast_alloc<linked_node<tt>, 64 * 1024>
+class linked_list : public fast_alloc<linked_node, 4 * 1024>
 {
-    typedef linked_node<tt> type;
-
-private:
-    type root;
+    linked_node root;
     std::atomic<type*> tail;
     
     std::mutex& mutex;
@@ -44,23 +49,20 @@ public:
     linked_list(std::mutex& mutex, std::condition_variable& cond) : tail(&root), mutex(mutex), cond(cond)
     {
     }
-    void push(type* t) //push element in list, always success
+    void push(linked_node* t) //push element in list, always success
     {
-        bool flush = t->flush;
         type* expected = tail;
         while(!tail.compare_exchange_weak(expected, t)) {
             expected = tail;
         }
         expected->next = t;
 
-        if(flush) {
-            bool lock = mutex.try_lock();
-            cond.notify_all();
-            if(lock)
-                mutex.unlock();
-        }
+        bool lock = mutex.try_lock();
+        cond.notify_all();
+        if(lock)
+            mutex.unlock();
     }
-    type* next(type* prev) //can return nullptr, but next time caller should used latest not nullptr value
+    linked_node* next(linked_node* prev) //can return nullptr, but next time caller should used latest not nullptr value
     {
         if(!prev)
             return root.next;
@@ -125,7 +127,9 @@ public:
 struct context
 {
     actives acs;
-    context()
+
+    uint32_t buf_delta;
+    context() : buf_delta()
     {
     }
     void insert(uint32_t security_id, ttime_t time)
@@ -152,100 +156,26 @@ struct context
     }
 };
 
-struct log_exporter
-{
-    log_exporter()
-    {
-    }
-    static const char* name()
-    {
-        return "log_exporter";
-    }
-    void proceed(const message& m)
-    {
-        if(m.id == msg_book)
-            mlog() << "<" << m.mb;
-        else if(m.id == msg_trade)
-            mlog() << "<" << m.mt;
-        else if(m.id == msg_clean)
-            mlog() << "<" << m.mc;
-        else if(m.id == msg_instr)
-            mlog() << "<" << m.mi;
-        if(m.flush)
-            mlog() << "<flush|";
-    }
-};
-
-struct lib_exporter
-{
-    std::string module;
-    exports exp;
-    void proceed(const message& m)
-    {
-        exp.proceed(m);
-    }
-    const char* name() const
-    {
-        return module.c_str();
-    }
-    lib_exporter(const std::string& module) : module(module), exp(module)
-    {
-    }
-    lib_exporter(const std::string& module, const std::string& params) : module(module), exp(module, params)
-    {
-    }
-};
-
-std::unique_ptr<lib_exporter> create_exporter_with_params(const std::string& m)
-{
-    auto ib = m.begin(), ie = m.end(), it = std::find(ib, ie, ' ');
-    if(it == ie || it + 1 == ie)
-        return std::make_unique<lib_exporter>(m);
-    else
-        return std::make_unique<lib_exporter>(std::string(ib, it), std::string(it + 1, ie));
-}
-
 class engine::impl : public stack_singleton<engine::impl>
 {
     volatile bool can_run;
     std::mutex mutex;
     std::condition_variable cond;
-
-    template<typename type>
-    struct counter : type
-    {
-        std::atomic<uint32_t> cnt;
-        counter()
-        {
-        }
-    };
-
-    typedef linked_list<counter<message> > llist;
-    llist ll;
-
-
     std::vector<std::thread> threads; //consume workers, one thread for each exporter
+    linked_list ll;
     uint32_t consumers;
-    template <typename consumer>
-    void work_thread(std::unique_ptr<consumer> p)
+
+    void work_thread(exporter exp)
     {
         try{
-            llist::type *prev = nullptr, *ptmp;
-            time_t ptime = 0;
-            message mp = message();
-            static_cast<msg_head&>(mp) = msg_head{message_ping::msg_id, message_ping::size};
-            mp.flush = false;
-            bool flush = true;
+            linked_list::type *prev = nullptr, *ptmp;
             while(can_run)
             {
                 //lockfree when queue not empty
                 ptmp = ll.next(prev);
         repeat:
                 if(ptmp){
-                    p->proceed(*ptmp);
-                    flush = ptmp->flush;
-                    if(flush)
-                        ptime = time(NULL);
+                    exp.proceed(ptmp->m, ptmp->count);
                     if(prev){
                         //we release prev here
                         uint32_t consumers_left = --(prev->cnt);
@@ -256,129 +186,129 @@ class engine::impl : public stack_singleton<engine::impl>
                     }
                     prev = ptmp;
                 }
-                else if(flush){
-                    time_t ct = time(NULL);
-                    if(ct != ptime) {
-                        mp.mtime = get_cur_ttime();
-                        p->proceed(mp);
-                        ptime = ct;
-                    }
-                    else {
-                        //here queue is empty, so wait on mutex for new messages
-                        bool lock = mutex.try_lock();
-                        if(lock) {
-                            std::unique_lock<std::mutex> lock(mutex, std::adopt_lock_t());
-                            ptmp = ll.next(prev);
-                            if(ptmp)
-                                goto repeat;
-                            else
-                                cond.wait_for(lock, std::chrono::microseconds(100 * 1000));
-                        }
+                else{
+                    //here queue is empty, so wait on mutex for new messages
+                    bool lock = mutex.try_lock();
+                    if(lock) {
+                        std::unique_lock<std::mutex> lock(mutex, std::adopt_lock_t());
+                        ptmp = ll.next(prev);
+                        if(ptmp)
+                            goto repeat;
+                        else
+                            cond.wait_for(lock, std::chrono::microseconds(100 * 1000));
                     }
                 }
             }
         }
         catch(std::exception& e){
-            mlog(mlog::error) << str_holder(p->name()) << " " << e;
+            mlog(mlog::error) << "exports: " << " " << e;
             //TODO: close connection for market data provider for current message
             //this should be done in server::impl::work_thread
         }
     }
-    static void log_and_throw_error(const uint8_t* data, uint32_t size, const char* reason)
+    static void log_and_throw_error(const char* data, uint32_t size, const char* reason)
     {
-        mlog() << "bad message (" << str_holder(reason) << "!): " << print_binary(data, std::min<uint32_t>(32, size));
+        mlog() << "bad message (" << str_holder(reason) << "!): " << print_binary((const uint8_t*)data, std::min<uint32_t>(32, size));
         throw std::runtime_error("bad message");
     }
 public:
     impl() : can_run(true), ll(mutex, cond)
     {
     }
+    str_holder alloc()
+    {
+        linked_node* p = ll.alloc();
+        return str_holder((const char*)p->m, sizeof(p->m));
+    }
+    void free(str_holder buf, context* ctx)
+    {
+        const char* m = (buf.str - ctx->buf_delta - sizeof(messages::mtime));
+        ll.free((linked_node*)m);
+    }
     void init()
     {
-        if(config::instance().log_exporter)
-            threads.push_back(std::thread(&impl::work_thread<log_exporter>, this, std::make_unique<log_exporter>()));
         for(const auto& m: config::instance().exports)
-            threads.push_back(std::thread(&impl::work_thread<lib_exporter>, this, create_exporter_with_params(m)));
+            threads.push_back(std::thread(&impl::work_thread, this, exporter(m)));
         consumers = threads.size();
     }
-    uint32_t proceed(const uint8_t* data, uint32_t size, context* ctx)
+    void proceed(str_holder& buf, context* ctx)
     {
         //MPROFILE("engine::proceed()")
         //mlog() << "proceed " << size << " bytes";
-        uint32_t consumed = 0;
+        //uint32_t consumed = 0;
 
-        while(size)
+        uint32_t full_size = buf.size + ctx->buf_delta;
+        uint32_t count = full_size / message_size;
+        uint32_t cur_delta = full_size % message_size;
+        ttime_t mtime = get_cur_ttime();
+
+        const char* ptr = buf.str - ctx->buf_delta;
+        message* m = (message*)(ptr);
+        linked_node* n = (linked_node*)(ptr - sizeof(messages::mtime));
+        n->mtime = mtime;
+        n->count = count;
+        n->cnt = consumers + 1;
+        ll.push(n);
+        cond.notify_all();
+        
+        struct node_free
         {
-            if(unlikely(size < sizeof(msg_head)))
-                break;
-            alloc_holder<llist> tm(ll);
-            msg_head& mh = *tm;
-            memcpy(&mh, data, sizeof(msg_head));
-            const uint32_t msg_sz = mh.size + sizeof(msg_head);
-#define MESSAGE_BEG(mes, member) \
-            else if(mh.id == mes::msg_id) { \
-                static const uint32_t cur_msg_size = mes::size; \
-                if(unlikely(mh.size != cur_msg_size)) \
-                    log_and_throw_error(data, size, es() % "cur_msg_size: " % cur_msg_size % ", mh.size: " % mh.size); \
-                if(size < msg_sz) \
-                    break; \
-                mes* t = &(tm-> member); \
-                memcpy(t, data + sizeof(msg_head), cur_msg_size);
-
-#define MESSAGE_END() \
-                consumed += msg_sz; \
-                size -= msg_sz; \
-                data += msg_sz; \
+            linked_node* n;
+            linked_list& ll;
+            node_free(linked_node* n, linked_list& ll) : n(n), ll(ll) 
+            {
             }
-
-#define MESSAGE_CONS_BEG(mes, member) \
-            MESSAGE_BEG(mes, member) \
-                tm->mtime = get_cur_ttime(); \
-                if(unlikely(!t->time.value)) \
-                    throw std::runtime_error("field time not set"); \
-                tm->flush = !(size - msg_sz);
-
-#define MESSAGE_CONS_END() \
-                tm->cnt = consumers; \
-                ll.push(tm.release()); \
-            MESSAGE_END()
-
-            if(0 == 1){
+            ~node_free() {
+                uint32_t consumers_left = --(n->cnt);
+                if(!consumers_left){
+                    n->next = nullptr;
+                    ll.free(n);
+                }
             }
+        };
+        node_free nf(n, ll);
 
-            MESSAGE_CONS_BEG(message_book, mb)
-                ctx->check(t->security_id, t->time);
-                //mlog() << "|" << *t;
-            MESSAGE_CONS_END()
+        linked_node *e = ll.alloc();
+        buf.size = sizeof(messages::m) - cur_delta;
+        buf.str = (const char*)(e->m) + cur_delta;
+        if(cur_delta)
+            memcpy(e->m, ptr + count * message_size, cur_delta);
+        ctx->buf_delta = cur_delta;
 
-            MESSAGE_CONS_BEG(message_trade, mt)
-                ctx->check(t->security_id, t->time);
-            MESSAGE_CONS_END()
-
-            MESSAGE_CONS_BEG(message_clean, mc)
-                ctx->check_clean(*t);
-            MESSAGE_CONS_END()
-
-            MESSAGE_CONS_BEG(message_instr, mi)
-                uint32_t sec_id = get_security_id(*t, true);
-                ctx->insert(sec_id, t->time);
-            MESSAGE_CONS_END()
-
-            MESSAGE_BEG(message_ping, mp)
-                //mlog() << "<ping|" << t->time << "|";
-            MESSAGE_END()
-
-            MESSAGE_BEG(message_hello, dratuti)
-                mlog() << "<hello|" << t->name << "|" << t->time << "|";
-            MESSAGE_END()
-
-            else {
-                log_and_throw_error(data, size, es() % "bad msg_id: " % mh.id);
+        for(uint32_t i = 0; i != count; ++i, ++m)
+        {
+            switch(m->id.id) {
+                case(msg_book) : {
+                    ctx->check(m->mb.security_id, m->mb.time);
+                    break;
+                }
+                case(msg_trade) : {
+                    ctx->check(m->mt.security_id, m->mt.time);
+                    break;
+                }
+                case(msg_clean) : {
+                    ctx->check_clean(m->mc);
+                    break;
+                }
+                case(msg_instr) : {
+                    uint32_t security_id = calc_crc(m->mi);
+                    if(security_id != m->mi.security_id)
+                        throw std::runtime_error(es() % "instrument crc mismatch, in: " % m->mi.security_id % ", calculated: " % security_id);
+                    ctx->insert(security_id, m->mi.time);
+                    break;
+                }
+                case(msg_ping) : {
+                    break;
+                }
+                case(msg_hello) : {
+                    //mlog() << "<hello|" << t->name << "|" << t->time << "|";
+                    break;
+                }
+                default:
+                    log_and_throw_error(ptr, full_size, es() % "bad msg_id: " % m->id.id);
+                
             }
         }
-        if(consumed)
-            cond.notify_all();
-        return consumed;
     }
     ~impl()
     {
@@ -386,15 +316,22 @@ public:
         for(auto&& t: threads)
             t.join();
     }
-    void push_clean(uint32_t security_id, ttime_t parser_time, bool flush) //when parser disconnected all OrdersBooks cleans
+    void push_clean(const std::vector<actives::type>& secs) //when parser disconnected all OrdersBooks cleans
     {
-        auto p = ll.alloc();
-        static_cast<msg_head&>(*p) = msg_head{message_clean::msg_id, message_clean::size};
-        p->mtime = get_cur_ttime();
-        p->mc = message_clean{security_id, 1/*source*/, parser_time};
-        p->cnt = consumers;
-        p->flush = flush;
-        ll.push(p);
+        uint32_t count = secs.size();
+        ttime_t mtime = get_cur_ttime();
+           
+        for(uint32_t ci = 0; ci != count;)
+        {
+            uint32_t cur_c = std::min<uint32_t>(count - ci, sizeof(messages::m) / message_size);
+            linked_node* n = ll.alloc();
+            n->mtime = mtime;
+            n->count = cur_c;
+            n->cnt = consumers;
+            for(uint32_t i = 0; i != cur_c; ++i, ++ci)
+                n->m[i].mc = message_clean{secs[ci].time, ttime_t(), msg_clean, "", secs[ci].security_id, 1/*source*/};
+            ll.push(n);
+        }
     }
 };
 
@@ -411,9 +348,9 @@ engine::~engine()
 void actives::on_disconnect()
 {
     mlog() << "actives::on_disconnect";
+    engine::impl::instance().push_clean(data);
     auto it = data.begin(), ie = data.end();
     for(; it != ie; ++it) {
-        engine::impl::instance().push_clean(it->security_id, it->time, it + 1 == ie);
         auto& v = get(it->security_id);
         if(v.disconnected)
             mlog(mlog::warning) << "actives::on_disconnect(), " << it->security_id << " already disconnected";
@@ -432,8 +369,18 @@ context_holder::~context_holder()
     delete ctx;
 }
 
-uint32_t proceed_data(const uint8_t* data, uint32_t size, context* ctx)
+str_holder alloc_buffer()
 {
-    return engine::impl::instance().proceed(data, size, ctx);
+    return engine::impl::instance().alloc();
+}
+
+void free_buffer(str_holder buf, context* ctx)
+{
+    engine::impl::instance().free(buf, ctx);
+}
+
+void proceed_data(str_holder& buf, context* ctx)
+{
+    return engine::impl::instance().proceed(buf, ctx);
 }
 

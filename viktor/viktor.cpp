@@ -13,7 +13,6 @@ namespace {
 
 struct viktor
 {
-    std::string host;
     std::unique_ptr<tyra> ty;
 
     viktor(const std::string& params)
@@ -27,41 +26,13 @@ struct viktor
         if(mode != "sight")
             throw std::runtime_error("viktor::viktor() write me");
 
-        host = std::string(i + 1, ie);
-        connect();
+        std::string host = std::string(i + 1, ie);
+        ty.reset(new tyra(host));
     }
 
-    void connect()
+    void proceed(const message* m, uint32_t count)
     {
-        if(!ty)
-            ty.reset(new tyra(host));
-    }
-
-    void proceed(const message& m)
-    {
-        if(m.id == msg_book) {
-            auto& v = reinterpret_cast<const tyra_msg<message_book>& >(m);
-            ty->send(v);
-        }
-        else if(m.id == msg_trade) {
-            auto& v = reinterpret_cast<const tyra_msg<message_trade>& >(m);
-            ty->send(v);
-        }
-        else if(m.id == msg_clean) {
-            auto& v = reinterpret_cast<const tyra_msg<message_clean>& >(m);
-            ty->send(v);
-        }
-        else if(m.id == msg_instr) {
-            auto& v = reinterpret_cast<const tyra_msg<message_instr>& >(m);
-            ty->send(v);
-        }
-        else if(m.id == msg_ping) {
-            tyra_msg<message_ping>& v = (tyra_msg<message_ping>&)m;
-            ty->send(v);
-        }
-        if(m.flush) {
-            ty->flush();
-        }
+        ty->send(m, count);
     }
 };
 
@@ -79,9 +50,9 @@ extern "C"
         delete (viktor*)(v);
     }
 
-    void viktor_proceed(void* v, const message& m)
+    void viktor_proceed(void* v, const message* m, uint32_t count)
     {
-        ((viktor*)(v))->proceed(m);
+        ((viktor*)(v))->proceed(m, count);
     }
 
     void create_hole(hole_exporter* m, simple_log* sl)

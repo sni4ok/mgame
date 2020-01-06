@@ -32,7 +32,7 @@ struct ncurses_err
 };
 
 
-class window
+class window : noncopyable
 {
     static void end_win(WINDOW*)
     {

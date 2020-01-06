@@ -10,6 +10,6 @@ extern "C"
 {
     void* viktor_init(const char* params);
     void viktor_destroy(void* v);
-    void viktor_proceed(void* v, const message& m);
+    void viktor_proceed(void* v, const message* m, uint32_t count);
 }
 
