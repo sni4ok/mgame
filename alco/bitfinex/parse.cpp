@@ -31,7 +31,6 @@ struct lws_i : lws_impl
     };
     const uint64_t ping;
     ttime_t ping_t;
-    message_ping mp = {ttime_t(), ttime_t(), msg_ping, ""};
 
     fmap<uint32_t, impl> parsers; //channel, impl
     lws_i() :
@@ -166,7 +165,7 @@ struct lws_i : lws_impl
             }
             else {
                 //possible "hb" message
-                e.proceed((const message*)&mp, 1);
+                lws_impl::ping(ttime_t(), time);
             }
         }
         else if(*it == '{')

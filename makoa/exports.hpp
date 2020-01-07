@@ -9,6 +9,7 @@
 #include "messages.hpp"
 
 #include "evie/utils.hpp"
+#include "evie/time.hpp"
 
 #include <list>
 #include <map>
@@ -32,7 +33,7 @@ struct exporter
     exporter(exporter&& r);
     void operator=(exporter&& r);
     ~exporter() {
-        if(he.destroy)
+        if(p && he.destroy)
             he.destroy(p);
     }
     void proceed(const message* m, uint32_t count) {
@@ -41,4 +42,14 @@ struct exporter
 };
 
 uint32_t register_exporter(const std::string& module, hole_exporter he);
+
+inline ttime_t get_export_mtime(const message* m)
+{
+    return (m - 1)->t.time;
+}
+
+inline void set_export_mtime(message* m)
+{
+    (m - 1)->t.time = get_cur_ttime();
+}
 

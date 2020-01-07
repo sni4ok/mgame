@@ -84,7 +84,7 @@ namespace {
 
         //  ttime_t etime; //exchange time
         //  ttime_t time;  //parser time
-        //  ttime_t mtime; //makoa server time
+        //  ttime_t mtime; //parser out or makoa server time
         //  ttime_t ctime; //cur estat time
         struct mstat
         {
@@ -130,7 +130,7 @@ namespace {
         void proceed(const message* mes, uint32_t count)
         {
             this->count += count;
-            ttime_t mtime = ttime_t();
+            ttime_t mtime = get_export_mtime(mes);
 
             for(uint32_t i = 0; i != count; ++i, ++mes){
                 const message& m = *mes;

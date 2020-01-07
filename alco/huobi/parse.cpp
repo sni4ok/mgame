@@ -171,10 +171,10 @@ struct lws_i : lws_impl
     }
     void parse_snapshot(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie)
     {
+        add_clean(i.security_id, etime, time);
         parse_orders_impl(i, etime, time, it, ie);
         it = std::find(it, ie, '}');
         skip_fixed(it, end);
-        add_clean(i.security_id, etime, time);
         send_messages();
     }
     void parse_trades(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie)

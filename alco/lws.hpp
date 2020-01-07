@@ -10,6 +10,7 @@ struct lws_impl : stack_singleton<lws_impl>
     typedef const char* iterator;
 
     static const uint32_t pre_alloc = 150;
+    message _;
     message ms[pre_alloc];
     uint32_t m_s;
     
@@ -45,6 +46,16 @@ struct lws_impl : stack_singleton<lws_impl>
         if(unlikely(m_s == pre_alloc))
             send_messages();
         ms[m_s++].mi = mi;
+    }
+    void ping(ttime_t etime, ttime_t time)
+    {
+        if(m_s != pre_alloc) {
+            message_ping& p = ms[m_s++].mp;
+            p.time = time;
+            p.etime = etime;
+            p.id = msg_ping;
+        }
+        send_messages();
     }
     void add_clean(uint32_t security_id, ttime_t etime, ttime_t time)
     {
@@ -88,13 +99,18 @@ struct lws_impl : stack_singleton<lws_impl>
     void send_messages()
     {
         if(m_s) {
+            set_export_mtime(ms);
             e.proceed(ms, m_s);
             m_s = 0;
         }
     }
     ~lws_impl()
     {
-        lws_context_destroy(context);
+        try {
+            lws_context_destroy(context);
+        } catch (std::exception& e) {
+            mlog() << "~lws_impl() " << e;
+        }
     }
 
     lws_context* context;
@@ -140,6 +156,7 @@ int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user, void* i
         case LWS_CALLBACK_CLIENT_CLOSED:
         {
             mlog() << "lws closed";
+            throw std::runtime_error("lws closed");
             return -1;
         }
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:

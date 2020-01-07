@@ -23,7 +23,7 @@ struct messages
     messages()
     {
     }
-    ttime_t mtime;
+    message _;
     message m[50];
     uint32_t count;
     std::atomic<uint32_t> cnt;
@@ -222,7 +222,7 @@ public:
     }
     void free(str_holder buf, context* ctx)
     {
-        const char* m = (buf.str - ctx->buf_delta - sizeof(messages::mtime));
+        const char* m = (buf.str - ctx->buf_delta - sizeof(messages::_));
         ll.free((linked_node*)m);
     }
     void init()
@@ -234,18 +234,15 @@ public:
     void proceed(str_holder& buf, context* ctx)
     {
         //MPROFILE("engine::proceed()")
-        //mlog() << "proceed " << size << " bytes";
-        //uint32_t consumed = 0;
 
         uint32_t full_size = buf.size + ctx->buf_delta;
         uint32_t count = full_size / message_size;
         uint32_t cur_delta = full_size % message_size;
-        ttime_t mtime = get_cur_ttime();
 
         const char* ptr = buf.str - ctx->buf_delta;
         message* m = (message*)(ptr);
-        linked_node* n = (linked_node*)(ptr - sizeof(messages::mtime));
-        n->mtime = mtime;
+        linked_node* n = (linked_node*)(ptr - sizeof(linked_node::_));
+        set_export_mtime(m);
         n->count = count;
         n->cnt = consumers + 1;
         ll.push(n);
@@ -319,13 +316,11 @@ public:
     void push_clean(const std::vector<actives::type>& secs) //when parser disconnected all OrdersBooks cleans
     {
         uint32_t count = secs.size();
-        ttime_t mtime = get_cur_ttime();
-           
         for(uint32_t ci = 0; ci != count;)
         {
             uint32_t cur_c = std::min<uint32_t>(count - ci, sizeof(messages::m) / message_size);
             linked_node* n = ll.alloc();
-            n->mtime = mtime;
+            set_export_mtime(n->m);
             n->count = cur_c;
             n->cnt = consumers;
             for(uint32_t i = 0; i != cur_c; ++i, ++ci)
