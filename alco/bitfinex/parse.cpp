@@ -7,6 +7,7 @@
 #include "../alco.hpp"
 #include "../lws.hpp"
 
+#include "evie/fmap.hpp"
 
 struct lws_i : lws_impl
 {
@@ -210,6 +211,11 @@ struct lws_i : lws_impl
     }
 };
 
+void proceed_bitfinex(volatile bool& can_run)
+{
+    return proceed_lws_parser<lws_i>(can_run);
+}
+
 void connect(lws_i& ls)
 {
 	lws_client_connect_info ccinfo =lws_client_connect_info();
@@ -224,26 +230,5 @@ void connect(lws_i& ls)
 	ccinfo.host = ccinfo.address;
 	ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
 	lws_client_connect_via_info(&ccinfo);
-}
-
-void proceed_bitfinex(volatile bool& can_run)
-{
-    while(can_run) {
-        try {
-            lws_i ls;
-            ls.context = create_context<lws_i>();
-            connect(ls);
-
-            int n = 0;
-            while(can_run && n >= 0) {
-                n = lws_service(ls.context, 0);
-            }
-        }
-        catch(std::exception& e) {
-            mlog() << "proceed_bitfinex " << e;
-            if(can_run)
-                usleep(5000 * 1000);
-        }
-    }
 }
 

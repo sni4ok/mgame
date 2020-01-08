@@ -5,34 +5,77 @@
 #include "config.hpp"
 #include "plaza_common.hpp"
 
-#include "../alco.hpp"
-
 #include "scheme/instruments.inl"
 #include "scheme/orders.inl"
 #include "scheme/trades.inl"
 
-#include <unistd.h>
+#include "../alco.hpp"
+
+#include "evie/fmap.hpp"
 
 CG_RESULT instruments_callback(cg_conn_t* conn, cg_listener_t* listener, struct cg_msg_t* msg, void* p);
 CG_RESULT orders_callback(cg_conn_t* conn, cg_listener_t* listener, struct cg_msg_t* msg, void* p);
 CG_RESULT trades_callback(cg_conn_t* conn, cg_listener_t* listener, struct cg_msg_t* msg, void* p);
 
-struct parser : stack_singleton<parser>
+struct parser : emessages, stack_singleton<parser>
 {
-    fmap<int32_t, security> tickers;
-    tyra t;
+    struct security : ::security
+    {
+        //replID, message_book
+        std::map<int64_t, message_book> cur_book;
+    };
+    //isin_id, security
+    typedef std::map<int32_t, security> tickers_type;
+    tickers_type tickers;
+
+    ttime_t ptime;
+    void set_msg_begin()
+    {
+        ptime = get_cur_ttime();
+    }
+    void set_msg_commit()
+    {
+        send_messages();
+    }
+    void set_order(tickers_type::iterator it, int64_t replID, price_t price, count_t count, ttime_t etime)
+    {
+        security& s = it->second;
+        message_book& mb = s.cur_book[replID];
+        if(mb.price != price)
+        {
+            if(mb.count.value)
+            {
+                add_order(s.mi.security_id, mb.price, count_t(), etime, ptime);
+            }
+            mb.price = price;
+        }
+        add_order(s.mi.security_id, price, count, etime, ptime);
+        mb.count = count;
+    }
+    void set_trade(tickers_type::iterator it, price_t price, count_t count, uint32_t direction, ttime_t etime)
+    {
+        add_trade(it->second.mi.security_id, price, count, direction, etime, ptime);
+    }
+
     volatile bool tickers_initialized;
 
     cg_conn_h conn;
     cg_listener_h orders, trades;
     
-    void init_tickers(volatile bool& can_run, const fmap<int32_t, security>& ft)
+    void proceed_ping(const cg_time_t& server_time)
+    {
+        int64_t server_ms = server_time.hour * 3600 * 1000 + server_time.minute * 60 * 1000 + server_time.second * 1000 + server_time.msec;
+        uint64_t ct = time(NULL) + cur_utc_time * 3600;
+        ttime_t etime;
+        etime.value = (ct - ct % (3600 * 24)) * ttime_t::frac + server_ms * (ttime_t::frac / 1000);
+        ping(etime, get_cur_ttime()); 
+    }
+    void init_tickers(volatile bool& can_run, parser::tickers_type& ft)
     {
         conn.connect(can_run);
         for(auto& v: ft)
-            t.send(v.second.mi);
+            v.second.proceed_instr(e);
         tickers = ft;
-        t.flush();
     }
     void init_tickers(volatile bool& can_run)
     {
@@ -56,12 +99,10 @@ struct parser : stack_singleton<parser>
     }
     void clear_order_book()
     {
-        auto it = tickers.begin(), it_e = tickers.end();
-        for(; it != it_e; ++it)
-            it->second.proceed_clean(t);
-        t.flush();
+        for(auto& v: tickers)
+            v.second.proceed_clean(e);
     }
-    parser() : t(config::instance().push), tickers_initialized(), conn(config::instance().cli_conn_recv),
+    parser() : emessages(config::instance().push), tickers_initialized(), conn(config::instance().cli_conn_recv),
         orders(conn, "orders", cfg_cli_orders, orders_callback, &tickers),
         trades(conn, "trades", cfg_cli_trades, trades_callback, &tickers)
     {
@@ -105,8 +146,6 @@ struct parser : stack_singleton<parser>
                 orders.reopen_unactive();
                 trades.reopen_unactive();
             }
-            //if(!(c % 10000))
-            //    parser::instance().t.ping();
         }
     }
     ~parser()
@@ -114,28 +153,6 @@ struct parser : stack_singleton<parser>
         warn_plaza_fail(cg_env_close(), "env_close");
     }
 };
-
-void proceed_plaza(volatile bool& can_run)
-{
-    fmap<int32_t, security> tickers;
-    while(can_run) {
-        try {
-            parser p;
-            if(tickers.empty()) {
-                p.init_tickers(can_run);
-                tickers = p.tickers;
-            }
-            else
-                p.init_tickers(can_run, tickers);
-            p.proceed(can_run);
-        }
-        catch(std::exception& e) {
-            mlog() << "proceed_plaza " << e;
-            if(can_run)
-                usleep(5000 * 1000);
-        }
-    }
-}
 
 CG_RESULT instruments_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void* p)
 {
@@ -148,14 +165,13 @@ CG_RESULT instruments_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg,
                 fut_sess_contents* f = (fut_sess_contents*)msg->data;
                 std::string ticker(f->short_isin.buf);
                 if(config::instance().proceed_ticker(ticker)) {
-                    fmap<int32_t, security>& tickers = *((fmap<int32_t, security>*)p);
+                    parser::tickers_type& tickers = *((parser::tickers_type*)p);
                     if(c.log_plaza)
                         f->print_brief();
                     auto it = tickers.find(f->isin_id);
                     if(it == tickers.end()) {
                         security& sec = tickers[f->isin_id];
                         sec.init(c.exchange_id, c.feed_id, std::string(f->short_isin.buf));
-                        parser::instance().t.send(sec.mi);
                     }
                     else {
                         mlog() << "security " << f->isin_id << ", " << std::string(f->short_isin.buf) << " already initialized";
@@ -168,11 +184,13 @@ CG_RESULT instruments_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg,
         }
     case CG_MSG_TN_BEGIN:
         {
+            parser::instance().set_msg_begin();
             //mlog() << "instruments_callback CG_MSG_TN_BEGIN";
             break;
         } 
     case CG_MSG_TN_COMMIT:
         {
+            parser::instance().set_msg_commit();
             //mlog() << "instruments_callback CG_MSG_TN_COMMIT";
             break;
         } 
@@ -230,12 +248,11 @@ CG_RESULT orders_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
                 throw std::runtime_error("proceed_order not orders_aggr received");
             }
             orders_aggr* o = (orders_aggr*)msg->data;
-            fmap<int32_t, security>& tickers = *((fmap<int32_t, security>*)p);
+            parser::tickers_type& tickers = *((parser::tickers_type*)p);
             auto it = tickers.find(o->isin_id);
             if(it == tickers.end()) {
                 break;
             }
-            security& s = it->second;
             price_t price = *o->price;
             count_t count = {o->volume * count_t::frac};
             ttime_t etime = {o->moment_ns};
@@ -248,18 +265,20 @@ CG_RESULT orders_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
                 o->print_brief();
                 throw std::runtime_error("orders_aggr bad dir");
             }
-            s.proceed_book(parser::instance().t, price, count, etime);
+            parser::instance().set_order(it, o->replID, price, count, etime);
+            //o->print_brief();
+            //s.proceed_book(parser::instance().e, price, count, etime);
             break;
         }
     case CG_MSG_TN_BEGIN:
         {
-            //market_data_manager::instance().check_heartbeat();
+            parser::instance().set_msg_begin();
             //mlog() << "orders_callback CG_MSG_TN_BEGIN";
             break;
         } 
     case CG_MSG_TN_COMMIT:
         {
-            parser::instance().t.flush();
+            parser::instance().set_msg_commit();
             if(config::instance().log_plaza)
                 mlog() << "orders_callback CG_MSG_TN_COMMIT";
             break;
@@ -327,12 +346,11 @@ CG_RESULT trades_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
             if(likely(deals_online)) {
                 if(msg->data_size == sizeof(deal)) {
                     deal* d = (deal*)msg->data;
-                    fmap<int32_t, security>& tickers = *((fmap<int32_t, security>*)p);
+                    parser::tickers_type& tickers = *((parser::tickers_type*)p);
                     auto it = tickers.find(d->isin_id);
                     if(it == tickers.end()) {
                         break;
                     }
-                    security& s = it->second;
                     uint32_t direction = 0;
                     if(d->id_ord_buy > d->id_ord_sell)
                         direction = 1;
@@ -341,11 +359,12 @@ CG_RESULT trades_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
                     price_t price = *d->price;
                     count_t count = {d->xamount * count_t::frac};
                     ttime_t etime = {d->moment_ns};
-                    s.proceed_trade(parser::instance().t, direction, price, count, etime);
+                    parser::instance().set_trade(it, price, count, direction, etime);
                 }
                 else if (msg->data_size == sizeof(heartbeat)) {
-                    parser::instance().t.ping();
                     heartbeat* h = (heartbeat*)msg->data;
+                    parser::instance().proceed_ping(h->server_time);
+
                     if(config::instance().log_plaza)
                         h->print_brief();
                     break;
@@ -358,12 +377,13 @@ CG_RESULT trades_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
         }
     case CG_MSG_TN_BEGIN:
         {
+            parser::instance().set_msg_begin();
             //mlog() << "deals_callback CG_MSG_TN_BEGIN";
             break;
         } 
     case CG_MSG_TN_COMMIT:
         {
-            parser::instance().t.flush();
+            parser::instance().set_msg_commit();
             //mlog() << "deals_callback CG_MSG_TN_COMMIT";
             break;
         } 
@@ -412,5 +432,27 @@ CG_RESULT trades_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
     }
     parser::instance().trades.set_call();
     return CG_ERR_OK;
+}
+
+void proceed_plaza(volatile bool& can_run)
+{
+    parser::tickers_type tickers;
+    while(can_run) {
+        try {
+            deals_online = false;
+            parser p;
+            if(tickers.empty()) {
+                p.init_tickers(can_run);
+                tickers = p.tickers;
+            }
+            p.init_tickers(can_run, tickers);
+            p.proceed(can_run);
+        }
+        catch(std::exception& e) {
+            mlog() << "proceed_plaza " << e;
+            if(can_run)
+                usleep(5000 * 1000);
+        }
+    }
 }
 

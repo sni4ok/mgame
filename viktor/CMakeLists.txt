@@ -10,6 +10,6 @@ TARGET_LINK_LIBRARIES(file evie)
 TARGET_LINK_LIBRARIES(stat evie)
 TARGET_LINK_LIBRARIES(mysql evie mysqlclient)
 
-#ADD_EXECUTABLE(pip pip.cpp)
-#TARGET_LINK_LIBRARIES(pip evie)
+ADD_EXECUTABLE(pip pip.cpp)
+TARGET_LINK_LIBRARIES(pip exports)
 

@@ -5,37 +5,54 @@
 #pragma once
 
 #include "makoa/types.hpp"
-#include "tyra/tyra.hpp"
-#include "evie/fmap.hpp"
+#include "makoa/exports.hpp"
 
 struct security
 {
+    message _;
     message_book mb;
     message_trade mt;
     message_clean mc;
     message_instr mi;
+    message_ping mp;
 
-    void proceed_book(tyra& t, price_t price, count_t count, ttime_t etime)
+    void proceed_book(exporter& e, price_t price, count_t count, ttime_t etime)
     {
         mb.price = price;
         mb.count = count;
         mb.etime = etime;
         mb.time = get_cur_ttime();
-        t.send(mb);
+        _.t.time = ttime_t(); //get_export_mtime
+        e.proceed((message*)(&mb), 1);
     }
-    void proceed_trade(tyra& t, uint32_t direction, price_t price, count_t count, ttime_t etime)
+    void proceed_trade(exporter& e, uint32_t direction, price_t price, count_t count, ttime_t etime)
     {
         mt.direction = direction;
         mt.price = price;
         mt.count = count;
         mt.etime = etime;
         mt.time = get_cur_ttime();
-        t.send(mt);
+        mb.time = ttime_t(); //get_export_mtime
+        e.proceed((message*)(&mt), 1);
     }
-    void proceed_clean(tyra& t)
+    void proceed_clean(exporter& e)
     {
         mc.time = get_cur_ttime();
-        t.send(mc);
+        mt.time = ttime_t(); //get_export_mtime
+        e.proceed((message*)(&mc), 1);
+    }
+    void proceed_instr(exporter& e)
+    {
+        mi.time = get_cur_ttime();
+        mc.time = ttime_t(); //get_export_mtime
+        e.proceed((message*)(&mi), 1);
+    }
+    void proceed_ping(exporter& e, ttime_t etime)
+    {
+        mp.etime = etime;
+        mp.time = get_cur_ttime();
+        mi.time = ttime_t(); //get_export_mtime
+        e.proceed((message*)(&mp), 1);
     }
     void init(const std::string& exchange_id, const std::string& feed_id, const std::string& ticker)
     {
@@ -47,6 +64,8 @@ struct security
         mc.id = msg_clean;
         mi = message_instr();
         mi.id = msg_instr;
+        mp = message_ping();
+        mp.id = msg_ping;
 
         memset(&mi.exchange_id, 0, sizeof(mi.exchange_id));
         memset(&mi.feed_id, 0, sizeof(mi.feed_id));
@@ -70,6 +89,82 @@ struct security
         mb.security_id = mi.security_id;
         mt.security_id = mi.security_id;
         mc.security_id = mi.security_id;
+    }
+};
+
+struct emessages : noncopyable
+{
+    exporter e;
+    static const uint32_t pre_alloc = 150;
+    message _;
+    message ms[pre_alloc];
+    uint32_t m_s;
+
+    emessages(const std::string& push) : e(push), m_s()
+    {
+    }
+    void add_instrument(const message_instr& mi)
+    {
+        if(unlikely(m_s == pre_alloc))
+            send_messages();
+        ms[m_s++].mi = mi;
+    }
+    void ping(ttime_t etime, ttime_t time)
+    {
+        if(m_s != pre_alloc) {
+            message_ping& p = ms[m_s++].mp;
+            p.time = time;
+            p.etime = etime;
+            p.id = msg_ping;
+        }
+        send_messages();
+    }
+    void add_clean(uint32_t security_id, ttime_t etime, ttime_t time)
+    {
+        if(unlikely(m_s == pre_alloc))
+            send_messages();
+        
+        message_clean& c = ms[m_s++].mc;
+        c.time = time;
+        c.etime = etime;
+        c.id = msg_clean;
+        c.security_id = security_id;
+        c.source = 0;
+    }
+    void add_order(uint32_t security_id, price_t price, count_t count, ttime_t etime, ttime_t time)
+    {
+        if(unlikely(m_s == pre_alloc))
+            send_messages();
+
+        message_book& m = ms[m_s++].mb;
+        m.time = time;
+        m.etime = etime;
+        m.id = msg_book;
+        m.security_id = security_id;
+        m.price = price;
+        m.count = count;
+    }
+    void add_trade(uint32_t security_id, price_t price, count_t count, uint32_t direction, ttime_t etime, ttime_t time)
+    {
+        if(unlikely(m_s == pre_alloc))
+            send_messages();
+
+        message_trade& m = ms[m_s++].mt;
+        m.time = time;
+        m.etime = etime;
+        m.id = msg_trade;
+        m.direction = direction;
+        m.security_id = security_id;
+        m.price = price;
+        m.count = count;
+    }
+    void send_messages()
+    {
+        if(m_s) {
+            set_export_mtime(ms);
+            e.proceed(ms, m_s);
+            m_s = 0;
+        }
     }
 };
 

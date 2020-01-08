@@ -1,22 +1,23 @@
-#include "makoa/exports.hpp"
+/*
+   author: Ilya Andronov <sni4ok@yandex.ru>
+*/
+
+#include "alco.hpp"
 
 #include <libwebsockets.h>
 
-struct lws_impl : stack_singleton<lws_impl>
+struct lws_impl : emessages, stack_singleton<lws_impl>
 {
-    exporter e;
     char buf[512];
     buf_stream bs;
     typedef const char* iterator;
 
-    static const uint32_t pre_alloc = 150;
-    message _;
-    message ms[pre_alloc];
-    uint32_t m_s;
+    bool closed;
+    time_t data_time;
     
     std::vector<std::string> subscribes;
     
-    lws_impl() : e(config::instance().push), bs(buf, buf + sizeof(buf) - 1), m_s()
+    lws_impl() : emessages(config::instance().push), bs(buf, buf + sizeof(buf) - 1), closed(), data_time(time(NULL))
     {
         bs.resize(LWS_PRE);
     }
@@ -39,69 +40,6 @@ struct lws_impl : stack_singleton<lws_impl>
             if(unlikely(sz != n))
                 throw std::runtime_error(es() % "lws_write ret: " % n % ", sz: " % sz);
             bs.resize(LWS_PRE);
-        }
-    }
-    void add_instrument(const message_instr& mi)
-    {
-        if(unlikely(m_s == pre_alloc))
-            send_messages();
-        ms[m_s++].mi = mi;
-    }
-    void ping(ttime_t etime, ttime_t time)
-    {
-        if(m_s != pre_alloc) {
-            message_ping& p = ms[m_s++].mp;
-            p.time = time;
-            p.etime = etime;
-            p.id = msg_ping;
-        }
-        send_messages();
-    }
-    void add_clean(uint32_t security_id, ttime_t etime, ttime_t time)
-    {
-        if(unlikely(m_s == pre_alloc))
-            send_messages();
-        
-        message_clean& c = ms[m_s++].mc;
-        c.time = time;
-        c.etime = etime;
-        c.id = msg_clean;
-        c.security_id = security_id;
-        c.source = 0;
-    }
-    void add_order(uint32_t security_id, price_t price, count_t count, ttime_t etime, ttime_t time)
-    {
-        if(unlikely(m_s == pre_alloc))
-            send_messages();
-
-        message_book& m = ms[m_s++].mb;
-        m.time = time;
-        m.etime = etime;
-        m.id = msg_book;
-        m.security_id = security_id;
-        m.price = price;
-        m.count = count;
-    }
-    void add_trade(uint32_t security_id, price_t price, count_t count, uint32_t direction, ttime_t etime, ttime_t time)
-    {
-        if(unlikely(m_s == pre_alloc))
-            send_messages();
-
-        message_trade& m = ms[m_s++].mt;
-        m.time = time;
-        m.etime = etime;
-        m.id = msg_trade;
-        m.direction = direction;
-        m.security_id = security_id;
-        m.price = price;
-        m.count = count;
-    }
-    void send_messages()
-    {
-        if(m_s) {
-            set_export_mtime(ms);
-            e.proceed(ms, m_s);
-            m_s = 0;
         }
     }
     ~lws_impl()
@@ -139,6 +77,7 @@ inline bool skip_if_fixed(const char*  &it, const str& v)
 template<typename lws_w>
 int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len)
 {
+    mlog() << "callback: " << int(reason);
     switch (reason)
     {
         case LWS_CALLBACK_CLIENT_ESTABLISHED:
@@ -151,16 +90,19 @@ int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user, void* i
         {
             if(config::instance().log_lws)
                 mlog() << "lws receive len: " << len;
-            return ((lws_w*)user)->proceed(wsi, in, len);
+            ((lws_w*)user)->proceed(wsi, in, len);
+            ((lws_w*)user)->data_time = time(NULL);
+            return 0;
         }
         case LWS_CALLBACK_CLIENT_CLOSED:
         {
             mlog() << "lws closed";
-            throw std::runtime_error("lws closed");
+            ((lws_w*)user)->closed = true;
             return -1;
         }
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         {
+            ((lws_w*)user)->closed = true;
             mlog() << "lws closed...";
             return 1;
         }
@@ -199,5 +141,34 @@ lws_context* create_context(const char* ssl_ca_file = 0)
     if(!context)
         throw std::runtime_error("lws_create_context error");
     return context;
+}
+
+template<typename lws_w>
+void proceed_lws_parser(volatile bool& can_run)
+{
+    while(can_run) {
+        try {
+            lws_w ls;
+            ls.context = create_context<lws_w>();
+            connect(ls);
+
+            int n = 0, i = 0;
+            while(can_run && n >= 0 && !ls.closed) {
+                if(!((++i) % 50)) {
+                    i = 0;
+                    if(ls.data_time + 10 < time(NULL))
+                        throw std::runtime_error(es() % " no data from " % ls.data_time);
+                }
+                n = lws_service(ls.context, 0);
+            }
+        } catch(std::exception& e) {
+            mlog() << "proceed_lws_parser " << e;
+            if(can_run)
+                usleep(5000 * 1000);
+        }
+        mlog(mlog::critical) << "proceed_lws_parser() recreate loop";
+        if(can_run)
+            usleep(1000 * 1000);
+    }
 }
 

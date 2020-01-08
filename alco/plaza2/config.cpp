@@ -25,6 +25,9 @@ config::config(const char* fname)
         local_pass = ";local_pass=" + local_pass + ";";
     cli_conn_recv = cgate_host + ":4001;app_name=" + app_name + "_recv;name=noname_recv" + local_pass;
   
+    trades = get_config_param<bool>(buf, "trades");
+    orders = get_config_param<bool>(buf, "orders");
+
     std::string tfilter = get_config_param<std::string>(buf, "tickers_filter");
     if(tfilter != "*")
         tickers_filter = split(tfilter);

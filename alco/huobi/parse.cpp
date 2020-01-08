@@ -15,7 +15,7 @@ void test_impl(const char* a1, const char* a2)
     assert(v1.value == v2.value);
     my_unused(v1, v2);
 }
-void amount_test()
+int amount_test()
 {
     test_impl("-0.5E-50", "0");
     test_impl("5.6", "0.56E1");
@@ -30,6 +30,7 @@ void amount_test()
     const char* v = "9.79380846343861E-4";
     count_t c = read_count(v, v + strlen(v));
     my_unused(c);
+    return rand();
 }
 
 struct lws_i : lws_impl
@@ -312,6 +313,13 @@ struct lws_i : lws_impl
     }
 };
 
+static const int amount_test_i = amount_test();
+
+void proceed_huobi(volatile bool& can_run)
+{
+    return proceed_lws_parser<lws_i>(can_run);
+}
+
 void connect(lws_i& ls)
 {
 	lws_client_connect_info ccinfo = lws_client_connect_info();
@@ -326,28 +334,5 @@ void connect(lws_i& ls)
 	ccinfo.host = ccinfo.address;
 	ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
 	lws_client_connect_via_info(&ccinfo);
-}
-
-void proceed_huobi(volatile bool& can_run)
-{
-    size_t msz = sizeof(message);
-    my_unused(msz);
-    amount_test();
-    while(can_run) {
-        try {
-            lws_i ls;
-            ls.context = create_context<lws_i>();
-            connect(ls);
-
-            int n = 0;
-            while(can_run && n >= 0) {
-                n = lws_service(ls.context, 0);
-            }
-        } catch(std::exception& e) {
-            mlog() << "proceed_huobi " << e;
-            if(can_run)
-                usleep(5000 * 1000);
-        }
-    }
 }
 

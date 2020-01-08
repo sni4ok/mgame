@@ -34,8 +34,6 @@ public:
     }
 
     void flush();
-    void ping();
-
     ~tyra();
 };
 

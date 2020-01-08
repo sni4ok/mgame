@@ -84,20 +84,3 @@ void tyra::flush()
     }
 }
 
-void tyra::ping()
-{
-    if(c != e) {
-        flush();
-    }
-    else {
-        const char* ptr = (const char*)(&mp);
-        mp.time = get_cur_ttime();
-        uint32_t s = try_socket_send(socket, ptr, message_size);
-        send_from_call += s;
-        if(s && s != message_size) {
-            std::copy(ptr + s, ptr + message_size, e);
-            e += (message_size - s);
-        }
-    }
-}
-
