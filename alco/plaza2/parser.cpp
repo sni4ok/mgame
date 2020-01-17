@@ -19,13 +19,8 @@ CG_RESULT trades_callback(cg_conn_t* conn, cg_listener_t* listener, struct cg_ms
 
 struct parser : emessages, stack_singleton<parser>
 {
-    struct security : ::security
-    {
-        //replID, message_book
-        std::map<int64_t, message_book> cur_book;
-    };
     //isin_id, security
-    typedef std::map<int32_t, security> tickers_type;
+    typedef fmap<int32_t, security> tickers_type;
     tickers_type tickers;
 
     ttime_t ptime;
@@ -40,17 +35,7 @@ struct parser : emessages, stack_singleton<parser>
     void set_order(tickers_type::iterator it, int64_t replID, price_t price, count_t count, ttime_t etime)
     {
         security& s = it->second;
-        message_book& mb = s.cur_book[replID];
-        if(mb.price != price)
-        {
-            if(mb.count.value)
-            {
-                add_order(s.mi.security_id, mb.price, count_t(), etime, ptime);
-            }
-            mb.price = price;
-        }
-        add_order(s.mi.security_id, price, count, etime, ptime);
-        mb.count = count;
+        add_order(s.mi.security_id, replID, price, count, etime, ptime);
     }
     void set_trade(tickers_type::iterator it, price_t price, count_t count, uint32_t direction, ttime_t etime)
     {
@@ -266,7 +251,7 @@ CG_RESULT orders_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
                 throw std::runtime_error("orders_aggr bad dir");
             }
             parser::instance().set_order(it, o->replID, price, count, etime);
-            //o->print_brief();
+            o->print_brief();
             //s.proceed_book(parser::instance().e, price, count, etime);
             break;
         }
@@ -343,7 +328,7 @@ CG_RESULT trades_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
     {
     case CG_MSG_STREAM_DATA: 
         {
-            if(likely(deals_online)) {
+            //if(likely(deals_online)) {
                 if(msg->data_size == sizeof(deal)) {
                     deal* d = (deal*)msg->data;
                     parser::tickers_type& tickers = *((parser::tickers_type*)p);
@@ -360,6 +345,7 @@ CG_RESULT trades_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
                     count_t count = {d->xamount * count_t::frac};
                     ttime_t etime = {d->moment_ns};
                     parser::instance().set_trade(it, price, count, direction, etime);
+                    d->print_brief();
                 }
                 else if (msg->data_size == sizeof(heartbeat)) {
                     heartbeat* h = (heartbeat*)msg->data;
@@ -370,7 +356,7 @@ CG_RESULT trades_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
                     break;
                 }
                 else throw std::runtime_error(es() % "trades_callback unknown message, size: " % msg->data_size);
-            }
+            //}
             //else
             //    mlog() << "deals_callback stream_data skipped due to not online";
             break;

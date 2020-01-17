@@ -128,9 +128,10 @@ public:
     }
 };
 
-template<typename type, uint32_t capacity>
+template<typename type, uint32_t capacity_size>
 class lockfree_queue : noncopyable
 {
+    std::string name;
     struct node
     {
         type elem;
@@ -140,37 +141,51 @@ class lockfree_queue : noncopyable
         //3 - pop lock
         std::atomic<uint32_t> status;
     };
-    array<node, capacity> elems;
+    array<node, capacity_size> elems;
 
     std::atomic<uint64_t> push_cnt, pop_cnt;
     static uint64_t get_idx(uint64_t idx) {
-        return idx % capacity;
+        return idx % capacity_size;
+    }
+
+    //my_mutex mutex;
+    void throw_exception(const char* reason, uint32_t status)
+    {
+        throw std::runtime_error(es() % name % ":lockfree_queue:" % str_holder(reason) % ", (" % capacity % "," % pop_cnt % "," % push_cnt % "," % status % ")");
     }
 public:
+    lockfree_queue(const std::string& name) : name(name)
+    {
+    }
+    static constexpr uint32_t capacity = capacity_size;
+
     void push(const type& t) {
         push(type(t));
     }
     void push(type&& t) {
+        //my_mutex::scoped_lock lock(mutex);
         node& n = elems[get_idx(push_cnt++)];
         uint32_t status = 0;
         if(!n.status.compare_exchange_strong(status, 1))
-            throw std::runtime_error("lockfree_queue overloaded");
+            throw_exception("push() overloaded", status);
         n.elem = std::move(t);
         status = 1;
         if(!n.status.compare_exchange_strong(status, 2))
-            throw std::runtime_error("lockfree_queue internal push error");
+            throw_exception("push() internal error", status);
     }
     void pop_strong(type& t) {
+        //my_mutex::scoped_lock lock(mutex);
         node& n = elems[get_idx(pop_cnt++)];
         uint32_t status = 2;
         if(!n.status.compare_exchange_strong(status, 3))
-            throw std::runtime_error("lockfree_queue::pop_strong() lock error");
+            throw_exception("pop_strong() lock error", status);
         t = std::move(n.elem);
         status = 3;
         if(!n.status.compare_exchange_strong(status, 0))
-            throw std::runtime_error("lockfree_queue::pop_strong() internal error");
+            throw_exception("pop_strong() internal error", status);
     }
     bool pop_weak(type& t) {
+        //my_mutex::scoped_lock lock(mutex);
         node& n = elems[get_idx(pop_cnt)];
         uint32_t status = 2;
         if(n.status.compare_exchange_strong(status, 3)) {
@@ -178,58 +193,32 @@ public:
             t = std::move(n.elem);
             status = 3;
             if(!n.status.compare_exchange_strong(status, 0))
-                throw std::runtime_error("lockfree_queue internal pop error");
+                throw_exception("pop_weak() internal error", status);
             return true;
         }
         return false;
     }
 };
 
-inline void follower_test()
-{
-    follower<int> deq2;
-    follower<int> deq;
-    deq.push_back(10);
-    follower<int>::const_iterator i1 = deq.begin(), i2 = deq.end();
-    deq.push_back(15);
-    follower<int>::const_iterator i3 = deq.end();
-    deq.push_back(35);
-    deq.push_back(45);
-    deq.push_back(25);
-    for(; i1 != i2; ++i1){
-        *i1;
-    }
-    for(; i1 != i3; ++i1){
-        *i1;
-    }
-
-    follower<int>::const_iterator i4 = i3 - 2;
-    *i4;
-}
- 
 template<typename ttype, uint32_t pool_size = 16 * 1024>
 struct fast_alloc
 {
     typedef ttype type;
     lockfree_queue<type*, pool_size> elems;
 
-    fast_alloc()
-    {
+    fast_alloc(const std::string& name) : elems(name) {
         for(uint32_t i = 0; i != pool_size; ++i)
             elems.push(new type);
     }
-    type* alloc()
-    {
+    type* alloc() {
         type* p;
         elems.pop_strong(p);
         return p;
     }
-    void free(type* m)
-    {
+    void free(type* m) {
         elems.push(m);
     }
-    ~fast_alloc()
-    {
+    ~fast_alloc() {
         type* p;
         while(elems.pop_weak(p))
             delete p;
@@ -243,28 +232,52 @@ class alloc_holder
     typedef typename alloc::type type;
     type* p;
 public:
-    alloc_holder(alloc& a) : a(a), p(a.alloc())
-    {
+    alloc_holder(alloc& a) : a(a), p(a.alloc()) {
     }
-    ~alloc_holder()
-    {
+    ~alloc_holder() {
         if(p)
             a.free(p);
     }
-    type* operator->()
-    {
+    type* operator->() {
         return p;
     }
-    type& operator*()
-    {
+    type& operator*() {
         return *p;
     }
-    type* release()
-    {
+    type* release() {
         type* ret = p;
         p = nullptr;
         return ret;
     }
 };
 
+template<typename type>
+struct lockfree_list
+{
+    struct node : type
+    {
+        node* next;
+        node() : next(){}
+    };
+    lockfree_list() : tail(&root) {
+    }
+    void push(node* t) {
+        node* expected = tail;
+        while(!tail.compare_exchange_weak(expected, t)) {
+            expected = tail;
+        }
+        expected->next = t;
+    }
+    node* begin() {
+        return root.next;
+    }
+    node* next(node* prev) {
+        if(!prev)
+            return root.next;
+        return prev->next;
+    }
+private:
+    node root;
+    std::atomic<node*> tail;
+};
 

@@ -7,33 +7,38 @@
 #include "messages.hpp"
 #include "types.hpp"
 
-#include "evie/fmap.hpp"
+//#include "evie/fmap.hpp"
 #include "evie/myitoa.hpp"
 
-struct order_book : fmap<price_t, message_book>
+#include <map>
+
+struct order_book
 {
-    uint32_t orders;
-
-    order_book() : orders()
-    {
-    }
-
     void set(const message_book& mb)
     {
-        message_book& m = (*this)[mb.price];
+        message_book& m = orders_l[mb.level_id];
         if(!m.security_id) {
             m.security_id = mb.security_id;
             m.price = mb.price;
-            ++orders;
-        } else {
-            if(unlikely(m.security_id != mb.security_id))
-                throw std::runtime_error(es() % "order_book cross securities detected, old: " % m.security_id % ", new: " % mb.security_id);
+        } else if(unlikely(m.security_id != mb.security_id))
+            throw std::runtime_error(es() % "order_book cross securities detected, old: " % m.security_id % ", new: " % mb.security_id);
 
-            if(m.count.value && !mb.count.value)
-                --orders;
-            else if(!m.count.value && mb.count.value)
-                ++orders;
-        }
+        message_book& o = orders_p[m.price];
+        o.level_id = m.price.value;
+        o.price = m.price;
+        o.count.value = o.count.value - m.count.value;
+        o.etime = m.etime;
+        o.time = m.time;
+
+        message_book& p = orders_p[mb.price];
+        p.level_id = mb.price.value;
+        p.price = mb.price;
+        p.count.value = p.count.value + mb.count.value;
+        p.etime = mb.etime;
+        p.time = mb.time;
+
+        m.level_id = mb.level_id;
+        m.price = mb.price;
         m.count = mb.count;
         m.etime = mb.etime;
         m.time = mb.time;
@@ -43,12 +48,15 @@ struct order_book : fmap<price_t, message_book>
 		if(m.id == msg_book)
             return set(m.mb);
         else if(m.id == msg_clean || m.id == msg_instr) {
-            clear();
-            orders = 0;
+            orders_l.clear();
+            orders_p.clear();
         }
         else
             throw std::runtime_error(es() % "order_book::proceed() unsupported message type: " % m.id.id);
-
     }
+
+    std::map<int64_t, message_book> orders_l;
+    std::map<price_t, message_book> orders_p;
+    typedef std::map<price_t, message_book>::const_iterator price_iterator;
 };
 

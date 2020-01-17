@@ -10,17 +10,13 @@
 
 struct config : stack_singleton<config>
 {
-    uint16_t port;
     std::string name;
 
-    //export can be set by two ways,
-    //multiple modules in one row without configuration params:
-    //  exports = module(,module2)
-    //or with params, one row for each module:
-    //  export = module[ params]
-
+    std::vector<std::string> imports;
     std::vector<std::string> exports;
+    uint32_t export_threads;
 
+    bool pooling;
     config(const char* fname);
     void print();
 };

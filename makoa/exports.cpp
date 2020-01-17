@@ -5,14 +5,62 @@
 
 #include "exports.hpp"
 #include "types.hpp"
+#include "mmap.hpp"
 
 #include "tyra/tyra.hpp"
 
 #include "evie/utils.hpp"
 #include "evie/mlog.hpp"
+#include "evie/profiler.hpp"
 
 #include <dlfcn.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
+#include <atomic>
+
+inline void init_smc(void* ptr)
+{
+    shared_memory_sync* p = get_smc(ptr);
+    int ret = 0;
+	pthread_condattr_t cond_attr;
+    ret &= pthread_condattr_init(&cond_attr);
+    ret &= pthread_condattr_setpshared(&cond_attr, PTHREAD_PROCESS_SHARED);
+    ret &= pthread_cond_init(&(p->condition), &cond_attr);
+    ret &= pthread_condattr_destroy(&cond_attr);
+
+    pthread_mutexattr_t m_attr;
+    ret &= pthread_mutexattr_init(&m_attr);
+    ret &= pthread_mutexattr_setpshared(&m_attr, PTHREAD_PROCESS_SHARED);
+    ret &= pthread_mutex_init(&(p->mutex), &m_attr);
+    ret &= pthread_mutexattr_destroy(&m_attr);
+    if(ret)
+        throw std::runtime_error("init_smc error");
+}
+
+void* mmap_create(const char* params, bool create)
+{
+    int h = ::open(params, create ? (O_RDWR | O_CREAT | O_TRUNC) : O_RDWR, 0666);
+    if(h <= 0)
+        throw_system_failure(es() % "open " % str_holder(params) % " error");
+
+    bool r = lseek(h, mmap_alloc_size, SEEK_SET) >= 0;
+    r &= (write(h, "", 1) == 1);
+    r &= (lseek(h, 0, SEEK_SET) >= 0);
+    if(!r)
+        throw_system_failure(es() % "mmap creating file error " % str_holder(params));
+
+    void* p = mmap(NULL, mmap_alloc_size, PROT_READ | PROT_WRITE, MAP_SHARED, h, 0);
+    ::close(h);
+    if(!p)
+        throw_system_failure(es() % "mmap error for " % str_holder(params));
+
+    if(create)
+        init_smc(p);
+
+    return p;
+}
 namespace
 {
     void log_message(void*, const message* m, uint32_t count)
@@ -132,7 +180,6 @@ namespace
         hole(&e.he, log_get());
         return e;
     }
-
     exporter create_impl(const std::string& m)
     {
         auto ib = m.begin(), ie = m.end(), it = std::find(ib, ie, ' ');
@@ -147,6 +194,102 @@ namespace
         ret.he = efactory.get(module);
         ret.p = ret.he.init(params.c_str());
         return ret;
+    }
+    void* pipe_init(const char* params)
+    {
+        int r = mkfifo(params, 0666);
+        my_unused(r);
+        int64_t h = ::open(params, O_WRONLY);
+        if(h <= 0)
+            throw_system_failure(es() % "open " % str_holder(params) % " error");
+
+        return (void*)h;
+    }
+    void pipe_destroy(void* p)
+    {
+        ::close(int((int64_t)p));
+    }
+    void pipe_proceed(void* p, const message* m, uint32_t count)
+    {
+        uint32_t wsize = sizeof(message) * count;
+        ssize_t ret = ::write(int((int64_t)p), (const void*)m, wsize);
+        if(unlikely(ret != wsize))
+            throw_system_failure(es() % "pipe::write, wsize: " % wsize  % ", ret: " % ret);
+    }
+    void* mmap_init(const char* params)
+    {
+        void *p = mmap_create(params, false);
+        shared_memory_sync* s = get_smc(p);
+        if(unlikely(pthread_mutex_lock(&(s->mutex))))
+            throw std::runtime_error("mmap_init()::mmap_lock error");
+        memset(p, 0, message_size);
+        uint8_t* c = (uint8_t*)p;
+        *c = 2;
+        *(++c) = 1;
+		pthread_mutex_unlock(&(s->mutex));
+        return p;
+    }
+    void mmap_destroy(void *p)
+    {
+        if(munmap(p, mmap_alloc_size) < 0)
+            throw_system_failure(es() % "munmmap error");
+    }
+    void mmap_proceed(void* v, const message* m, uint32_t count)
+    {
+        bool flub = false;
+        std::atomic_uchar* f = ((std::atomic_uchar*)v), *e = f + message_size, *i = f;
+
+        uint8_t w = *f;
+        uint8_t r = *(f + 1);
+        if(w < 2 || w >= message_size || !r || r >= message_size)
+            throw std::runtime_error(es() % "mmap_proceed() internal error, wp: " % uint32_t(w) % ", rp: " % uint32_t(r));
+
+        i += w;
+        message* p = (((message*)v) + 1) + (w - 2) * 255;
+
+        uint32_t c = 0;
+        while(c != count)
+        {
+            uint32_t cur_count = (count - c);
+            if(cur_count > 255)
+                cur_count = 255;
+
+            uint8_t nf = atomic_load(i);
+            if(nf) {
+                //reader not exists or overloaded
+                time_t tf = time(NULL);
+                flub = true;
+                while(nf && tf + 5 >= time(NULL)){
+                    usleep(10);
+                    nf = atomic_load(i);
+                }
+                if(nf)
+                    throw std::runtime_error(es() % "mmap_proceed() map overload, wp: " % uint32_t(*f) % ", rp: " % uint32_t(*(f + 1)));
+            }
+            memcpy(p, m + c, cur_count * message_size);
+            atomic_store(i, uint8_t(cur_count));
+            //mlog() << "mmap_proceed(" << uint64_t(v) << "," << uint64_t(p) << "," << c << "," << cur_count
+            //    << "," << uint32_t(atomic_load(f)) << "," << uint32_t(atomic_load(f + 1)) << ")";
+            p += 255;
+
+            ++i;
+            if(i == e)
+                i = f + 2;
+            
+            *f = i - f;
+            c += cur_count;
+        }
+
+        if(flub)
+        {
+            MPROFILE("mmap_proceed_flub")
+        }
+
+        shared_memory_sync* ps = get_smc(v);
+        if(!pthread_mutex_lock(&(ps->mutex))) {
+            pthread_cond_signal(&(ps->condition));
+            pthread_mutex_unlock(&(ps->mutex));
+        }
     }
 }
 
@@ -191,4 +334,6 @@ void exporter::operator=(exporter&& r)
 
 static const uint32_t register_log_message = register_exporter("log_messages", {&hole_no_init, &hole_no_destroy, &log_message});
 static const uint32_t register_tyra = register_exporter("tyra", {&tyra_create, &tyra_destroy, &tyra_proceed});
+static const uint32_t register_pipe = register_exporter("pipe", {&pipe_init, &pipe_destroy, &pipe_proceed});
+static const uint32_t register_mmap = register_exporter("mmap_cp", {&mmap_init, &mmap_destroy, &mmap_proceed});
 

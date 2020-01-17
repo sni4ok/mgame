@@ -17,10 +17,12 @@
 
 volatile bool can_run = true;
 
+void server_set_close();
 void term_signal(int sign)
 {
     mlog() << "Termination signal received: " << sign;
     can_run = false;
+    server_set_close();
 }
 
 void on_signal(int sign)
@@ -48,8 +50,8 @@ int main(int argc, char** argv)
         cfg.print();
         name = cfg.name;
         engine en;
-        server sv;
-        sv.accept_loop(can_run);
+        server sv(can_run);
+        sv.import_loop();
     } catch(std::exception& e) {
         mlog(mlog::error | mlog::always_cout) << "makoa(" << name << ") ended with " << e;
         return 1;

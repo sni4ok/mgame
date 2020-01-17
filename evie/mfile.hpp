@@ -9,14 +9,10 @@
 #include <fstream>
 #include <memory>
 
-class mfile
+struct mfile
 {
-    struct impl;
-    std::unique_ptr<impl> pimpl;
-public:
-    mfile();
+    int hfile;
     mfile(const char* file, bool direct);
-    bool open(const char* file, bool direct);
     uint64_t size() const;
     void seekg(uint64_t pos);
     void read(char* ptr, uint32_t size);

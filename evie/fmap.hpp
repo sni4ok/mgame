@@ -24,7 +24,13 @@ struct fmap
 
     fmap() : v(){
     }
-    fmap(const fmap&) = delete;
+    fmap(const fmap& r) {
+        data = r.data;
+    }
+    fmap& operator=(const fmap& r) {
+        data = r.data;
+        return *this;
+    }
     void clear() {
         data.clear();
     }

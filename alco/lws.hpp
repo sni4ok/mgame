@@ -77,7 +77,6 @@ inline bool skip_if_fixed(const char*  &it, const str& v)
 template<typename lws_w>
 int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len)
 {
-    mlog() << "callback: " << int(reason);
     switch (reason)
     {
         case LWS_CALLBACK_CLIENT_ESTABLISHED:

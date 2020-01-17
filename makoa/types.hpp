@@ -59,7 +59,7 @@ template<typename stream>
 stream& operator<<(stream& s, const message_instr& i)
 {
     s << "instr|"<< i.exchange_id << "|" << i.feed_id << "|" << i.security << "|" << i.security_id
-        << "|" << i.time;
+        << "|" << i.etime << "|" << i.time << "|";
     return s;
 }
 
@@ -110,6 +110,11 @@ inline bool operator!=(price_t l, price_t r)
     return l.value != r.value;
 }
 
+inline bool operator==(price_t l, price_t r)
+{
+    return l.value == r.value;
+}
+
 inline bool operator<(count_t l, count_t r)
 {
     return l.value < r.value;
@@ -123,6 +128,11 @@ inline bool operator>(count_t l, count_t r)
 inline bool operator!=(count_t l, count_t r)
 {
     return l.value != r.value;
+}
+
+inline bool operator==(count_t l, count_t r)
+{
+    return l.value == r.value;
 }
 
 inline uint64_t get_decimal_pow(uint32_t e)

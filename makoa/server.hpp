@@ -7,12 +7,11 @@
 #include <memory>
 
 struct server
-              // used modules: logger, config, engine, securities
 {
     struct impl;
-    server();
+    server(volatile bool& can_run);
     ~server();
-    void accept_loop(volatile bool& can_run);
+    void import_loop();
 
 private:
     std::unique_ptr<impl> pimpl;

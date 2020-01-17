@@ -18,13 +18,15 @@
 #include <atomic>
 #include <cstring>
 
+bool pooling_mode = false;
+
 struct messages
 {
     messages()
     {
     }
     message _;
-    message m[50];
+    message m[255];
     uint32_t count;
     std::atomic<uint32_t> cnt;
 };
@@ -40,33 +42,56 @@ struct linked_node : messages
 class linked_list : public fast_alloc<linked_node, 4 * 1024>
 {
     linked_node root;
-    std::atomic<type*> tail;
+    std::atomic<linked_node*> tail;
     
-    std::mutex& mutex;
-    std::condition_variable& cond;
-
 public:
-    linked_list(std::mutex& mutex, std::condition_variable& cond) : tail(&root), mutex(mutex), cond(cond)
+    linked_list() : fast_alloc("messages_linked_list"), tail(&root)
     {
     }
     void push(linked_node* t) //push element in list, always success
     {
-        type* expected = tail;
+        linked_node* expected = tail;
         while(!tail.compare_exchange_weak(expected, t)) {
             expected = tail;
         }
         expected->next = t;
-
-        bool lock = mutex.try_lock();
-        cond.notify_all();
-        if(lock)
-            mutex.unlock();
     }
     linked_node* next(linked_node* prev) //can return nullptr, but next time caller should used latest not nullptr value
     {
         if(!prev)
             return root.next;
         return prev->next;
+    }
+    void release_node(linked_list::type* node)
+    {
+        uint32_t consumers_left = --(node->cnt);
+        if(!consumers_left){
+            node->next = nullptr;
+            free(node);
+        }
+    }
+};
+
+struct node_free
+{
+    linked_node* n;
+    linked_list& ll;
+    node_free(linked_node* n, linked_list& ll) : n(n), ll(ll) 
+    {
+    }
+    void release()
+    {
+        ll.release_node(n);
+        n = 0;
+    }
+    ~node_free() {
+        try {
+            if(n)
+                ll.release_node(n);
+        }
+        catch(std::exception& e) {
+            mlog() << "~node_free() " << e;
+        }
     }
 };
 
@@ -152,7 +177,12 @@ struct context
     }
     ~context()
     {
-        acs.on_disconnect();
+        try{
+            acs.on_disconnect();
+        }
+        catch(std::exception& e){
+            mlog() << "~context() " << e;
+        }
     }
 };
 
@@ -161,49 +191,87 @@ class engine::impl : public stack_singleton<engine::impl>
     volatile bool can_run;
     std::mutex mutex;
     std::condition_variable cond;
-    std::vector<std::thread> threads; //consume workers, one thread for each exporter
+    std::vector<std::thread> threads;
     linked_list ll;
     uint32_t consumers;
 
-    void work_thread(exporter exp)
+    void notify()
+    {
+        if(!pooling_mode){
+            //MPROFILE("notify_lock")
+            bool lock = mutex.try_lock();
+            cond.notify_all();
+            if(lock)
+                mutex.unlock();
+        }
+    }
+    void wait_updates()
+    {
+        if(!pooling_mode){
+            //MPROFILE("wait_lock()")
+            std::unique_lock<std::mutex> lock(mutex);
+            cond.wait_for(lock, std::chrono::microseconds(100 * 1000));
+        }
+    }
+
+    struct imple
+    {
+        linked_list* ll;
+        exporter exp;
+        linked_list::type *prev, *ptmp;
+        imple()
+        {
+        }
+        imple(linked_list& ll, const std::string& eparams) : ll(&ll), exp(eparams), prev(), ptmp()
+        {
+        }
+        bool proceed()
+        {
+            bool ret = false;
+            ptmp = ll->next(prev);
+            while(ptmp){
+                exp.proceed(ptmp->m, ptmp->count);
+                ret = true;
+                if(prev)
+                    ll->release_node(prev);
+                prev = ptmp;
+                ptmp = ll->next(prev);
+            }
+            return ret;
+        }
+        ~imple()
+        {
+            try {
+                if(prev)
+                    ll->release_node(prev);
+            }
+            catch(std::exception& e) {
+                mlog() << "~imple() " << e;
+            }
+        }
+    };
+    lockfree_queue<imple*, 50> ies;
+
+    void work_thread()
     {
         try{
-            linked_list::type *prev = nullptr, *ptmp;
-            while(can_run)
-            {
-                //lockfree when queue not empty
-                ptmp = ll.next(prev);
-        repeat:
-                if(ptmp){
-                    exp.proceed(ptmp->m, ptmp->count);
-                    if(prev){
-                        //we release prev here
-                        uint32_t consumers_left = --(prev->cnt);
-                        if(!consumers_left){
-                            prev->next = nullptr;
-                            ll.free(prev);
-                        }
-                    }
-                    prev = ptmp;
+            imple* i = nullptr;
+            while(can_run) {
+                bool res = false;
+                ies.pop_weak(i);
+                if(i) {
+                    res = i->proceed();
+                    ies.push(i);
+                    i = 0;
                 }
-                else{
-                    //here queue is empty, so wait on mutex for new messages
-                    bool lock = mutex.try_lock();
-                    if(lock) {
-                        std::unique_lock<std::mutex> lock(mutex, std::adopt_lock_t());
-                        ptmp = ll.next(prev);
-                        if(ptmp)
-                            goto repeat;
-                        else
-                            cond.wait_for(lock, std::chrono::microseconds(100 * 1000));
-                    }
-                }
+                if(!res)
+                    wait_updates();
             }
+            if(i)
+                ies.push(i);
         }
         catch(std::exception& e){
             mlog(mlog::error) << "exports: " << " " << e;
-            //TODO: close connection for market data provider for current message
-            //this should be done in server::impl::work_thread
         }
     }
     static void log_and_throw_error(const char* data, uint32_t size, const char* reason)
@@ -212,7 +280,24 @@ class engine::impl : public stack_singleton<engine::impl>
         throw std::runtime_error("bad message");
     }
 public:
-    impl() : can_run(true), ll(mutex, cond)
+    void loop_one()
+    {
+        imple* i = nullptr;
+        for(uint32_t c = 0; c != ies.capacity && can_run; ++c) {
+            bool res = false;
+            ies.pop_weak(i);
+            if(i) {
+                res = i->proceed();
+                ies.push(i);
+                i = 0;
+            }
+            if(!res)
+                return;
+        }
+        if(i)
+            ies.push(i);
+    }
+    impl() : can_run(true), ies("exporters_queue")
     {
     }
     str_holder alloc()
@@ -227,9 +312,12 @@ public:
     }
     void init()
     {
-        for(const auto& m: config::instance().exports)
-            threads.push_back(std::thread(&impl::work_thread, this, exporter(m)));
-        consumers = threads.size();
+        consumers = config::instance().exports.size();
+        for(const auto& e: config::instance().exports)
+            ies.push(new imple(ll, e));
+
+        for(uint32_t i = 0; i != config::instance().export_threads; ++i)
+            threads.push_back(std::thread(&impl::work_thread, this));
     }
     void proceed(str_holder& buf, context* ctx)
     {
@@ -246,23 +334,8 @@ public:
         n->count = count;
         n->cnt = consumers + 1;
         ll.push(n);
-        cond.notify_all();
+        notify();
         
-        struct node_free
-        {
-            linked_node* n;
-            linked_list& ll;
-            node_free(linked_node* n, linked_list& ll) : n(n), ll(ll) 
-            {
-            }
-            ~node_free() {
-                uint32_t consumers_left = --(n->cnt);
-                if(!consumers_left){
-                    n->next = nullptr;
-                    ll.free(n);
-                }
-            }
-        };
         node_free nf(n, ll);
 
         linked_node *e = ll.alloc();
@@ -271,6 +344,9 @@ public:
         if(cur_delta)
             memcpy(e->m, ptr + count * message_size, cur_delta);
         ctx->buf_delta = cur_delta;
+        
+        //if(!cur_delta)
+        //    loop_one();
 
         for(uint32_t i = 0; i != count; ++i, ++m)
         {
@@ -303,15 +379,18 @@ public:
                 }
                 default:
                     log_and_throw_error(ptr, full_size, es() % "bad msg_id: " % m->id.id);
-                
             }
         }
+        nf.release();
     }
     ~impl()
     {
         can_run = false;
         for(auto&& t: threads)
             t.join();
+        imple *i = nullptr;
+        while(ies.pop_weak(i))
+            delete i;
     }
     void push_clean(const std::vector<actives::type>& secs) //when parser disconnected all OrdersBooks cleans
     {
@@ -326,12 +405,14 @@ public:
             for(uint32_t i = 0; i != cur_c; ++i, ++ci)
                 n->m[i].mc = message_clean{secs[ci].time, ttime_t(), msg_clean, "", secs[ci].security_id, 1/*source*/};
             ll.push(n);
+            notify();
         }
     }
 };
 
 engine::engine()
 {
+    pooling_mode = config::instance().pooling;
     pimpl = std::make_unique<engine::impl>();
     pimpl->init();
 }
@@ -376,6 +457,7 @@ void free_buffer(str_holder buf, context* ctx)
 
 void proceed_data(str_holder& buf, context* ctx)
 {
+    //MPROFILE("proceed_data")
     return engine::impl::instance().proceed(buf, ctx);
 }
 

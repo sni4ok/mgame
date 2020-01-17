@@ -64,7 +64,7 @@ struct lws_i : lws_impl
     typedef void (lws_i::*func)(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie);
     struct impl
     {
-        impl() : ask_price(), bid_price(), ask_count(), bid_count()
+        impl() : security_id()
         {
         }
         impl(string&& symbol, security* sec, func f) : impl()
@@ -78,10 +78,6 @@ struct lws_i : lws_impl
         uint32_t security_id;
         security* sec;
         func f;
-
-        //bbo
-        price_t ask_price, bid_price;
-        count_t ask_count, bid_count;
 
         bool operator<(const impl& i) const {
             return symbol < i.symbol;
@@ -112,21 +108,10 @@ struct lws_i : lws_impl
         it = std::find(it, ie, '}');
         skip_fixed(it, end);
 
-        if(i.ask_price != ask_price && i.ask_count != count_t())
-            add_order(i.security_id, i.ask_price, count_t(), etime, time);
-        if(i.ask_price != ask_price || i.ask_count != ask_count)
-            add_order(i.security_id, ask_price, ask_count, etime, time);
-
-        if(i.bid_price != bid_price && i.bid_count != count_t())
-            add_order(i.security_id, i.bid_price, count_t(), etime, time);
-        if(i.bid_price != bid_price || i.bid_count != bid_count)
-            add_order(i.security_id, bid_price, bid_count, etime, time);
+        add_order(i.security_id, 2, ask_price, ask_count, etime, time);
+        add_order(i.security_id, 1, bid_price, bid_count, etime, time);
        
         send_messages();
-        i.ask_price = ask_price;
-        i.ask_count = ask_count;
-        i.bid_price = bid_price;
-        i.bid_count = bid_count;
     }
     void parse_orders_impl(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie, bool a)
     {
@@ -140,7 +125,7 @@ struct lws_i : lws_impl
             if(a)
                 c.value = -c.value;
             skip_fixed(it, "]");
-            add_order(i.security_id, p, c, etime, time);
+            add_order(i.security_id, p.value, p, c, etime, time);
             if(*it != ',') {
                 skip_fixed(it, "]");
                 break;

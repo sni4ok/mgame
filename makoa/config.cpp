@@ -10,25 +10,26 @@
 config::config(const char* fname)
 {
     std::string cs = read_file<std::string>(fname);
-    port = get_config_param<uint16_t>(cs, "port");
     name = get_config_param<std::string>(cs, "name");
 
-    std::string e = get_config_param<std::string>(cs, "exports", true);
-    exports = split(e);
-    auto ex = get_config_params<std::string>(cs, "export");
-    std::copy(ex.begin(), ex.end(), std::back_inserter(exports));
+    imports = get_config_params<std::string>(cs, "import");
+    exports = get_config_params<std::string>(cs, "export");
+    export_threads = get_config_param<uint32_t>(cs, "export_threads");
+
+    pooling = get_config_param<bool>(cs, "pooling");
 }
 
 void config::print()
 {
     mlog ml;
     ml << "config params:\n"
-        << "  port: " << port << "\n"
         << "  name: " << name << "\n";
-    if(!exports.empty()) {
-        ml << "  exports:\n";
-        for(auto v: exports)
-            ml << "      " << v << "\n";
-    }
+    ml << "  imports:\n";
+    for(auto v: imports)
+        ml << "      " << v << "\n";
+    ml << "  exports:\n";
+    for(auto v: exports)
+        ml << "      " << v << "\n";
+    ml << "  export_threads: " << export_threads << "\n";
 }
 

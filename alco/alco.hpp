@@ -131,7 +131,7 @@ struct emessages : noncopyable
         c.security_id = security_id;
         c.source = 0;
     }
-    void add_order(uint32_t security_id, price_t price, count_t count, ttime_t etime, ttime_t time)
+    void add_order(uint32_t security_id, int64_t level_id, price_t price, count_t count, ttime_t etime, ttime_t time)
     {
         if(unlikely(m_s == pre_alloc))
             send_messages();
@@ -141,6 +141,7 @@ struct emessages : noncopyable
         m.etime = etime;
         m.id = msg_book;
         m.security_id = security_id;
+        m.level_id = level_id;
         m.price = price;
         m.count = count;
     }

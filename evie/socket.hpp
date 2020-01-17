@@ -159,25 +159,12 @@ static void socket_send_async(int socket, const char* ptr, uint32_t sz)
     }
 }
 
-static void socket_send_async(int socket, buf_stream& ostream)
-{
-    socket_send_async(socket, ostream.begin(), ostream.size());
-    ostream.clear();
-}
-
-static std::string name_fmt(const char* name)
-{
-    if(!name || !strlen(name))
-        return std::string();
-    return std::string(name) + ": ";
-}
-
 static int my_accept_async(uint32_t port, bool local, bool sync = false,
     std::string* client_ip_ptr = nullptr, volatile bool* can_run = nullptr, const char* name = "")
 {
     int socket = ::socket(AF_INET, local ? AF_LOCAL : SOCK_STREAM /*| SOCK_NONBLOCK*/, IPPROTO_TCP);
     if(socket < 0) 
-        throw_system_failure(es() % name_fmt(name) % "Open socket error");
+        throw_system_failure(es() % name % ": Open socket error");
     socket_holder sh(socket);
 
     int flag = 1;

@@ -110,11 +110,17 @@ struct lws_i : lws_impl
             skip_fixed(it, "[");
             ne = std::find(it, ie, ',');
             price_t price = read_price(it, ne);
-            ne = std::find(ne + 1, ie, ',') + 1; //skip count (number orders on current price level)
-            it = std::find(ne, ie, ']');
-            count_t count = read_count(ne, it);
-            add_order(i.security_id, price, count, ttime_t(), time);
+            ++ne;
+            it = std::find(ne, ie, ',');
+            uint32_t count = my_cvt::atoi<uint32_t>(ne, it - ne);
             ++it;
+            ne = std::find(it, ie, ']');
+            count_t amount = read_count(it, ne);
+            if(count > 0)
+                add_order(i.security_id, price.value, price, amount, ttime_t(), time);
+            else
+                add_order(i.security_id, price.value, price, count_t(), ttime_t(), time);
+            it = ne + 1;
             if(*it != ',')
                 break;
             else

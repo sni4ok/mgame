@@ -61,7 +61,6 @@ struct ifile
             }
             else {
                 active = true;
-                usleep(50 * 1000);
             }
         }
     }

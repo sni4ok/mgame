@@ -94,7 +94,6 @@ struct mirror::impl
     std::string head_msg;
 
     price_t top_order_p;
-    typedef order_book::const_iterator iterator;
     uint32_t trades_from;
 
     char buf[512];
@@ -124,14 +123,14 @@ struct mirror::impl
         mi = i;
         head_msg = array_to_string(mi.exchange_id) + "/" + array_to_string(mi.feed_id) + "/" + array_to_string(mi.security);
     }
-   iterator get_top_order()
+    order_book::price_iterator get_top_order()
     {
         if(!top_order_p.value)
-            return  ob.begin();
+            return ob.orders_p.begin();
 
-        iterator it = ob.lower_bound(top_order_p);
-        iterator ib = ob.begin(), ie = ob.end();
-        while(it != ie && it > ib && !it->second.count.value)
+        auto it = ob.orders_p.lower_bound(top_order_p);
+        auto ib = ob.orders_p.begin(), ie = ob.orders_p.end();
+        while(it != ie && it != ib && !it->second.count.value)
             --it;
         if(it != ie)
             top_order_p = it->first;
@@ -154,7 +153,7 @@ struct mirror::impl
     {
         if(!sec.security_id)
             return;
-        iterator it = get_top_order(), ie = ob.end();
+        order_book::price_iterator it = get_top_order(), ie = ob.orders_p.end();
         e = attron(A_BOLD);
         for(uint32_t i = 0; i != w.rows - 1; ++i, ++it)
         {
@@ -205,12 +204,12 @@ struct mirror::impl
                 usleep(20000);
             else
             {
-                mlog() << "key: " << key;
+                //mlog() << "key: " << key;
                 if(key == 259 || key == 339) // arrow up and page up
                 {
                     uint32_t r = (key == 259 ? 1 : w.rows);
                     std::unique_lock<std::mutex> lock(mutex);
-                    iterator it = get_top_order(), ib = ob.begin();
+                    order_book::price_iterator it = get_top_order(), ib = ob.orders_p.begin();
 
                     for(uint32_t i = 0; i != r; ++i) {
                         if(it != ib) {
@@ -224,19 +223,22 @@ struct mirror::impl
                 else if(key == 258 || key == 338) //arrow down or page down
                 {
                     std::unique_lock<std::mutex> lock(mutex);
-                    iterator it = ob.upper_bound(top_order_p), ie = ob.end() - 1;
-                    while(it < ie && !it->second.count.value)
+                    order_book::price_iterator it = ob.orders_p.upper_bound(top_order_p), ie = ob.orders_p.end();
+                    auto ib = it;
+                    while(it != ie && !it->second.count.value)
                         ++it;
                     uint32_t r = (key == 258 ? 0 : w.rows - 1);
                     for(uint32_t i = 0; i != r; ++i) {
                         if(it != ie) {
                             ++it;
-                            while(it < ie && !it->second.count.value)
+                            while(it != ie && !it->second.count.value)
                                 ++it;
                         }
                     }
+                    if(it == ie && ib != ie)
+                        --it;
 
-                    if(it != ie + 1)
+                    if(it != ie)
                         top_order_p = it->first;
                 }
                 break;

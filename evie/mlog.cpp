@@ -74,7 +74,7 @@ namespace
         lockfree_queue<void*, pre_alloc> queue;
 
     public:
-        my_pool() {
+        my_pool() : queue("mlog::my_pool") {
             for(uint32_t i = 0; i != pre_alloc; ++i)
                 queue.push(::malloc(buf_size + 1));
         }
@@ -208,7 +208,7 @@ public:
         return params;
     }
     simple_log() : can_run(true), work_thread(&simple_log::WriteThred, this),
-        all_size(), no_cout()
+        strs("mlog::Strs"), all_size(), no_cout()
     {
     }
     my_pool pool;

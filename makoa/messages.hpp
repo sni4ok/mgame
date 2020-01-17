@@ -21,7 +21,7 @@ static const uint8_t
                         , msg_book  = 13
 ;
 
-static const uint32_t message_size = 40, message_bsize = message_size - 17;
+static const uint32_t message_size = 48, message_bsize = message_size - 17;
 
 #ifndef TTIME_T_DEFINED
 struct ttime_t
@@ -90,6 +90,7 @@ struct message_trade : message_times
     //enum direction{unknown = 0, buy = 1, sell = 2};
     uint16_t direction;
     uint32_t security_id;
+	int64_t unused_;
     price_t price;
     count_t count;
     static const uint32_t msg_id = msg_trade;
@@ -97,12 +98,10 @@ struct message_trade : message_times
 static_assert(sizeof(message_trade) == message_size, "protocol agreement");
 
 //message_instr clean OrderBook for instrument
-struct message_instr
+struct message_instr : message_times
 {
-    ttime_t time;
-    char exchange_id[8];
     uint8_t id;
-
+    char exchange_id[8];
     char feed_id[4];
     char security[15];
     
@@ -129,6 +128,7 @@ struct message_book : message_times
     uint8_t unused[3];
 
     uint32_t security_id;
+	int64_t level_id; //
     price_t price; 
     count_t count; //this new counts for level price
     static const uint32_t msg_id = msg_book;
