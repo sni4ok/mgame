@@ -11,6 +11,8 @@
 
 struct lws_i : lws_impl
 {
+    config& cfg;
+    bool prec_R0;
     std::vector<security> securities;
     
     char subscribed[24];
@@ -35,27 +37,28 @@ struct lws_i : lws_impl
 
     fmap<uint32_t, impl> parsers; //channel, impl
     lws_i() :
+        cfg(config::instance()),
         subscribed("\"subscribed\",\"channel\":"),
         trade("\"trades\",\"chanId\":"),
         book("\"book\",\"chanId\":"),
         symbol("\"symbol\":\""),
         event("\"event\":"),
-        ping(uint64_t(config::instance().ping) * ttime_t::frac), ping_t(get_cur_ttime())
+        ping(uint64_t(cfg.ping) * ttime_t::frac), ping_t(get_cur_ttime())
     {
-        config& c = config::instance();
-        for(auto& v: c.tickers) {
+        prec_R0 = (cfg.precision == "R0");
+        for(auto& v: cfg.tickers) {
             security sec;
-            sec.init(c.exchange_id, c.feed_id, v);
+            sec.init(cfg.exchange_id, cfg.feed_id, v);
             securities.push_back(std::move(sec));
             security& s = securities.back();
             add_instrument(s.mi);
 
-            if(c.trades) {
+            if(cfg.trades) {
                 subscribes.push_back("{\"event\":\"subscribe\",\"channel\":\"trades\",\"symbol\":\"" + v + "\"}");
             }
-            if(c.orders) {
+            if(cfg.orders) {
                 subscribes.push_back("{\"event\":\"subscribe\",\"channel\":\"book\",\"symbol\":\""
-                    + v + "\",\"prec\":\"" + c.precision + "\",\"freq\":\"" + c.frequency + "\",\"len\":\"" + c.length + "\"}");
+                    + v + "\",\"prec\":\"" + cfg.precision + "\",\"freq\":\"" + cfg.frequency + "\",\"len\":\"" + cfg.length + "\"}");
             }
         }
         send_messages();
@@ -109,17 +112,34 @@ struct lws_i : lws_impl
         {
             skip_fixed(it, "[");
             ne = std::find(it, ie, ',');
-            price_t price = read_price(it, ne);
-            ++ne;
-            it = std::find(ne, ie, ',');
-            uint32_t count = my_cvt::atoi<uint32_t>(ne, it - ne);
-            ++it;
-            ne = std::find(it, ie, ']');
-            count_t amount = read_count(it, ne);
-            if(count > 0)
-                add_order(i.security_id, price.value, price, amount, ttime_t(), time);
+            if(prec_R0)
+            {
+                int64_t level_id = my_cvt::atoi<int64_t>(it, ne - it);
+                ++ne;
+                it = std::find(ne, ie, ',');
+                price_t price = read_price(ne, it);
+                ++it;
+                ne = std::find(it, ie, ']');
+                count_t amount = read_count(it, ne);
+                if(price != price_t())
+                    add_order(i.security_id, level_id, price, amount, ttime_t(), time);
+                else
+                    add_order(i.security_id, level_id, price, count_t(), ttime_t(), time);
+            }
             else
-                add_order(i.security_id, price.value, price, count_t(), ttime_t(), time);
+            {
+                price_t price = read_price(it, ne);
+                ++ne;
+                it = std::find(ne, ie, ',');
+                uint32_t count = my_cvt::atoi<uint32_t>(ne, it - ne);
+                ++it;
+                ne = std::find(it, ie, ']');
+                count_t amount = read_count(it, ne);
+                if(count > 0)
+                    add_order(i.security_id, price.value, price, amount, ttime_t(), time);
+                else
+                    add_order(i.security_id, price.value, price, count_t(), ttime_t(), time);
+            }
             it = ne + 1;
             if(*it != ',')
                 break;
@@ -152,7 +172,7 @@ struct lws_i : lws_impl
     int proceed(lws* wsi, void* in, size_t len)
     {
         ttime_t time = get_cur_ttime();
-        if(config::instance().log_lws)
+        if(cfg.log_lws)
             mlog() << "lws proceed: " << str_holder((const char*)in, len);
         iterator it = (iterator)in, ie = it + len;
 

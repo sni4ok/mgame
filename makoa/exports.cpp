@@ -35,8 +35,10 @@ inline void init_smc(void* ptr)
     ret &= pthread_mutexattr_setpshared(&m_attr, PTHREAD_PROCESS_SHARED);
     ret &= pthread_mutex_init(&(p->mutex), &m_attr);
     ret &= pthread_mutexattr_destroy(&m_attr);
-    if(ret)
+    if(ret) {
+        mmap_close(ptr);
         throw std::runtime_error("init_smc error");
+    }
 }
 
 void* mmap_create(const char* params, bool create)
