@@ -328,7 +328,7 @@ CG_RESULT trades_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
     {
     case CG_MSG_STREAM_DATA: 
         {
-            //if(likely(deals_online)) {
+            if(likely(deals_online)) {
                 if(msg->data_size == sizeof(deal)) {
                     deal* d = (deal*)msg->data;
                     parser::tickers_type& tickers = *((parser::tickers_type*)p);
@@ -356,9 +356,9 @@ CG_RESULT trades_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
                     break;
                 }
                 else throw std::runtime_error(es() % "trades_callback unknown message, size: " % msg->data_size);
-            //}
-            //else
-            //    mlog() << "deals_callback stream_data skipped due to not online";
+            }
+            else
+                mlog() << "deals_callback stream_data skipped due to not online";
             break;
         }
     case CG_MSG_TN_BEGIN:

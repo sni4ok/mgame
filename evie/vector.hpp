@@ -20,7 +20,7 @@ public:
     typedef type value_type;
 
     mvector() : buf(), size_(), capacity_() {
-        static_assert(std::is_trivially_copy_assignable<type>::value, "mvector::mvector()");
+        //static_assert(std::is_trivially_copy_assignable<type>::value, "mvector::mvector()");
         reserve(64);
     }
     mvector& operator=(const mvector& r)
