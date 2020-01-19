@@ -16,23 +16,24 @@ struct security
     message_instr mi;
     message_ping mp;
 
-    void proceed_book(exporter& e, price_t price, count_t count, ttime_t etime)
+    void proceed_book(exporter& e, price_t price, count_t count, ttime_t etime, ttime_t time)
     {
+        mb.time = time;
+        mb.etime = etime;
+        mb.level_id = price.value;
         mb.price = price;
         mb.count = count;
-        mb.etime = etime;
-        mb.time = get_cur_ttime();
-        _.t.time = ttime_t(); //get_export_mtime
+        _.t.time = get_cur_ttime(); //get_export_mtime
         e.proceed((message*)(&mb), 1);
     }
-    void proceed_trade(exporter& e, uint32_t direction, price_t price, count_t count, ttime_t etime)
+    void proceed_trade(exporter& e, uint32_t direction, price_t price, count_t count, ttime_t etime, ttime_t time)
     {
+        mt.time = time;
+        mt.etime = etime;
         mt.direction = direction;
         mt.price = price;
         mt.count = count;
-        mt.etime = etime;
-        mt.time = get_cur_ttime();
-        mb.time = ttime_t(); //get_export_mtime
+        mb.time = get_cur_ttime(); //get_export_mtime
         e.proceed((message*)(&mt), 1);
     }
     void proceed_clean(exporter& e)
