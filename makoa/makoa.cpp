@@ -49,7 +49,7 @@ int main(int argc, char** argv)
         config cfg(argc == 1 ? "makoa_server.conf" : argv[1]);
         cfg.print();
         name = cfg.name;
-        engine en;
+        engine en(can_run);
         server sv(can_run);
         sv.import_loop();
     } catch(std::exception& e) {

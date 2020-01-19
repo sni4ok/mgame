@@ -13,7 +13,7 @@ struct engine // wrapper for control lifetime of consumers
               // used modules: logger, config
 {
     class impl;
-    engine();
+    engine(volatile bool& can_run);
     ~engine();
 
 private:

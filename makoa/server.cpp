@@ -311,6 +311,7 @@ struct server::impl : stack_singleton<server::impl>
         mmap_handle(void *ptr, std::set<void*>& mmaps, std::mutex& mutex)
             : ptr(ptr), mmaps(&mmaps), mutex(&mutex)
         {
+            mmaps.insert(ptr);
         }
         ~mmap_handle()
         {
@@ -365,7 +366,6 @@ struct server::impl : stack_singleton<server::impl>
                     threads.push_back(std::thread(&impl::import_mmap_cp, this, p[1]));
             }
         }
-        join();
     }
     std::vector<std::thread> threads;
     void join()
@@ -376,7 +376,6 @@ struct server::impl : stack_singleton<server::impl>
     }
     ~impl()
     {
-        set_close();
         join();
         std::unique_lock<std::mutex> lock(mutex);
         while(count)

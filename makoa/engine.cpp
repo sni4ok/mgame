@@ -188,7 +188,7 @@ struct context
 
 class engine::impl : public stack_singleton<engine::impl>
 {
-    volatile bool can_run;
+    volatile bool& can_run;
     std::mutex mutex;
     std::condition_variable cond;
     std::vector<std::thread> threads;
@@ -297,7 +297,7 @@ public:
         if(i)
             ies.push(i);
     }
-    impl() : can_run(true), ies("exporters_queue")
+    impl(volatile bool& can_run) : can_run(can_run), ies("exporters_queue")
     {
     }
     str_holder alloc()
@@ -385,7 +385,6 @@ public:
     }
     ~impl()
     {
-        can_run = false;
         for(auto&& t: threads)
             t.join();
         imple *i = nullptr;
@@ -410,10 +409,10 @@ public:
     }
 };
 
-engine::engine()
+engine::engine(volatile bool& can_run)
 {
     pooling_mode = config::instance().pooling;
-    pimpl = std::make_unique<engine::impl>();
+    pimpl = std::make_unique<engine::impl>(can_run);
     pimpl->init();
 }
 
