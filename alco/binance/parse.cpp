@@ -34,7 +34,7 @@ struct lws_i : lws_impl
         subscribes.push_back(sub.str());
     }
 
-    typedef my_basic_string<char, sizeof(message_instr::security)> ticker;
+    typedef my_basic_string<char, sizeof(message_instr::security) + 1> ticker;
     fmap<ticker, uint32_t> securities;
     security tmp;
     uint32_t get_security_id(iterator i, iterator ie)
