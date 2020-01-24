@@ -276,7 +276,7 @@ class engine::impl : public stack_singleton<engine::impl>
     }
     static void log_and_throw_error(const char* data, uint32_t size, const char* reason)
     {
-        mlog() << "bad message (" << str_holder(reason) << "!): " << print_binary((const uint8_t*)data, std::min<uint32_t>(32, size));
+        mlog() << "bad message (" << _str_holder(reason) << "!): " << print_binary((const uint8_t*)data, std::min<uint32_t>(32, size));
         throw std::runtime_error("bad message");
     }
 public:

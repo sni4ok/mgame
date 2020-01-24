@@ -77,15 +77,15 @@ struct mysql
                 << "instruments_" << tt << ", orders_" << tt << ", trades_" << tt;
             bsi << "rename table instruments to instruments_" << tt;
             if(mysql_real_query(sql.get(), bsi.begin(), bsi.size()))
-                mlog(mlog::critical) << "mysql error: " << str_holder(mysql_error(sql.get()));
+                mlog(mlog::critical) << "mysql error: " << _str_holder(mysql_error(sql.get()));
             bsi.clear();
             bsi << "rename table orders to orders_" << tt;
             if(mysql_real_query(sql.get(), bsi.begin(), bsi.size()))
-                mlog(mlog::critical) << "mysql error: " << str_holder(mysql_error(sql.get()));
+                mlog(mlog::critical) << "mysql error: " << _str_holder(mysql_error(sql.get()));
             bsi.clear();
             bsi << "rename table trades to trades_" << tt;
             if(mysql_real_query(sql.get(), bsi.begin(), bsi.size()))
-                mlog(mlog::critical) << "mysql error: " << str_holder(mysql_error(sql.get()));
+                mlog(mlog::critical) << "mysql error: " << _str_holder(mysql_error(sql.get()));
             bsi.clear();
         }
  

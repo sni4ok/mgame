@@ -15,14 +15,14 @@ struct lws_i : lws_impl
     typedef my_basic_string<char, sizeof(message_instr::security) + 1> ticker;
     fmap<ticker, security> securities;
 
-    security& get_security(iterator i, iterator ie)
+    security& get_security(iterator i, iterator ie, ttime_t time)
     {
         ticker symbol(i, ie);
         auto it = securities.find(symbol);
         if(unlikely(it == securities.end())) {
             security& s = securities[symbol];
             s.init(cfg.exchange_id, cfg.feed_id, std::string(i, ie));
-            s.proceed_instr(e);
+            s.proceed_instr(e, time);
             return s;
         }
         else
@@ -90,7 +90,7 @@ struct lws_i : lws_impl
         if(skip_if_fixed(it, "l2update\",\"product_id\":\""))
         {
             iterator ne = std::find(it, ie, '\"');
-            security& s = get_security(it, ne);
+            security& s = get_security(it, ne, time);
             it = ne + 1;
             skip_fixed(it, ",\"changes\":[[\"");
             bool ask;
@@ -142,7 +142,7 @@ struct lws_i : lws_impl
             it = ne + 1;
             skip_fixed(it, ",\"product_id\":\"");
             ne = std::find(it, ie, '\"');
-            security& s = get_security(it, ne);
+            security& s = get_security(it, ne, time);
             it = ne + 1;
             skip_fixed(it, ",\"sequence\":");
             it = std::find(it, ie, ',') + 1;

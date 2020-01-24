@@ -150,7 +150,7 @@ inline mlog& operator<<(mlog& ml, const cg_time_t& t)
 inline void check_plaza_fail(uint32_t res, const char* msg)
 {
     if(unlikely(res != CG_ERR_OK)) {
-        mlog(mlog::critical) << "Client gate error (" << str_holder(msg) << "): " << res;
+        mlog(mlog::critical) << "Client gate error (" << _str_holder(msg) << "): " << res;
         throw std::runtime_error(es() % "Client gate error (" % msg % "): " % res);
     }
 } 
@@ -158,7 +158,7 @@ inline void check_plaza_fail(uint32_t res, const char* msg)
 inline void warn_plaza_fail(uint32_t res, const char* msg)
 {
     if(unlikely(res != CG_ERR_OK)) {
-        mlog(mlog::critical) << "Client gate warning (" << str_holder(msg) << "): " << res;
+        mlog(mlog::critical) << "Client gate warning (" << _str_holder(msg) << "): " << res;
     }
 } 
 
@@ -261,7 +261,7 @@ struct cg_listener_h
         mlog() << "lsn_new: " << cli_listener;
         check_plaza_fail(cg_lsn_open(listener, get_state()), "lsn_open");
         mlog() << "stream: " << name << " opened";
-        mlog() << "state: " << str_holder(get_state() ? get_state() : "");
+        mlog() << "state: " << _str_holder(get_state() ? get_state() : "");
         {
             uint32_t state = 0;
             uint32_t r = cg_lsn_getstate(listener, &state);

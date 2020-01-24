@@ -151,7 +151,7 @@ class lockfree_queue : noncopyable
     //my_mutex mutex;
     void throw_exception(const char* reason, uint32_t status)
     {
-        throw std::runtime_error(es() % name % ":lockfree_queue:" % str_holder(reason) % ", (" % capacity % "," % pop_cnt % "," % push_cnt % "," % status % ")");
+        throw std::runtime_error(es() % name % ":lockfree_queue:" % _str_holder(reason) % ", (" % capacity % "," % pop_cnt % "," % push_cnt % "," % status % ")");
     }
 public:
     lockfree_queue(const std::string& name) : name(name)

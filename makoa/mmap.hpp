@@ -11,6 +11,7 @@ struct shared_memory_sync
 {
     pthread_mutex_t mutex;
     pthread_cond_t condition;
+    uint8_t pooling_mode; //0 unitialized, 1 pooling mode
 };
 
 static const uint32_t mmap_alloc_size_base = message_size + (message_size - 2) * 255 * message_size;

@@ -196,21 +196,23 @@ struct server::impl : stack_singleton<server::impl>
         shared_memory_sync* s = get_smc(p);
         std::atomic_uchar* w = ((std::atomic_uchar*)p), *r = w + 1;
         bool initialized = false;
+        pthread_mutex_lock(&(s->mutex));
         while(!initialized && can_run)
         {
-            pthread_mutex_lock(&(s->mutex));
             uint8_t wc = atomic_load(w);
             uint8_t rc = atomic_load(r);
             if(rc != 1 && rc != 0) {
                 atomic_store(w, 0);
+                pthread_mutex_unlock(&(s->mutex));
                 throw std::runtime_error("mmap inconsistence");
             }
-            initialized = (wc == 2 && rc == 1);
-            pthread_mutex_unlock(&(s->mutex));
+            initialized = (wc && rc == 1);
             if(!initialized)
-                usleep(500);
+                pthread_cond_wait(&(s->condition), &(s->mutex));
         }
+        pthread_mutex_unlock(&(s->mutex));
         *r = 2;
+        if(initialized)
         mlog() << "reaceiving data from " << params << " started";
 
         while(can_run)
@@ -300,34 +302,33 @@ struct server::impl : stack_singleton<server::impl>
             }
         }
     }
-
     struct mmap_handle
     {
         void* ptr;
-        std::set<void*>* mmaps;
-        std::mutex* mutex;
-        mmap_handle() : ptr(), mmaps(), mutex(){
-        }
-        mmap_handle(void *ptr, std::set<void*>& mmaps, std::mutex& mutex)
-            : ptr(ptr), mmaps(&mmaps), mutex(&mutex)
+        std::set<void*>& mmaps;
+        std::mutex& mutex;
+        mmap_handle(const std::string& params, std::set<void*>& mmaps, std::mutex& mutex)
+            :  mmaps(mmaps), mutex(mutex)
         {
+            std::unique_lock<std::mutex> lock(mutex);
+            ptr = mmap_create(params.c_str(), true);
+            shared_memory_sync* s = get_smc(ptr);
+            //pthread_mutex_lock(&(ps->mutex));
+            atomic_store((std::atomic_uchar*)&s->pooling_mode, pooling_mode ? uint8_t(1) : uint8_t(2));
+            //pthread_mutex_unlock(&(ps->mutex));
             mmaps.insert(ptr);
         }
         ~mmap_handle()
         {
-            if(mutex) {
-                mmap_close(ptr);
-                std::unique_lock<std::mutex> lock(*mutex);
-                mmaps->erase(ptr);
-            }
+            mmap_close(ptr);
+            std::unique_lock<std::mutex> lock(mutex);
+            mmaps.erase(ptr);
         }
     };
     std::set<void*> mmaps;
     void import_mmap_cp(const std::string& params)
     {
-        std::unique_lock<std::mutex> lock(mutex);
-        mmap_handle p(mmap_create(params.c_str(), true), mmaps, mutex);
-        lock.unlock();
+        mmap_handle p(params, mmaps, mutex);
         while(can_run) {
             try {
                 work_thread_cond(params, p.ptr, &mmap_cp_read);

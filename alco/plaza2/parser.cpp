@@ -59,7 +59,7 @@ struct parser : emessages, stack_singleton<parser>
     {
         conn.connect(can_run);
         for(auto& v: ft)
-            v.second.proceed_instr(e);
+            v.second.proceed_instr(e, get_cur_ttime());
         tickers = ft;
     }
     void init_tickers(volatile bool& can_run)
@@ -304,7 +304,7 @@ CG_RESULT orders_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
     case CG_MSG_P2REPL_REPLSTATE: 
         {
             if(config::instance().log_plaza)
-                mlog() << "orders_callback CG_MSG_P2REPL_REPLSTATE, data, str: " << str_holder((char*)msg->data);
+                mlog() << "orders_callback CG_MSG_P2REPL_REPLSTATE, data, str: " << _str_holder((char*)msg->data);
             parser::instance().orders.set_replstate(msg);
             break;
         }
@@ -408,7 +408,7 @@ CG_RESULT trades_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
     case CG_MSG_P2REPL_REPLSTATE: 
         {
             if(config::instance().log_plaza)
-                mlog() << "deals_callback CG_MSG_P2REPL_REPLSTATE, data, str: " << str_holder((char*)msg->data);
+                mlog() << "deals_callback CG_MSG_P2REPL_REPLSTATE, data, str: " << _str_holder((char*)msg->data);
             parser::instance().trades.set_replstate(msg);
             break;
         }

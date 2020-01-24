@@ -42,9 +42,9 @@ struct security
         mt.time = ttime_t(); //get_export_mtime
         e.proceed((message*)(&mc), 1);
     }
-    void proceed_instr(exporter& e)
+    void proceed_instr(exporter& e, ttime_t time)
     {
-        mi.time = get_cur_ttime();
+        mi.time = time;
         mc.time = ttime_t(); //get_export_mtime
         e.proceed((message*)(&mi), 1);
     }

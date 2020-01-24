@@ -52,7 +52,7 @@ struct efile
             int r = rename(fname.c_str(), backup.c_str());
             if(r) {
                 mlog(mlog::critical) << "rename file from " << fname << ", to " << backup
-                    << ", error: " << r << ", " << str_holder(errno ? strerror(errno) : "");
+                    << ", error: " << r << ", " << _str_holder(errno ? strerror(errno) : "");
             }
             else {
                 mlog(mlog::critical) << "file renamed from " << fname << ", to " << backup;
@@ -62,7 +62,7 @@ struct efile
         else
             throw std::runtime_error(es() % "efile() bad open_mode: " % params);
 
-        hfile = ::open(fname.c_str(), fp, S_IWRITE | S_IREAD | S_IREAD | S_IWRITE | S_IRGRP | S_IWGRP);
+        hfile = ::open(fname.c_str(), fp, S_IWRITE | S_IREAD | S_IRGRP | S_IWGRP);
         if(hfile < 0)
             throw_system_failure(es() % "open file " % fname % " error");
     }

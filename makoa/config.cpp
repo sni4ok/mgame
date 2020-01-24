@@ -30,6 +30,7 @@ void config::print()
     ml << "  exports:\n";
     for(auto v: exports)
         ml << "      " << v << "\n";
-    ml << "  export_threads: " << export_threads << "\n";
+    ml << "  export_threads: " << export_threads << "\n"
+        << "  pooling: " << pooling << "\n";
 }
 

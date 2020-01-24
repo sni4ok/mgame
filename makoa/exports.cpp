@@ -45,18 +45,18 @@ void* mmap_create(const char* params, bool create)
 {
     int h = ::open(params, create ? (O_RDWR | O_CREAT | O_TRUNC) : O_RDWR, 0666);
     if(h <= 0)
-        throw_system_failure(es() % "open " % str_holder(params) % " error");
+        throw_system_failure(es() % "open " % _str_holder(params) % " error");
 
     bool r = lseek(h, mmap_alloc_size, SEEK_SET) >= 0;
     r &= (write(h, "", 1) == 1);
     r &= (lseek(h, 0, SEEK_SET) >= 0);
     if(!r)
-        throw_system_failure(es() % "mmap creating file error " % str_holder(params));
+        throw_system_failure(es() % "mmap creating file error " % _str_holder(params));
 
     void* p = mmap(NULL, mmap_alloc_size, PROT_READ | PROT_WRITE, MAP_SHARED, h, 0);
     ::close(h);
     if(!p)
-        throw_system_failure(es() % "mmap error for " % str_holder(params));
+        throw_system_failure(es() % "mmap error for " % _str_holder(params));
 
     if(create)
         init_smc(p);
@@ -88,6 +88,9 @@ namespace
         return 0;
     }
     void hole_no_destroy(void*)
+    {
+    }
+    void hole_no_proceed(void*, const message*, uint32_t)
     {
     }
     void* tyra_create(const char* params)
@@ -203,7 +206,7 @@ namespace
         my_unused(r);
         int64_t h = ::open(params, O_WRONLY);
         if(h <= 0)
-            throw_system_failure(es() % "open " % str_holder(params) % " error");
+            throw_system_failure(es() % "open " % _str_holder(params) % " error");
 
         return (void*)h;
     }
@@ -228,6 +231,7 @@ namespace
         uint8_t* c = (uint8_t*)p;
         *c = 2;
         *(++c) = 1;
+        pthread_cond_signal(&(s->condition));
 		pthread_mutex_unlock(&(s->mutex));
         return p;
     }
@@ -288,7 +292,7 @@ namespace
         }
 
         shared_memory_sync* ps = get_smc(v);
-        if(!pthread_mutex_lock(&(ps->mutex))) {
+        if(ps->pooling_mode == 2 && !pthread_mutex_lock(&(ps->mutex))) {
             pthread_cond_signal(&(ps->condition));
             pthread_mutex_unlock(&(ps->mutex));
         }
@@ -338,4 +342,5 @@ static const uint32_t register_log_message = register_exporter("log_messages", {
 static const uint32_t register_tyra = register_exporter("tyra", {&tyra_create, &tyra_destroy, &tyra_proceed});
 static const uint32_t register_pipe = register_exporter("pipe", {&pipe_init, &pipe_destroy, &pipe_proceed});
 static const uint32_t register_mmap = register_exporter("mmap_cp", {&mmap_init, &mmap_destroy, &mmap_proceed});
+static const uint32_t register_null = register_exporter("/dev/null", {&hole_no_init, &hole_no_destroy, &hole_no_proceed});
 

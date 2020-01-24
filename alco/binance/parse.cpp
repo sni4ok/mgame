@@ -37,14 +37,14 @@ struct lws_i : lws_impl
     typedef my_basic_string<char, sizeof(message_instr::security) + 1> ticker;
     fmap<ticker, uint32_t> securities;
     security tmp;
-    uint32_t get_security_id(iterator i, iterator ie)
+    uint32_t get_security_id(iterator i, iterator ie, ttime_t time)
     {
         ticker symbol(i, ie);
         auto it = securities.find(symbol);
         if(unlikely(it == securities.end())) {
             tmp.init(cfg.exchange_id, cfg.feed_id, std::string(i, ie));
             securities[symbol] = tmp.mi.security_id;
-            tmp.proceed_instr(e);
+            tmp.proceed_instr(e, time);
             return tmp.mi.security_id;
         }
         else
@@ -62,7 +62,7 @@ struct lws_i : lws_impl
             it = std::find(it + 1, ie, ',');
             skip_fixed(it, ",\"s\":\"");
             iterator ne = std::find(it, ie, '\"');
-            uint32_t security_id = get_security_id(it, ne);
+            uint32_t security_id = get_security_id(it, ne, time);
             it = ne + 1;
             skip_fixed(it, ",\"b\":\"");
             ne = std::find(it, ie, '\"');
@@ -99,7 +99,7 @@ struct lws_i : lws_impl
             it = it + 14;
             skip_fixed(it, "\"s\":\"");
             iterator ne = std::find(it, ie, '\"');
-            uint32_t security_id = get_security_id(it, ne);
+            uint32_t security_id = get_security_id(it, ne, time);
             it = ne + 1;
             skip_fixed(it, ",\"t\":");
             it = std::find(it, ie, ',');

@@ -320,7 +320,7 @@ void mirror::proceed(const message* m, uint32_t count)
 
 void* ying_init(const char* params)
 {
-    mlog() << "ying " << str_holder(params) << " started";
+    mlog() << "ying " << _str_holder(params) << " started";
     return create_mirror(params);
 }
 

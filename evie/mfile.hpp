@@ -29,7 +29,7 @@ void read_file(string& buf, const char* fname, bool can_empty = false)
         std::copy(std::istreambuf_iterator<char>(f),std::istreambuf_iterator<char>(), std::back_inserter(buf));
     }
     if(!can_empty && buf_size == buf.size())
-        throw std::runtime_error(es() % "read \"" % str_holder(fname) % "\" error");
+        throw std::runtime_error(es() % "read \"" % _str_holder(fname) % "\" error");
 }
 
 template<typename string>

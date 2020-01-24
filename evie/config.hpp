@@ -105,7 +105,7 @@ static void print_init(int argc, char** argv)
     for(int i = 0; i != argc; ++i) {
         if(i)
             l << " ";
-        l << str_holder(argv[i]);
+        l << _str_holder(argv[i]);
     }
 }
 

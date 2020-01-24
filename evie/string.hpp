@@ -26,12 +26,11 @@ inline void my_fast_move(const char* from, const char* to, char* out)
 {
     memmove(out, from, to - from);
 }
+
 struct str_holder
 {
     const char* str;
     uint32_t size;
-    str_holder(const char* str) : str(str), size(strlen(str)) {
-    }
     str_holder(const char* str, uint32_t size) : str(str), size(size) {
     }
     template<typename array>
@@ -51,6 +50,14 @@ struct str_holder
         return false;
     }
 };
+
+struct _str_holder : str_holder
+{
+    _str_holder(const char* str) : str_holder(str, strlen(str))
+    {
+    }
+};
+
 template<typename ch, uint32_t stack_sz = 256>
 class my_basic_string
 {

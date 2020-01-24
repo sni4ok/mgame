@@ -52,7 +52,7 @@ class profilerinfo : public stack_singleton<profilerinfo>
         for(auto& v: data) {
             const info &i = v.second;
             uint64_t time_av = i.time / i.count;
-            log << str_holder(v.first) << ": average time: ";
+            log << _str_holder(v.first) << ": average time: ";
             write_time(log, time_av);
             log << ", minimum time: ";
             write_time(log, i.time_min);
