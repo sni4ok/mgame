@@ -295,9 +295,9 @@ struct mirror::impl
 inline mirror::impl* create_mirror(const std::string& params)
 {
     auto p = split(params, ' ');
-    if(p.size() != 2)
+    if(p.size() > 2)
         throw std::runtime_error(es() % "mirror::mirror() bad params: " % params);
-    uint32_t refresh_rate = atoi(p[1].c_str());
+    uint32_t refresh_rate = p.size() == 2 ? atoi(p[1].c_str()) : 100;
     if(!refresh_rate)
         throw std::runtime_error(es() % "mirror::mirror() bad params: " % params % ", refresh_rate should be at least 1");
     return new mirror::impl(p[0], refresh_rate);

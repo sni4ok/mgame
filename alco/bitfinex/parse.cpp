@@ -169,7 +169,7 @@ struct lws_i : lws_impl
         }
         throw std::runtime_error(es() % "add_channel error, channel: " % channel % ", ticker: " % ticker);
     }
-    int proceed(lws* wsi, void* in, size_t len)
+    void proceed(lws* wsi, void* in, size_t len)
     {
         ttime_t time = get_cur_ttime();
         if(cfg.log_lws)
@@ -233,7 +233,6 @@ struct lws_i : lws_impl
                 send(wsi);
             }
         }
-        return 0;
     }
 };
 

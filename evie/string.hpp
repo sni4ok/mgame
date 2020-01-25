@@ -41,9 +41,6 @@ struct str_holder
         while(size && v[size - 1] == char())
             --size;
     }
-    operator const char*() const {
-        return str;
-    }
     bool operator==(const str_holder& r) const {
         if(size == r.size)
             return std::equal(str, str + size, r.str);

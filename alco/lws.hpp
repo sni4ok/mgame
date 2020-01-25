@@ -131,7 +131,7 @@ struct lws_impl : emessages, lws_dump, stack_singleton<lws_impl>
 };
 
 template<typename str>
-inline void skip_fixed(const char*  &it, const str& v)
+inline void skip_fixed(const char* &it, const str& v)
 {
     static_assert(std::is_array<str>::value);
     bool eq = std::equal(it, it + sizeof(v) - 1, v);
@@ -143,7 +143,17 @@ inline void skip_fixed(const char*  &it, const str& v)
 }
 
 template<typename str>
-inline bool skip_if_fixed(const char*  &it, const str& v)
+inline void search_and_skip_fixed(const char* &it, const char* ie, const str& v)
+{
+    static_assert(std::is_array<str>::value);
+    const char* i = std::search(it, ie, v, v + (sizeof(v) - 1));
+    if(unlikely(i == ie))
+        throw std::runtime_error(es() % "search_and_skip_fixed error, expect: |" % str_holder(v) %  "| in |" % str_holder(it, ie - it));
+    it  = i + (sizeof(v) - 1);
+}
+
+template<typename str>
+inline bool skip_if_fixed(const char* &it, const str& v)
 {
     static_assert(std::is_array<str>::value);
     bool eq = std::equal(it, it + sizeof(v) - 1, v);
@@ -190,7 +200,7 @@ int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user, void* i
         }
         default:
         {
-            if(config::instance().log_lws)
+            if(unlikely(config::instance().log_lws))
                 mlog() << "lws callback: " << int(reason) << ", len: " << len;
             break;
         }
@@ -228,8 +238,9 @@ lws_context* create_context(const char* ssl_ca_file = 0)
 template<typename lws_w>
 void proceed_lws_parser_fake(volatile bool& can_run)
 {
+    mlog() << "parser started in fake mode, from " << _str_holder(getenv("lws_fake"));
     lws_w ls;
-    for(;;)
+    for(;can_run;)
     {
         str_holder str = ls.read_dump();
         if(str.size) {

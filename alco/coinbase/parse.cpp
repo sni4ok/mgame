@@ -6,6 +6,7 @@
 
 #include "../alco.hpp"
 #include "../lws.hpp"
+#include "../utils.hpp"
 
 #include "evie/fmap.hpp"
 
@@ -30,17 +31,7 @@ struct lws_i : lws_impl
     }
     lws_i() : cfg(config::instance())
     {
-        std::string tickers;
-        {
-            std::stringstream s;
-            for(uint32_t i = 0; i != cfg.tickers.size(); ++i) {
-                if(i)
-                    s << ",";
-                s << "\"" << cfg.tickers[i] << "\"";
-            }
-            tickers = s.str();
-        }
-        
+        std::string tickers = join_tickers(cfg.tickers);
         std::stringstream sub;
         sub << "{\"type\":\"subscribe\",\"product_ids\": [" << tickers << "],\"channels\": [";
         if(cfg.orders)
@@ -80,7 +71,7 @@ struct lws_i : lws_impl
         it += 16;
         return ttime_t{cur_date_time + us * 1000 + (s + m * 60 + h * 3600) * my_cvt::p10<9>()};
     }
-    int proceed(lws* wsi, void* in, size_t len)
+    void proceed(lws*, void* in, size_t len)
     {
         ttime_t time = get_cur_ttime();
         if(cfg.log_lws)
@@ -159,7 +150,6 @@ struct lws_i : lws_impl
             if(ie - it > 120)
                 throw std::runtime_error(es() % "parsing message error: " % std::string((iterator)in, ie));
         }
-        return 0;
     }
 };
 

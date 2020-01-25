@@ -6,10 +6,9 @@
 
 #include "../alco.hpp"
 #include "../lws.hpp"
+#include "../utils.hpp"
 
-#include "evie/fmap.hpp"
-
-struct lws_i : lws_impl
+struct lws_i : sec_id_by_name<lws_impl>
 {
     config& cfg;
     
@@ -32,23 +31,6 @@ struct lws_i : lws_impl
         }
         sub << "],\"id\":1}";
         subscribes.push_back(sub.str());
-    }
-
-    typedef my_basic_string<char, sizeof(message_instr::security) + 1> ticker;
-    fmap<ticker, uint32_t> securities;
-    security tmp;
-    uint32_t get_security_id(iterator i, iterator ie, ttime_t time)
-    {
-        ticker symbol(i, ie);
-        auto it = securities.find(symbol);
-        if(unlikely(it == securities.end())) {
-            tmp.init(cfg.exchange_id, cfg.feed_id, std::string(i, ie));
-            securities[symbol] = tmp.mi.security_id;
-            tmp.proceed_instr(e, time);
-            return tmp.mi.security_id;
-        }
-        else
-            return it->second;
     }
     void proceed(lws* wsi, void* in, size_t len)
     {

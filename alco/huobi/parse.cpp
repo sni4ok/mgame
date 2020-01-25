@@ -248,14 +248,12 @@ struct lws_i : lws_impl
         send_messages();
         std::sort(parsers.begin(), parsers.end());
     }
-    int proceed(lws* wsi, void* in, size_t len)
+    void proceed(lws* wsi, void* in, size_t len)
     {
         ttime_t time = get_cur_ttime();
         str_holder str = zlib.decompress(in, len);
         if(config::instance().log_lws)
             mlog() << "lws proceed: " << str;
-        if(unlikely(!str.size))
-            return 0;
         iterator it = str.str, ie = str.str + str.size;
         if(unlikely(*it != '{' || *(it + 1) != '\"'))
             throw std::runtime_error(es() % "bad message: " % str);
@@ -294,7 +292,6 @@ struct lws_i : lws_impl
         else {
             mlog(mlog::critical) << "unsupported message: " << str;
         }
-        return 0;
     }
 };
 
