@@ -89,6 +89,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     }
     void parse_book(uint32_t security_id, ttime_t time, iterator& it, iterator ie)
     {
+        bool snapshot = false;
         iterator f = it;
         skip_fixed(it, "{");
         for(;;){
@@ -100,8 +101,10 @@ struct lws_i : sec_id_by_name<lws_impl>
                 ask = true;
             else throw std::runtime_error(es() % "parsing book message error: " % str_holder(f, ie - f));
             ++it;
-            if(*it == 's') //snapshot
+            if(*it == 's') { //snapshot
                 ++it;
+                snapshot = true;
+            }
             skip_fixed(it, "\":[");
             for(;;)
             {
@@ -109,9 +112,12 @@ struct lws_i : sec_id_by_name<lws_impl>
                 parse_tick(it, ie);
                 if(ask)
                     t_count.value = -t_count.value;
-                add_order(security_id, t_price.value, t_price, t_count, t_time, time);
-                if(*it == ',')
-                    skip_fixed(it, ",\"r\""); //republish flag
+                bool rep = false;
+                if(*it == ',') {
+                    skip_fixed(it, ",\"r\"");
+                    rep = true;
+                }
+                add_order(security_id, t_price.value, t_price, t_count, (snapshot || rep) ? ttime_t() : t_time, time);
                 skip_fixed(it, "]");
                 if(*it == ',')
                     ++it;
@@ -220,7 +226,6 @@ struct lws_i : sec_id_by_name<lws_impl>
         if(unlikely(it != ie))
         {
             mlog(mlog::critical) << "unsupported message: " << str_holder((iterator)in, len);
-            throw std::runtime_error("");
         }
     }
 };
