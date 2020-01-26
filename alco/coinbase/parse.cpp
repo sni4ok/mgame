@@ -8,9 +8,7 @@
 #include "../lws.hpp"
 #include "../utils.hpp"
 
-#include "evie/fmap.hpp"
-
-struct lws_i : lws_impl
+struct lws_i : lws_impl, read_time_impl
 {
     config& cfg;
     typedef my_basic_string<char, sizeof(message_instr::security) + 1> ticker;
@@ -40,36 +38,6 @@ struct lws_i : lws_impl
             sub << "\"matches\",";
         sub << "{\"name\": \"ticker\",\"product_ids\": [" << tickers << "]}]}";
         subscribes.push_back(sub.str());
-    }
-
-    my_basic_string<char, 11> cur_date;
-    uint64_t cur_date_time;
-    ttime_t read_time(iterator& it)
-    {
-        if(unlikely(cur_date != str_holder(it, 10)))
-        {
-            if(*(it + 4) != '-' || *(it + 7) != '-')
-                throw std::runtime_error(es() % "bad time: " % std::string(it, it + 26));
-            struct tm t = tm();
-            int y = my_cvt::atoi<int>(it, 4); 
-            int m = my_cvt::atoi<int>(it + 5, 2); 
-            int d = my_cvt::atoi<int>(it + 8, 2); 
-            t.tm_year = y - 1900;
-            t.tm_mon = m - 1;
-            t.tm_mday = d;
-            cur_date_time = timegm(&t) * my_cvt::p10<9>();
-            cur_date = str_holder(it, 10);
-            mlog() << "cur_date set " << cur_date;
-        }
-        it += 10;
-        if(*it != 'T' || *(it + 3) != ':' || *(it + 6) != ':' || *(it + 9) != '.')
-            throw std::runtime_error(es() % "bad time: " % std::string(it - 10, it + 16));
-        uint64_t h = my_cvt::atoi<uint64_t>(it + 1, 2);
-        uint64_t m = my_cvt::atoi<uint64_t>(it + 4, 2);
-        uint64_t s = my_cvt::atoi<uint64_t>(it + 7, 2);
-        uint64_t us = my_cvt::atoi<uint64_t>(it + 10, 6);
-        it += 16;
-        return ttime_t{cur_date_time + us * 1000 + (s + m * 60 + h * 3600) * my_cvt::p10<9>()};
     }
     void proceed(lws*, void* in, size_t len)
     {
@@ -101,7 +69,7 @@ struct lws_i : lws_impl
                 c.value = -c.value;
             it = ne + 1;
             skip_fixed(it, "]],\"time\":\"");
-            ttime_t etime = read_time(it);
+            ttime_t etime = read_time<6>(it);
             skip_fixed(it, "Z\"}");
             if(unlikely(it != ie))
                 throw std::runtime_error(es() % "parsing message error: " % std::string((iterator)in, ie));
@@ -138,7 +106,7 @@ struct lws_i : lws_impl
             skip_fixed(it, ",\"sequence\":");
             it = std::find(it, ie, ',') + 1;
             skip_fixed(it, "\"time\":\"");
-            ttime_t etime = read_time(it);
+            ttime_t etime = read_time<6>(it);
             skip_fixed(it, "Z\"}");
             if(unlikely(it != ie))
                 throw std::runtime_error(es() % "parsing message error: " % std::string((iterator)in, ie));

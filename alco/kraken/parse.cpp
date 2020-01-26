@@ -8,17 +8,6 @@
 #include "../lws.hpp"
 #include "../utils.hpp"
 
-template<typename func>
-auto read_value(const char* &it, const char* ie, func f, bool last)
-{
-    skip_fixed(it, "\"");
-    const char* ne = std::find(it, ie, '\"');
-    auto ret = f(it, ne);
-    it = ne + 1;
-    if(!last)
-        skip_fixed(it, ",");
-    return ret;
-}
 ttime_t read_time(const char* it, const char* ie)
 {
     const char* ne = std::find(it, ie, '.');

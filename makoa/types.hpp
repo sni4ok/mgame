@@ -74,7 +74,7 @@ stream& operator<<(stream& s, const message_clean& c)
 template<typename stream>
 stream& operator<<(stream& s, const message_book& t)
 {
-    s << "book|"<< t.security_id << "|" << t.price << "|" << t.count
+    s << "book|"<< t.security_id << "|" << t.level_id << "|" << t.price << "|" << t.count
         << "|" << t.etime << "|" << t.time << "|";
     return s;
 }

@@ -132,7 +132,7 @@ void proceed_binance(volatile bool& can_run)
 
 void connect(lws_i& ls)
 {
-	lws_client_connect_info ccinfo =lws_client_connect_info();
+	lws_client_connect_info ccinfo = lws_client_connect_info();
 	ccinfo.context = ls.context;
 	ccinfo.address = "stream.binance.com";
 	ccinfo.port = 9443;
