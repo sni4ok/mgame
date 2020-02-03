@@ -434,14 +434,14 @@ void actives::on_disconnect()
     }
 }
 
-context_holder::context_holder()
+void* context_create()
 {
-    ctx = new context();
+    return (void*)(new context());
 }
 
-context_holder::~context_holder()
+void context_destroy(void* ctx)
 {
-    delete ctx;
+    delete (context*)ctx;
 }
 
 str_holder alloc_buffer()
@@ -449,14 +449,14 @@ str_holder alloc_buffer()
     return engine::impl::instance().alloc();
 }
 
-void free_buffer(str_holder buf, context* ctx)
+void free_buffer(str_holder buf, void* ctx)
 {
-    engine::impl::instance().free(buf, ctx);
+    engine::impl::instance().free(buf, (context*)(ctx));
 }
 
-void proceed_data(str_holder& buf, context* ctx)
+void proceed_data(str_holder& buf, void* ctx)
 {
     //MPROFILE("proceed_data")
-    return engine::impl::instance().proceed(buf, ctx);
+    return engine::impl::instance().proceed(buf, (context*)(ctx));
 }
 

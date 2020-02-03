@@ -1,9 +1,0 @@
-this program used for import already saved market data to makoa_server
-have modes: history, realtime
-
-./pip [config_file.conf] mode {mode_params} [date_time_from]
-
-examples:
-
-./pip realtime file bin data/date.bin
-

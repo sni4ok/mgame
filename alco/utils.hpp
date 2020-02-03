@@ -44,51 +44,6 @@ private:
     security tmp;
 };
 
-struct read_time_impl
-{
-
-    my_basic_string<char, 11> cur_date;
-    uint64_t cur_date_time;
-    template<uint32_t frac_size>
-    ttime_t read_time(const char* &it)
-    {
-        //2020-01-26T10:45:21 //frac_size 0
-        //2020-01-26T10:45:21.418 //frac_size 3
-        //2020-01-26T10:45:21.418000001 //frac_size 9
-
-        if(unlikely(cur_date != str_holder(it, 10)))
-        {
-            if(*(it + 4) != '-' || *(it + 7) != '-')
-                throw std::runtime_error(es() % "bad time: " % std::string(it, it + 26));
-            struct tm t = tm();
-            int y = my_cvt::atoi<int>(it, 4); 
-            int m = my_cvt::atoi<int>(it + 5, 2); 
-            int d = my_cvt::atoi<int>(it + 8, 2); 
-            t.tm_year = y - 1900;
-            t.tm_mon = m - 1;
-            t.tm_mday = d;
-            cur_date_time = timegm(&t) * my_cvt::p10<9>();
-            cur_date = str_holder(it, 10);
-            mlog() << "cur_date set " << cur_date;
-        }
-        it += 10;
-        if(*it != 'T' || *(it + 3) != ':' || *(it + 6) != ':' || (frac_size ? *(it + 9) != '.' : false))
-            throw std::runtime_error(es() % "bad time: " % std::string(it - 10, it + 10 + (frac_size ? 1 + frac_size : 0)));
-        uint64_t h = my_cvt::atoi<uint64_t>(it + 1, 2);
-        uint64_t m = my_cvt::atoi<uint64_t>(it + 4, 2);
-        uint64_t s = my_cvt::atoi<uint64_t>(it + 7, 2);
-        uint64_t ns = 0;
-        if(frac_size)
-        {
-            uint64_t frac = my_cvt::atoi<uint64_t>(it + 10, frac_size);
-            ns = frac * my_cvt::p10<9 - frac_size>();
-            it += (frac_size + 1);
-        }
-        it += 9;
-        return ttime_t{cur_date_time + ns + (s + m * 60 + h * 3600) * my_cvt::p10<9>()};
-    }
-};
-
 template<typename func>
 auto read_value(const char* &it, const char* ie, func f, bool last)
 {

@@ -16,3 +16,4 @@ struct server
 private:
     std::unique_ptr<impl> pimpl;
 };
+

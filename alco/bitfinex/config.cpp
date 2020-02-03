@@ -29,7 +29,7 @@ config::config(const char* fname)
 
     mlog() << "config() tickers: " << smb
         << ", trades: " << trades << ", orders: " << orders << ", precision: " << precision
-        << ", frequency: " << frequency << ", length: " << length
+        << ", frequency: " << frequency << ", length: " << length << ", ping: " << ping 
         << ", exchange_id: " << exchange_id << ", feed_id: " << feed_id
         << ",\n    push: " << push << ", log_lws: " << log_lws;
 }

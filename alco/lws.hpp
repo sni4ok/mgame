@@ -250,7 +250,6 @@ void proceed_lws_parser_fake(volatile bool& can_run)
         else
             break;
     }
-    sleep(5);
 }
 
 template<typename lws_w>

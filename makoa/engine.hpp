@@ -20,13 +20,3 @@ private:
     std::unique_ptr<impl> pimpl;
 };
 
-//proceed input data by engine
-//in case of exception connection should be closed
-struct context;
-struct context_holder : noncopyable
-{
-    context* ctx;
-    context_holder();
-    ~context_holder();
-};
-

@@ -37,6 +37,7 @@ namespace {
     using std::string;
     struct estat
     {
+        bool brief;
         std::string name;
 
         uint32_t count;
@@ -106,7 +107,10 @@ namespace {
                 tc.add(time, ctime);
                 ec.add(etime, ctime);
             }
-
+            void add(ttime_t etime, ttime_t time)
+            {
+                et.add(etime, time);
+            }
         };
         mstat mb, mt, mc, mi, mp;
 
@@ -123,28 +127,38 @@ namespace {
                 ml << '\n';
             }
         }
-        estat(std::string params) : name(params), count()
+        estat(std::string params) : brief(params == "brief"), name(params), count()
         {
             mlog() << "stat " << params << " initialized";
         }
         void proceed(const message* mes, uint32_t count)
         {
             this->count += count;
-            ttime_t mtime = get_export_mtime(mes);
-
-            for(uint32_t i = 0; i != count; ++i, ++mes){
-                const message& m = *mes;
-                ttime_t ctime = get_cur_ttime();
-                if(m.id == msg_book)
-                    mb.add(m.mb.etime, m.mb.time, mtime, ctime);
-                else if(m.id == msg_trade)
-                    mt.add(m.mt.etime, m.mt.time, mtime, ctime);
-                else if(m.id == msg_clean)
-                    mc.add(m.mc.etime, m.mc.time, mtime, ctime);
-                else if(m.id == msg_instr)
-                    mi.add(ttime_t(), m.mi.time, mtime, ctime);
-                else if(m.id == msg_ping)
-                    mp.add(m.mp.etime, m.mp.time, mtime, ctime);
+            if(brief) {
+                for(uint32_t i = 0; i != count; ++i, ++mes) {
+                    const message& m = *mes;
+                    if(m.id == msg_book)
+                        mb.add(m.mb.etime, m.mb.time);
+                    else if(m.id == msg_trade)
+                        mt.add(m.mt.etime, m.mt.time);
+                }
+            }
+            else {
+                ttime_t mtime = get_export_mtime(mes);
+                for(uint32_t i = 0; i != count; ++i, ++mes) {
+                    const message& m = *mes;
+                    ttime_t ctime = get_cur_ttime();
+                    if(m.id == msg_book)
+                        mb.add(m.mb.etime, m.mb.time, mtime, ctime);
+                    else if(m.id == msg_trade)
+                        mt.add(m.mt.etime, m.mt.time, mtime, ctime);
+                    else if(m.id == msg_clean)
+                        mc.add(m.mc.etime, m.mc.time, mtime, ctime);
+                    else if(m.id == msg_instr)
+                        mi.add(ttime_t(), m.mi.time, mtime, ctime);
+                    else if(m.id == msg_ping)
+                        mp.add(m.mp.etime, m.mp.time, mtime, ctime);
+                }
             }
         }
         ~estat() {

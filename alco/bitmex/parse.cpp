@@ -142,12 +142,16 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                                     etime = ttime_t();
                                 }
                                 send_messages();
+                                if(unlikely(it != ie))
+                                    throw std::runtime_error(es() % "parsing message error: " % str_holder((iterator)in, len));
                                 return;
                             }
                         }
                     }
                 }
                 send_messages();
+                if(unlikely(it != ie))
+                    throw std::runtime_error(es() % "parsing message error: " % str_holder((iterator)in, len));
             }
             else if(table == trades_table)
             {
@@ -192,7 +196,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
             {
                 throw std::runtime_error(es() % "unknown table name: " % str_holder((iterator)in, len));
             }
-            if(it != ie)
+            if(unlikely(it != ie))
                 throw std::runtime_error(es() % "parsing message error: " % str_holder((iterator)in, len));
         }
         else if(skip_if_fixed(it, "success\""))
