@@ -133,7 +133,7 @@ void* ifile_create(const char* params)
 {
     std::vector<std::string> p = split(params, ' ');
     if(p.size() > 3)
-        throw std::runtime_error("ifile_create() file_name[,time_from,[time_to]]");
+        throw std::runtime_error("ifile_create() file_name[ time_from[ time_to]]");
     ttime_t tf = ttime_t(), tt = ttime_t();
     if(p.size() >= 2)
         tf = parse_time(p[1]);

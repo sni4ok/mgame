@@ -6,14 +6,12 @@
 
 #include "../alco.hpp"
 #include "../lws.hpp"
+#include "../utils.hpp"
 
-#include "evie/fmap.hpp"
-
-struct lws_i : lws_impl
+struct lws_i : sec_id_by_name<lws_impl>
 {
     config& cfg;
     bool prec_R0;
-    std::vector<security> securities;
     
     char subscribed[24];
     char trade[19];
@@ -47,12 +45,6 @@ struct lws_i : lws_impl
     {
         prec_R0 = (cfg.precision == "R0");
         for(auto& v: cfg.tickers) {
-            security sec;
-            sec.init(cfg.exchange_id, cfg.feed_id, v);
-            securities.push_back(std::move(sec));
-            security& s = securities.back();
-            add_instrument(s.mi);
-
             if(cfg.trades) {
                 subscribes.push_back("{\"event\":\"subscribe\",\"channel\":\"trades\",\"symbol\":\"" + v + "\"}");
             }
@@ -152,22 +144,15 @@ struct lws_i : lws_impl
             skip_fixed(it, "]]");
         send_messages();
     }
-    void add_channel(uint32_t channel, str_holder ticker, bool is_trades)
+    void add_channel(uint32_t channel, str_holder ticker, bool is_trades, ttime_t time)
     {
         mlog() << "add_channel: " << channel << ", ticker: " << ticker << ", is_trades: " << is_trades;
-        for(auto& sec: securities) {
-            if(str_holder(sec.mi.security) == ticker)
-            {
-                impl& i = parsers[channel];
-                i.security_id = sec.mi.security_id;
-                if(is_trades)
-                    i.f = &lws_i::parse_trades;
-                else
-                    i.f = &lws_i::parse_orders;
-                return;
-            }
-        }
-        throw std::runtime_error(es() % "add_channel error, channel: " % channel % ", ticker: " % ticker);
+        impl& i = parsers[channel];
+        i.security_id = get_security_id(ticker.str, ticker.str + ticker.size, time);
+        if(is_trades)
+            i.f = &lws_i::parse_trades;
+        else
+            i.f = &lws_i::parse_orders;
     }
     void proceed(lws* wsi, void* in, size_t len)
     {
@@ -214,7 +199,7 @@ struct lws_i : lws_impl
                     it = std::find(ne, ie, '\"');
 
                     str_holder ticker(ne, it - ne);
-                    add_channel(channel, ticker, is_trades);
+                    add_channel(channel, ticker, is_trades, time);
                     it = std::find(it, ie, '}') + 1;
                     if(it != ie)
                         throw std::runtime_error(es() % "parsing logic error message: " % str_holder((const char*)in, len));

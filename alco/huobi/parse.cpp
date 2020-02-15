@@ -6,6 +6,7 @@
 
 #include "../alco.hpp"
 #include "../lws.hpp"
+#include "../utils.hpp"
 #include "utils.hpp"
 
 void test_impl(const char* a1, const char* a2)
@@ -33,7 +34,7 @@ int amount_test()
     return rand();
 }
 
-struct lws_i : lws_impl
+struct lws_i : sec_id_by_name<lws_impl>
 {
     zlibe zlib;
 
@@ -64,28 +65,18 @@ struct lws_i : lws_impl
     typedef void (lws_i::*func)(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie);
     struct impl
     {
-        impl() : security_id()
+        impl() : security_id(), f()
         {
         }
-        impl(string&& symbol, security* sec, func f) : impl()
+        impl(ticker security, func f) : security(security), security_id(), f(f)
         {
-            this->symbol = symbol;
-            this->sec = sec;
-            this->f = f;
-            security_id = this->sec->mi.security_id;
         }
-        string symbol;
+        ticker security;
         uint32_t security_id;
-        security* sec;
         func f;
-
-        bool operator<(const impl& i) const {
-            return symbol < i.symbol;
-        }
-        bool operator<(const str_holder& s) const {
-            return symbol < s;
-        }
     };
+    fmap<string, impl> parsers;
+
     void parse_bbo(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie)
     {
         //MPROFILE("parse_bbo")
@@ -199,9 +190,6 @@ struct lws_i : lws_impl
         skip_fixed(it, end);
         send_messages();
     }
-    std::vector<security> securities;
-    std::vector<impl> parsers;
-
     lws_i() :
         ch("ch\":\"market."),
         ts(",\"ts\":"),
@@ -222,31 +210,23 @@ struct lws_i : lws_impl
     {
         config& c = config::instance();
         for(auto& v: c.tickers) {
-            security sec;
-            sec.init(c.exchange_id, c.feed_id, v);
-            securities.push_back(std::move(sec));
-            security& s = securities.back();
-            add_instrument(s.mi);
-
             if(c.snapshot) {
-                parsers.push_back({v + ".depth." + c.step, &s, &lws_i::parse_snapshot});
+                parsers[v + ".depth." + c.step] = impl(v, &lws_i::parse_snapshot);
                 subscribes.push_back("{\"sub\":\"market." + v + ".depth." + c.step + "\",\"id\":\"snapshot_" + v + "\"}");
             }
             if(c.orders) {
-                parsers.push_back({v + ".mbp." + c.levels, &s, &lws_i::parse_orders});
+                parsers[v + ".mbp." + c.levels] = impl(v, &lws_i::parse_orders);
                 subscribes.push_back("{\"sub\":\"market." + v + ".mbp." + c.levels + "\",\"id\":\"orders_" + v + "\"}");
             }
             if(c.bbo) {
-                parsers.push_back({v + ".bbo", &s, &lws_i::parse_bbo});
+                parsers[v + ".bbo"] = impl(v, &lws_i::parse_bbo);
                 subscribes.push_back("{\"sub\":\"market." + v + ".bbo\",\"id\":\"bbo_" + v + "\"}");
             }
             if(c.trades) {
-                parsers.push_back({v + ".trade.detail", &s, &lws_i::parse_trades});
+                parsers[v + ".trade.detail"] = impl(v, &lws_i::parse_trades);
                 subscribes.push_back("{\"sub\":\"market." + v + ".trade.detail\",\"id\":\"trades_" + v + "\"}");
             }
         }
-        send_messages();
-        std::sort(parsers.begin(), parsers.end());
     }
     void proceed(lws* wsi, void* in, size_t len)
     {
@@ -264,15 +244,17 @@ struct lws_i : lws_impl
             it = it + sizeof(ch) - 1;
             iterator ne = std::find(it, ie, '\"');
             str_holder symbol(it, ne - it);
-            std::vector<impl>::iterator i = std::lower_bound(parsers.begin(), parsers.end(), symbol);
-            if(unlikely(i == parsers.end() || i->symbol != symbol))
+            auto i = parsers.find(symbol);
+            if(unlikely(i == parsers.end()))
                 throw std::runtime_error(es() % "unknown symbol in market message: " % str);
+            if(unlikely(!i->second.security_id))
+                i->second.security_id = get_security_id(i->second.security.begin(), i->second.security.end(), time);
             ++ne;
             skip_fixed(ne, ts);
             ttime_t etime = {my_cvt::atoi<uint64_t>(ne, 13) * (ttime_t::frac / 1000)};
             ne += 13;
             skip_fixed(ne, tick);
-            ((this)->*(i->f))(*i, etime, time, ne, ie);
+            ((this)->*(i->second.f))(i->second, etime, time, ne, ie);
             if(ne != ie)
                 throw std::runtime_error(es() % "parsing market message error: " % str);
         }

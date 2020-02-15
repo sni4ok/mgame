@@ -121,7 +121,7 @@ struct mirror::impl
     void set_instrument(const message_instr& i)
     {
         mi = i;
-        head_msg = array_to_string(mi.exchange_id) + "/" + array_to_string(mi.feed_id) + "/" + array_to_string(mi.security);
+        head_msg = get_std_string(mi.exchange_id) + "/" + get_std_string(mi.feed_id) + "/" + get_std_string(mi.security);
     }
     order_book::price_iterator get_top_order()
     {

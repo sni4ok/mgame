@@ -104,12 +104,6 @@ struct emessages : noncopyable
     emessages(const std::string& push) : e(push), m_s()
     {
     }
-    void add_instrument(const message_instr& mi)
-    {
-        if(unlikely(m_s == pre_alloc))
-            send_messages();
-        ms[m_s++].mi = mi;
-    }
     void ping(ttime_t etime, ttime_t time)
     {
         if(m_s != pre_alloc) {

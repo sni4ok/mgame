@@ -48,16 +48,28 @@ struct efile
         }
         else if(p[1] == "rename_new")
         {
-            std::string backup = fname + "_" + std::to_string(time(NULL));
-            int r = rename(fname.c_str(), backup.c_str());
-            if(r) {
-                mlog(mlog::critical) << "rename file from " << fname << ", to " << backup
-                    << ", error: " << r << ", " << _str_holder(errno ? strerror(errno) : "");
+            uint64_t fsz = 0;
+            int hfile = open(fname.c_str(), O_RDONLY);
+            if(hfile) {
+                struct stat st;
+                if(fstat(hfile, &st))
+                    throw_system_failure("fstat() error");
+                fsz = st.st_size;
+                close(hfile);
             }
-            else {
-                mlog(mlog::critical) << "file renamed from " << fname << ", to " << backup;
+            if(fsz) {
+                std::string backup = fname + "_" + std::to_string(time(NULL));
+                int r = rename(fname.c_str(), backup.c_str());
+                if(r) {
+                    mlog(mlog::critical) << "rename file from " << fname << ", to " << backup
+                        << ", error: " << r << ", " << _str_holder(errno ? strerror(errno) : "");
+                }
+                else {
+                    mlog(mlog::critical) << "file renamed from " << fname << ", to " << backup;
+                }
             }
-            fp |= O_EXCL;
+            if(fsz || !hfile)
+                fp |= O_EXCL;
         }
         else
             throw std::runtime_error(es() % "efile() bad open_mode: " % params);

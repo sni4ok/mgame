@@ -222,7 +222,8 @@ public:
     }
 };
 
-inline std::ostream& operator<<(std::ostream& s, const str_holder& str){
+inline std::ostream& operator<<(std::ostream& s, const str_holder& str)
+{
     s.write(str.str, str.size);
     return s;
 }
@@ -295,9 +296,9 @@ struct buf_stream
 };
 
 template<typename array>
-inline std::string array_to_string(const array& v)
+inline std::string get_std_string(const array& v)
 {
-    static_assert(std::is_array<array>::value, "array_to_string");
+    static_assert(std::is_array<array>::value, "get_std_string");
     uint32_t sz = sizeof(v);
     while(sz && v[sz - 1] == char())
         --sz;
@@ -305,7 +306,8 @@ inline std::string array_to_string(const array& v)
 }
 
 template<typename stream, typename ch, uint32_t stack_sz>
-inline stream& operator<<(stream& str, const my_basic_string<ch, stack_sz>& v){
+inline stream& operator<<(stream& str, const my_basic_string<ch, stack_sz>& v)
+{
     str.write(&v[0], v.size());
     return str;
 }
@@ -314,10 +316,18 @@ typedef my_basic_string<char> my_string;
 typedef my_basic_string<wchar_t> my_wstring;
 
 template<uint32_t stack_sz>
-inline std::string get_std_string(const my_basic_string<char, stack_sz>& v){
+inline std::string get_std_string(const my_basic_string<char, stack_sz>& v)
+{
     return std::string(v.begin(), v.end());
 }
-inline const std::string& get_std_string(const std::string& v){
+
+inline const std::string& get_std_string(const std::string& v)
+{
     return v;
+}
+
+inline std::string get_std_string(str_holder v)
+{
+    return std::string(v.str, v.str + v.size);
 }
 
