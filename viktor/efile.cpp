@@ -50,7 +50,7 @@ struct efile
         {
             uint64_t fsz = 0;
             int hfile = open(fname.c_str(), O_RDONLY);
-            if(hfile) {
+            if(hfile > 0) {
                 struct stat st;
                 if(fstat(hfile, &st))
                     throw_system_failure("fstat() error");
