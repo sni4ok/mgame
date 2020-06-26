@@ -126,17 +126,17 @@ struct lws_i : sec_id_by_name<lws_impl>
     }
     void parse_orders_impl(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie)
     {
-        it = std::search(it, ie, bids, bids + sizeof(bids) - 1);
-        skip_fixed(it, bids);
-        if(*it != ']')
-            parse_orders_impl(i, etime, time, it, ie, false);
-        else
-            ++it;
-
         it = std::search(it, ie, asks, asks + sizeof(asks) - 1);
         skip_fixed(it, asks);
         if(*it != ']')
             parse_orders_impl(i, etime, time, it, ie, true);
+        else
+            ++it;
+
+        it = std::search(it, ie, bids, bids + sizeof(bids) - 1);
+        skip_fixed(it, bids);
+        if(*it != ']')
+            parse_orders_impl(i, etime, time, it, ie, false);
         else
             ++it;
     }
