@@ -22,7 +22,7 @@ mtime_parsed parse_mtime_impl(const mtime& time)
     mtime_parsed ret;
     struct tm * t = gmtime(&time.t.tv_sec);
     ret.year = t->tm_year + 1900;
-    ret.month = t->tm_mon;
+    ret.month = t->tm_mon + 1;
     ret.day = t->tm_mday;
     ret.hours = t->tm_hour;
     ret.minutes = t->tm_min;

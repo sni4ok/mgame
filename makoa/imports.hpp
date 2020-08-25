@@ -5,13 +5,6 @@
 #pragma once
 
 #include "evie/string.hpp"
-#include "evie/utils.hpp"
-
-void* context_create();
-void context_destroy(void*);
-str_holder alloc_buffer();
-void free_buffer(str_holder buf, void* ctx);
-void proceed_data(str_holder& buf, void* ctx);
 
 struct hole_importer
 {

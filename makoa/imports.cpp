@@ -13,6 +13,12 @@
 
 #include <sys/stat.h>
 
+str_holder alloc_buffer();
+void* context_create();
+void context_destroy(void*);
+void free_buffer(str_holder buf, void* ctx);
+void proceed_data(str_holder& buf, void* ctx);
+
 template<typename reader_state>
 struct reader : noncopyable
 {
@@ -42,8 +48,6 @@ struct reader : noncopyable
         context_destroy(ctx);
     }
 };
-
-void* mmap_create(const char* params, bool create);
 
 uint32_t socket_read(int socket, char* buf, uint32_t buf_size)
 {

@@ -95,7 +95,7 @@ struct fmap
     void erase(value_type* it) {
         data.erase(it);
     }
-    
+
 private:
     mutable value_type v;
     mvector<value_type> data;

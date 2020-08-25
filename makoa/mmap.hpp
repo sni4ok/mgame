@@ -1,11 +1,15 @@
+/*
+   author: Ilya Andronov <sni4ok@yandex.ru>
+*/
+
 #pragma once
 
 #include "messages.hpp"
 
-#include <pthread.h>
-#include <sys/mman.h>
-
 #include <stdexcept>
+
+#include <sys/mman.h>
+#include <pthread.h>
 
 struct shared_memory_sync
 {
@@ -22,7 +26,10 @@ inline shared_memory_sync* get_smc(void* ptr)
     return  (shared_memory_sync*)(((uint8_t*)ptr) + mmap_alloc_size_base);
 }
 
+void* mmap_create(const char* params, bool create);
+
 inline void mmap_close(void* ptr)
 {
     munmap(ptr, mmap_alloc_size);
 }
+

@@ -24,14 +24,6 @@ struct server::impl : stack_singleton<server::impl>
     impl(volatile bool& can_run) : can_run(can_run)
     {
     }
-    void set_close()
-    {
-        std::unique_lock<std::mutex> lock(mutex);
-        for(auto& i: imports) {
-            if(i.first.set_close)
-                i.first.set_close(i.second);
-        }
-    }
     void import_thread(std::string params)
     {
         try
@@ -59,7 +51,6 @@ struct server::impl : stack_singleton<server::impl>
         }
         catch(std::exception& e) {
             can_run = false;
-            set_close();
             mlog() << "import_thread ended, " << params << " " << e;
         }
     }
@@ -75,15 +66,15 @@ struct server::impl : stack_singleton<server::impl>
     }
     ~impl()
     {
+        for(auto& i: imports) {
+            if(i.first.set_close)
+                i.first.set_close(i.second);
+        }
         for(auto&& t: threads)
             t.join();
     }
 };
 
-void server_set_close()
-{
-    server::impl::instance().set_close();
-}
 void server::import_loop()
 {
     pimpl->run();

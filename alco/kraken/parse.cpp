@@ -122,7 +122,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                 continue;
             else
                 throw std::runtime_error(es() % "parsing book message error: " % str_holder(f, ie - f));
-            if(skip_if_fixed(it, " \"c\":\""))
+            if(skip_if_fixed(it, "\"c\":\""))
                 break;
         }
         if(*(ie - 1) != ']' || ie - it > 35)

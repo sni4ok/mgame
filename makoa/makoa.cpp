@@ -8,6 +8,7 @@
 
 #include "engine.hpp"
 #include "server.hpp"
+#include "config.hpp"
 
 #include "evie/mlog.hpp"
 #include "evie/profiler.hpp"
@@ -17,17 +18,18 @@
 
 volatile bool can_run = true;
 
-void server_set_close();
-void term_signal(int sign)
+extern "C" 
 {
-    mlog() << "Termination signal received: " << sign;
-    can_run = false;
-    server_set_close();
-}
+    void term_signal(int sign)
+    {
+        mlog() << "Termination signal received: " << sign;
+        can_run = false;
+    }
 
-void on_signal(int sign)
-{
-    mlog() << "Signal received: " << sign;
+    void on_signal(int sign)
+    {
+        mlog() << "Signal received: " << sign;
+    }
 }
 
 int main(int argc, char** argv)

@@ -3,23 +3,24 @@
 */
 
 #include "evie/mlog.hpp"
-#include "evie/utils.hpp"
 #include "evie/profiler.hpp"
-#include "evie/config.hpp"
 
 #include <csignal>
 
 volatile bool parser_can_run = true;
 
-void term_signal(int sign)
+extern "C"
 {
-    mlog() << "Termination signal received: " << sign;
-    parser_can_run = false;
-}
+    void term_signal(int sign)
+    {
+        mlog() << "Termination signal received: " << sign;
+        parser_can_run = false;
+    }
 
-void on_signal(int sign)
-{
-    mlog() << "Signal received: " << sign;
+    void on_signal(int sign)
+    {
+        mlog() << "Signal received: " << sign;
+    }
 }
 
 int parser_main(int argc, char** argv, const std::string& parser_name, void (*proceed)(volatile bool&))

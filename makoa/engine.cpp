@@ -6,6 +6,7 @@
 #include "engine.hpp"
 #include "exports.hpp"
 #include "types.hpp"
+#include "config.hpp"
 
 #include "evie/fast_alloc.hpp"
 #include "evie/mlog.hpp"
