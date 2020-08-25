@@ -1,3 +1,6 @@
+/*
+   author: Ilya Andronov <sni4ok@yandex.ru>
+*/
 
 #include "evie/mfile.hpp"
 #include "evie/config.hpp"
@@ -33,7 +36,7 @@ void context_destroy(void* e)
 
 char msg_buf[message_size * 256];
 
-str_holder alloc_buffer()
+str_holder alloc_buffer(void*)
 {
     return str_holder(msg_buf + 1, 255 * message_size);
 }

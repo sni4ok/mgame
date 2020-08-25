@@ -445,7 +445,7 @@ void context_destroy(void* ctx)
     delete (context*)ctx;
 }
 
-str_holder alloc_buffer()
+str_holder alloc_buffer(void*)
 {
     return engine::impl::instance().alloc();
 }

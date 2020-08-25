@@ -1,3 +1,6 @@
+/*
+   author: Ilya Andronov <sni4ok@yandex.ru>
+*/
 
 #include "evie/mfile.hpp"
 #include "evie/utils.hpp"
@@ -38,7 +41,7 @@ struct ifile
 
     node nt;
     message mt;
-    void add_file(const std::string& fname)
+    void add_file_impl(const std::string& fname)
     {
         mfile f(fname.c_str(), false);
         uint64_t sz = f.size();
@@ -61,6 +64,16 @@ struct ifile
         }
     }
 
+    void add_file(const std::string& fname)
+    {
+        try {
+            add_file_impl(fname);
+        }
+        catch(std::exception& e) {
+            mlog() << "ifile::add_file(" << fname << ") skipped, " << e;
+        }
+    }
+
     void read_directory(const std::string& fname)
     {
         std::string::const_iterator it = fname.end() - 1, ib = fname.begin();
@@ -73,7 +86,7 @@ struct ifile
 
         DIR *d = opendir(dir.c_str());
         if(!d)
-            throw_system_failure(es() % "list directory error" % dir);
+            throw_system_failure(es() % "list directory error " % dir);
         dirent *e;
         while((e = readdir(d)))
         {
@@ -84,7 +97,6 @@ struct ifile
         }
         closedir(d);
         std::sort(files.begin(), files.end());
-
     }
 
     ifile(const std::string& fname, ttime_t tf, ttime_t tt)
@@ -108,6 +120,7 @@ struct ifile
                     nt = *files.rbegin();
                     files.pop_back();
                     cur_file = ::open(nt.name.c_str(), O_RDONLY);
+                    //mlog() << "open " << nt.name;
                 }
                 ret = ::read(cur_file, buf, buf_size);
                 if(!ret) {
@@ -132,7 +145,7 @@ struct ifile
 void* ifile_create(const char* params)
 {
     std::vector<std::string> p = split(params, ' ');
-    if(p.size() > 3)
+    if(p.empty() || p.size() > 3)
         throw std::runtime_error("ifile_create() file_name[ time_from[ time_to]]");
     ttime_t tf = ttime_t(), tt = ttime_t();
     if(p.size() >= 2)

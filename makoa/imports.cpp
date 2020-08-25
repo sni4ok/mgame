@@ -13,11 +13,11 @@
 
 #include <sys/stat.h>
 
-str_holder alloc_buffer();
 void* context_create();
-void context_destroy(void*);
+str_holder alloc_buffer(void*);
 void free_buffer(str_holder buf, void* ctx);
 void proceed_data(str_holder& buf, void* ctx);
+void context_destroy(void*);
 
 template<typename reader_state>
 struct reader : noncopyable
@@ -41,7 +41,7 @@ struct reader : noncopyable
         return true;
     }
     reader(reader_state socket, func read) : socket(socket), read(read),
-        ctx(context_create()), buf(alloc_buffer()), recv_time(time(NULL)){
+        ctx(context_create()), buf(alloc_buffer(ctx)), recv_time(time(NULL)){
     }
     ~reader() {
         free_buffer(buf, ctx);
@@ -306,7 +306,7 @@ struct import_ifile
     import_ifile(volatile bool& can_run, const std::string& params) : can_run(can_run), params(params), realtime(true)
     {
         const char* p = params.c_str();
-        if(params.size() > 8 && std::equal(params.begin(), params.end(), "history ")) {
+        if(params.size() > 8 && std::equal(p, p + 8, "history ")) {
             realtime = false;
             p += 8;
         }
