@@ -27,8 +27,8 @@ struct order_book
         //o.level_id = m.price.value;
         o.price = m.price;
         o.count.value = o.count.value - m.count.value;
-        o.etime = m.etime;
-        o.time = m.time;
+        o.etime = mb.etime;
+        o.time = mb.time;
 
         const price_t& price = mb.price.value ? mb.price : m.price;
         message_book& p = orders_p[price];

@@ -13,11 +13,11 @@
 
 #include <sys/stat.h>
 
-void* context_create();
-str_holder alloc_buffer(void*);
-void free_buffer(str_holder buf, void* ctx);
-void proceed_data(str_holder& buf, void* ctx);
-void context_destroy(void*);
+void* import_context_create(void* params);
+str_holder import_alloc_buffer(void* ctx);
+void import_free_buffer(str_holder buf, void* ctx);
+void import_proceed_data(str_holder& buf, void* ctx);
+void import_context_destroy(void* ctx);
 
 template<typename reader_state>
 struct reader : noncopyable
@@ -36,16 +36,16 @@ struct reader : noncopyable
         if(unlikely(!readed))
             return false;
         buf.size = readed;
-        proceed_data(buf, ctx);
+        import_proceed_data(buf, ctx);
         recv_time = time(NULL);
         return true;
     }
-    reader(reader_state socket, func read) : socket(socket), read(read),
-        ctx(context_create()), buf(alloc_buffer(ctx)), recv_time(time(NULL)){
+    reader(void* ctx_params, reader_state socket, func read) : socket(socket), read(read),
+        ctx(import_context_create(ctx_params)), buf(import_alloc_buffer(ctx)), recv_time(time(NULL)){
     }
     ~reader() {
-        free_buffer(buf, ctx);
-        context_destroy(ctx);
+        import_free_buffer(buf, ctx);
+        import_context_destroy(ctx);
     }
 };
 
@@ -132,10 +132,10 @@ void mmap_cp_set_closed(void* imc)
     }
 }
 
-void import_mmap_cp_start(void* imc)
+void import_mmap_cp_start(void* imc, void* params)
 {
     import_mmap_cp& ic = *((import_mmap_cp*)(imc));
-    reader<void*> rr(ic.ptr, mmap_cp_read);
+    reader<void*> rr(params, ic.ptr, mmap_cp_read);
     void* p = ic.ptr;
 
     shared_memory_sync* s = get_smc(p);
@@ -215,9 +215,9 @@ void work_thread_reader(reader<int>& r, volatile bool& can_run, uint32_t timeout
 static const uint32_t max_connections = 32;
 static const uint32_t timeout = 30; //in seconds
 
-void import_pipe_start(void* p)
+void import_pipe_start(void* c, void* p)
 {
-    import_pipe& ip = *((import_pipe*)(p));
+    import_pipe& ip = *((import_pipe*)(c));
     int m = mkfifo(ip.params.c_str(), 0666);
     my_unused(m);
     int64_t h = open(ip.params.c_str(), O_RDONLY | O_NONBLOCK);
@@ -225,7 +225,7 @@ void import_pipe_start(void* p)
         throw_system_failure(es() % "open " % ip.params % " error");
     mlog() << "import from " << ip.params << " started";
     socket_holder ss(h);
-    reader<int> r(h, &pipe_read);
+    reader<int> r(p, h, &pipe_read);
     work_thread_reader(r, ip.can_run, timeout);
 }
 
@@ -249,7 +249,7 @@ struct import_tcp
     }
 };
 
-void import_tcp_thread(import_tcp* it, int socket, std::string client, volatile bool& initialized)
+void import_tcp_thread(import_tcp* it, int socket, std::string client, volatile bool& initialized, void* p)
 {
     try {
         socket_holder ss(socket);
@@ -263,7 +263,7 @@ void import_tcp_thread(import_tcp* it, int socket, std::string client, volatile 
         it->cond.notify_all();
         lock.unlock();
         mlog() << "server() thread for " << client << " started";
-        reader<int> r(socket, socket_read);
+        reader<int> r(p, socket, socket_read);
         work_thread_reader(r, it->can_run, timeout);
     } catch(std::exception& e) {
         mlog(mlog::error) << "server(" << it->params << ") client " << client << " " << e;
@@ -274,9 +274,9 @@ void import_tcp_thread(import_tcp* it, int socket, std::string client, volatile 
     --(it->count);
 }
 
-void import_tcp_start(void* p)
+void import_tcp_start(void* c, void* p)
 {
-    import_tcp& it = *((import_tcp*)(p));
+    import_tcp& it = *((import_tcp*)(c));
     while(it.can_run) {
         std::string client;
         std::unique_lock<std::mutex> lock(it.mutex);
@@ -285,7 +285,7 @@ void import_tcp_start(void* p)
         lock.unlock();
         int socket = my_accept_async(it.port, false/*local*/, false/*sync*/, &client, &it.can_run, it.params.c_str());
         volatile bool initialized = false;
-        std::thread thrd(&import_tcp_thread, &it, socket, client, std::ref(initialized));
+        std::thread thrd(&import_tcp_thread, &it, socket, client, std::ref(initialized), p);
         lock.lock();
         while(!initialized)
             it.cond.wait_for(lock, std::chrono::microseconds(50 * 1000));
@@ -319,10 +319,10 @@ struct import_ifile
     }
 };
 
-void import_ifile_start(void* p)
+void import_ifile_start(void* c, void* p)
 {
-    import_ifile& f = *((import_ifile*)(p));
-    reader<void*> r(f.ptr, &ifile_read);
+    import_ifile& f = *((import_ifile*)(c));
+    reader<void*> r(p, f.ptr, &ifile_read);
     while(f.can_run) {
         bool ret = r.proceed();
         if(unlikely(!ret && !f.realtime))

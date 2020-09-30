@@ -120,9 +120,19 @@ inline bool operator<(count_t l, count_t r)
     return l.value < r.value;
 }
 
+inline bool operator<=(count_t l, count_t r)
+{
+    return l.value <= r.value;
+}
+
 inline bool operator>(count_t l, count_t r)
 {
     return l.value > r.value;
+}
+
+inline bool operator>=(count_t l, count_t r)
+{
+    return l.value >= r.value;
 }
 
 inline bool operator!=(count_t l, count_t r)

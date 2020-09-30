@@ -435,27 +435,27 @@ void actives::on_disconnect()
     }
 }
 
-void* context_create()
+void* import_context_create(void*)
 {
     return (void*)(new context());
 }
 
-void context_destroy(void* ctx)
+void import_context_destroy(void* ctx)
 {
     delete (context*)ctx;
 }
 
-str_holder alloc_buffer(void*)
+str_holder import_alloc_buffer(void*)
 {
     return engine::impl::instance().alloc();
 }
 
-void free_buffer(str_holder buf, void* ctx)
+void import_free_buffer(str_holder buf, void* ctx)
 {
     engine::impl::instance().free(buf, (context*)(ctx));
 }
 
-void proceed_data(str_holder& buf, void* ctx)
+void import_proceed_data(str_holder& buf, void* ctx)
 {
     //MPROFILE("proceed_data")
     return engine::impl::instance().proceed(buf, (context*)(ctx));

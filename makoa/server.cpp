@@ -39,7 +39,7 @@ struct server::impl : stack_singleton<server::impl>
             }
             while(can_run) {
                 try {
-                    hi.start(i);
+                    hi.start(i, nullptr);
                 } catch (std::exception& e) {
                     mlog() << "import_thread " << params << " " << e;
                     for(uint i = 0; can_run && i != 5; ++i)

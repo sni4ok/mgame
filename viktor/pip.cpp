@@ -24,28 +24,28 @@ struct config : stack_singleton<config>
 
 #include "alco/main.hpp"
 
-void* context_create()
+void* import_context_create(void*)
 {
     exporter* e = new exporter(config::instance().push);
     return (void*)e;
 }
-void context_destroy(void* e)
+void import_context_destroy(void* e)
 {
     delete (exporter*)e;
 }
 
 char msg_buf[message_size * 256];
 
-str_holder alloc_buffer(void*)
+str_holder import_alloc_buffer(void*)
 {
     return str_holder(msg_buf + 1, 255 * message_size);
 }
 
-void free_buffer(str_holder, void*)
+void import_free_buffer(str_holder, void*)
 {
 }
 
-void proceed_data(str_holder& buf, void* ctx)
+void import_proceed_data(str_holder& buf, void* ctx)
 {
     exporter* e = (exporter*)ctx;
     message* m = (message*)buf.str;
@@ -63,7 +63,7 @@ void proceed_pip(volatile bool& can_run)
     *c = char();
     hole_importer hi = create_importer(f);
     void* i = hi.init(can_run, c + 1);
-    hi.start(i);
+    hi.start(i, nullptr);
     hi.destroy(i);
 }
 
