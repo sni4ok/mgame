@@ -23,20 +23,18 @@ struct efile
 {
     std::vector<char> buf;
     buf_stream bs;
-    bool bin, csv;
+    bool bin;
     std::string fname;
     int hfile;
 
-    efile(const std::string& params) : buf(1024 * 1024), bs(buf), bin(), csv()
+    efile(const std::string& params) : buf(1024 * 1024), bs(buf), bin()
     {
         std::vector<std::string> p = split(params, ' ');
         if(p.size() != 3)
             throw std::runtime_error(es() % "efile() bad params: " % params);
         if(p[0] == "bin")
             bin = true;
-        else if(p[0] == "csv")
-            bin = csv;
-        else
+        else if(p[0] != "csv")
             throw std::runtime_error(es() % "efile() bad file_type: " % params);
         fname = std::move(p[2]);
 
@@ -105,8 +103,8 @@ struct efile
     }
     void write_csv(const message_instr& m)
     {
-        bs << "i," <<  m.exchange_id << ',' << m.feed_id << ',' << m.security_id
-            << ',' << m.time << '\n';
+        bs << "i," <<  m.exchange_id << ',' << m.feed_id << "," << m.security
+            << ',' << m.security_id << ',' << m.etime << ',' << m.time << '\n';
     }
     void proceed_csv(const message* m, uint32_t count)
     {

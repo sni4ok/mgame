@@ -45,7 +45,7 @@ void import_free_buffer(str_holder, void*)
 {
 }
 
-void import_proceed_data(str_holder& buf, void* ctx)
+bool import_proceed_data(str_holder& buf, void* ctx)
 {
     exporter* e = (exporter*)ctx;
     message* m = (message*)buf.str;
@@ -54,6 +54,7 @@ void import_proceed_data(str_holder& buf, void* ctx)
         throw std::runtime_error("fractional messages not supported yet");
     e->proceed(m, count);
     buf.size = 255 * message_size;
+    return true;
 }
 
 void proceed_pip(volatile bool& can_run)

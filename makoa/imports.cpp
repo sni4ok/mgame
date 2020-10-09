@@ -16,7 +16,7 @@
 void* import_context_create(void* params);
 str_holder import_alloc_buffer(void* ctx);
 void import_free_buffer(str_holder buf, void* ctx);
-void import_proceed_data(str_holder& buf, void* ctx);
+bool import_proceed_data(str_holder& buf, void* ctx);
 void import_context_destroy(void* ctx);
 
 template<typename reader_state>
@@ -36,9 +36,9 @@ struct reader : noncopyable
         if(unlikely(!readed))
             return false;
         buf.size = readed;
-        import_proceed_data(buf, ctx);
+        bool ret = import_proceed_data(buf, ctx);
         recv_time = time(NULL);
-        return true;
+        return ret;
     }
     reader(void* ctx_params, reader_state socket, func read) : socket(socket), read(read),
         ctx(import_context_create(ctx_params)), buf(import_alloc_buffer(ctx)), recv_time(time(NULL)){
@@ -300,18 +300,10 @@ uint32_t ifile_read(void *v, char* buf, uint32_t buf_size);
 struct import_ifile
 {
     volatile bool& can_run;
-    std::string params;
-    bool realtime;
     void* ptr;
-    import_ifile(volatile bool& can_run, const std::string& params) : can_run(can_run), params(params), realtime(true)
+    import_ifile(volatile bool& can_run, const std::string& params) : can_run(can_run)
     {
-        const char* p = params.c_str();
-        if(params.size() > 8 && std::equal(p, p + 8, "history ")) {
-            realtime = false;
-            p += 8;
-        }
-
-        ptr = ifile_create(p);
+        ptr = ifile_create(params.c_str());
     }
     ~import_ifile()
     {
@@ -325,7 +317,7 @@ void import_ifile_start(void* c, void* p)
     reader<void*> r(p, f.ptr, &ifile_read);
     while(f.can_run) {
         bool ret = r.proceed();
-        if(unlikely(!ret && !f.realtime))
+        if(unlikely(!ret))
             return;
     }
 }

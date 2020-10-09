@@ -320,7 +320,7 @@ public:
         for(uint32_t i = 0; i != config::instance().export_threads; ++i)
             threads.push_back(std::thread(&impl::work_thread, this));
     }
-    void proceed(str_holder& buf, context* ctx)
+    bool proceed(str_holder& buf, context* ctx)
     {
         //MPROFILE("engine::proceed()")
 
@@ -383,6 +383,7 @@ public:
             }
         }
         nf.release();
+        return true;
     }
     ~impl()
     {
@@ -455,7 +456,7 @@ void import_free_buffer(str_holder buf, void* ctx)
     engine::impl::instance().free(buf, (context*)(ctx));
 }
 
-void import_proceed_data(str_holder& buf, void* ctx)
+bool import_proceed_data(str_holder& buf, void* ctx)
 {
     //MPROFILE("proceed_data")
     return engine::impl::instance().proceed(buf, (context*)(ctx));
