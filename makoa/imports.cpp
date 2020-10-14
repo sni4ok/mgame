@@ -152,8 +152,11 @@ void import_mmap_cp_start(void* imc, void* params)
             throw std::runtime_error("mmap inconsistence");
         }
         initialized = (wc && rc == 1);
-        if(!initialized)
-            pthread_cond_wait(&(s->condition), &(s->mutex));
+        if(!initialized) {
+            mtime t = get_cur_utc_mtime();
+            t.t.tv_sec += 1;
+            pthread_cond_timedwait(&(s->condition), &(s->mutex), &t.t);
+        }
     }
     pthread_mutex_unlock(&(s->mutex));
     *r = 2;
@@ -208,7 +211,8 @@ void work_thread_reader(reader<int>& r, volatile bool& can_run, uint32_t timeout
                 throw std::runtime_error("feed timeout");
             continue;
         }
-        r.proceed();
+        if(!r.proceed())
+            break;
     }
 }
 

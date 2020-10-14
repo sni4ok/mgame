@@ -166,8 +166,11 @@ public:
         //my_mutex::scoped_lock lock(mutex);
         node& n = elems[get_idx(push_cnt++)];
         uint32_t status = 0;
-        if(!n.status.compare_exchange_strong(status, 1))
-            throw_exception("push() overloaded", status);
+        while((!n.status.compare_exchange_strong(status, 1))) {
+            if(status != 3)
+                throw_exception("push() overloaded", status);
+            status = 0;
+        }
         n.elem = std::move(t);
         status = 1;
         if(!n.status.compare_exchange_strong(status, 2))

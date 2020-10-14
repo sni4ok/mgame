@@ -88,7 +88,7 @@ struct efile
     }
     void write_csv(const message_book& m)
     {
-        bs << "b," <<  m.security_id << ',' << m.price << ',' << m.count
+        bs << "b," <<  m.security_id << ',' << m.level_id << "," << m.price << ',' << m.count
             << ',' << m.etime << ',' << m.time << '\n';
     }
     void write_csv(const message_trade& m)

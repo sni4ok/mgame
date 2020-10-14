@@ -128,9 +128,9 @@ struct message_book : message_times
     uint8_t unused[3];
 
     uint32_t security_id;
-	int64_t level_id; //
+	int64_t level_id;
     price_t price; 
-    count_t count; //this new counts for level price
+    count_t count; //this new counts for level_id
     static const uint32_t msg_id = msg_book;
 };
 static_assert(sizeof(message_book) == message_size, "protocol agreement");
