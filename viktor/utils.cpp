@@ -11,7 +11,7 @@
 void fix_zero_tail(const char* fname)
 {
     std::cout << "fix_zero_tail(" << fname << "):" << std::endl;
-    mfile f(fname, false);
+    mfile f(fname);
     uint64_t fsz = f.size();
     std::vector<char> m(message_size), mc(message_size);
     int64_t nsz = fsz - fsz % message_size;

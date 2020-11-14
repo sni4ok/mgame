@@ -11,7 +11,7 @@
 
 config::config(const char* fname)
 {
-    std::string buf = read_file<std::string>(fname);
+    auto buf = read_file(fname);
     cgate_host = get_config_param<std::string>(buf, "cgate_host");
     if(cgate_host == "127.0.0.1")
         cgate_host = "p2lrpcq://" + cgate_host;

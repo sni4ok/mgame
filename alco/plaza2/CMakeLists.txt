@@ -8,3 +8,4 @@ FIND_LIBRARY(plaza_sys NAME libP2Sys.so PATHS ${PLAZA_LIB_PATH})
 FIND_LIBRARY(plaza_rep NAME libP2ReplClient.so PATHS ${PLAZA_LIB_PATH})
 
 TARGET_LINK_LIBRARIES(plaza exports ${plaza_cgate} ${plaza_sys} ${plaza_rep})
+TARGET_LINK_LIBRARIES(plaza_templater evie)

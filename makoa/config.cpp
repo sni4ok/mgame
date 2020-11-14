@@ -9,7 +9,7 @@
 
 config::config(const char* fname)
 {
-    std::string cs = read_file<std::string>(fname);
+    auto cs = read_file(fname);
     name = get_config_param<std::string>(cs, "name");
 
     imports = get_config_params<std::string>(cs, "import");

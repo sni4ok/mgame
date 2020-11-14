@@ -106,39 +106,47 @@ struct lws_i : sec_id_by_name<lws_impl>
     }
     void parse_orders_impl(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie, bool a)
     {
-        for(;;) {
-            skip_fixed(it, "[");
-            iterator ne = std::find(it, ie, ',');
-            price_t p = read_price(it, ne);
-            skip_fixed(ne, ",");
-            it = std::find(ne, ie, ']');
-            count_t c = read_count(ne, it);
-            if(a)
-                c.value = -c.value;
-            skip_fixed(it, "]");
-            add_order(i.security_id, p.value, p, c, etime, time);
-            if(*it != ',') {
+        if(*it != ']')
+        {
+            for(;;) {
+                skip_fixed(it, "[");
+                iterator ne = std::find(it, ie, ',');
+                price_t p = read_price(it, ne);
+                skip_fixed(ne, ",");
+                it = std::find(ne, ie, ']');
+                count_t c = read_count(ne, it);
+                if(a)
+                    c.value = -c.value;
                 skip_fixed(it, "]");
-                break;
+                add_order(i.security_id, p.value, p, c, etime, time);
+                if(*it != ',') {
+                    skip_fixed(it, "]");
+                    break;
+                }
+                else ++it;
             }
-            else ++it;
         }
+        else
+            ++it;
     }
     void parse_orders_impl(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie)
     {
-        it = std::search(it, ie, asks, asks + sizeof(asks) - 1);
-        skip_fixed(it, asks);
-        if(*it != ']')
-            parse_orders_impl(i, etime, time, it, ie, true);
-        else
-            ++it;
+        search_and_skip_fixed(it, ie, "prevSeqNum\":");
+        search_and_skip_fixed(it, ie, ",\"");
 
-        it = std::search(it, ie, bids, bids + sizeof(bids) - 1);
-        skip_fixed(it, bids);
-        if(*it != ']')
-            parse_orders_impl(i, etime, time, it, ie, false);
-        else
-            ++it;
+        bool have_asks = false;
+        if(skip_if_fixed(it, asks)) {
+            parse_orders_impl(i, etime, time, it, ie, true);
+            have_asks = true;
+        }
+
+        search_and_skip_fixed(it, ie, bids);
+        parse_orders_impl(i, etime, time, it, ie, false);
+
+        if(!have_asks) {
+            search_and_skip_fixed(it, ie, asks);
+            parse_orders_impl(i, etime, time, it, ie, true);
+        }
     }
     void parse_orders(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie)
     {

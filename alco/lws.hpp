@@ -138,7 +138,7 @@ inline void skip_fixed(const char* &it, const str& v)
     //bool eq = !(strncmp(it, v, sizeof(v) - 1));
     //bool eq = !(memcmp(it, v, sizeof(v) - 1));
     if(unlikely(!eq))
-        throw std::runtime_error(es() % "skip_fixed error, expect: |" % str_holder(v) %  "| in |" % str_holder(it, 100));
+        throw std::runtime_error(es() % "skip_fixed error, expect: |" % str_holder(v) % "| in |" % str_holder(it, strnlen(it, 100)) % "|");
     it += sizeof(v) - 1;
 }
 
@@ -148,7 +148,7 @@ inline void search_and_skip_fixed(const char* &it, const char* ie, const str& v)
     static_assert(std::is_array<str>::value);
     const char* i = std::search(it, ie, v, v + (sizeof(v) - 1));
     if(unlikely(i == ie))
-        throw std::runtime_error(es() % "search_and_skip_fixed error, expect: |" % str_holder(v) %  "| in |" % str_holder(it, ie - it));
+        throw std::runtime_error(es() % "search_and_skip_fixed error, expect: |" % str_holder(v) % "| in |" % str_holder(it, ie - it) % "|");
     it  = i + (sizeof(v) - 1);
 }
 

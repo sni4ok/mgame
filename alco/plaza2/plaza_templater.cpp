@@ -11,6 +11,7 @@
 #include <set>
 #include <iostream>
 #include <fstream>
+#include <memory>
 
 #include <dirent.h>
 
@@ -211,7 +212,7 @@ struct skelet
             ctx.saved_namespace = namespace_type();
         }
     }
-    void commit(context& ctx, bool end, std::string::const_iterator i_f, std::string::const_iterator i_t) {
+    void commit(context& ctx, bool end, std::vector<char>::const_iterator i_f, std::vector<char>::const_iterator i_t) {
         if(types.empty() || !ctx.need_save()) {
             clear_and_close_namespace(ctx, end);
             return;
@@ -327,7 +328,8 @@ struct skelet
         }
         else{
             if(it->second != cur_str) {
-                std::cerr << "bad redinfication of struct: " << ctx.cur_namespace.first << "::" << ctx.cur_namespace.second << "::" << ctx.table_name << std::endl;
+                std::cerr << "bad redinfication of struct: " << ctx.cur_namespace.first << "::"
+                    << ctx.cur_namespace.second << "::" << ctx.table_name << std::endl;
                 ctx.sf << "    //struct " << ctx.table_name << " badly defined early" << std::endl;
             }
             else
@@ -344,9 +346,9 @@ void check_no_endl(const std::string& v)
         throw std::runtime_error(es() % "string with endl, parse error: " % v);
 }
 
-void parse_file(context& ctx, const std::string& data)
+void parse_file(context& ctx, const std::vector<char>& data)
 {
-    std::string::const_iterator it = data.begin(), it_e = data.end(), it_tmp, ini_from = it;
+    std::vector<char>::const_iterator it = data.begin(), it_e = data.end(), it_tmp, ini_from = it;
     skelet sk;
     //const std::string stream_name = "\x20\xCF\xEE\xF2\xEE\xEA\x20"; //" Potok "
     const std::string stream_name = "\x20\xD0\x9F\xD0\xBE\xD1\x82\xD0\xBE\xD0\xBA\x20"; //" Potok "
@@ -454,7 +456,7 @@ void parse_file(context& ctx, const std::string& data)
     sk.commit(ctx, true, ini_from, it);
 }
 
-void parse_file(context& ctx, const std::string& data, const std::string& fname)
+void parse_file(context& ctx, const std::vector<char>& data, const std::string& fname)
 {
     try {
         parse_file(ctx, data);
@@ -498,7 +500,7 @@ void parse_all(const std::string& ini_folder, const std::string& out_file)
         ctx.cur_namespace = namespace_type();
         std::cout << "file: " << fname << std::endl;
         ctx.sf << "// file: " << fname << std::endl;
-        parse_file(ctx, read_file<std::string>((ini_folder + "/" + fname).c_str()), fname);
+        parse_file(ctx, read_file((ini_folder + "/" + fname).c_str()), fname);
     }
     std::map<std::string, namespace_type> unique_tables;
     {
@@ -570,15 +572,15 @@ void proceed_selected(const std::string& ini_folder, const std::string& scheme, 
 {
     std::vector<std::unique_ptr<source> > sources;
     {
-        std::string sc = read_file<std::string>(scheme.c_str());
-        std::string::const_iterator it = sc.begin(), ie = sc.end(), ii;
+        auto sc = read_file(scheme.c_str());
+        auto it = sc.begin(), ie = sc.end();
         while(it != ie)
         {
             while(it != ie && *it == '\n')
                 ++it;
             if(it == ie)
                 break;
-            ii = std::find(it, ie, '\n');
+            auto ii = std::find(it, ie, '\n');
             if(*it != ';') {
                 std::vector<std::string> vs = split(std::string(it, ii), ';');
                 if(vs.size() != 4)
@@ -597,7 +599,7 @@ void proceed_selected(const std::string& ini_folder, const std::string& scheme, 
     
     std::vector<std::string> files = list_folder(ini_folder);
     for(const std::string& fname: files) {
-        std::string data = read_file<std::string>((ini_folder + "/" + fname).c_str());
+        auto data = read_file((ini_folder + "/" + fname).c_str());
         for(std::unique_ptr<source>& s: sources) {
             s->cur_namespace = namespace_type();
             parse_file(*s, data, fname);

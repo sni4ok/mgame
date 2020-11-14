@@ -8,11 +8,15 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-mfile::mfile(const char* file, bool direct)
+mfile::mfile(const char* file)
 {
-	hfile = ::open(file, direct ? O_DIRECT | O_RDONLY : O_RDONLY);
+	hfile = ::open(file, O_RDONLY);
 	if(hfile < 0)
 		throw_system_failure(es() % "open file " % file % " error");
+}
+
+mfile::mfile(int hfile) : hfile(hfile)
+{
 }
 
 uint64_t mfile::size() const
@@ -39,5 +43,29 @@ void mfile::read(char* ptr, uint32_t size)
 mfile::~mfile()
 {
 	::close(hfile);
+}
+
+bool read_file(std::vector<char>& buf, const char* fname, bool can_empty)
+{
+    bool ret = false;
+    uint64_t buf_size = buf.size();
+    int hfile = ::open(fname, O_RDONLY);
+    if(hfile > 0) {
+        mfile f(hfile);
+        uint64_t size = f.size();
+        buf.resize(buf_size + size);
+        f.read(&buf[buf_size], size);
+        ret = true;
+    }
+    if(!can_empty && buf_size == buf.size())
+        throw std::runtime_error(es() % "read \"" % _str_holder(fname) % "\" error");
+    return ret;
+}
+
+std::vector<char> read_file(const char* fname, bool can_empty)
+{
+    std::vector<char> buf;
+    read_file(buf, fname, can_empty);
+    return buf;
 }
 

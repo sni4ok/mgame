@@ -8,7 +8,7 @@
 
 config::config(const char* fname)
 {
-    std::string cs = read_file<std::string>(fname);
+    auto cs = read_file(fname);
     std::string smb = get_config_param<std::string>(cs, "tickers");
     tickers = split(smb);
     trades = get_config_param<bool>(cs, "trades");

@@ -14,7 +14,7 @@ struct config : stack_singleton<config>
 
     config(const char* fname)
     {
-        std::string cs = read_file<std::string>(fname);
+        auto cs = read_file(fname);
         push = get_config_param<std::string>(cs, "push");
         import = get_config_param<std::string>(cs, "import");
 

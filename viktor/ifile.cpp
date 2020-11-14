@@ -162,7 +162,7 @@ struct ifile
 
     ttime_t add_file_impl(const std::string& fname, bool last_file)
     {
-        mfile f(fname.c_str(), false);
+        mfile f(fname.c_str());
         uint64_t sz = f.size();
         if(sz < message_size)
             return ttime_t();
