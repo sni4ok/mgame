@@ -3,15 +3,15 @@
 #pragma once
 #pragma pack(push, 4)
 
-const char* cfg_cli_orders = "p2repl://FORTS_FUTAGGR50_REPL;scheme=|FILE|scheme/orders.ini|CustReplScheme";
+const char* cfg_cli_orders = "p2repl://FORTS_AGGR50_REPL;scheme=|FILE|scheme/orders.ini|CustReplScheme";
 
-namespace FORTS_FUTAGGR50_REPL
+namespace FORTS_AGGR50_REPL
 { 
 namespace CustReplScheme
 {
     struct orders_aggr
     {
-        static constexpr uint32_t plaza_size = 69;
+        static constexpr uint32_t plaza_size = 80;
         int64_t replID;
         int64_t replRev;
         int64_t replAct;
@@ -21,13 +21,14 @@ namespace CustReplScheme
         cg_time_t moment;
         uint64_t moment_ns;
         int8_t dir;
+        int64_t synth_volume;
         void print_brief() {
             mlog() << "orders_aggr|" << replID << "|" << replRev << "|" << replAct << "|" << isin_id << "|" << price << "|"
-               << volume << "|" << moment << "|" << moment_ns << "|" << dir << "|";
+               << volume << "|" << moment << "|" << moment_ns << "|" << dir << "|" << synth_volume << "|";
         }
     };
-    static_assert(sizeof(orders_aggr) == 72, "orders_aggr");
+    static_assert(sizeof(orders_aggr) == 80, "orders_aggr");
 }}
-using FORTS_FUTAGGR50_REPL::CustReplScheme::orders_aggr;
+using FORTS_AGGR50_REPL::CustReplScheme::orders_aggr;
 #pragma pack(pop)
 

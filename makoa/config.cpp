@@ -5,7 +5,7 @@
 
 #include "config.hpp"
 
-#include "evie/mfile.hpp"
+#include "evie/config.hpp"
 
 config::config(const char* fname)
 {

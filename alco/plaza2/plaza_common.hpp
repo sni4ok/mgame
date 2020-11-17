@@ -6,9 +6,6 @@
 
 #include "config.hpp"
 
-#include "evie/string.hpp"
-#include "evie/mlog.hpp"
-
 #include "makoa/messages.hpp"
 
 #include "cgate.h"
@@ -183,10 +180,18 @@ struct cg_conn_h
     }
     void connect(volatile bool& can_run)
     {
+        if(cli)
+            throw std::runtime_error("cg_conn_h cli already initialized");
         mlog() << "cg_conn_new: " << cli_conn;
-        check_plaza_fail(cg_conn_new(cli_conn.c_str(), &cli), "conn_new");
-        check_plaza_fail(cg_conn_open(cli, 0), "conn_open");
-        wait_active(can_run);
+        try {
+            check_plaza_fail(cg_conn_new(cli_conn.c_str(), &cli), "conn_new");
+            check_plaza_fail(cg_conn_open(cli, 0), "conn_open");
+            wait_active(can_run);
+        }
+        catch(std::exception& e) {
+            disconnect();
+            throw;
+        }
     }
     void disconnect()
     {

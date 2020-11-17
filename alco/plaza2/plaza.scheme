@@ -1,4 +1,4 @@
 instruments;FORTS_FUTINFO_REPL;CustReplScheme;fut_sess_contents,sys_messages,sys_events
 trades;FORTS_DEALS_REPL;CustReplScheme;deal,heartbeat
-orders;FORTS_FUTAGGR50_REPL;CustReplScheme;orders_aggr
+orders;FORTS_AGGR50_REPL;CustReplScheme;orders_aggr
 

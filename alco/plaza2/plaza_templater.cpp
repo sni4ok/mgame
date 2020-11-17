@@ -445,6 +445,8 @@ void parse_file(context& ctx, const std::vector<char>& data)
             }
             else if(type == "isSyncService") {
             }
+            else if(type == "REC_TIME_FIELD") {
+            }
             else
                 throw std::runtime_error(es() % "unknown type: " % type);
 

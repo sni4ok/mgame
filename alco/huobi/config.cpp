@@ -4,8 +4,6 @@
 
 #include "config.hpp"
 
-#include "evie/mfile.hpp"
-
 config::config(const char* fname)
 {
     auto cs = read_file(fname);

@@ -4,12 +4,9 @@
 
 #pragma once
 
-#include "mlog.hpp"
 #include "mutex.hpp"
 #include "fmap.hpp"
 #include "utils.hpp"
-
-#include <cassert>
 
 #include <sys/time.h>
 #include <sys/times.h>

@@ -9,7 +9,6 @@
 
 #include <map>
 #include <atomic>
-#include <thread>
 
 #include <sys/stat.h>
 
@@ -240,16 +239,16 @@ struct import_tcp
     uint16_t port;
 
     uint32_t count;
-    std::mutex mutex;
-    std::condition_variable cond;
+    my_mutex mutex;
+    my_condition cond;
     import_tcp(volatile bool& can_run, const std::string& params) : can_run(can_run), params(params), port(lexical_cast<uint16_t>(params)), count()
     {
     }
     ~import_tcp()
     {
-        std::unique_lock<std::mutex> lock(mutex);
+        my_mutex::scoped_lock lock(mutex);
         while(count)
-            cond.wait_for(lock, std::chrono::microseconds(50 * 1000));
+            cond.timed_uwait(lock, 50 * 1000);
     }
 };
 
@@ -257,7 +256,7 @@ void import_tcp_thread(import_tcp* it, int socket, std::string client, volatile 
 {
     try {
         socket_holder ss(socket);
-        std::unique_lock<std::mutex> lock(it->mutex);
+        my_mutex::scoped_lock lock(it->mutex);
         ++(it->count);
         initialized = true;
         if(it->count == max_connections)
@@ -272,7 +271,7 @@ void import_tcp_thread(import_tcp* it, int socket, std::string client, volatile 
     } catch(std::exception& e) {
         mlog(mlog::error) << "server(" << it->params << ") client " << client << " " << e;
     }
-    std::unique_lock<std::mutex> lock(it->mutex);
+    my_mutex::scoped_lock lock(it->mutex);
     it->cond.notify_all();
     mlog() << "server(" << it->params << ") thread for " << client << " ended";
     --(it->count);
@@ -283,16 +282,16 @@ void import_tcp_start(void* c, void* p)
     import_tcp& it = *((import_tcp*)(c));
     while(it.can_run) {
         std::string client;
-        std::unique_lock<std::mutex> lock(it.mutex);
+        my_mutex::scoped_lock lock(it.mutex);
         while(it.can_run && it.count >= max_connections)
-            it.cond.wait_for(lock, std::chrono::microseconds(50 * 1000));
+            it.cond.timed_uwait(lock, 50 * 1000);
         lock.unlock();
         int socket = my_accept_async(it.port, false/*local*/, false/*sync*/, &client, &it.can_run, it.params.c_str());
         volatile bool initialized = false;
         std::thread thrd(&import_tcp_thread, &it, socket, client, std::ref(initialized), p);
         lock.lock();
         while(!initialized)
-            it.cond.wait_for(lock, std::chrono::microseconds(50 * 1000));
+            it.cond.timed_uwait(lock, 50 * 1000);
         thrd.detach();
     }
 }

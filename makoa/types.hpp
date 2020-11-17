@@ -7,7 +7,6 @@
 #include "messages.hpp"
 
 #include "evie/time.hpp"
-#include "evie/mlog.hpp"
 #include "evie/utils.hpp"
 
 template<typename stream>

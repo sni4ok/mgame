@@ -57,7 +57,8 @@ struct parser : emessages, stack_singleton<parser>
     }
     void init_tickers(volatile bool& can_run, parser::tickers_type& ft)
     {
-        conn.connect(can_run);
+        if(!conn.cli)
+            conn.connect(can_run);
         for(auto& v: ft)
             v.second.proceed_instr(e, get_cur_ttime());
         tickers = ft;
@@ -65,7 +66,8 @@ struct parser : emessages, stack_singleton<parser>
     void init_tickers(volatile bool& can_run)
     {
         cg_listener_h instruments(conn, "instruments", cfg_cli_instruments, instruments_callback, &tickers);
-        conn.connect(can_run);
+        if(!conn.cli)
+            conn.connect(can_run);
         instruments.open();
         mlog() << "instruments successfully connected to p2router";
 
@@ -114,7 +116,6 @@ struct parser : emessages, stack_singleton<parser>
     {
         for(uint32_t c = 0; can_run; ++c) {
             if(unlikely(!conn.cli)) {
-                disconnect();
                 connect(can_run);
                 if(!can_run)
                     break;
@@ -159,7 +160,8 @@ CG_RESULT instruments_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg,
                         sec.init(c.exchange_id, c.feed_id, std::string(f->short_isin.buf));
                     }
                     else {
-                        mlog() << "security " << f->isin_id << ", " << std::string(f->short_isin.buf) << " already initialized";
+                        if(!parser::instance().tickers_initialized)
+                            mlog() << "security " << f->isin_id << ", " << std::string(f->short_isin.buf) << " already initialized";
                         parser::instance().tickers_initialized = true;
                     }
                 }
@@ -229,9 +231,8 @@ CG_RESULT orders_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
     {
     case CG_MSG_STREAM_DATA: 
         {
-            if(unlikely(msg->data_size != sizeof(orders_aggr))){
-                throw std::runtime_error("proceed_order not orders_aggr received");
-            }
+            if(unlikely(msg->data_size != sizeof(orders_aggr)))
+                throw std::runtime_error(es() % "orders_callback() not orders_aggr received, msg_size: " % msg->data_size);
             orders_aggr* o = (orders_aggr*)msg->data;
             parser::tickers_type& tickers = *((parser::tickers_type*)p);
             auto it = tickers.find(o->isin_id);
@@ -251,8 +252,8 @@ CG_RESULT orders_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
                 throw std::runtime_error("orders_aggr bad dir");
             }
             parser::instance().set_order(it, o->replID, price, count, etime);
-            o->print_brief();
-            //s.proceed_book(parser::instance().e, price, count, etime);
+            if(config::instance().log_plaza)
+                o->print_brief();
             break;
         }
     case CG_MSG_TN_BEGIN:
@@ -337,15 +338,16 @@ CG_RESULT trades_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
                         break;
                     }
                     uint32_t direction = 0;
-                    if(d->id_ord_buy > d->id_ord_sell)
+                    if(d->public_order_id_buy > d->public_order_id_sell)
                         direction = 1;
-                    else if(d->id_ord_sell > d->id_ord_buy)
+                    else if(d->public_order_id_sell > d->public_order_id_buy)
                         direction = 2;
                     price_t price = *d->price;
                     count_t count = {d->xamount * count_t::frac};
                     ttime_t etime = {d->moment_ns};
                     parser::instance().set_trade(it, price, count, direction, etime);
-                    d->print_brief();
+                    if(config::instance().log_plaza)
+                        d->print_brief();
                 }
                 else if (msg->data_size == sizeof(heartbeat)) {
                     heartbeat* h = (heartbeat*)msg->data;
@@ -357,8 +359,9 @@ CG_RESULT trades_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
                 }
                 else throw std::runtime_error(es() % "trades_callback unknown message, size: " % msg->data_size);
             }
-            else
-                mlog() << "deals_callback stream_data skipped due to not online";
+            else {
+                //mlog() << "deals_callback stream_data skipped due to not online";
+            }
             break;
         }
     case CG_MSG_TN_BEGIN:
@@ -401,8 +404,7 @@ CG_RESULT trades_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
     case CG_MSG_P2REPL_ONLINE: 
         {
             deals_online = true;
-            if(config::instance().log_plaza)
-                mlog() << "deals_callback plaza online setted";
+            mlog() << "deals_callback plaza online setted";
             break;
         }
     case CG_MSG_P2REPL_REPLSTATE: 

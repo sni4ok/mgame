@@ -9,15 +9,6 @@
 #include "config.hpp"
 
 #include "evie/fast_alloc.hpp"
-#include "evie/mlog.hpp"
-#include "evie/time.hpp"
-
-#include <vector>
-#include <thread>
-#include <mutex>
-#include <condition_variable>
-#include <atomic>
-#include <cstring>
 
 bool pooling_mode = false;
 
@@ -190,8 +181,8 @@ struct context
 class engine::impl : public stack_singleton<engine::impl>
 {
     volatile bool& can_run;
-    std::mutex mutex;
-    std::condition_variable cond;
+    my_mutex mutex;
+    my_condition cond;
     std::vector<std::thread> threads;
     linked_list ll;
     uint32_t consumers;
@@ -210,8 +201,8 @@ class engine::impl : public stack_singleton<engine::impl>
     {
         if(!pooling_mode){
             //MPROFILE("wait_lock()")
-            std::unique_lock<std::mutex> lock(mutex);
-            cond.wait_for(lock, std::chrono::microseconds(100 * 1000));
+            my_mutex::scoped_lock lock(mutex);
+            cond.timed_uwait(lock, 100 * 1000);
         }
     }
 

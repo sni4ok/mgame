@@ -11,7 +11,7 @@ namespace CustReplScheme
 {
     struct deal
     {
-        static constexpr uint32_t plaza_size = 105;
+        static constexpr uint32_t plaza_size = 124;
         int64_t replID;
         int64_t replRev;
         int64_t replAct;
@@ -20,19 +20,22 @@ namespace CustReplScheme
         int64_t id_deal;
         int64_t xpos;
         int64_t xamount;
-        int64_t id_ord_buy;
-        int64_t id_ord_sell;
+        int64_t public_order_id_buy;
+        int64_t public_order_id_sell;
         cg_decimal<16,5> price;
         cg_time_t moment;
         uint64_t moment_ns;
         int8_t nosystem;
+        int64_t xstatus_buy;
+        int64_t xstatus_sell;
         void print_brief() {
             mlog() << "deal|" << replID << "|" << replRev << "|" << replAct << "|" << sess_id << "|" << isin_id << "|"
-               << id_deal << "|" << xpos << "|" << xamount << "|" << id_ord_buy << "|" << id_ord_sell << "|"
-               << price << "|" << moment << "|" << moment_ns << "|" << nosystem << "|";
+               << id_deal << "|" << xpos << "|" << xamount << "|" << public_order_id_buy << "|" << public_order_id_sell << "|"
+               << price << "|" << moment << "|" << moment_ns << "|" << nosystem << "|" << xstatus_buy << "|"
+               << xstatus_sell << "|";
         }
     };
-    static_assert(sizeof(deal) == 108, "deal");
+    static_assert(sizeof(deal) == 124, "deal");
     struct heartbeat
     {
         static constexpr uint32_t plaza_size = 34;

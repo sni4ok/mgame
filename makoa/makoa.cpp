@@ -10,8 +10,8 @@
 #include "server.hpp"
 #include "config.hpp"
 
-#include "evie/mlog.hpp"
 #include "evie/profiler.hpp"
+#include "evie/config.hpp"
 
 #include <iostream>
 #include <csignal>

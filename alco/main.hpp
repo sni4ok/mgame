@@ -2,7 +2,6 @@
    author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
-#include "evie/mlog.hpp"
 #include "evie/profiler.hpp"
 
 #include <csignal>

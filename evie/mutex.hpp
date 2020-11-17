@@ -6,6 +6,7 @@
 
 #include <condition_variable>
 #include <shared_mutex>
+#include <thread>
 
 struct my_mutex : std::mutex
 {

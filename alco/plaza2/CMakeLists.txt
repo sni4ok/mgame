@@ -2,7 +2,9 @@ INCLUDE_DIRECTORIES(../../)
 ADD_EXECUTABLE(plaza_templater plaza_templater.cpp)
 ADD_EXECUTABLE(plaza plaza.cpp config.cpp parser.cpp)
 
-SET(PLAZA_LIB_PATH ~/plaza/cgate-6.3.0.67/lib)
+SET(PLAZA_LIB_PATH ~/plaza/cgate-6.6.0.86/lib)
+INCLUDE_DIRECTORIES(~/plaza/cgate-6.6.0.86/include)
+
 FIND_LIBRARY(plaza_cgate NAME libcgate.so PATHS ${PLAZA_LIB_PATH})
 FIND_LIBRARY(plaza_sys NAME libP2Sys.so PATHS ${PLAZA_LIB_PATH})
 FIND_LIBRARY(plaza_rep NAME libP2ReplClient.so PATHS ${PLAZA_LIB_PATH})

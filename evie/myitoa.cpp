@@ -6,7 +6,6 @@
 
 #include <cmath>
 #include <cassert>
-#include <stdio.h>
 #include <cstring>
 
 namespace my_cvt

@@ -5,7 +5,6 @@
 #pragma once
 
 #include <type_traits>
-#include <stdexcept>
 
 template<typename type>
 class mvector
@@ -25,8 +24,6 @@ public:
     }
     mvector& operator=(const mvector& r)
     {
-        if(size_)
-            throw std::logic_error("mvector& operator=(), size_ not 0");
         resize(r.size());
         memmove(&buf[0], &r.buf[0], (r.size()) * sizeof(type));
         return *this;

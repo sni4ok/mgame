@@ -11,7 +11,7 @@ namespace CustReplScheme
 {
     struct fut_sess_contents
     {
-        static constexpr uint32_t plaza_size = 474;
+        static constexpr uint32_t plaza_size = 416;
         int64_t replID;
         int64_t replRev;
         int64_t replAct;
@@ -21,22 +21,22 @@ namespace CustReplScheme
         cg_string<25> isin;
         cg_string<75> name;
         int32_t inst_term;
-        cg_string<25> code_vcb;
+        cg_string<25> base_contract_code;
         cg_decimal<16,5> limit_up;
         cg_decimal<16,5> limit_down;
-        cg_decimal<16,5> old_kotir;
+        cg_decimal<16,5> settlement_price_open;
         cg_decimal<16,2> buy_deposit;
         cg_decimal<16,2> sell_deposit;
         int32_t roundto;
         cg_decimal<16,5> min_step;
         int32_t lot_volume;
         cg_decimal<16,5> step_price;
-        cg_time_t d_pg;
+        cg_time_t last_trade_date;
         int8_t is_spread;
         cg_time_t d_exp_start;
         int8_t is_percent;
         cg_decimal<6,2> percent_rate;
-        cg_decimal<16,5> last_cl_quote;
+        cg_decimal<16,5> settlement_price;
         int32_t signs;
         int8_t is_trade_evening;
         int32_t ticker;
@@ -50,23 +50,18 @@ namespace CustReplScheme
         cg_decimal<16,5> pctyield_coeff;
         cg_decimal<16,5> pctyield_total;
         cg_time_t d_exp_end;
-        cg_string<25> base_contract_code;
-        cg_decimal<16,5> settlement_price_open;
-        cg_decimal<16,5> settlement_price;
-        cg_time_t last_trade_date;
         void print_brief() {
             mlog() << "fut_sess_contents|" << replID << "|" << replRev << "|" << replAct << "|" << sess_id << "|" << isin_id << "|"
-               << short_isin << "|" << isin << "|" << name << "|" << inst_term << "|" << code_vcb << "|"
-               << limit_up << "|" << limit_down << "|" << old_kotir << "|" << buy_deposit << "|" << sell_deposit << "|"
-               << roundto << "|" << min_step << "|" << lot_volume << "|" << step_price << "|" << d_pg << "|"
-               << is_spread << "|" << d_exp_start << "|" << is_percent << "|" << percent_rate << "|" << last_cl_quote << "|"
+               << short_isin << "|" << isin << "|" << name << "|" << inst_term << "|" << base_contract_code << "|"
+               << limit_up << "|" << limit_down << "|" << settlement_price_open << "|" << buy_deposit << "|" << sell_deposit << "|"
+               << roundto << "|" << min_step << "|" << lot_volume << "|" << step_price << "|" << last_trade_date << "|"
+               << is_spread << "|" << d_exp_start << "|" << is_percent << "|" << percent_rate << "|" << settlement_price << "|"
                << signs << "|" << is_trade_evening << "|" << ticker << "|" << state << "|" << multileg_type << "|"
                << legs_qty << "|" << step_price_clr << "|" << step_price_interclr << "|" << step_price_curr << "|" << d_start << "|"
-               << pctyield_coeff << "|" << pctyield_total << "|" << d_exp_end << "|" << base_contract_code << "|" << settlement_price_open << "|"
-               << settlement_price << "|" << last_trade_date << "|";
+               << pctyield_coeff << "|" << pctyield_total << "|" << d_exp_end << "|";
         }
     };
-    static_assert(sizeof(fut_sess_contents) == 476, "fut_sess_contents");
+    static_assert(sizeof(fut_sess_contents) == 416, "fut_sess_contents");
     struct sys_messages
     {
         static constexpr uint32_t plaza_size = 4306;

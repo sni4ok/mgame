@@ -5,11 +5,9 @@
 #include "mirror.hpp"
 #include "ncurses.hpp"
 
-#include "evie/utils.hpp"
+#include "evie/mutex.hpp"
 
 #include <deque>
-#include <mutex>
-#include <thread>
 
 #include <unistd.h>
 
@@ -102,7 +100,7 @@ struct mirror::impl
     int64_t dE, dP;
     
     volatile bool can_run;
-    std::mutex mutex;
+    my_mutex mutex;
     std::thread refresh_thrd;
 
     const char empty[10];
@@ -184,7 +182,7 @@ struct mirror::impl
     }
     void refresh(window& w)
     {
-        std::unique_lock<std::mutex> lock(mutex);
+        my_mutex::scoped_lock lock(mutex);
         w.clear();
         print_order_book(w);
         print_trades(w);
@@ -208,7 +206,7 @@ struct mirror::impl
                 if(key == 259 || key == 339) // arrow up and page up
                 {
                     uint32_t r = (key == 259 ? 1 : w.rows);
-                    std::unique_lock<std::mutex> lock(mutex);
+                    my_mutex::scoped_lock lock(mutex);
                     order_book::price_iterator it = get_top_order(), ib = ob.orders_p.begin();
 
                     for(uint32_t i = 0; i != r; ++i) {
@@ -222,7 +220,7 @@ struct mirror::impl
                 }
                 else if(key == 258 || key == 338) //arrow down or page down
                 {
-                    std::unique_lock<std::mutex> lock(mutex);
+                    my_mutex::scoped_lock lock(mutex);
                     order_book::price_iterator it = ob.orders_p.upper_bound(top_order_p), ie = ob.orders_p.end();
                     auto ib = it;
                     while(it != ie && !it->second.count.value)
@@ -269,7 +267,7 @@ struct mirror::impl
         if(m.id == msg_ping)
             return;
         if(sec.equal(m)) {
-            std::unique_lock<std::mutex> lock(mutex);
+            my_mutex::scoped_lock lock(mutex);
             if(m.id == msg_instr)
                 set_instrument(m.mi);
             if(m.id == msg_trade) {

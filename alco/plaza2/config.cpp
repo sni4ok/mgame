@@ -4,11 +4,6 @@
 
 #include "config.hpp"
 
-#include "evie/mfile.hpp"
-
-#include <set>
-
-
 config::config(const char* fname)
 {
     auto buf = read_file(fname);

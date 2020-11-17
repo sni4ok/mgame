@@ -6,9 +6,7 @@
 #include "server.hpp"
 #include "imports.hpp"
 
-#include <mutex>
-#include <thread>
-#include <vector>
+#include <evie/mutex.hpp>
 
 #include <unistd.h>
 
@@ -19,7 +17,7 @@ struct server::impl : stack_singleton<server::impl>
     volatile bool& can_run;
     std::vector<std::thread> threads;
     std::vector<std::pair<hole_importer, void*> > imports;
-    std::mutex mutex;
+    my_mutex mutex;
 
     impl(volatile bool& can_run) : can_run(can_run)
     {
@@ -34,7 +32,7 @@ struct server::impl : stack_singleton<server::impl>
             hole_importer hi = create_importer(f);
             void* i = hi.init(can_run, c + 1);
             {
-                std::unique_lock<std::mutex> lock(mutex);
+                my_mutex::scoped_lock lock(mutex);
                 imports.push_back(std::make_pair(hi, i));
             }
             while(can_run) {

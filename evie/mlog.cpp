@@ -2,16 +2,13 @@
     author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
-#include "mlog.hpp"
 #include "mutex.hpp"
 #include "mtime.hpp"
 #include "utils.hpp"
 #include "fast_alloc.hpp"
 
 #include <fstream>
-#include <thread>
 
-#include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
