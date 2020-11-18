@@ -14,7 +14,7 @@ bool pooling_mode = false;
 
 struct messages
 {
-    messages()
+    messages() : cnt()
     {
     }
     message _;
@@ -59,7 +59,7 @@ public:
         uint32_t consumers_left = --(node->cnt);
         if(!consumers_left){
             node->next = nullptr;
-            free(node);
+            this->free(node);
         }
     }
 };

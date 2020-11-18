@@ -96,7 +96,7 @@ namespace
     public:
         ofile(const char* file) : name(file)
         {
-            hfile = ::open(file, O_WRONLY | O_CREAT | O_APPEND, S_IWRITE | S_IRGRP | S_IWGRP);
+            hfile = ::open(file, O_WRONLY | O_CREAT | O_APPEND, S_IWRITE | S_IREAD | S_IRGRP | S_IWGRP);
             if(hfile < 0)
                 throw_system_failure(es() % "open file " % name % " error");
         }
