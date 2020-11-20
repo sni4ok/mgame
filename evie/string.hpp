@@ -235,8 +235,16 @@ struct buf_stream
     }
     buf_stream(char* from, char* to) : from(from), cur(from), to(to) {
     }
+    template<typename array>
+    buf_stream(array& v, typename std::enable_if<std::is_array<array>::value>* = 0)
+        : from(&v[0]), cur(from), to(from + sizeof(v))
+    {
+    }
     const char* begin() const {
         return from;
+    }
+    const char* end() const {
+        return cur;
     }
     uint32_t size() const {
         return cur - from;
@@ -247,8 +255,11 @@ struct buf_stream
     void clear() {
         cur = from;
     }
-    void resize(uint32_t size) {
-        cur = from + size;
+    void resize(uint32_t new_sz) {
+        uint32_t cur_sz = size();
+        if(new_sz > cur_sz)
+            check_size(new_sz - cur_sz);
+        cur = from + new_sz;
     }
     void write(const char* v, uint32_t s) {
         if(unlikely(s > to - cur))
@@ -256,15 +267,14 @@ struct buf_stream
         my_fast_copy(v, s, cur);
         cur += s;
     }
-    void put(char c) {
-        if(unlikely(1 > to - cur))
-            throw std::runtime_error("buf_stream::put() overloaded");
+    buf_stream& operator<<(char c) {
+        check_size(1);
         *cur = c;
         ++cur;
-    }
-    buf_stream& operator<<(char ch) {
-        put(ch);
         return *this;
+    }
+    void put(char c) {
+        (*this) << c;
     }
     buf_stream& operator<<(const str_holder& str) {
         write(str.str, str.size);
@@ -283,14 +293,23 @@ struct buf_stream
         write(&v[0], sz);
         return *this;
     }
+    void check_size(uint32_t delta) const {
+        if(unlikely(delta > to - cur))
+            throw std::runtime_error("buf_stream::check_size() overloaded");
+    }
     template<typename T>
     typename std::enable_if_t<std::is_integral<T>::value, buf_stream&> operator<<(T t) {
-        uint32_t sz = my_cvt::itoa<T>(cur, t);
-        cur += sz;
+        check_size(my_cvt::atoi_size<T>::value);
+        cur += my_cvt::itoa(cur, t);
+        return *this;
+    }
+    buf_stream& operator<<(double d) {
+        check_size(30);
+        cur += my_cvt::dtoa(cur, d);
         return *this;
     }
     buf_stream& operator<<(std::ostream& (std::ostream&)) {
-        put('\n');
+        (*this) << '\n';
         return *this;
     }
 };

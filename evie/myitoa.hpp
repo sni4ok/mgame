@@ -30,75 +30,26 @@ public:
 
 namespace my_cvt
 {
-    uint32_t utoa16(char *aBuf, uint16_t v);
-    uint32_t itoa16(char *aBuf, int16_t v);
-    uint32_t utoa32(char *aBuf, uint32_t v);
-    uint32_t itoa32(char *aBuf, int32_t v);
-    uint32_t utoa64(char *aBuf, uint64_t v);
-    uint32_t itoa64(char *aBuf, int64_t v);
+    uint32_t itoa(char *buf, int8_t v);
+    uint32_t itoa(char *buf, uint8_t v);
+    uint32_t itoa(char *buf, uint16_t v);
+    uint32_t itoa(char *buf, int16_t v);
+    uint32_t itoa(char *buf, uint32_t v);
+    uint32_t itoa(char *buf, int32_t v);
+    uint32_t itoa(char *buf, uint64_t v);
+    uint32_t itoa(char *buf, int64_t v);
     uint32_t dtoa(char *buf, double v);
 
     inline uint32_t itoa(char* buf, bool t) {
         buf[0] = (t ? '1' : '0');
         return 1;
     }
-    using std::is_integral;
-    using std::is_unsigned;
-    using std::is_signed;
-    using std::is_same;
 
-    template<typename T>
-    typename std::enable_if_t<is_integral<T>::value && is_unsigned<T>::value && sizeof(T) == 1, uint32_t>
-    itoa(char* buf, T t) {
-        return utoa16(buf, uint16_t(t));
-    }
-    template<typename T>
-    typename std::enable_if_t<is_integral<T>::value && is_unsigned<T>::value && sizeof(T) == 2, uint32_t>
-    itoa(char* buf, T t) {
-        return utoa16(buf, uint16_t(t));
-    }
-    template<typename T>
-    typename std::enable_if_t<is_integral<T>::value && is_unsigned<T>::value && sizeof(T) == 4, uint32_t>
-    itoa(char* buf, T t) {
-        return utoa32(buf, uint32_t(t));
-    }
-    template<typename T>
-    typename std::enable_if_t<is_integral<T>::value && is_unsigned<T>::value && sizeof(T) == 8, uint32_t>
-    itoa(char* buf, T t) {
-        return utoa64(buf, uint64_t(t));
-    }
-    template<typename T>
-    typename std::enable_if_t<is_integral<T>::value && is_signed<T>::value && sizeof(T) == 1, uint32_t>
-    itoa(char* buf, T t) {
-        return itoa16(buf, int16_t(t));
-    }
-    template<typename T>
-    typename std::enable_if_t<is_integral<T>::value && is_signed<T>::value && sizeof(T) == 2, uint32_t>
-    itoa(char* buf, T t) {
-        return itoa16(buf, int16_t(t));
-    }
-    template<typename T>
-    typename std::enable_if_t<is_integral<T>::value && is_signed<T>::value && sizeof(T) == 4, uint32_t>
-    itoa(char* buf, T t) {
-        return itoa32(buf, int32_t(t));
-    }
-    template<typename T>
-    typename std::enable_if_t<is_integral<T>::value && is_signed<T>::value && sizeof(T) == 8, uint32_t>
-    itoa(char* buf, T t) {
-        return itoa64(buf, int64_t(t));
-    }
-    template<typename T>
-    typename std::enable_if_t<is_same<T, bool>::value, bool>
-    atoi(const char* buf, uint32_t size) {
-        if(unlikely(size != 1 || (buf[0] != '0' && buf[0] != '1')))
-            throw std::runtime_error(es() % "atoi() bad bool number: " % std::string(&buf[0], &buf[size]));
-        return(buf[0] == '1');
-    }
-    template<typename T>
-    typename std::enable_if_t<!(is_same<T, bool>::value) && is_integral<T>::value && is_unsigned<T>::value, T>
-    atoi(const char* buf, uint32_t size) {
-        T ret = 0;
-        static const T mm = (std::numeric_limits<T>::max()) / 10;
+    template<typename type>
+    type atoi_u(const char* buf, uint32_t size) {
+        static_assert(std::is_unsigned<type>::value);
+        type ret = 0;
+        static const type mm = (std::numeric_limits<type>::max()) / 10;
         for(uint32_t i = 0; i != size; ++i) {
             if(unlikely(ret > mm))
                 throw std::runtime_error(es() % "atoi() max possible size exceed for: "
@@ -111,13 +62,27 @@ namespace my_cvt
         }
         return ret;
     }
-    template<typename T>
-    typename std::enable_if_t<!(is_same<T, bool>::value) && is_integral<T>::value && is_signed<T>::value, T>
-    atoi(const char* buf, uint32_t size) {
-        if(size && buf[0] == '-')
-            return -T(atoi<typename std::make_unsigned<T>::type>(buf + 1, size - 1));
-        return T(atoi<typename std::make_unsigned<T>::type>(buf, size));
+
+    template<typename type>
+    type atoi(const char* buf, uint32_t size) {
+        static_assert(std::is_integral<type>::value);
+        typedef typename std::make_unsigned<type>::type type_u;
+        if(std::is_unsigned<type>::value)
+            return atoi_u<type_u>(buf, size);
+        else {
+            if(size && buf[0] == '-')
+                return -type(atoi_u<type_u>(buf + 1, size - 1));
+            return type(atoi<type_u>(buf, size));
+        }
     }
+
+    template<>
+    inline bool atoi<bool>(const char* buf, uint32_t size) {
+        if(unlikely(size != 1 || (buf[0] != '0' && buf[0] != '1')))
+            throw std::runtime_error(es() % "atoi() bad bool number: " % std::string(&buf[0], &buf[size]));
+        return(buf[0] == '1');
+    }
+
     template<uint32_t v>
     struct pow10
     {
@@ -140,6 +105,15 @@ namespace my_cvt
         p10<9>(), p10<10>(), p10<11>(), p10<12>(), p10<13>(),
         p10<14>(), p10<15>(), p10<16>(), p10<17>(), p10<18>(),
         p10<19>()
+    };
+
+    static constexpr uint32_t atoi_u_ps[] = {3, 5, 10, 20, 20};
+    static constexpr uint32_t atoi_s_ps[] = {4, 6, 11, 21, 21};
+
+    template<typename type>
+    struct atoi_size
+    {
+        static const uint32_t value = (std::is_unsigned<type>::value ? atoi_u_ps : atoi_s_ps)[sizeof(type) / 2];
     };
 }
 

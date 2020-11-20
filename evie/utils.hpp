@@ -22,23 +22,23 @@ private:
 template<typename base>
 class stack_singleton
 {
-    static base*& get_impl(){
+    static base*& get_impl() {
         static base* value = 0;
         return value;
     }
     stack_singleton(const stack_singleton&) = delete;
 public:
-    static void set_instance(base* instance){
+    static void set_instance(base* instance) {
         assert((!get_impl() || get_impl() == instance) && "singleton already initialized");
         get_impl() = instance;
     }
-    static base& instance(){
+    static base& instance() {
         return *get_impl();
     }
-    stack_singleton(){
+    stack_singleton() {
         set_instance(static_cast<base*>(this));
     }
-    ~stack_singleton(){
+    ~stack_singleton() {
         get_impl() = 0;
     }
 };
@@ -48,38 +48,103 @@ inline void throw_system_failure(const char* msg)
     throw std::runtime_error(es() % (errno ? strerror(errno) : "") % ", " % msg);
 }
 
-template <typename type>
-type lexical_cast(const std::string& str)
+template<typename type>
+std::enable_if_t<std::is_integral<type>::value, std::string>
+to_string(type value)
 {
-    type var;
-    std::istringstream iss;
-    iss.str(str);
-    iss >> var;
-    if(!iss.eof())
-        throw std::runtime_error(es() % "bad params for lexical_cast: " % str);
-    return var;
+    char buf[24];
+    uint32_t size = my_cvt::itoa(buf, value);
+    return std::string(buf, buf + size);
+}
+
+inline std::string to_string(double value)
+{
+    char buf[32];
+    uint32_t size = my_cvt::dtoa(buf, value);
+    return std::string(buf, buf + size);
+}
+
+template<typename type>
+std::enable_if_t<std::is_integral<type>::value, type>
+lexical_cast(const char* from, const char* to)
+{
+    return my_cvt::atoi<type>(from, to - from);
+}
+
+template<typename type>
+std::enable_if_t<!(std::is_integral<type>::value), type>
+lexical_cast(const char* from, const char* to);
+
+template<>
+inline double lexical_cast<double>(const char* from, const char* to)
+{
+    char* ep;
+    double ret;
+    if(*to == char())
+        ret = strtod(from, &ep);
+    else {
+        my_basic_string<char, 30> buf(from, to - from);
+        ret = strtod(buf.c_str(), &ep);
+        ep = (char*)(from + (ep - buf.begin()));
+    }
+    if(ep != to)
+        throw std::runtime_error(es() % "bad lexical_cast to double from " % str_holder(from, to - from));
+    return ret;
 }
 
 template<>
-inline std::string lexical_cast<std::string>(const std::string& str)
+inline std::string lexical_cast<std::string>(const char* from, const char* to)
 {
-    return str;
+    return std::string(from, to);
+}
+
+template<typename type>
+type lexical_cast(const std::string& str)
+{
+    return lexical_cast<type>(&str[0], &str[0] + str.size());
+}
+
+template<typename type>
+type lexical_cast(std::string::const_iterator from, std::string::const_iterator to)
+{
+    return lexical_cast<type>(&(*from), &(*to));
+}
+
+template<typename type>
+type lexical_cast(std::vector<char>::const_iterator from, std::vector<char>::const_iterator to)
+{
+    return lexical_cast<type>(&(*from), &(*to));
+}
+
+template<typename type>
+type lexical_cast(const str_holder& str)
+{
+    return lexical_cast<type>(str.str, str.str + str.size);
 }
 
 static std::vector<std::string> split(const std::string& str, char sep = ',')
 {
     std::vector<std::string> ret;
-    if(!str.empty()) {
-        auto it = str.begin(), ie = str.end(), i = it;
-        while(it != ie) {
-            i = std::find(it, ie, sep);
-            ret.push_back(std::string(it, i));
-            if(i != ie)
-                ++i;
-            it = i;
-        }
+    auto it = str.begin(), ie = str.end(), i = it;
+    while(it != ie) {
+        i = std::find(it, ie, sep);
+        ret.push_back(std::string(it, i));
+        if(i != ie)
+            ++i;
+        it = i;
     }
     return ret;
+}
+
+static void split(std::vector<str_holder>& ret, const char* it, const char* ie, char sep = ',')
+{
+    while(it != ie) {
+        const char* i = std::find(it, ie, sep);
+        ret.push_back(str_holder(it, i - it));
+        if(i != ie)
+            ++i;
+        it = i;
+    }
 }
 
 class crc32_table : noncopyable
@@ -94,7 +159,7 @@ class crc32_table : noncopyable
         }
     }
 public:
-    static uint32_t* get(){
+    static uint32_t* get() {
         static crc32_table t;
         return t.crc_table;
     }

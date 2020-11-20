@@ -111,7 +111,16 @@ namespace my_cvt
         }
     }
 
-    uint32_t utoa16(char* buf, uint16_t i)
+    uint32_t itoa(char* buf, uint8_t i)
+    {
+        return
+            (i < ita2.values ?
+                (i < ita1.values ? ita1.write(i, buf) : ita2.write(i, buf)) :
+                    ita3.write(i, buf)
+            );
+    }
+
+    uint32_t itoa(char* buf, uint16_t i)
     {
         return
             (i < ita2.values ?
@@ -123,10 +132,10 @@ namespace my_cvt
             );
     }
 
-    uint32_t utoa32(char* buf, uint32_t i)
+    uint32_t itoa(char* buf, uint32_t i)
     {
         if(i <= std::numeric_limits<uint16_t>::max())
-            return utoa16(buf, uint16_t(i));
+            return itoa(buf, uint16_t(i));
 
         //i >= 65536 here
         return
@@ -139,47 +148,57 @@ namespace my_cvt
             );
     }
 
-    uint32_t utoa64(char* buf, uint64_t i)
+    uint32_t itoa(char* buf, uint64_t i)
     {
         if(i <= std::numeric_limits<uint32_t>::max())
-            return utoa32(buf, uint32_t(i));
+            return itoa(buf, uint32_t(i));
 
         //i >= 4294967296 here :D
-        uint32_t ret = utoa64(buf, i / ita8.values);
+        uint32_t ret = itoa(buf, i / ita8.values);
         buf += ret;
         ita8.write(i % ita8.values, buf);
         buf += ita8.digits;
         return ret + ita8.digits;
     }
 
-    uint32_t itoa16(char* buf, int16_t i)
+    uint32_t itoa(char* buf, int8_t i)
     {
         if(i < 0) {
             *buf++ = '-';
-            return utoa16(buf, uint16_t(-i)) + 1;
+            return itoa(buf, uint8_t(-i)) + 1;
         }
         else
-            return utoa16(buf, uint16_t(i));
+            return itoa(buf, uint8_t(i));
     }
 
-    uint32_t itoa32(char* buf, int32_t i)
+    uint32_t itoa(char* buf, int16_t i)
     {
         if(i < 0) {
             *buf++ = '-';
-            return utoa32(buf, uint32_t(-i)) + 1;
+            return itoa(buf, uint16_t(-i)) + 1;
         }
         else
-            return utoa32(buf, uint32_t(i));
+            return itoa(buf, uint16_t(i));
     }
 
-    uint32_t itoa64(char* buf, int64_t i)
+    uint32_t itoa(char* buf, int32_t i)
     {
         if(i < 0) {
             *buf++ = '-';
-            return utoa64(buf, uint64_t(-i)) + 1;
+            return itoa(buf, uint32_t(-i)) + 1;
         }
         else
-            return utoa64(buf, uint64_t(i));
+            return itoa(buf, uint32_t(i));
+    }
+
+    uint32_t itoa(char* buf, int64_t i)
+    {
+        if(i < 0) {
+            *buf++ = '-';
+            return itoa(buf, uint64_t(-i)) + 1;
+        }
+        else
+            return itoa(buf, uint64_t(i));
     }
 
     const double d_max_d = static_cast<double>(uint64_t(1) << 62);
@@ -221,7 +240,7 @@ namespace my_cvt
             sz += cur_sz;
             *buf++ = 'e';
             ++sz;
-            sz += itoa32(buf, exp);
+            sz += itoa(buf, exp);
             return sz;
         } else {
             double intp = 0.0;
@@ -234,7 +253,7 @@ namespace my_cvt
                 *buf++ = '-';
                 ++sz;
             }
-            uint32_t i_sz = itoa64(buf, iv);
+            uint32_t i_sz = itoa(buf, iv);
             sz += i_sz;
             buf += i_sz;
 
@@ -262,7 +281,7 @@ namespace my_cvt
                     mantissa /= 1000;
                 while(mantissa && !(mantissa % 10))
                     mantissa /= 10;
-                sz += itoa32(buf, mantissa);
+                sz += itoa(buf, mantissa);
             }
             return sz;
         }
@@ -272,7 +291,7 @@ namespace my_cvt
     {
         char buf[1024];
         for(uint32_t i = 0; i <= 65535; ++i) {
-            uint32_t sz = utoa16(buf, uint16_t(i));
+            uint32_t sz = itoa(buf, uint16_t(i));
             my_unused(sz);
         }
         uint32_t sz = itoa(buf, true);
@@ -297,10 +316,10 @@ namespace my_cvt
         sz = itoa(buf, -52578631);
         assert(std::string(&buf[0], &buf[sz]) == "-52578631");
         assert(atoi<int32_t>(buf, sz) == -52578631);
-        sz = itoa(buf, -947593471239506712LL);
+        sz = itoa(buf, int64_t(-947593471239506712LL));
         assert(std::string(&buf[0], &buf[sz]) == "-947593471239506712");
         assert(atoi<int64_t>(buf, sz) == -947593471239506712);
-        sz = itoa(buf, 9475934712395012ULL);
+        sz = itoa(buf, uint64_t(9475934712395012ULL));
         assert(std::string(&buf[0], &buf[sz]) == "9475934712395012");
         assert(atoi<uint64_t>(buf, sz) == 9475934712395012);
         sz = dtoa(buf, 3.03);

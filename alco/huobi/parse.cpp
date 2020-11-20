@@ -8,31 +8,6 @@
 #include "../utils.hpp"
 #include "utils.hpp"
 
-void test_impl(const char* a1, const char* a2)
-{
-    count_t v1 = read_count(a1, a1 + strlen(a1));
-    count_t v2 = read_count(a2, a2 + strlen(a2));
-    assert(v1.value == v2.value);
-    my_unused(v1, v2);
-}
-int amount_test()
-{
-    test_impl("-0.5E-50", "0");
-    test_impl("5.6", "0.56E1");
-    test_impl("0.056", "0.56E-1");
-    test_impl("0.56", "5.6E-1");
-    test_impl("-0.056", "-0.56E-1");
-    test_impl("-5.6", "-0.56E1");
-    test_impl("-0.56", "-5.6E-1");
-    test_impl("560", "56E1");
-    test_impl("5e-7", "0.5E-6");
-
-    const char* v = "9.79380846343861E-4";
-    count_t c = read_count(v, v + strlen(v));
-    my_unused(c);
-    return rand();
-}
-
 struct lws_i : sec_id_by_name<lws_impl>
 {
     zlibe zlib;
@@ -283,8 +258,6 @@ struct lws_i : sec_id_by_name<lws_impl>
         }
     }
 };
-
-static const int amount_test_i = amount_test();
 
 void proceed_huobi(volatile bool& can_run)
 {

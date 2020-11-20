@@ -9,21 +9,30 @@
 #include "evie/time.hpp"
 #include "evie/utils.hpp"
 
+template<typename stream, typename decimal>
+void write_decimal(stream& s, const decimal& d)
+{
+    int64_t int_ = d.value / decimal::frac;
+    int32_t float_ = d.value % decimal::frac;
+    if(d.value < 0) {
+        s << '-';
+        int_ = -int_;
+        float_ = -float_;
+    }
+    s << int_ << "." << mlog_fixed<-decimal::exponent>(float_);
+}
+
 template<typename stream>
 stream& operator<<(stream& s, const price_t& p)
 {
-    if(p.value < 0)
-        s << "-";
-    s << (std::abs(p.value) / price_t::frac) << "." << mlog_fixed<5>(std::abs(p.value) % price_t::frac);
+    write_decimal(s, p);
     return s;
 }
 
 template<typename stream>
 stream& operator<<(stream& s, const count_t& c)
 {
-    if(c.value < 0)
-        s << "-";
-    s << (std::abs(c.value) / count_t::frac) << "." << mlog_fixed<8>(std::abs(c.value) % count_t::frac);
+    write_decimal(s, c);
     return s;
 }
 

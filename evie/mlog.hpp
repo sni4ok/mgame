@@ -129,13 +129,9 @@ struct mlog
     template<typename T>
     typename std::enable_if_t<std::is_integral<T>::value, mlog&> operator<<(T t)
     {
-        check_size(22);
+        check_size(my_cvt::atoi_size<T>::value);
         cur_size += my_cvt::itoa(&buf[cur_size], t);
         return *this;
-    }
-    mlog& operator<<(uint8_t v)
-    {
-        return (*this) << uint16_t(v);
     }
     mlog& operator<<(double d)
     {
@@ -155,19 +151,6 @@ private:
     uint32_t cur_size;
     std::vector<std::pair<char*, uint32_t> >* blocks;
 };
-
-template<typename type>
-mlog& operator<<(mlog& ml, const std::vector<type>& p)
-{
-    ml << '{';
-    for(auto it = p.begin(), it_e = p.end(), itb = it; it != it_e; ++it) {
-        if(it != itb)
-            ml << ',';
-        ml << *it;
-    }
-    ml << '}';
-    return ml;
-}
 
 simple_log* log_init(const char* file_name = 0, long params = 0);
 simple_log* log_create(const char* file_name, long params = 0);

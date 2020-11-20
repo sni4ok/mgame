@@ -78,7 +78,7 @@ struct cg_stream
     typename std::enable_if<std::is_integral<T>::value, cg_stream&>::type operator<<(T t)
     {
         static_assert(std::is_integral<T>::value);
-        uint32_t sz = my_cvt::itoa<T>(it, t);
+        uint32_t sz = my_cvt::itoa(it, t);
         it += sz;
         return *this;
     }
@@ -95,7 +95,6 @@ mlog& operator<<(mlog& ml, const cg_string<sz>& str)
     ml << str_holder(str.buf);
     return ml;
 }
-
 
 template<uint32_t m, uint32_t e>
 struct cg_decimal
@@ -150,14 +149,13 @@ inline void check_plaza_fail(uint32_t res, const char* msg)
         mlog(mlog::critical) << "Client gate error (" << _str_holder(msg) << "): " << res;
         throw std::runtime_error(es() % "Client gate error (" % msg % "): " % res);
     }
-} 
+}
 
 inline void warn_plaza_fail(uint32_t res, const char* msg)
 {
-    if(unlikely(res != CG_ERR_OK)) {
+    if(unlikely(res != CG_ERR_OK))
         mlog(mlog::critical) << "Client gate warning (" << _str_holder(msg) << "): " << res;
-    }
-} 
+}
 
 struct cg_conn_h
 {
@@ -219,7 +217,8 @@ struct cg_listener_h
     std::string def_state;
     std::string rev;
     time_t last_call_time;
-    void set_call(){
+    void set_call()
+    {
         last_call_time = time(NULL);
     }
     cg_listener_h(cg_conn_h& conn, const std::string& name, const std::string cli_listener, plaza_func func, void* func_state = 0, std::string def_state = "")
@@ -259,7 +258,8 @@ struct cg_listener_h
         }
         return rev.c_str();
     }
-    void open(){
+    void open()
+    {
         destroy();
         mlog() << "open stream: " << name;
         check_plaza_fail(cg_lsn_new(conn.cli, cli_listener.c_str(), func, func_state, &listener), "lsn_new");
@@ -278,12 +278,14 @@ struct cg_listener_h
         closed = false;
         set_call();
     }
-    void reopen(){
+    void reopen()
+    {
         if(likely(!closed))
             return;
         open();
     }
-    void reopen_unactive(){
+    void reopen_unactive()
+    {
         if(unlikely(!listener))
             open();
         else{
@@ -298,7 +300,8 @@ struct cg_listener_h
             }
         }
     }
-    ~cg_listener_h(){
+    ~cg_listener_h()
+    {
         destroy();
     }
 };
@@ -308,9 +311,11 @@ struct heartbeat_check
     int64_t min_delta_ms;
     uint32_t possible_delay_ms;
     heartbeat_check(uint32_t possible_delay_ms)
-    : min_delta_ms(10000000), possible_delay_ms(possible_delay_ms){
+    : min_delta_ms(10000000), possible_delay_ms(possible_delay_ms)
+    {
     }
-    bool proceed(const cg_time_t& server_time){
+    bool proceed(const cg_time_t& server_time)
+    {
         mtime ct = get_cur_mtime();
         int64_t day_ms = ((ct.total_sec() - ct.day_seconds()) * 1000) + ct.ms();
         int64_t server_ms = server_time.hour * 3600 * 1000 + server_time.minute * 60 * 1000 + server_time.second * 1000 + server_time.msec;
