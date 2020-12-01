@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include "config.hpp"
-
 #include "makoa/messages.hpp"
 
 #include "cgate.h"
@@ -17,75 +15,32 @@ template<uint32_t sz>
 struct cg_string
 {
     char buf[sz + 1];
-    cg_string(){
+    cg_string()
+    {
         memset(buf, 0, sizeof(buf));
     }
+	cg_string(const char* str, uint32_t size)
+    {
+        if(size > sz)
+            throw std::runtime_error("cg_string::operator= size overflow");
+        my_fast_copy(str, size, &buf[0]);
+        memset(&buf[sz], 0, sizeof(buf) - size);
+    }
     template<typename array>
-    cg_string(const array& v){
-        static_assert(sizeof(v[0]) == 1);
-        static_assert(std::is_array<array>::value);
-        static_assert(sizeof(v) <= sizeof(buf));
+    cg_string(const array& v)
+    {
+        static_assert(sizeof(v[0]) == 1 && std::is_array<array>::value && sizeof(v) <= sizeof(buf));
         my_fast_copy(&v[0], sizeof(v), &buf[0]);
         memset(&buf[sizeof(v)], 0, sizeof(buf) - sizeof(v));
     }
-    template<typename array>
-    cg_string& operator=(const array& v){
-        static_assert(sizeof(v[0]) == 1);
-        static_assert(std::is_array<array>::value);
-        static_assert(sizeof(v) <= sizeof(buf));
-        my_fast_copy(&v[0], sizeof(v), &buf[0]);
+    cg_string& operator=(const std::string& str)
+    {
+        new (this) cg_string(&str[0], str.size());
         return *this;
     }
-    cg_string& operator=(const std::string& str){
-        if(str.size() > sz)
-            throw std::runtime_error("cg_string::operator= size overflow");
-        my_fast_copy(str.c_str(), str.size() + 1, &buf[0]);
-        return *this;
-    }
-    void clear(){
-        buf[0] = char();
-    }
-    bool empty() const{
+    bool empty() const
+    {
         return buf[0] == char();
-    }
-};
-
-struct cg_stream
-{
-    char* it;
-    cg_stream(char* str) : it(str){
-    }
-    template<uint32_t sz>
-    cg_stream(cg_string<sz>& str) : it(str.buf){
-    }
-    cg_stream& operator<<(char ch){
-        *it = ch;
-        ++it;
-        return *this;
-    }
-    template<typename array>
-    typename std::enable_if<std::is_array<array>::value, cg_stream&>::type operator<<(const array& v)
-    {
-        static_assert(std::is_array<array>::value);
-        uint32_t sz = sizeof(v) / 1;
-        if(v[sz - 1] == char())
-            --sz;
-        my_fast_copy(&v[0], sz, it);
-        it += sz;
-        return *this;
-    }
-    template<typename T>
-    typename std::enable_if<std::is_integral<T>::value, cg_stream&>::type operator<<(T t)
-    {
-        static_assert(std::is_integral<T>::value);
-        uint32_t sz = my_cvt::itoa(it, t);
-        it += sz;
-        return *this;
-    }
-    void write(const char* str, std::streamsize count)
-    {
-        my_fast_copy(str, count, it);
-        it += count;
     }
 };
 
@@ -100,10 +55,11 @@ template<uint32_t m, uint32_t e>
 struct cg_decimal
 {
     char buf[2 + (m >> 1) + ((m | e) & 1)];
-    cg_decimal(){
+    cg_decimal() {
         memset(buf, 0, sizeof(buf));
     }
-    price_t operator*() const{
+    price_t operator*() const
+    {
         price_t ret;
         int8_t s;
         cg_bcd_get((void*)buf, &ret.value, &s);
@@ -251,7 +207,7 @@ struct cg_listener_h
     }
     const char* get_state() const
     {
-        if(rev.empty()){
+        if(rev.empty()) {
             if(def_state.empty())
                 return 0;
             return def_state.c_str();
@@ -270,7 +226,7 @@ struct cg_listener_h
         {
             uint32_t state = 0;
             uint32_t r = cg_lsn_getstate(listener, &state);
-            if(r != CG_ERR_OK || (state != CG_STATE_ACTIVE && state != CG_STATE_OPENING)){
+            if(r != CG_ERR_OK || (state != CG_STATE_ACTIVE && state != CG_STATE_OPENING)) {
                 mlog(mlog::critical) << "stream: " << name << ", bad state: " << state;
                 throw std::runtime_error("open stream error");
             }
@@ -316,19 +272,19 @@ struct heartbeat_check
     }
     bool proceed(const cg_time_t& server_time)
     {
-        mtime ct = get_cur_mtime();
+        mtime ct = cur_mtime();
         int64_t day_ms = ((ct.total_sec() - ct.day_seconds()) * 1000) + ct.ms();
         int64_t server_ms = server_time.hour * 3600 * 1000 + server_time.minute * 60 * 1000 + server_time.second * 1000 + server_time.msec;
         int64_t delta_ms = day_ms - server_ms;
         min_delta_ms++;
         //Forts somethimes change time by hand for 5 or 42 seconds at a time
-        if(delta_ms > min_delta_ms + possible_delay_ms + 50){
+        if(delta_ms > min_delta_ms + possible_delay_ms + 50) {
             int64_t set_to = min_delta_ms + 50;
             mlog(mlog::critical) << "heartbeat_check force reset, min_delta_ms: " << min_delta_ms << ", delta_ms: " << delta_ms
                 << ", set to: " << set_to;
             min_delta_ms = set_to;
         }
-        if(delta_ms < min_delta_ms){
+        if(delta_ms < min_delta_ms) {
             mlog() << "heartbeat_check min_delta_ms set to: " << delta_ms;
             min_delta_ms = delta_ms;
         }

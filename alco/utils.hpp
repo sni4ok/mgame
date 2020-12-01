@@ -6,6 +6,8 @@
 
 #include "evie/fmap.hpp"
 
+#include <sstream>
+
 static std::string join_tickers(std::vector<std::string> tickers, bool quotes = true)
 {
     std::stringstream s;
@@ -24,7 +26,7 @@ static std::string join_tickers(std::vector<std::string> tickers, bool quotes = 
 template<typename base>
 struct sec_id_by_name : base
 {
-    typedef my_basic_string<char, sizeof(message_instr::security) + 1> ticker;
+    typedef my_basic_string<sizeof(message_instr::security) + 1> ticker;
     uint32_t get_security_id(const char* i, const char* ie, ttime_t time)
     {
         ticker symbol(i, ie);

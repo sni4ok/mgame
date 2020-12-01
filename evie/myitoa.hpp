@@ -5,28 +5,12 @@
 #pragma once
 
 #include <string>
-#include <sstream>
 #include <limits>
+#include <stdexcept>
 #include <type_traits>
 
 #define unlikely(x)     __builtin_expect(!!(x),0)
 #define likely(x)       __builtin_expect(!!(x),1)
-
-class es
-{
-    std::string s;
-    std::stringstream ss;
-public:
-    template<typename t>
-    es& operator%(const t& v) {
-        ss << v;
-        return *this;
-    }
-    operator const char*() {
-        s = ss.str();
-        return s.c_str();
-    }
-};
 
 namespace my_cvt
 {
@@ -52,11 +36,10 @@ namespace my_cvt
         static const type mm = (std::numeric_limits<type>::max()) / 10;
         for(uint32_t i = 0; i != size; ++i) {
             if(unlikely(ret > mm))
-                throw std::runtime_error(es() % "atoi() max possible size exceed for: "
-                    % std::string(&buf[0], &buf[size]) % ", ret: " % ret % ", mm: " % mm);
+                throw std::runtime_error(std::string("atoi() max possible size exceed for: ") + std::string(&buf[0], &buf[size]));
             char ch = buf[i];
             if(unlikely(ch < '0' || ch > '9'))
-                throw std::runtime_error(es() % "atoi() bad integral number: " % std::string(&buf[0], &buf[size]));
+                throw std::runtime_error(std::string("atoi() bad integral number: ") + std::string(&buf[0], &buf[size]));
             ret *= 10;
             ret += (ch - '0');
         }
@@ -79,7 +62,7 @@ namespace my_cvt
     template<>
     inline bool atoi<bool>(const char* buf, uint32_t size) {
         if(unlikely(size != 1 || (buf[0] != '0' && buf[0] != '1')))
-            throw std::runtime_error(es() % "atoi() bad bool number: " % std::string(&buf[0], &buf[size]));
+            throw std::runtime_error(std::string("atoi() bad bool number: ") + std::string(&buf[0], &buf[size]));
         return(buf[0] == '1');
     }
 
@@ -89,9 +72,9 @@ namespace my_cvt
         static constexpr uint64_t result = pow10<v - 1>::result * 10;
     };
 
-    template<> struct pow10<1>
+    template<> struct pow10<0>
     {
-        static constexpr uint64_t result = 10;
+        static constexpr uint64_t result = 1;
     };
 
     template<uint32_t v>

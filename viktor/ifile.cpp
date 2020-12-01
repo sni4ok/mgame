@@ -223,7 +223,7 @@ struct ifile
         uint32_t tfrom = main_file.tf.value / ttime_t::frac;
         for(int i = 0; i != n; ++i) {
             dirent *e = ee[i];
-            _str_holder fname(e->d_name);
+            str_holder fname(_str_holder(e->d_name));
             if(fname.size > f_size && std::equal(fname.str, fname.str + f_size, f.begin())) {
                 if(fname.size > f_size) {
                     if(fname.str[f_size] != '_')

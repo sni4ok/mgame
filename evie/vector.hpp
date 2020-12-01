@@ -4,7 +4,11 @@
 
 #pragma once
 
+#include "myitoa.hpp"
+
 #include <type_traits>
+
+#include "string.h"
 
 template<typename type>
 class mvector

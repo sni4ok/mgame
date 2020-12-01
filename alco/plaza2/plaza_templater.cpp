@@ -12,6 +12,7 @@
 #include <iostream>
 #include <fstream>
 #include <memory>
+#include <sstream>
 
 #include <dirent.h>
 
@@ -471,14 +472,6 @@ void parse_file(context& ctx, const std::vector<char>& data, const std::string& 
 std::vector<std::string> list_folder(const std::string& ini_folder)
 {
     std::vector<std::string> files;
-
-    /*namespace fs = boost::filesystem;
-    fs::directory_iterator it(ini_folder), it_e;
-    for(; it != it_e; ++it) {
-        if(it->status().type() == fs::regular_file && it->path().extension() == ".ini")
-            files.push_back(it->leaf());
-    }
-    */
 
     std::unique_ptr<DIR, int(*)(DIR*)> dp(opendir(ini_folder.c_str()), &closedir);
     if(!dp)

@@ -124,7 +124,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                             {
                                 parse_ticks(it, ie, security_id, time, true);
                             }
-                            else if(it, skip_if_fixed(it, ",\""))
+                            else if(skip_if_fixed(it, ",\""))
                             {
                             }
                             else if(skip_if_fixed(it, "timestamp\":\""))
@@ -155,7 +155,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
             else if(table == trades_table)
             {
                 str_holder action = read_named_value("\",\"action\":\"", it, ie, '\"', read_str);
-                if(action == "partial") //partial table contains old trades
+                if(action == str_holder("partial")) //partial table contains old trades
                     return;
 
                 search_and_skip_fixed(it, ie, "data\":[");
@@ -170,9 +170,9 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                     it = ne + 1;
                     str_holder side = read_named_value(",\"side\":\"", it, ie, '\"', read_str);
                     int direction;
-                    if(side == "Buy")
+                    if(side == str_holder("Buy"))
                         direction = 1;
-                    else if(side == "Sell")
+                    else if(side == str_holder("Sell"))
                         direction = 2;
                     else
                         throw std::runtime_error(es() % "unknown trade direction in message: " % str_holder((iterator)in, len));

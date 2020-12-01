@@ -34,7 +34,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     char ping[7];
     char error[16];
 
-    typedef my_basic_string<char, 64> string;
+    typedef my_basic_string<64> string;
     struct impl;
     typedef void (lws_i::*func)(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie);
     struct impl

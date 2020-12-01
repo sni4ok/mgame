@@ -2,93 +2,14 @@
     author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
-#include "mutex.hpp"
-#include "mtime.hpp"
 #include "utils.hpp"
 #include "fast_alloc.hpp"
 
-#include <fstream>
-
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <fcntl.h>
 
-mtime_parsed parse_mtime_impl(const mtime& time)
-{
-    //very slow function
-    mtime_parsed ret;
-    struct tm * t = gmtime(&time.t.tv_sec);
-    ret.year = t->tm_year + 1900;
-    ret.month = t->tm_mon + 1;
-    ret.day = t->tm_mday;
-    ret.hours = t->tm_hour;
-    ret.minutes = t->tm_min;
-    ret.seconds = t->tm_sec;
-    ret.nanos = time.nanos();
-    return ret;
-}
-const uint32_t cur_day_seconds = get_cur_mtime().day_seconds(); //first call of get_cur_mtime() can be slow
-const mtime_date cur_day_date = parse_mtime_impl(get_cur_mtime_seconds());
-inline my_string get_cur_day_str()
-{
-    std::stringstream str;
-    str << mlog_fixed<4>(cur_day_date.year) << "-" << mlog_fixed<2>(cur_day_date.month) << "-" << mlog_fixed<2>(cur_day_date.day);
-    std::string s = str.str();
-    return my_string(&s[0], s.size());
-}
-
-const my_string cur_day_date_str = get_cur_day_str();
-
-void parse_mtime(const mtime& time, mtime_parsed& ret)
-{
-    if(time.day_seconds() == cur_day_seconds){
-        static_cast<mtime_date&>(ret) = cur_day_date;
-        uint32_t frac = time.total_sec() % (24 * 3600);
-        ret.seconds = frac % 60;
-        ret.hours = frac / 3600;
-        ret.minutes = (frac - ret.hours * 3600) / 60;
-        ret.nanos = time.nanos();
-    }
-    else
-        ret = parse_mtime_impl(time);
-}
-mtime_time_duration get_mtime_time_duration(const mtime& time)
-{
-    mtime_time_duration ret;
-    uint32_t frac = time.total_sec() % (24 * 3600);
-    ret.seconds = frac % 60;
-    ret.hours = frac / 3600;
-    ret.minutes = (frac - ret.hours * 3600) / 60;
-    ret.nanos = time.nanos();
-    return ret;
-}
 namespace
 {
-    static const uint32_t buf_size = 1000;
-    static const uint32_t pre_alloc = 4 * 1024;
-    class my_pool
-    {
-        lockfree_queue<void*, pre_alloc> queue;
-
-    public:
-        my_pool() : queue("mlog::my_pool") {
-            for(uint32_t i = 0; i != pre_alloc; ++i)
-                queue.push(::malloc(buf_size + 1));
-        }
-        void* malloc() {
-            void* p;
-            queue.pop_strong(p);
-            return p;
-        }
-        void free(void* p) {
-            queue.push(p);
-        }
-        ~my_pool() {
-            void* p;
-            while(queue.pop_weak(p))
-                ::free(p);
-        }
-    };
     class ofile
     {
         std::string name;
@@ -110,9 +31,9 @@ namespace
             if((::fcntl(hfile, F_SETLK, &lock_struct)) < 0)
                 throw_system_failure(es() % "lock file " % name % " error");
         }
-        void write(const char* buf, uint32_t count)
+        void write(const char* buf, uint32_t size)
         {
-            if(::write(hfile, buf, count) != count)
+            if(::write(hfile, buf, size) != size)
                 throw_system_failure(es() % "file " % name % " writing error");
         }
         ~ofile()
@@ -124,130 +45,143 @@ namespace
 
 class simple_log
 {
-    std::unique_ptr<ofile> stream, stream_crit;
-    long params;
-    volatile bool can_run;
-    std::thread work_thread;
-    struct Data{
-        char* buf;
-        uint32_t size;
-        long extra_param;
-        Data() : buf(), size(), extra_param(){
-        }
-        Data(char* buf, uint32_t size, long extra_param) : buf(buf), size(size), extra_param(extra_param){
-        }
-    };
-
-    typedef lockfree_queue<Data, pre_alloc> Strs;
-    Strs strs;
-    std::atomic<uint32_t> all_size;
-
+    static const uint32_t pool_size = 4 * 1024;
+    static const uint32_t pre_alloc = 128;
     static const uint32_t log_no_cout_size = 10;
-    void write_impl(char* str, uint32_t size, long extra_param, uint32_t all_sz, uint32_t cur_size){
-        if(str){
-            if(!no_cout && extra_param == mlog::only_cout){
-                std::cout.write(str, size);
-                std::cout.flush();
-            }
-            else{
-                if(stream)
-                    (*stream).write(str, size);
-                if((extra_param & mlog::critical) && stream_crit)
-                    (*stream_crit).write(str, size);
-                if((!stream || ((params & mlog::always_cout) && !(extra_param & mlog::no_cout))) && !no_cout){
-                    if(all_sz >= log_no_cout_size){
-                        if(!cur_size)
-                            std::cout << "[[skipped " << all_sz << " rows from logging to stdout, see log file for found it]]" << std::endl;
-                    }
-                    else{
-                        std::cout.write(str, size);
-                    }
+
+    typedef fast_alloc<mlog::node, pool_size> string_pool;
+    typedef lockfree_queue<mlog::data, pool_size> nodes_type;
+
+    void write_impl(char* str, uint32_t size, uint32_t extra_param, uint32_t all_sz, uint32_t cur_size)
+    {
+        if(str)
+        {
+            if(stream)
+                (*stream).write(str, size);
+            if((extra_param & mlog::critical) && stream_crit)
+                (*stream_crit).write(str, size);
+            if((!stream || ((params & mlog::always_cout) && !(extra_param & mlog::no_cout))) && !no_cout)
+            {
+                if(all_sz >= log_no_cout_size)
+                {
+                    if(!cur_size)
+                        std::cout << "[[skipped " << all_sz << " rows from logging to stdout, see log file for found it]]" << std::endl;
                 }
+                else
+                    std::cout.write(str, size);
             }
         }
     }
-    void WriteThred(){
+    void write_thred()
+    {
         set_trash_thread();
         uint32_t writed_sz = 0;
-        try{
-            Data data;
+        try
+        {
+            mlog::data data;
             static const uint32_t cntr_from = 128, cntr_to = 524288;
             uint32_t cntr = 128;
-            for(;;){
+            for(;;)
+            {
                 uint32_t all_sz = all_size - writed_sz;
-                for(uint32_t cur_i = 0; cur_i != all_sz; ++cur_i){
-                    strs.pop_strong(data);
-                    write_impl(data.buf, data.size, data.extra_param, all_sz, cur_i);
+                for(uint32_t cur_i = 0; cur_i != all_sz; ++cur_i)
+                {
+                    nodes.pop_strong(data);
+
+                    while(data.head)
+                    {
+                        mlog::node* next = data.head->next;
+                        write_impl(data.head->buf, data.head->size, data.extra_param, all_sz, cur_i);
+                        pool.free(data.head);
+                        data.head = next;
+                    }
+
                     ++writed_sz;
-                    pool.free(data.buf);
                 }
-                if(all_sz){
+                if(all_sz)
+                {
                     if(cntr != cntr_from)
                         cntr /= 2;
                 }
                 if(!all_sz && !can_run)
                     break;
-                if(!all_sz){
+                if(!all_sz)
+                {
                     usleep(cntr);
                     if(cntr != cntr_to)
                         cntr *= 2;
                 }
             }
         }
-        catch(std::exception& e){
-            std::cout << "simple_log::WriteThread error: " << e.what() << std::endl;
+        catch(std::exception& e)
+        {
+            std::cout << "simple_log::write_thread error: " << e.what() << std::endl;
         }
     }
+
+    std::unique_ptr<ofile> stream, stream_crit;
+    volatile bool can_run;
+    std::thread work_thread;
+    std::atomic<uint32_t> all_size;
+    string_pool pool;
+    static simple_log* log;
+
 public:
+    nodes_type nodes;
     volatile bool no_cout;
-    long& Params() {
-        return params;
-    }
-    simple_log() : can_run(true), work_thread(&simple_log::WriteThred, this),
-        strs("mlog::Strs"), all_size(), no_cout()
+    uint32_t params;
+
+    simple_log() : can_run(true), work_thread(&simple_log::write_thred, this),
+        all_size(), pool("mlog::pool", pre_alloc), nodes("mlog::nodes"), no_cout()
     {
     }
-    my_pool pool;
-    ~simple_log(){
+    ~simple_log()
+    {
         can_run = false;
         work_thread.join();
     }
-    void init(const char* file_name, long params){
+    mlog::node* alloc()
+    {
+        mlog::node* node = pool.alloc();
+        node->next = nullptr;
+        node->size = 0;
+        return node;
+    }
+    void init(const char* file_name, uint32_t params)
+    {
         this->params = params;
-        if(file_name){
+        if(file_name)
+        {
             stream.reset(new ofile(file_name));
-            if(!(params & mlog::no_crit_file)){
+            if(!(params & mlog::no_crit_file))
+            {
                 std::string crit_file = std::string(file_name) + "_crit";
                 stream_crit.reset(new ofile(crit_file.c_str()));
             }
-            if(params & mlog::lock_file){
+            if(params & mlog::lock_file)
+            {
                 stream->lock();
                 if(stream_crit)
                     stream_crit->lock();
             }
         }
-        else{
+        else
+        {
             stream.reset();
             stream_crit.reset();
         }
     }
-    static simple_log* my_log;
-    static void set_instance(simple_log* log){
-        my_log = log;
+    static void set_instance(simple_log* l)
+    {
+        log = l;
     };
-    static simple_log& instance(){
-        return *my_log;
+    static simple_log& instance()
+    {
+        return *log;
     }
-    long Params() const{
-        return params;
-    }
-    void WriteBulk(const std::vector<std::pair<char*, uint32_t> >& blocks, long extra_param){
-        std::vector<std::pair<char*, uint32_t> >::const_iterator it = blocks.begin(), it_e = blocks.end();
-        for(; it != it_e; ++it)
-            Write(it->first, it->second, extra_param);
-    }
-    void Write(char* buf, uint32_t size, long extra_param){
-        strs.push(Data(buf, size, extra_param));
+    void write(const mlog::data& buf)
+    {
+        nodes.push(buf);
         ++all_size;
     }
 };
@@ -257,7 +191,7 @@ void mlog::set_no_cout()
     simple_log::instance().no_cout = true;
 }
 
-simple_log* log_init(const char* file_name, long params)
+simple_log* log_init(const char* file_name, uint32_t params)
 {
     static simple_log log;
     simple_log::set_instance(&log);
@@ -265,7 +199,7 @@ simple_log* log_init(const char* file_name, long params)
     return &log;
 }
 
-simple_log* log_create(const char* file_name, long params)
+simple_log* log_create(const char* file_name, uint32_t params)
 {
     std::unique_ptr<simple_log> log(new simple_log());
     log->init(file_name, params);
@@ -287,15 +221,17 @@ simple_log* log_get()
     return &simple_log::instance();
 }
 
-long& log_params()
+uint32_t& log_params()
 {
-    return log_get()->Params();
+    return log_get()->params;
 }
 
 std::atomic<uint32_t> thread_tss_id;
 static pthread_key_t key;
 static pthread_once_t key_once = PTHREAD_ONCE_INIT;
-static void make_key(){
+
+static void make_key()
+{
     pthread_key_create(&key, NULL);
 }
 
@@ -313,77 +249,74 @@ static int get_thread_id()
 
 void mlog::init()
 {
-    {
-        //MPROFILE("Pool_alloc")
-        buf = (char*)log.pool.malloc();
-    }
-    if(extra_param == only_cout)
-        return;
+    buf.head = log.alloc();
+    buf.tail = buf.head;
 
-    long params = log.Params() | extra_param;
-
-    if(params & mlog::store_pid){
-        (*this) << "pid: " << getpid() << " ";
-    }
-    if(params & mlog::store_tid){
-        (*this) << "tid: " << get_thread_id() << " ";       
-    }
-    //MPROFILE("Pool_tail")
-    if(extra_param & mlog::warning)
-        (*this) << "WARNING ";
-    if(extra_param & mlog::error)
-        (*this) << "ERROR ";
-    (*this) << get_cur_mtime() << ": ";
+    uint32_t params = log.params | buf.extra_param;
+    if(params & mlog::store_pid)
+        *this << "pid: " << getpid() << " ";
+    if(params & mlog::store_tid)
+        *this << "tid: " << get_thread_id() << " ";
+    if(buf.extra_param & mlog::warning)
+        *this << "WARNING ";
+    if(buf.extra_param & mlog::error)
+        *this << "ERROR ";
+    *this << cur_mtime() << ": ";
 }
 
-mlog::mlog(long extra_param) : log(simple_log::instance()), extra_param(extra_param), cur_size(), blocks(NULL)
+mlog::mlog(uint32_t extra_param) : log(simple_log::instance())
 {
+    buf.extra_param = extra_param;
     init();
 }
 
-mlog::mlog(simple_log* log, long extra_param) : log(*log), extra_param(extra_param), cur_size(), blocks(NULL)
+mlog::mlog(simple_log* log, uint32_t extra_param) : log(*log)
 {
+    buf.extra_param = extra_param;
     init();
 }
 
 mlog::~mlog()
 {
-    if(extra_param != only_cout)
-        (*this) << std::endl;
-    if(blocks){
-        blocks->push_back(std::pair<char*, uint32_t>(buf, cur_size));
-        log.WriteBulk(*blocks, extra_param);
-        delete blocks;
-    }
-    else
-        log.Write(&buf[0], cur_size, extra_param);
+    *this << '\n';
+    log.write(buf);
 }
 
 mlog& mlog::operator<<(char s)
 {
     check_size(1);
-    buf[cur_size++] = s;
+    buf.tail->buf[(buf.tail->size)++] = s;
     return *this;
 }
 
 void mlog::write_string(const char* it, uint32_t size)
 {
-    while(size) {
-        uint32_t cur_write = std::min(size, buf_size - cur_size);
-        my_fast_copy(it, cur_write, &buf[cur_size]);
-        cur_size += cur_write;
+    while(size)
+    {
+        uint32_t cur_write = std::min(size, buf_size - buf.tail->size);
+        my_fast_copy(it, cur_write, &buf.tail->buf[buf.tail->size]);
+        buf.tail->size += cur_write;
         it += cur_write;
         size -= cur_write;
-        if(cur_size == buf_size) {
-            if(!blocks)
-                blocks = new std::vector<std::pair<char*, uint32_t> >(1, std::pair<char*, uint32_t>(buf, cur_size));
-            else
-                blocks->push_back(std::pair<char*, uint32_t>(buf, cur_size));
-            cur_size = 0;
-            buf = 0;
-            buf = (char*)log.pool.malloc();
+        if(buf.tail->size == buf_size)
+        {
+            node* tail = buf.tail;
+            buf.tail = log.alloc();
+            tail->next = buf.tail;
         }
     }
+}
+
+void mlog::write(const char* it, uint32_t size)
+{
+    check_size(size);
+    write_string(it, size);
+}
+
+mlog& mlog::operator<<(const str_holder& str)
+{
+    write(str.str, str.size);
+    return *this;
 }
 
 mlog& mlog::operator<<(const std::string& s)
@@ -396,69 +329,63 @@ mlog& mlog::operator<<(const std::string& s)
 mlog& mlog::operator<<(std::ostream& (std::ostream&))
 {
     check_size(1);
-    buf[cur_size++] = '\n';
+    buf.tail->buf[(buf.tail->size)++] = '\n';
     return *this;
 }
 
-mlog& mlog::operator<<(const mtime_date& d)
+mlog& mlog::operator<<(const mtime_duration& t)
 {
-    if(d == cur_day_date)
-        (*this) << cur_day_date_str;
-    else
-        (*this) << d.year << '-' << print2chars(d.month) << '-' << print2chars(d.day);
-    return *this;
-}
-
-mlog& mlog::operator<<(const mtime_time_duration& t)
-{
-    //MPROFILE("Pool_time_durat")
-    (*this) << print2chars(t.hours) << ':' << print2chars(t.minutes) << ':' << print2chars(t.seconds);
-    (*this) << "." << mlog_fixed<6>(t.nanos / 1000);
+    *this << print2chars(t.hours) << ':' << print2chars(t.minutes) << ':' << print2chars(t.seconds)
+        << "." << mlog_fixed<6>(t.nanos / 1000);
     return *this;
 }
 
 mlog& mlog::operator<<(const mtime_parsed& p)
 {
-    (*this) << static_cast<const mtime_date&>(p) << ' ' << static_cast<const mtime_time_duration&>(p);
+    *this << static_cast<const mtime_date&>(p) << ' ' << static_cast<const mtime_duration&>(p);
     return *this;
 }
 
 mlog& mlog::operator<<(const mtime& p)
 {
-    mtime_parsed mp;
-    parse_mtime(p, mp);
-    (*this) << mp;
+    *this << parse_mtime(p);
     return *this;
 }
 
 mlog& mlog::operator<<(const std::exception& e)
 {
-    extra_param |= critical;
-    return (*this) << "exception: " << _str_holder(e.what());
+    buf.extra_param |= critical;
+    *this << "exception: ";
+    const char* s = e.what();
+    write(s, strlen(s));
+    return *this;
 }
 
 void mlog::check_size(uint32_t delta)
 {
-    if(cur_size + delta > buf_size){
+    if(buf.tail->size + delta > buf_size)
+    {
         if(delta > buf_size)
             throw std::runtime_error("mlog() max size exceed");
-        if(!blocks)
-            blocks = new std::vector<std::pair<char*, uint32_t> >(1, std::pair<char*, uint32_t>(buf, cur_size));
-        else
-            blocks->push_back(std::pair<char*, uint32_t>(buf, cur_size));
-        cur_size = 0;
-        buf = 0;
-        buf = (char*)log.pool.malloc();
+        node* tail = buf.tail;
+        buf.tail = log.alloc();
+        tail->next = buf.tail;
     }
+}
+
+mlog& mlog::operator<<(double d)
+{
+    check_size(30);
+    buf.tail->size += my_cvt::dtoa(&buf.tail->buf[buf.tail->size], d);
+    return *this;
 }
 
 void MlogTestThread(size_t thread_id, size_t log_count)
 {
     mlog() << "thread " << thread_id << " started";
     MPROFILE("MlogThread")
-    for(size_t i = 0; i != log_count; ++i){
-        //MPROFILE("MlogLoop")
-        //MPROFILE_THREAD("MlogLoop_thread")
+    for(size_t i = 0; i != log_count; ++i)
+    {
         mlog() << "MlogTestThread_" << thread_id << ", loop:" << i;
     }
 }
@@ -471,7 +398,7 @@ namespace my_cvt
 void log_test(size_t thread_count, size_t log_count)
 {
     my_cvt::test_itoa();
-    simple_log::instance().Params() = mlog::always_cout;
+    simple_log::instance().params = mlog::always_cout;
     mlog() << "mlog test for " << thread_count << " threads and " << log_count << " loops";
     MPROFILE("MlogTest");
     {
@@ -484,8 +411,9 @@ void log_test(size_t thread_count, size_t log_count)
     mlog() << "mlog test successfully ended";
 }
 
-simple_log* simple_log::my_log = 0;
+simple_log* simple_log::log = 0;
 static const uint32_t trash_t1 = 3, trash_t2 = 9;
+
 void set_affinity_thread(uint32_t thrd)
 {
     cpu_set_t cpuset;
@@ -494,7 +422,9 @@ void set_affinity_thread(uint32_t thrd)
     if(pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset))
         mlog(mlog::critical) << "pthread_setaffinity_np() error";
 }
-void set_trash_thread(){
+
+void set_trash_thread()
+{
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(trash_t1, &cpuset);
@@ -502,11 +432,14 @@ void set_trash_thread(){
     if(pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset))
         mlog(mlog::critical) << "pthread_setaffinity_np() error";
 }
-void set_significant_thread(){
+
+void set_significant_thread()
+{
     return;
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
-    for(uint32_t i = 0; i != 11; ++i){
+    for(uint32_t i = 0; i != 11; ++i)
+    {
         if(i != trash_t1 && i != trash_t2)
             CPU_SET(i, &cpuset);
     }
@@ -522,7 +455,9 @@ void log_start_params(int argc, char** argv)
 }
 
 const char binary16[] = "000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F202122232425262728292A2B2C2D2E2F303132333435363738393A3B3C3D3E3F404142434445464748494A4B4C4D4E4F505152535455565758595A5B5C5D5E5F606162636465666768696A6B6C6D6E6F707172737475767778797A7B7C7D7E7F808182838485868788898A8B8C8D8E8F909192939495969798999A9B9C9D9E9FA0A1A2A3A4A5A6A7A8A9AAABACADAEAFB0B1B2B3B4B5B6B7B8B9BABBBCBDBEBFC0C1C2C3C4C5C6C7C8C9CACBCCCDCECFD0D1D2D3D4D5D6D7D8D9DADBDCDDDEDFE0E1E2E3E4E5E6E7E8E9EAEBECEDEEEFF0F1F2F3F4F5F6F7F8F9FAFBFCFDFEFF";
-str_holder itoa_hex(uint8_t ch){
+
+str_holder itoa_hex(uint8_t ch)
+{
     return str_holder(&binary16[ch * 2], 2);
 }
 

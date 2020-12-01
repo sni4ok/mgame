@@ -149,28 +149,28 @@ class lockfree_queue : noncopyable
         return idx % capacity_size;
     }
 
-    //my_mutex mutex;
     void throw_exception(const char* reason, uint32_t status)
     {
-        throw std::runtime_error(es() % name % ":lockfree_queue:" % _str_holder(reason) % ", (" % capacity % "," % pop_cnt % ","
-            % push_cnt % "," % status % ")");
+        throw std::runtime_error(es() % name % ":lockfree_queue:" % _str_holder(reason) % ", (" % capacity % "," % uint64_t(pop_cnt) % ","
+            % uint64_t(push_cnt) % "," % status % ")");
     }
 public:
     lockfree_queue(const std::string& name) : name(name), push_cnt(), pop_cnt()
     {
     }
-    static constexpr uint32_t capacity = capacity_size;
+    static const constexpr uint32_t capacity = capacity_size;
 
     void push(const type& t) {
         push(type(t));
     }
     void push(type&& t) {
-        //my_mutex::scoped_lock lock(mutex);
         node& n = elems[get_idx(push_cnt++)];
         uint32_t status = 0;
         while((!n.status.compare_exchange_strong(status, 1))) {
-            if(status != 3)
-                throw_exception("push() overloaded", status);
+            if(status != 3) {
+                usleep(1);
+                //throw_exception("push() overloaded", status);
+            }
             status = 0;
         }
         n.elem = std::move(t);
@@ -178,8 +178,20 @@ public:
         if(!n.status.compare_exchange_strong(status, 2))
             throw_exception("push() internal error", status);
     }
+    bool push_weak(type t) {
+        node& n = elems[get_idx(push_cnt)];
+        uint32_t status = 0;
+        if((n.status.compare_exchange_weak(status, 1))) {
+            ++push_cnt;
+            n.elem = t;
+            status = 1;
+            if(!n.status.compare_exchange_strong(status, 2))
+                throw_exception("push_weak() internal error", status);
+            return true;
+        }
+        return false;
+    }
     void pop_strong(type& t) {
-        //my_mutex::scoped_lock lock(mutex);
         node& n = elems[get_idx(pop_cnt++)];
         uint32_t status = 2;
         if(!n.status.compare_exchange_strong(status, 3))
@@ -190,7 +202,6 @@ public:
             throw_exception("pop_strong() internal error", status);
     }
     bool pop_weak(type& t) {
-        //my_mutex::scoped_lock lock(mutex);
         node& n = elems[get_idx(pop_cnt)];
         uint32_t status = 2;
         if(n.status.compare_exchange_strong(status, 3)) {
@@ -205,23 +216,27 @@ public:
     }
 };
 
-template<typename ttype, uint32_t pool_size = 16 * 1024>
+template<typename type_t, uint32_t pool_size = 16 * 1024>
 struct fast_alloc
 {
-    typedef ttype type;
+    typedef type_t type;
     lockfree_queue<type*, pool_size> elems;
 
-    fast_alloc(const std::string& name) : elems(name) {
-        for(uint32_t i = 0; i != pool_size; ++i)
+    fast_alloc(const std::string& name, uint32_t pre_alloc = 1) : elems(name) {
+        assert(pre_alloc <= pool_size);
+        for(uint32_t i = 0; i != pre_alloc; ++i)
             elems.push(new type);
     }
     type* alloc() {
         type* p;
-        elems.pop_strong(p);
-        return p;
+        if(!elems.pop_weak(p))
+            return new type;
+        else
+            return p;
     }
     void free(type* m) {
-        elems.push(m);
+        if(!elems.push_weak(m))
+            delete m;
     }
     ~fast_alloc() {
         type* p;
@@ -236,6 +251,7 @@ class alloc_holder
     alloc &a;
     typedef typename alloc::type type;
     type* p;
+
 public:
     alloc_holder(alloc& a) : a(a), p(a.alloc()) {
     }
@@ -264,6 +280,7 @@ struct lockfree_list
         node* next;
         node() : next(){}
     };
+
     lockfree_list() : tail(&root) {
     }
     void push(node* t) {
@@ -281,6 +298,7 @@ struct lockfree_list
             return root.next;
         return prev->next;
     }
+
 private:
     node root;
     std::atomic<node*> tail;

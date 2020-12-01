@@ -10,7 +10,7 @@
 struct lws_i : lws_impl, read_time_impl
 {
     config& cfg;
-    typedef my_basic_string<char, sizeof(message_instr::security) + 1> ticker;
+    typedef my_basic_string<sizeof(message_instr::security) + 1> ticker;
     fmap<ticker, security> securities;
 
     security& get_security(iterator i, iterator ie, ttime_t time)

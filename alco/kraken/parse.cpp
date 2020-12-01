@@ -199,11 +199,11 @@ struct lws_i : sec_id_by_name<lws_impl>
             skip_fixed(it, "}}");
             impl& i = parsers[channel];
             i.security_id = security_id;
-            if(type == "book")
+            if(type == str_holder("book"))
                 i.f = &lws_i::parse_book;
-            else if(type == "trade")
+            else if(type == str_holder("trade"))
                 i.f = &lws_i::parse_trade;
-            else if(type == "spread")
+            else if(type == str_holder("spread"))
                 i.f = &lws_i::parse_spread;
             else
                 throw std::runtime_error(es() % "unsupported type: " % str_holder((iterator)in, len));

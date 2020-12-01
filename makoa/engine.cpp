@@ -17,6 +17,7 @@ struct messages
     messages() : cnt()
     {
     }
+
     message _;
     message m[255];
     uint32_t count;
@@ -28,6 +29,7 @@ struct linked_node : messages
     linked_node() : next()
     {
     }
+
     linked_node* next;
 };
 
@@ -43,9 +45,9 @@ public:
     void push(linked_node* t) //push element in list, always success
     {
         linked_node* expected = tail;
-        while(!tail.compare_exchange_weak(expected, t)) {
+        while(!tail.compare_exchange_weak(expected, t))
             expected = tail;
-        }
+
         expected->next = t;
     }
     linked_node* next(linked_node* prev) //can return nullptr, but next time caller should used latest not nullptr value
@@ -57,7 +59,8 @@ public:
     void release_node(linked_list::type* node)
     {
         uint32_t consumers_left = --(node->cnt);
-        if(!consumers_left){
+        if(!consumers_left)
+        {
             node->next = nullptr;
             this->free(node);
         }
@@ -68,6 +71,7 @@ struct node_free
 {
     linked_node* n;
     linked_list& ll;
+
     node_free(linked_node* n, linked_list& ll) : n(n), ll(ll) 
     {
     }
@@ -76,7 +80,8 @@ struct node_free
         ll.release_node(n);
         n = 0;
     }
-    ~node_free() {
+    ~node_free()
+    {
         try {
             if(n)
                 ll.release_node(n);
@@ -94,6 +99,7 @@ struct actives : noncopyable
         uint32_t security_id;
         ttime_t time; //last parser time for current security_id
         bool disconnected;
+
         bool operator < (const type& r) const {
             return security_id < r.security_id;
         }
@@ -138,14 +144,15 @@ public:
         last_value = &(*it);
         return *last_value;
     }
+
     void on_disconnect();
 };
 
 struct context
 {
     actives acs;
-
     uint32_t buf_delta;
+
     context() : buf_delta()
     {
     }
@@ -169,10 +176,12 @@ struct context
     }
     ~context()
     {
-        try{
+        try
+        {
             acs.on_disconnect();
         }
-        catch(std::exception& e){
+        catch(std::exception& e)
+        {
             mlog() << "~context() " << e;
         }
     }
@@ -189,7 +198,8 @@ class engine::impl : public stack_singleton<engine::impl>
 
     void notify()
     {
-        if(!pooling_mode){
+        if(!pooling_mode)
+        {
             //MPROFILE("notify_lock")
             bool lock = mutex.try_lock();
             cond.notify_all();
@@ -199,7 +209,8 @@ class engine::impl : public stack_singleton<engine::impl>
     }
     void wait_updates()
     {
-        if(!pooling_mode){
+        if(!pooling_mode)
+        {
             //MPROFILE("wait_lock()")
             my_mutex::scoped_lock lock(mutex);
             cond.timed_uwait(lock, 100 * 1000);
@@ -211,6 +222,7 @@ class engine::impl : public stack_singleton<engine::impl>
         linked_list* ll;
         exporter exp;
         linked_list::type *prev, *ptmp;
+
         imple()
         {
         }
@@ -221,7 +233,8 @@ class engine::impl : public stack_singleton<engine::impl>
         {
             bool ret = false;
             ptmp = ll->next(prev);
-            while(ptmp){
+            while(ptmp)
+            {
                 exp.proceed(ptmp->m, ptmp->count);
                 ret = true;
                 if(prev)
@@ -242,16 +255,21 @@ class engine::impl : public stack_singleton<engine::impl>
             }
         }
     };
+
     lockfree_queue<imple*, 50> ies;
 
     void work_thread()
     {
-        try{
+        try
+        {
             imple* i = nullptr;
-            while(can_run) {
+            while(can_run)
+            {
                 bool res = false;
                 ies.pop_weak(i);
-                if(i) {
+
+                if(i)
+                {
                     res = i->proceed();
                     ies.push(i);
                     i = 0;
@@ -262,23 +280,27 @@ class engine::impl : public stack_singleton<engine::impl>
             if(i)
                 ies.push(i);
         }
-        catch(std::exception& e){
+        catch(std::exception& e)
+        {
             mlog(mlog::error) << "exports: " << " " << e;
         }
     }
-    static void log_and_throw_error(const char* data, uint32_t size, const char* reason)
+    static void log_and_throw_error(const char* data, uint32_t size, const std::string& reason)
     {
-        mlog() << "bad message (" << _str_holder(reason) << "!): " << print_binary((const uint8_t*)data, std::min<uint32_t>(32, size));
-        throw std::runtime_error("bad message");
+        mlog() << "bad message (" << reason << "!): " << print_binary((const uint8_t*)data, std::min<uint32_t>(32, size));
+        throw std::runtime_error(reason);
     }
+
 public:
     void loop_one()
     {
         imple* i = nullptr;
-        for(uint32_t c = 0; c != ies.capacity && can_run; ++c) {
+        for(uint32_t c = 0; c != ies.capacity && can_run; ++c)
+        {
             bool res = false;
             ies.pop_weak(i);
-            if(i) {
+            if(i)
+            {
                 res = i->proceed();
                 ies.push(i);
                 i = 0;
@@ -418,7 +440,8 @@ void actives::on_disconnect()
     mlog() << "actives::on_disconnect";
     engine::impl::instance().push_clean(data);
     auto it = data.begin(), ie = data.end();
-    for(; it != ie; ++it) {
+    for(; it != ie; ++it)
+    {
         auto& v = get(it->security_id);
         if(v.disconnected)
             mlog(mlog::warning) << "actives::on_disconnect(), " << it->security_id << " already disconnected";

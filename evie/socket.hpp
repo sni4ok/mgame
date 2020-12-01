@@ -220,3 +220,18 @@ static int my_accept_async(uint32_t port, bool local, bool sync = false,
     return sc.release();
 }
 
+static int my_accept_async(uint32_t port, const std::string& possible_client_ip, bool sync = false,
+    std::string* client_ip_ptr = nullptr, volatile bool* can_run = nullptr, const char* name = "")
+{
+    std::string client_ip;
+    int s = my_accept_async(port, (possible_client_ip == "127.0.0.1"), sync, &client_ip, can_run);
+
+    if(possible_client_ip != "*" && client_ip != possible_client_ip) {
+        close(s);
+        throw std::runtime_error(es() % "socket_sender connected client with ip: " % client_ip % ", possible_ip: " % possible_client_ip);
+    }
+    if(client_ip_ptr)
+        *client_ip_ptr = client_ip;
+    return s;
+}
+
