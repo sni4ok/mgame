@@ -93,6 +93,7 @@ struct mtime_date
 {
     uint16_t year;
     uint8_t month, day;
+
     mtime_date() : year(), month(), day(){
     }
     bool operator==(const mtime_date& r) const {
@@ -104,6 +105,7 @@ struct mtime_duration
 {
     uint8_t hours, minutes, seconds;
     uint32_t nanos;
+
     mtime_duration() : hours(), minutes(), seconds(), nanos() {
     }
     mtime_duration(uint8_t h, uint8_t m, uint8_t s, uint8_t n = 0)

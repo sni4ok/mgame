@@ -191,24 +191,18 @@ void mlog::set_no_cout()
     simple_log::instance().no_cout = true;
 }
 
-simple_log* log_init(const char* file_name, uint32_t params)
-{
-    static simple_log log;
-    simple_log::set_instance(&log);
-    simple_log::instance().init(file_name, params);
-    return &log;
-}
-
-simple_log* log_create(const char* file_name, uint32_t params)
-{
-    std::unique_ptr<simple_log> log(new simple_log());
-    log->init(file_name, params);
-    return log.release();
-}
-
 void log_destroy(simple_log* log)
 {
     delete log;
+}
+
+std::unique_ptr<simple_log, void (*)(simple_log*)> log_init(const char* file_name, uint32_t params, bool set_instance)
+{
+    std::unique_ptr<simple_log, void (*)(simple_log*)> log(new simple_log(), &log_destroy);
+    log->init(file_name, params);
+    if(set_instance)
+        log->set_instance(log.get());
+    return log;
 }
 
 void log_set(simple_log* log)
@@ -309,7 +303,6 @@ void mlog::write_string(const char* it, uint32_t size)
 
 void mlog::write(const char* it, uint32_t size)
 {
-    check_size(size);
     write_string(it, size);
 }
 
@@ -321,8 +314,7 @@ mlog& mlog::operator<<(const str_holder& str)
 
 mlog& mlog::operator<<(const std::string& s)
 {
-    uint32_t sz = s.size();
-    write_string(&s[0], sz);
+    write_string(&s[0], s.size());
     return *this;
 }
 

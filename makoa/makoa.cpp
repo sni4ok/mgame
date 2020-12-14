@@ -42,7 +42,7 @@ int main(int argc, char** argv)
         std::cout << "Usage: ./makoa_server [config file]" << std::endl;
         return 1;
     }
-    log_raii li(argc == 1 ? "makoa_server.log" : get_log_name(argv[1]), mlog::store_tid | mlog::always_cout | mlog::lock_file);
+    auto log = log_init(argc == 1 ? "makoa_server.log" : get_log_name(argv[1]).c_str(), mlog::store_tid | mlog::always_cout | mlog::lock_file);
     profilerinfo pff_info;
     std::string name;
     try {

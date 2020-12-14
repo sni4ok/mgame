@@ -9,6 +9,7 @@
 #include "mtime.hpp"
 
 #include <type_traits>
+#include <memory>
 
 class simple_log;
 
@@ -155,29 +156,12 @@ private:
     data buf;
 };
 
-simple_log* log_init(const char* file_name = 0, uint32_t params = 0);
-simple_log* log_create(const char* file_name, uint32_t params = 0);
-void log_destroy(simple_log* log);
-void log_set(simple_log* sl);
+std::unique_ptr<simple_log, void (*)(simple_log*)> log_init(const char* file_name = 0, uint32_t params = 0, bool set_log_instance = true);
 simple_log* log_get();
+void log_set(simple_log* sl);
 uint32_t& log_params();
 void log_test(size_t thread_count, size_t log_count);
 void set_significant_thread();
 void set_trash_thread();
 void log_start_params(int argc, char** argv);
-
-struct log_raii
-{
-    simple_log* sl;
-
-    log_raii(const std::string& fname, uint32_t params)
-    {
-        sl = log_create(fname.c_str(), params);
-        log_set(sl);
-    }
-    ~log_raii()
-    {
-        log_destroy(sl);
-    }
-};
 

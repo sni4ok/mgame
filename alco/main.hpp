@@ -32,7 +32,7 @@ int parser_main(int argc, char** argv, const std::string& parser_name, void (*pr
         std::cout << "Usage: ./" << parser_name << " [config file]" << std::endl;
         return 1;
     }
-    log_raii li(argc == 1 ? (parser_name + ".log") : get_log_name(argv[1]), mlog::always_cout | mlog::info);
+    auto log = log_init(argc == 1 ? (parser_name + ".log").c_str() : get_log_name(argv[1]).c_str(), mlog::always_cout | mlog::info);
     profilerinfo pff_info;
     try {
         mlog() << parser_name << " started";

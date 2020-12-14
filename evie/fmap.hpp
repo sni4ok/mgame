@@ -6,23 +6,53 @@
 
 #include "vector.hpp"
 
-template<typename key, typename value>
+template<class It, class T, class Pr>
+It lower_bound_simple(It first, It last, const T& val, Pr pred)
+{
+    int64_t count = last - first;
+    while(count > 0)
+    {
+        int64_t step = count / 2;
+        It mid = first + step;
+        if(pred(*mid, val))
+            first = ++mid, count -= step + 1;
+        else
+            count = step;
+    }
+    return first;
+}
+
+template <class It, class T, class Pr>
+It upper_bound_simple(It first, It last, const T& val, Pr pred)
+{
+  int64_t count = last - first;
+  while(count > 0)
+  {
+    int64_t step = count / 2;
+    It mid = first + step;
+    if(!pred(val, *mid))
+        first = ++mid, count -= step + 1;
+    else
+        count = step;
+  }
+  return first;
+}
+
+template<typename key, typename value, typename comp = std::less<key>, template <typename> typename vector = mvector>
 struct fmap
 {
     struct pair
     {
         key first;
         value second;
-        bool operator<(const pair& r) const {
-            return first < r.first;
-        }
     };
 
     typedef key key_type;
     typedef value mapped_type;
-    typedef pair value_type;
-    typedef value_type* iterator;
-    typedef const value_type* const_iterator;
+    typedef vector<pair>::value_type value_type;
+    typedef vector<pair>::iterator iterator;
+    typedef vector<pair>::const_iterator const_iterator;
+    typedef vector<pair>::reverse_iterator reverse_iterator;
 
     fmap() {
     }
@@ -46,80 +76,112 @@ struct fmap
     bool empty() const {
         return data.empty();
     }
-    const value& at(key k) const {
-        value_type v;
-        v.first = k;
-        auto ie = data.end();
-        auto it = std::lower_bound(data.begin(), ie, v);
-        if(unlikely(it == ie || it->first != k))
+    const value& at(const key& k) const {
+        auto it = lower_bound(k);
+        if(unlikely(it == data.end() || it->first != k))
             throw std::runtime_error("fmap::at() error");
         return it->second;
     }
-    value& at(key k) {
-        const fmap* p = this;
-        return const_cast<value&>(p->at(k));
+    value& at(const key& k) {
+        return const_cast<value&>(const_cast<const fmap*>(this)->at(k));
     }
-    template<typename key_t>
-    value& operator[](const key_t& k) {
-        value_type v;
-        v.first = key_type(k);
-        auto ie = data.end();
-        auto it = std::lower_bound(data.begin(), ie, v);
-        if(it == ie || it->first != v.first) {
-            v.second = value();
-            it = data.insert(it, v);
+    value& operator[](const key_type& k) {
+        auto it = lower_bound(k);
+        if(it == data.end() || it->first != k) {
+            it = data.insert(it, value_type());
+            it->first = k;
         }
         return it->second;
     }
-    const value_type* lower_bound(key k) const {
-        value_type v;
-        v.first = k;
-        return std::lower_bound(data.begin(), data.end(), v);
+    template<typename key_t>
+    value& operator[](const key_t& k) {
+        return (*this)[key_type(k)];
     }
-    const value_type* upper_bound(key k) const {
-        value_type v;
-        v.first = k;
-        return std::upper_bound(data.begin(), data.end(), v);
+    const_iterator lower_bound(const key& k) const {
+        return lower_bound_simple(data.begin(), data.end(), k,
+            [](const pair& v, const key_type& k) { return comp()(v.first, k); }
+        );
     }
-    const value_type* find(key k) const {
-        value_type v;
-        v.first = k;
-        auto ie = data.end();
-        auto it = std::lower_bound(data.begin(), ie, v);
-        if(it != ie && it->first == k)
+    iterator lower_bound(const key& k) {
+        return lower_bound_simple(data.begin(), data.end(), k,
+            [](const pair& v, const key_type& k) { return comp()(v.first, k); }
+        );
+    }
+    const_iterator upper_bound(const key& k) const {
+        return upper_bound_simple(data.begin(), data.end(), k,
+            [](const key_type& k, const pair& v) { return comp()(k, v.first); }
+        );
+    }
+    iterator upper_bound(const key& k) {
+        return iterator(const_cast<const fmap*>(this)->upper_bound(k));
+    }
+    const_iterator find(const key& k) const {
+        auto it = lower_bound(k);
+        if(it != data.end() && it->first == k)
             return it;
-        return ie;
-    }
-    value_type* find(key k) {
-        return const_cast<value_type*>(const_cast<const fmap*>(this)->find(k));
-    }
-    const value_type* begin() const {
-        return data.begin();
-    }
-    value_type* begin() {
-        return data.begin();
-    }
-    const value_type* end() const {
         return data.end();
     }
-    value_type* end() {
+    iterator find(const key& k) {
+        return iterator(const_cast<const fmap*>(this)->find(k));
+    }
+    const_iterator begin() const {
+        return data.begin();
+    }
+    iterator begin() {
+        return data.begin();
+    }
+    const_iterator end() const {
         return data.end();
+    }
+    iterator end() {
+        return data.end();
+    }
+    reverse_iterator rbegin() const
+    {
+        return data.rbegin();
+    }
+    reverse_iterator rend() const
+    {
+        return data.rend();
     }
     void swap(fmap& r) {
         data.swap(r.data);
     }
-    void swap(mvector<value_type>& r) {
+    void swap(vector<pair>& r) {
         data.swap(r);
     }
     void insert(const pair& v) {
-        iterator it = std::lower_bound(data.begin(), data.end(), v);
-        data.insert(it, v);
+        auto it = lower_bound(v.first);
+        if(it == data.end() || it->first != v.first)
+            data.insert(it, v);
     }
-    void erase(value_type* it) {
+    void insert(const key& k, const value_type& v) {
+        auto it = lower_bound(k);
+        if(it == data.end() || it->first != k)
+            it = data.insert(it, v);
+    }
+    void erase(const key& k) {
+        iterator it = find(k);
         data.erase(it);
+    }
+    iterator erase(const_iterator it) {
+        data.erase(iterator(it));
+        return iterator(it);
+    }
+    void erase(const_iterator from, const_iterator to) {
+        data.erase(iterator(from), iterator(to));
+    }
+    void reserve(uint32_t new_capacity) {
+        data.reserve(new_capacity);
     }
 
 private:
-    mvector<value_type> data;
+    vector<pair> data;
+};
+
+template<typename key, typename value>
+struct pmap : fmap<key, value, std::less<key>, pvector>
+{
+    using fmap<key, value, std::less<key>, pvector>::fmap;
 };
 
