@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "mlog.hpp"
 #include "time.hpp"
 #include "string.hpp"
 
@@ -113,6 +114,7 @@ struct read_time_impl
 {
     my_basic_string<11> cur_date;
     uint64_t cur_date_time;
+
     template<uint32_t frac_size>
     ttime_t read_time(const char* &it);
 };

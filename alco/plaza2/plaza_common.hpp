@@ -85,7 +85,7 @@ mlog& operator<<(mlog& ml, const cg_decimal<m, e>& d)
 
 inline mlog& operator<<(mlog& ml, const cg_time_t& t)
 {
-    mtime_parsed p;
+    time_parsed p;
     p.year = t.year;
     p.month = t.month;
     p.day = t.day;
@@ -266,15 +266,15 @@ struct heartbeat_check
 {
     int64_t min_delta_ms;
     uint32_t possible_delay_ms;
+
     heartbeat_check(uint32_t possible_delay_ms)
     : min_delta_ms(10000000), possible_delay_ms(possible_delay_ms)
     {
     }
     bool proceed(const cg_time_t& server_time)
     {
-        mtime ct = cur_mtime();
-        int64_t day_ms = ((ct.total_sec() - ct.day_seconds()) * 1000) + ct.ms();
-        int64_t server_ms = server_time.hour * 3600 * 1000 + server_time.minute * 60 * 1000 + server_time.second * 1000 + server_time.msec;
+        int64_t day_ms = get_time_duration(cur_mtime()).total_ns() / 1000000;
+        int64_t server_ms = (server_time.hour * 3600 + server_time.minute * 60 + server_time.second) * 1000 + server_time.msec;
         int64_t delta_ms = day_ms - server_ms;
         min_delta_ms++;
         //Forts somethimes change time by hand for 5 or 42 seconds at a time

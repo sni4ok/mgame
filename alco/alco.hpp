@@ -23,7 +23,7 @@ struct security
         mb.level_id = price.value;
         mb.price = price;
         mb.count = count;
-        _.t.time = get_cur_ttime(); //get_export_mtime
+        _.t.time = cur_ttime(); //get_export_mtime
         e.proceed((message*)(&mb), 1);
     }
     void proceed_trade(exporter& e, uint32_t direction, price_t price, count_t count, ttime_t etime, ttime_t time)
@@ -33,12 +33,12 @@ struct security
         mt.direction = direction;
         mt.price = price;
         mt.count = count;
-        mb.time = get_cur_ttime(); //get_export_mtime
+        mb.time = cur_ttime(); //get_export_mtime
         e.proceed((message*)(&mt), 1);
     }
     void proceed_clean(exporter& e)
     {
-        mc.time = get_cur_ttime();
+        mc.time = cur_ttime();
         mt.time = ttime_t(); //get_export_mtime
         e.proceed((message*)(&mc), 1);
     }
@@ -51,7 +51,7 @@ struct security
     void proceed_ping(exporter& e, ttime_t etime)
     {
         mp.etime = etime;
-        mp.time = get_cur_ttime();
+        mp.time = cur_ttime();
         mi.time = ttime_t(); //get_export_mtime
         e.proceed((message*)(&mp), 1);
     }
@@ -85,7 +85,7 @@ struct security
         std::copy(ticker.begin(), ticker.end(), &mi.security[0]);
 
         mi.security_id = calc_crc(mi);
-        mi.time = get_cur_ttime();
+        mi.time = cur_ttime();
 
         mb.security_id = mi.security_id;
         mt.security_id = mi.security_id;

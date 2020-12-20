@@ -325,22 +325,22 @@ mlog& mlog::operator<<(std::ostream& (std::ostream&))
     return *this;
 }
 
-mlog& mlog::operator<<(const mtime_duration& t)
+mlog& mlog::operator<<(const time_duration& t)
 {
     *this << print2chars(t.hours) << ':' << print2chars(t.minutes) << ':' << print2chars(t.seconds)
         << "." << mlog_fixed<6>(t.nanos / 1000);
     return *this;
 }
 
-mlog& mlog::operator<<(const mtime_parsed& p)
+mlog& mlog::operator<<(const time_parsed& p)
 {
-    *this << static_cast<const mtime_date&>(p) << ' ' << static_cast<const mtime_duration&>(p);
+    *this << p.date() << ' ' << p.duration();
     return *this;
 }
 
-mlog& mlog::operator<<(const mtime& p)
+mlog& mlog::operator<<(const ttime_t& p)
 {
-    *this << parse_mtime(p);
+    *this << parse_time(p);
     return *this;
 }
 

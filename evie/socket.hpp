@@ -224,7 +224,7 @@ static int my_accept_async(uint32_t port, const std::string& possible_client_ip,
     std::string* client_ip_ptr = nullptr, volatile bool* can_run = nullptr, const char* name = "")
 {
     std::string client_ip;
-    int s = my_accept_async(port, (possible_client_ip == "127.0.0.1"), sync, &client_ip, can_run);
+    int s = my_accept_async(port, (possible_client_ip == "127.0.0.1"), sync, &client_ip, can_run, name);
 
     if(possible_client_ip != "*" && client_ip != possible_client_ip) {
         close(s);

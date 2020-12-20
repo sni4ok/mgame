@@ -11,7 +11,7 @@
 
 void set_export_mtime(message* m)
 {
-    (m - 1)->t.time = get_cur_ttime();
+    (m - 1)->t.time = cur_ttime();
 }
 
 inline void init_smc(void* ptr)

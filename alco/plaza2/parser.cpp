@@ -26,7 +26,7 @@ struct parser : emessages, stack_singleton<parser>
     ttime_t ptime;
     void set_msg_begin()
     {
-        ptime = get_cur_ttime();
+        ptime = cur_ttime();
     }
     void set_msg_commit()
     {
@@ -49,18 +49,18 @@ struct parser : emessages, stack_singleton<parser>
     
     void proceed_ping(const cg_time_t& server_time)
     {
-        int64_t server_ms = server_time.hour * 3600 * 1000 + server_time.minute * 60 * 1000 + server_time.second * 1000 + server_time.msec;
-        uint64_t ct = time(NULL) + cur_utc_time * 3600;
+        int64_t server_ms = (server_time.hour * 3600 + server_time.minute * 60 + server_time.second) * 1000 + server_time.msec;
+        uint64_t ct = time(NULL) + cur_utc_time_delta / ttime_t::frac;
         ttime_t etime;
         etime.value = (ct - ct % (3600 * 24)) * ttime_t::frac + server_ms * (ttime_t::frac / 1000);
-        ping(etime, get_cur_ttime()); 
+        ping(etime, cur_ttime());
     }
     void init_tickers(volatile bool& can_run, parser::tickers_type& ft)
     {
         if(!conn.cli)
             conn.connect(can_run);
         for(auto& v: ft)
-            v.second.proceed_instr(e, get_cur_ttime());
+            v.second.proceed_instr(e, cur_ttime());
         tickers = ft;
     }
     void init_tickers(volatile bool& can_run)

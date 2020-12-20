@@ -212,7 +212,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     }
     void proceed(lws* wsi, void* in, size_t len)
     {
-        ttime_t time = get_cur_ttime();
+        ttime_t time = cur_ttime();
         str_holder str = zlib.decompress(in, len);
         if(config::instance().log_lws)
             mlog() << "lws proceed: " << str;

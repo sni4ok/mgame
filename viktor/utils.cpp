@@ -35,6 +35,7 @@ void test_io(type c)
     str << c;
     type v = read_decimal<type>(str.begin(), str.end());
     assert(v == c);
+    my_unused(v);
 }
 
 void test_impl(const char* a1, const char* a2)

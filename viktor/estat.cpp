@@ -147,7 +147,7 @@ namespace {
                 ttime_t mtime = get_export_mtime(mes);
                 for(uint32_t i = 0; i != count; ++i, ++mes) {
                     const message& m = *mes;
-                    ttime_t ctime = get_cur_ttime();
+                    ttime_t ctime = cur_ttime();
                     if(m.id == msg_book)
                         mb.add(m.mb.etime, m.mb.time, mtime, ctime);
                     else if(m.id == msg_trade)

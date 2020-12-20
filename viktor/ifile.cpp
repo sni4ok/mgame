@@ -308,7 +308,7 @@ struct ifile
                         return ret;
                     else {
                         usleep(10 * 1000);
-                        ping.time = get_cur_ttime();
+                        ping.time = cur_ttime();
                         if(ping.time > main_file.tt)
                             return ret;
                         memcpy(buf, &ping, message_size);
@@ -343,7 +343,7 @@ void* ifile_create(const char* params)
     if(p.size() >= 2)
         tf = parse_time(p[1]);
     else
-        tf = get_cur_ttime();
+        tf = cur_ttime();
 
     if(p.size() == 3)
         tt = parse_time(p[2]);

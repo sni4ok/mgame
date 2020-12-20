@@ -40,7 +40,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         book("\"book\",\"chanId\":"),
         symbol("\"symbol\":\""),
         event("\"event\":"),
-        ping(uint64_t(cfg.ping) * ttime_t::frac), ping_t(get_cur_ttime())
+        ping(uint64_t(cfg.ping) * ttime_t::frac), ping_t(cur_ttime())
     {
         prec_R0 = (cfg.precision == "R0");
         for(auto& v: cfg.tickers) {
@@ -155,7 +155,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     }
     void proceed(lws* wsi, void* in, size_t len)
     {
-        ttime_t time = get_cur_ttime();
+        ttime_t time = cur_ttime();
         if(cfg.log_lws)
             mlog() << "lws proceed: " << str_holder((const char*)in, len);
         iterator it = (iterator)in, ie = it + len;

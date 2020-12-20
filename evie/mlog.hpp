@@ -116,10 +116,10 @@ struct mlog
     mlog& operator<<(const std::string& s);
     mlog& operator<<(const std::exception& e);
     mlog& operator<<(std::ostream& (std::ostream&));
-    mlog& operator<<(const mtime_date& d);
-    mlog& operator<<(const mtime_duration& t);
-    mlog& operator<<(const mtime_parsed& p);
-    mlog& operator<<(const mtime& p);
+    mlog& operator<<(const date& d);
+    mlog& operator<<(const time_duration& t);
+    mlog& operator<<(const time_parsed& p);
+    mlog& operator<<(const ttime_t& p);
     mlog& operator<<(double d);
     static void set_no_cout();
 

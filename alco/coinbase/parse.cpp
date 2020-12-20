@@ -40,7 +40,7 @@ struct lws_i : lws_impl, read_time_impl
     }
     void proceed(lws*, void* in, size_t len)
     {
-        ttime_t time = get_cur_ttime();
+        ttime_t time = cur_ttime();
         if(cfg.log_lws)
             mlog() << "lws proceed: " << str_holder((const char*)in, len);
         iterator it = (iterator)in, ie = it + len;

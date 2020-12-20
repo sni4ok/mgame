@@ -152,7 +152,8 @@ void import_mmap_cp_start(void* imc, void* params)
         }
         initialized = (wc && rc == 1);
         if(!initialized) {
-            mtime t = cur_utc_mtime();
+            timespec t;
+            clock_gettime(CLOCK_REALTIME, &t);
             t.tv_sec += 1;
             pthread_cond_timedwait(&(s->condition), &(s->mutex), &t);
         }

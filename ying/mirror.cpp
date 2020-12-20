@@ -51,14 +51,6 @@ char get_direction(uint32_t direction)
     throw std::runtime_error(es() % "bad direction: " % direction);
 }
 
-int64_t operator-(ttime_t l, ttime_t r)
-{
-    if(l.value > r.value)
-        return int64_t(l.value - r.value);
-    else
-        return -int64_t(r.value - l.value);
-}
-
 struct print_dt
 {
     int64_t value;
@@ -272,14 +264,14 @@ struct mirror::impl
                 set_instrument(m.mi);
             if(m.id == msg_trade) {
                 trades.push_back(m.mt);
-                ttime_t ct = get_cur_ttime();
+                ttime_t ct = cur_ttime();
                 dE = ct - m.mt.etime;
                 dP = ct - m.mt.time;
             }
             else {
                 ob.proceed(m);
                 if(m.id == msg_book)
-                    dP = get_cur_ttime() - m.mb.time;
+                    dP = cur_ttime() - m.mb.time;
             }
         }
     }
