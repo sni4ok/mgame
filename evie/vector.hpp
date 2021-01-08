@@ -25,15 +25,15 @@ public:
     }
     mvector(const type* from, const type* to): buf(), size_(), capacity_() {
         resize(to - from);
-        memmove(&buf[0], from, (to - from) * sizeof(type));
+        memmove((void*)&buf[0], from, (to - from) * sizeof(type));
     }
     mvector(const mvector& r) : buf(), size_(), capacity_() {
         resize(r.size());
-        memmove(&buf[0], &r.buf[0], (r.size()) * sizeof(type));
+        memmove((void*)&buf[0], &r.buf[0], (r.size()) * sizeof(type));
     }
     mvector& operator=(const mvector& r) {
         resize(r.size());
-        memmove(&buf[0], &r.buf[0], (r.size()) * sizeof(type));
+        memmove((void*)&buf[0], &r.buf[0], (r.size()) * sizeof(type));
         return *this;
     }
     void resize(uint32_t new_size) {
@@ -44,7 +44,7 @@ public:
         if(new_size <= capacity_)
             size_ = new_size;
         else {
-            void *new_ptr = realloc(buf, new_size * sizeof(type));
+            void *new_ptr = realloc((void*)buf, new_size * sizeof(type));
             if(!new_ptr)
                 throw std::bad_alloc();
             buf = (type*)new_ptr;
@@ -60,7 +60,7 @@ public:
     void reserve(uint32_t new_capacity) {
         if(new_capacity <= capacity_)
             return;
-        void *new_ptr = realloc(buf, new_capacity * sizeof(type));
+        void *new_ptr = realloc((void*)buf, new_capacity * sizeof(type));
         if(!new_ptr)
             throw std::bad_alloc();
         buf = (type*)new_ptr;
@@ -142,7 +142,7 @@ public:
             reserve(capacity_ ? capacity_ * 2 : 32);
             it = &buf[pos];
         }
-        memmove(it + 1, it, (end() - it) * sizeof(type));
+        memmove((void*)(it + 1), it, (end() - it) * sizeof(type));
         *it = v;
         ++size_;
         return it;
@@ -150,7 +150,7 @@ public:
     void insert(const type* from, const type* to) {
         uint32_t size = size_;
         resize(size_ + (to - from));
-        memmove(&buf[size], from, (to - from) * sizeof(type));
+        memmove((void*)&buf[size], from, (to - from) * sizeof(type));
     }
     void push_back(const type& v) {
         if(size_ == capacity_)
@@ -159,11 +159,11 @@ public:
         ++size_;
     }
     void erase(iterator it) {
-        memmove(it, it + 1, ((end() - it) - 1) * sizeof(type));
+        memmove((void*)it, it + 1, ((end() - it) - 1) * sizeof(type));
         --size_;
     }
     void erase(iterator from, iterator to) {
-        memmove(from, to, (end() - to) * sizeof(type));
+        memmove((void*)from, to, (end() - to) * sizeof(type));
         size_ -= to - from;
     }
 };

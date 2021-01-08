@@ -8,7 +8,7 @@
 
 #include <sstream>
 
-static std::string join_tickers(std::vector<std::string> tickers, bool quotes = true)
+inline std::string join_tickers(std::vector<std::string> tickers, bool quotes = true)
 {
     std::stringstream s;
     for(uint32_t i = 0; i != tickers.size(); ++i) {

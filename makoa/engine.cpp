@@ -164,7 +164,7 @@ struct context
     {
         auto& m = acs.get(security_id);
         if(unlikely(m.time > time))
-            throw std::runtime_error(es() % "context::check() m.time: " % m.time % " > time: " % time);
+            throw std::runtime_error(es() % "context::check() m.time: " % m.time.value % " > time: " % time.value);
         m.time = time;
         return m;
     }

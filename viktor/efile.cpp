@@ -89,22 +89,22 @@ struct efile
     void write_csv(const message_book& m)
     {
         bs << "b," <<  m.security_id << ',' << m.level_id << "," << m.price << ',' << m.count
-            << ',' << m.etime << ',' << m.time << '\n';
+            << ',' << m.etime.value << ',' << m.time.value << '\n';
     }
     void write_csv(const message_trade& m)
     {
         bs << "t," <<  m.security_id << ',' << m.direction << ',' << m.price << ',' << m.count
-            << ',' << m.etime << ',' << m.time << '\n';
+            << ',' << m.etime.value << ',' << m.time.value << '\n';
     }
     void write_csv(const message_clean& m)
     {
         bs << "c," <<  m.security_id << ',' << m.source
-            << ',' << m.etime << ',' << m.time << '\n';
+            << ',' << m.etime.value << ',' << m.time.value << '\n';
     }
     void write_csv(const message_instr& m)
     {
         bs << "i," <<  m.exchange_id << ',' << m.feed_id << "," << m.security
-            << ',' << m.security_id << ',' << m.etime << ',' << m.time << '\n';
+            << ',' << m.security_id << ',' << m.etime.value << ',' << m.time.value << '\n';
     }
     void proceed_csv(const message* m, uint32_t count)
     {

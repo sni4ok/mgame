@@ -153,7 +153,7 @@ struct mysql
     {
         if(bso.size() != so)
             bso << ',';
-        bso << '(' << security_id << ",NULL,0,0," << time << ')';
+        bso << '(' << security_id << ",NULL,0,0," << time.value << ')';
     }
     void proceed(const message* m, uint32_t count)
     {
@@ -162,13 +162,13 @@ struct mysql
                 message_book &v = (message_book&)*m;
                 if(bso.size() != so)
                     bso << ',';
-                bso << '(' << v.security_id << ',' << v.price << ',' << v.count << ',' << v.etime << ',' << v.time << ')';
+                bso << '(' << v.security_id << ',' << v.price << ',' << v.count << ',' << v.etime.value << ',' << v.time.value << ')';
             }
             else if(m->id == msg_trade) {
                 message_trade &v = (message_trade&)*m;
                 if(bst.size() != st)
                     bst << ',';
-                bst << '(' << v.security_id << ',' << v.direction << ',' << v.price << ',' << v.count << ',' << v.etime << ',' << v.time << ')';
+                bst << '(' << v.security_id << ',' << v.direction << ',' << v.price << ',' << v.count << ',' << v.etime.value << ',' << v.time.value << ')';
             }
             else if(m->id == msg_clean) {
                 message_clean &v = (message_clean&)*m;
@@ -178,7 +178,7 @@ struct mysql
                 message_instr &v = (message_instr&)*m;
                 if(bsi.size() != si)
                     bsi << ',';
-                bsi << "(\'" << v.exchange_id << "\',\'" << v.feed_id << "\',\'" << v.security << "\'," << v.security_id << ',' << v.time << ')';
+                bsi << "(\'" << v.exchange_id << "\',\'" << v.feed_id << "\',\'" << v.security << "\'," << v.security_id << ',' << v.time.value << ')';
                 clean(v.security_id, v.time);
             }
         }

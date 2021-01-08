@@ -9,19 +9,6 @@
 #include "evie/time.hpp"
 #include "evie/utils.hpp"
 
-template<typename stream, typename decimal>
-void write_decimal(stream& s, const decimal& d)
-{
-    int64_t int_ = d.value / decimal::frac;
-    int32_t float_ = d.value % decimal::frac;
-    if(d.value < 0) {
-        s << '-';
-        int_ = -int_;
-        float_ = -float_;
-    }
-    s << int_ << "." << mlog_fixed<-decimal::exponent>(float_);
-}
-
 template<typename stream>
 stream& operator<<(stream& s, const price_t& p)
 {
@@ -38,7 +25,7 @@ stream& operator<<(stream& s, const count_t& c)
 
 struct brief_time : ttime_t
 {
-    brief_time(ttime_t time) : ttime_t(time)
+    explicit brief_time(ttime_t time) : ttime_t(time)
     {
     }
 };
@@ -151,61 +138,6 @@ inline bool operator!=(count_t l, count_t r)
 inline bool operator==(count_t l, count_t r)
 {
     return l.value == r.value;
-}
-
-inline uint64_t get_decimal_pow(uint32_t e)
-{
-    if(e > 19)
-        return std::numeric_limits<int64_t>::max();
-    else
-        return my_cvt::decimal_pow[e];
-}
-
-template<typename decimal>
-inline decimal read_decimal(const char* it, const char* ie)
-{
-    bool minus = (*it == '-');
-    if(minus)
-        ++it;
-    const char* p = std::find(it, ie, '.');
-    const char* E = std::find_if((p == ie ? it : p + 1), ie,
-            [](char c) {
-                return c == 'E' || c == 'e';
-                });
-
-    decimal ret;
-    ret.value = my_cvt::atoi<int64_t>(it, std::min(p, E) - it);
-    int digits = 0;
-    int64_t _float = 0;
-
-    if(p != ie) {
-        ++p;
-        digits = E - p;
-        _float = my_cvt::atoi<int64_t>(p, digits);
-    }
-    int e = 0;
-    if(E != ie) {
-        ++E;
-        e = my_cvt::atoi<int>(E, ie - E);
-    }
-
-    int em = -decimal::exponent + e;
-    int fm = -decimal::exponent - digits + e;
-
-    if(em < 0)
-        ret.value /= get_decimal_pow(-em);
-    else
-        ret.value *= get_decimal_pow(em);
-
-    if(fm < 0)
-        _float /= get_decimal_pow(-fm);
-    else
-        _float *= get_decimal_pow(fm);
-    ret.value += _float;
-
-    if(minus)
-        ret.value = -ret.value;
-    return ret;
 }
 
 inline price_t read_price(const char* it, const char* ie)

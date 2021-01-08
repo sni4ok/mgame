@@ -79,7 +79,7 @@ struct cg_decimal
 template<uint32_t m, uint32_t e>
 mlog& operator<<(mlog& ml, const cg_decimal<m, e>& d)
 {
-    ml << *d;
+    write_decimal(ml, *d);
     return ml;
 }
 

@@ -9,7 +9,7 @@ IF("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 ENDIF("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror=uninitialized -Wno-unused-function -march=native -std=c++2a")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -march=native -std=c++2a")
 
 SUBDIRS(evie makoa ying tyra viktor alco)
 

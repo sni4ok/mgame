@@ -99,7 +99,7 @@ struct time_duration
 
     time_duration() : hours(), minutes(), seconds(), nanos() {
     }
-    time_duration(uint8_t h, uint8_t m, uint8_t s, uint8_t n = 0)
+    time_duration(uint8_t h, uint8_t m, uint8_t s, uint32_t n = 0)
         : hours(h), minutes(m), seconds(s), nanos(n)
     {
     }

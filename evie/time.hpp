@@ -41,10 +41,18 @@ inline bool operator<(ttime_t l, ttime_t r)
     return l.value < r.value;
 }
 
-template<typename stream>
-stream& operator<<(stream& s, const ttime_t& t)
+inline bool operator<=(ttime_t l, ttime_t r)
 {
-    s << t.value;
-    return s;
+    return l.value <= r.value;
+}
+
+inline bool operator!=(ttime_t l, ttime_t r)
+{
+    return l.value != r.value;
+}
+
+inline bool operator==(ttime_t l, ttime_t r)
+{
+    return l.value == r.value;
 }
 

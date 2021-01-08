@@ -79,7 +79,7 @@ std::vector<type> get_config_params(const buf& cfg, const std::string& tag)
     return ret;
 }
 
-static std::string get_log_name(const std::string& fname)
+inline std::string get_log_name(const std::string& fname)
 {
     //a.conf, ../a.conf, ~/a.conf
     auto ib = fname.begin(), ie5 = ib + (fname.size() - 5);
@@ -93,7 +93,7 @@ static std::string get_log_name(const std::string& fname)
     return std::string(it, ie5) + ".log";
 }
 
-static void print_init(int argc, char** argv)
+inline void print_init(int argc, char** argv)
 {
     mlog l;
     for(int i = 0; i != argc; ++i) {

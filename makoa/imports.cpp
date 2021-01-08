@@ -6,11 +6,15 @@
 #include "imports.hpp"
 
 #include "evie/socket.hpp"
+#include "evie/profiler.hpp"
 
 #include <map>
 #include <atomic>
 
+#include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
+#include <poll.h>
 
 void* import_context_create(void* params);
 str_holder import_alloc_buffer(void* ctx);

@@ -7,6 +7,8 @@
 #include "evie/socket.hpp"
 #include "evie/time.hpp"
 
+#include <unistd.h>
+
 tyra::tyra(const std::string& host) : send_from_call(), send_from_buffer(), bf(buf), bt(buf + sizeof(buf)), c(buf), e(buf) 
 {
     mlog() << "tyra() " << host;

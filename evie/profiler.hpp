@@ -14,8 +14,7 @@
 #include <unistd.h>
 
 #ifndef MPROFILE
-#define MPROFILE(id) mprofiler profile_me ## __LINE__ (id, false);
-#define MPROFILE_THREAD(id) mprofiler profile_me_thread(id, true);
+#define MPROFILE(id) mprofiler profile_me ## __LINE__ (id);
 #endif
 
 static_assert(RUSAGE_THREAD, "rusage_thread");
@@ -46,7 +45,8 @@ class profilerinfo : public stack_singleton<profilerinfo>
             return;
         mlog log(param);
         log << "profiler: " << std::endl;
-        for(auto& v: data) {
+        for(auto& v: data)
+        {
             const info &i = v.second;
             uint64_t time_av = i.time / i.count;
             log << _str_holder(v.first) << ": average time: ";
@@ -70,6 +70,7 @@ public:
     }
     void add_info(const char* id, uint64_t time)
     {
+        time /= 100;
         if(!time)
             time = 1;
         my_mutex::scoped_lock lock(mutex);
@@ -113,57 +114,23 @@ public:
     }
 };
 
-class mprofiler_impl
+struct mprofiler : noncopyable
 {
-    bool cur_thread;
     const char* id;
-    uint64_t time; //in 100ns
-    mprofiler_impl(const mprofiler_impl&) = delete;
+    ttime_t time;
 
-public:
-    static void get_process_time(uint64_t& d_time) {
-        timeval val = timeval();
-        gettimeofday(&val, 0);
-        d_time = (uint64_t(val.tv_sec) * 1000000 + uint64_t(val.tv_usec)) * 10;
+    mprofiler(const char* id) : id(id), time(cur_ttime())
+    {
     }
-    static void get_thread_time(uint64_t& r_time) {
-        uint64_t user = 0, sys = 0;
-        rusage rs = rusage();
-        getrusage(RUSAGE_THREAD, &rs);
-        user = uint64_t(rs.ru_utime.tv_sec) * 1000000 + uint64_t(rs.ru_utime.tv_usec);
-        sys = uint64_t(rs.ru_stime.tv_sec) * 1000000 + uint64_t(rs.ru_stime.tv_usec);
-        r_time = (user + sys) * 10;
-    }
-    mprofiler_impl() {
-    }
-    void start(const char* id, bool cur_thread){
-        this->cur_thread = cur_thread;
-        this->id = id;
-        time = 0;
-        cur_thread ? get_thread_time(time) : get_process_time(time);
-    }
-    void stop() {
-        if(time) {
-            uint64_t time_to;
-            cur_thread ? get_thread_time(time_to) : get_process_time(time_to);
-            if(time_to){
-                uint64_t md = time_to > time ? time_to - time : 0;
-                profilerinfo::instance().add_info(id, md);
-            }
+    ~mprofiler()
+    {
+        try
+        {
+            int64_t dt = cur_ttime() - time;
+            profilerinfo::instance().add_info(id, dt);
         }
-    }
-};
-
-struct mprofiler : mprofiler_impl
-{
-    mprofiler(const char* id, bool cur_thread) {
-        start(id, cur_thread);
-    }
-    ~mprofiler() {
-        try {
-            stop();
-        }
-        catch(...) {
+        catch(...)
+        {
         }
     }
 };

@@ -31,7 +31,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         sub << "],\"id\":1}";
         subscribes.push_back(sub.str());
     }
-    void proceed(lws* wsi, void* in, size_t len)
+    void proceed(lws*, void* in, size_t len)
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)

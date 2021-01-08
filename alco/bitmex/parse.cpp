@@ -10,11 +10,11 @@
 struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
 {
     config& cfg;
-
     str_holder orders_table, trades_table;
+    ttime_t etime;
 
-    lws_i() : cfg(config::instance()), orders_table(cfg.orders_table.c_str(), cfg.orders_table.size()),
-    trades_table("trade")
+    lws_i() : cfg(config::instance()), orders_table(cfg.orders_table.c_str(),
+        cfg.orders_table.size()), trades_table("trade"), etime()
     {
         std::string sb = "{\"op\":\"subscribe\",\"args\":\"";
         std::string se = "\"}";
@@ -51,8 +51,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
         skip_fixed(it, "]");
     }
 
-    ttime_t etime = ttime_t();
-    void proceed(lws* wsi, void* in, size_t len)
+    void proceed(lws*, void* in, size_t len)
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
