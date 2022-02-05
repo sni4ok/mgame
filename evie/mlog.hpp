@@ -15,8 +15,9 @@ class simple_log;
 
 static const str_holder mlog_fixed_str[] =
 {
-   str_holder(""), str_holder("0"), str_holder("00"), str_holder("000"), str_holder("0000"),
-   str_holder("00000"), str_holder("000000"), str_holder("0000000"), str_holder("00000000")
+   str_holder(""), str_holder("0"), str_holder("00"),
+   str_holder("000"), str_holder("0000"), str_holder("00000"),
+   str_holder("000000"), str_holder("0000000"), str_holder("00000000")
 };
 
 template<uint32_t sz>
