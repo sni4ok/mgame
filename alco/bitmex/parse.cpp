@@ -99,15 +99,20 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                             it = ne;
                         }
                         price_t p = price_t();
-                        if(*it == ',') {
-                            it = ne + 1;
-                            skip_fixed(it, "\"price\":");
-                            ne = std::find(it, ie, '}');
+                        if(skip_if_fixed(it, ",\"price\":"))
+                        {
+                            ne = std::find(it, ie, ',');
                             p = read_price(it, ne);
                             it = ne;
                         }
+                        skip_fixed(it, ",\"timestamp\":\"");
+                        {
+                            etime = read_time<3>(it);
+                            skip_fixed(it, "Z\"");
+                        }
+                        it = std::find(ne, ie, '}');
                         skip_fixed(it, "}");
-                        add_order(security_id, id, p, c, ttime_t(), time);
+                        add_order(security_id, id, p, c, etime, time);
                         if(skip_if_fixed(it, "]}"))
                             break;
                         skip_fixed(it, ",{");
@@ -162,7 +167,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                 for(;;)
                 {
                     skip_fixed(it, "{\"timestamp\":\"");
-                    ttime_t etime = read_time<3>(it);
+                    etime = read_time<3>(it);
                     skip_fixed(it, "Z\",\"symbol\":\"");
                     ne = std::find(it, ie, '\"');
                     uint32_t security_id = get_security_id(it, ne, time);
