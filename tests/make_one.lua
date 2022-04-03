@@ -4,11 +4,11 @@ function main()
     local n = arg[1] - 1
     for i = 0, n do
         local conf = "one/makoa_one_" .. i .. ".conf"
-        local cont = "log_exporter = 0\nport = " .. (10000 + i) .. "\nname = makoa_one_" .. i
+        local cont = "log_exporter = 0\nimport = tyra " .. (10000 + i) .. "\nname = makoa_one_" .. i .. "\nexport_threads = 1\npooling = 0\n"
 		if(i ~= n) then
-            cont = cont .. "\n\nexport = viktor sight localhost:" .. (10001 + i) .. "\n"
+            cont = cont .. "export = viktor sight localhost:" .. (10001 + i) .. "\n"
         else
-			cont = cont .. "\n\n#BTCUSD with empty feed\nexport = ying 3842312473 50\n"
+			cont = cont .. "export = ying $0\n"
 		end
 
         io.open(conf, "w+") : write(cont) : close()
@@ -20,10 +20,12 @@ function main()
             sh = sh .. "./makoa_server " .. conf .. " &\nsleep 0.1\n"
         else
             io.open("run_oneY.sh", "w+") : write("./makoa_server " .. conf .. "\n") : close()
+            os.execute("chmod +x run_oneY.sh")
         end
     end
     sh = sh .. "./bitfinex one/alco_one.conf"
     io.open("run_one.sh", "w+") : write(sh) : close()
+    os.execute("chmod +x run_one.sh")
 end
 
 main()

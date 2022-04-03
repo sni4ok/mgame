@@ -4,6 +4,8 @@
 
 makoa with ying exporter should running in personal console
 
+"bitfinex libviktor.so libying.so makoa_server" used for this tests
+
 test zero:
 generate configs:
     lua make_zero.lua 25
