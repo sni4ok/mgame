@@ -21,13 +21,14 @@ struct exporter
 {
     void *p;
     hole_exporter he;
+
     exporter() : p(), he()
     {
     }
     exporter(const std::string& params);
-
     exporter(exporter&& r);
     void operator=(exporter&& r);
+
     ~exporter() {
         if(p && he.destroy)
             he.destroy(p);

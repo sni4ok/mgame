@@ -6,7 +6,6 @@
 #include "engine.hpp"
 #include "exports.hpp"
 #include "types.hpp"
-#include "config.hpp"
 
 #include "evie/fast_alloc.hpp"
 
@@ -190,6 +189,7 @@ struct context
 class engine::impl : public stack_singleton<engine::impl>
 {
     volatile bool& can_run;
+    volatile bool can_exit;
     my_mutex mutex;
     my_condition cond;
     std::vector<std::thread> threads;
@@ -274,8 +274,11 @@ class engine::impl : public stack_singleton<engine::impl>
                     ies.push(i);
                     i = 0;
                 }
-                if(!res)
+                if(!res) {
+                    if(can_exit)
+                        break;
                     wait_updates();
+                }
             }
             if(i)
                 ies.push(i);
@@ -311,7 +314,7 @@ public:
         if(i)
             ies.push(i);
     }
-    impl(volatile bool& can_run) : can_run(can_run), ies("exporters_queue")
+    impl(volatile bool& can_run) : can_run(can_run), can_exit(false), ies("exporters_queue")
     {
     }
     str_holder alloc()
@@ -324,13 +327,13 @@ public:
         const char* m = (buf.str - ctx->buf_delta - sizeof(messages::_));
         ll.free((linked_node*)m);
     }
-    void init()
+    void init(const std::vector<std::string>& exports, uint32_t export_threads)
     {
-        consumers = config::instance().exports.size();
-        for(const auto& e: config::instance().exports)
+        consumers = exports.size();
+        for(const auto& e: exports)
             ies.push(new imple(ll, e));
 
-        for(uint32_t i = 0; i != config::instance().export_threads; ++i)
+        for(uint32_t i = 0; i != export_threads; ++i)
             threads.push_back(std::thread(&impl::work_thread, this));
     }
     bool proceed(str_holder& buf, context* ctx)
@@ -400,6 +403,7 @@ public:
     }
     ~impl()
     {
+        can_exit = true;
         for(auto&& t: threads)
             t.join();
         imple *i = nullptr;
@@ -424,11 +428,11 @@ public:
     }
 };
 
-engine::engine(volatile bool& can_run)
+engine::engine(volatile bool& can_run, bool pooling, const std::vector<std::string>& exports, uint32_t export_threads)
 {
-    pooling_mode = config::instance().pooling;
+    pooling_mode = pooling;
     pimpl = std::make_unique<engine::impl>(can_run);
-    pimpl->init();
+    pimpl->init(exports, export_threads);
 }
 
 engine::~engine()
@@ -437,14 +441,14 @@ engine::~engine()
 
 void actives::on_disconnect()
 {
-    mlog() << "actives::on_disconnect";
+    mlog() << "makoa() actives::on_disconnect";
     engine::impl::instance().push_clean(data);
     auto it = data.begin(), ie = data.end();
     for(; it != ie; ++it)
     {
         auto& v = get(it->security_id);
         if(v.disconnected)
-            mlog(mlog::warning) << "actives::on_disconnect(), " << it->security_id << " already disconnected";
+            mlog(mlog::warning) << "makoa() actives::on_disconnect(), " << it->security_id << " already disconnected";
 
         get(it->security_id).disconnected = true;
     }

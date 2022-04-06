@@ -10,8 +10,8 @@ TARGET_LINK_LIBRARIES(file evie)
 TARGET_LINK_LIBRARIES(stat evie)
 TARGET_LINK_LIBRARIES(mysql evie mysqlclient)
 
-ADD_EXECUTABLE(pip pip.cpp ifile.cpp ../makoa/imports.cpp)
-TARGET_LINK_LIBRARIES(pip exports)
+ADD_EXECUTABLE(pip pip.cpp)
+TARGET_LINK_LIBRARIES(pip makoa)
 
 ADD_EXECUTABLE(utils utils.cpp)
 TARGET_LINK_LIBRARIES(utils evie)

@@ -2,11 +2,11 @@
     author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
-#include "config.hpp"
 #include "server.hpp"
 #include "imports.hpp"
 
-#include <evie/mutex.hpp>
+#include "evie/mutex.hpp"
+#include "evie/utils.hpp"
 
 #include <unistd.h>
 
@@ -15,11 +15,12 @@ extern bool pooling_mode;
 struct server::impl : stack_singleton<server::impl>
 {
     volatile bool& can_run;
+    bool quit_on_exit;
     std::vector<std::thread> threads;
     std::vector<std::pair<hole_importer, void*> > imports;
     my_mutex mutex;
 
-    impl(volatile bool& can_run) : can_run(can_run)
+    impl(volatile bool& can_run, bool quit_on_exit) : can_run(can_run), quit_on_exit(quit_on_exit)
     {
     }
     void import_thread(std::string params)
@@ -38,6 +39,8 @@ struct server::impl : stack_singleton<server::impl>
             while(can_run) {
                 try {
                     hi.start(i, nullptr);
+                    if(quit_on_exit)
+                        break;
                 } catch (std::exception& e) {
                     mlog() << "import_thread " << params << " " << e;
                     for(uint i = 0; can_run && i != 5; ++i)
@@ -52,9 +55,9 @@ struct server::impl : stack_singleton<server::impl>
             mlog() << "import_thread ended, " << params << " " << e;
         }
     }
-    void run()
+    void run(const std::vector<std::string>& imports)
     {
-        for(std::string i: config::instance().imports)
+        for(std::string i: imports)
         {
             if(i.size() > 7 && std::equal(i.begin(), i.begin() + 7, "mmap_cp"))
                 i = i + (pooling_mode ? " 1" : " 0");
@@ -73,13 +76,13 @@ struct server::impl : stack_singleton<server::impl>
     }
 };
 
-void server::import_loop()
+void server::run(const std::vector<std::string>& imports)
 {
-    pimpl->run();
+    pimpl->run(imports);
 }
-server::server(volatile bool& can_run)
+server::server(volatile bool& can_run, bool quit_on_exit)
 {
-    pimpl = std::make_unique<server::impl>(can_run);
+    pimpl = std::make_unique<server::impl>(can_run, quit_on_exit);
 }
 server::~server()
 {

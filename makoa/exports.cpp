@@ -3,6 +3,7 @@
     author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
+#include "order_book.hpp"
 #include "exports.hpp"
 #include "types.hpp"
 #include "mmap.hpp"
@@ -69,6 +70,7 @@ namespace
         static const uint32_t max_size = 20;
         exporter exporters[max_size];
         uint32_t size;
+
         exports_chain() : size()
         {
         }

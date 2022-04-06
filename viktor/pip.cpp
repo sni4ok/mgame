@@ -5,8 +5,8 @@
 #include "evie/mfile.hpp"
 #include "evie/config.hpp"
 
-#include "makoa/exports.hpp"
-#include "makoa/imports.hpp"
+#include "makoa/engine.hpp"
+#include "makoa/server.hpp"
 
 struct config : stack_singleton<config>
 {
@@ -24,48 +24,11 @@ struct config : stack_singleton<config>
 
 #include "alco/main.hpp"
 
-void* import_context_create(void*)
-{
-    exporter* e = new exporter(config::instance().push);
-    return (void*)e;
-}
-void import_context_destroy(void* e)
-{
-    delete (exporter*)e;
-}
-
-char msg_buf[message_size * 256];
-
-str_holder import_alloc_buffer(void*)
-{
-    return str_holder(msg_buf + 1, 255 * message_size);
-}
-
-void import_free_buffer(str_holder, void*)
-{
-}
-
-bool import_proceed_data(str_holder& buf, void* ctx)
-{
-    exporter* e = (exporter*)ctx;
-    message* m = (message*)buf.str;
-    uint32_t count = buf.size / message_size;
-    if(unlikely(buf.size % message_size))
-        throw std::runtime_error("fractional messages not supported yet");
-    e->proceed(m, count);
-    buf.size = 255 * message_size;
-    return true;
-}
-
 void proceed_pip(volatile bool& can_run)
 {
-    char* f = (char*)config::instance().import.c_str();
-    char* c = (char*)std::find(f, f + config::instance().import.size(), ' ');
-    *c = char();
-    hole_importer hi = create_importer(f);
-    void* i = hi.init(can_run, c + 1);
-    hi.start(i, nullptr);
-    hi.destroy(i);
+    engine en(can_run, false, {config::instance().push}, 1);
+    server sv(can_run, true);
+    sv.run({config::instance().import});
 }
 
 int main(int argc, char** argv)

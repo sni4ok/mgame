@@ -109,6 +109,7 @@ struct import_mmap_cp
     std::string params;
     void* ptr;
     bool pooling_mode;
+
     import_mmap_cp(volatile bool& can_run, const std::string& params) : can_run(can_run), params(params)
     {
         std::vector<std::string> p = split(params, ' ');
@@ -193,6 +194,7 @@ struct import_pipe
 {
     volatile bool& can_run;
     std::string params;
+
     import_pipe(volatile bool& can_run, const std::string& params) : can_run(can_run), params(params)
     {
     }
@@ -242,10 +244,10 @@ struct import_tcp
     volatile bool& can_run;
     std::string params;
     uint16_t port;
-
     uint32_t count;
     my_mutex mutex;
     my_condition cond;
+
     import_tcp(volatile bool& can_run, const std::string& params) : can_run(can_run), params(params), port(lexical_cast<uint16_t>(params)), count()
     {
     }
@@ -309,6 +311,7 @@ struct import_ifile
 {
     volatile bool& can_run;
     void* ptr;
+
     import_ifile(volatile bool& can_run, const std::string& params) : can_run(can_run)
     {
         ptr = ifile_create(params.c_str());

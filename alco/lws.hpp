@@ -219,7 +219,7 @@ lws_context* create_context(const char* ssl_ca_file = 0)
 
     lws_protocols protocols[] =
     {
-        {"example-protocol", &lws_event_cb<lws_w>, 0, 4096 * 1000, 0, 0, 0},
+        {"ws", &lws_event_cb<lws_w>, 0, 4096 * 1000, 0, 0, 0},
         lws_protocols()
     };
 

@@ -22,18 +22,26 @@ struct order_book
         assert(m.price.value);
         message_book& o = orders_p[m.price];
         //o.level_id = m.price.value;
-        o.price = m.price;
         o.count.value = o.count.value - m.count.value;
-        o.etime = mb.etime;
-        o.time = mb.time;
+        if(!o.count.value)
+            orders_p.erase(m.price);
+        else {
+            o.price = m.price;
+            o.etime = mb.etime;
+            o.time = mb.time;
+        }
 
         const price_t& price = mb.price.value ? mb.price : m.price;
         message_book& p = orders_p[price];
         //p.level_id = mb.price.value;
-        p.price = price;
         p.count.value = p.count.value + mb.count.value;
-        p.etime = mb.etime;
-        p.time = mb.time;
+        if(!p.count.value)
+            orders_p.erase(price);
+        else {
+            p.price = price;
+            p.etime = mb.etime;
+            p.time = mb.time;
+        }
 
         m.level_id = mb.level_id;
         m.price = price;

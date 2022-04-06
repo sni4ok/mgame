@@ -5,13 +5,14 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 struct server
 {
     struct impl;
-    server(volatile bool& can_run);
+    server(volatile bool& can_run, bool quit_on_exit = false);
     ~server();
-    void import_loop();
+    void run(const std::vector<std::string>& imports);
 
 private:
     std::unique_ptr<impl> pimpl;

@@ -51,9 +51,9 @@ int main(int argc, char** argv)
         config cfg(argc == 1 ? "makoa_server.conf" : argv[1]);
         cfg.print();
         name = cfg.name;
-        engine en(can_run);
+        engine en(can_run, cfg.pooling, cfg.exports, cfg.export_threads);
         server sv(can_run);
-        sv.import_loop();
+        sv.run(cfg.imports);
     } catch(std::exception& e) {
         mlog(mlog::error | mlog::always_cout) << "makoa(" << name << ") ended with " << e;
         return 1;
