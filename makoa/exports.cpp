@@ -3,7 +3,6 @@
     author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
-#include "order_book.hpp"
 #include "exports.hpp"
 #include "types.hpp"
 #include "mmap.hpp"

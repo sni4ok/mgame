@@ -23,10 +23,11 @@ struct server::impl : stack_singleton<server::impl>
     impl(volatile bool& can_run, bool quit_on_exit) : can_run(can_run), quit_on_exit(quit_on_exit)
     {
     }
-    void import_thread(std::string params)
+    void import_thread(std::string str)
     {
         try
         {
+            std::string params = str;
             char* f = (char*)params.c_str();
             char* c = (char*)std::find(f, f + params.size(), ' ');
             *c = char();
@@ -42,7 +43,7 @@ struct server::impl : stack_singleton<server::impl>
                     if(quit_on_exit)
                         break;
                 } catch (std::exception& e) {
-                    mlog() << "import_thread " << params << " " << e;
+                    mlog() << "import_thread " << str << " " << e;
                     for(uint i = 0; can_run && i != 5; ++i)
                         sleep(1);
                 }
@@ -52,7 +53,7 @@ struct server::impl : stack_singleton<server::impl>
         }
         catch(std::exception& e) {
             can_run = false;
-            mlog() << "import_thread ended, " << params << " " << e;
+            mlog() << "import_thread ended, " << str << " " << e;
         }
     }
     void run(const std::vector<std::string>& imports)
