@@ -20,6 +20,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
         std::string se = "\"}";
 
         for(auto& v: cfg.tickers) {
+            //subscribes.push_back(sb + "instrument:" + v + se);
             if(cfg.orders)
                 subscribes.push_back(sb + cfg.orders_table + ":" + v + se);
             if(cfg.trades)

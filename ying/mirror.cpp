@@ -5,6 +5,8 @@
 #include "mirror.hpp"
 #include "ncurses.hpp"
 
+#include "makoa/types.hpp"
+
 #include "evie/mutex.hpp"
 
 #include <deque>
@@ -84,7 +86,7 @@ struct mirror::impl
     std::string head_msg;
 
     price_t top_order_p;
-    uint32_t trades_from;
+    uint32_t trades_from, trades_width_limit;
 
     char buf[512];
     buf_stream bs;
@@ -98,7 +100,7 @@ struct mirror::impl
     const char empty[10];
     impl(const std::string& sec, uint32_t refresh_rate_ms) :
         sec(sec), refresh_rate(refresh_rate_ms * 1000),
-        top_order_p(), trades_from(), bs(buf, buf + sizeof(buf) - 1),
+        top_order_p(), trades_from(), trades_width_limit(), bs(buf, buf + sizeof(buf) - 1),
         dE(), dP(), can_run(true), refresh_thrd(&impl::refresh_thread, this),
         empty("         ")
     {
@@ -134,7 +136,10 @@ struct mirror::impl
         uint32_t i = 0;
         for(auto&& v : trades)
         {
-            bs << brief_time(v.etime) << " " << brief_time(v.time) << " " << v.price << " " << v.count << " " << get_direction(v.direction) << '\0';
+            bs << brief_time(v.etime) << " " << brief_time(v.time) << " " << v.price << " " << v.count << " " << get_direction(v.direction);
+            if(bs.size() > trades_width_limit)
+                bs.resize(trades_width_limit);
+            bs << '\0';
             e = mvwaddstr(w, i++, trades_from, bs.begin());
             bs.clear();
         }
@@ -159,6 +164,7 @@ struct mirror::impl
             bs << '\0';
             e = mvwaddstr(w, i, 0, bs.begin());
             trades_from = std::max<uint32_t>(trades_from, bs.size() + 4);
+            trades_width_limit = w.cols - trades_from;
             bs.clear();
         }
         e = attroff(A_BOLD);

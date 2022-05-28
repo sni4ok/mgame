@@ -118,12 +118,12 @@ public:
         tmp = {security_id, ttime_t(), false};
         auto it = std::lower_bound(data.begin(), data.end(), tmp);
         if(unlikely(it != data.end() && it->security_id == security_id)) {
-            if(!it->disconnected)
-                throw std::runtime_error(es() % "activites, security_id " % security_id % " already in active list");
-            else {
+            //if(!it->disconnected)
+            //    throw std::runtime_error(es() % "activites, security_id " % security_id % " already in active list");
+            //else {
                 it->disconnected = false;
                 it->time = ttime_t(); //TODO: this for several usage makoa_test etc, remove or overthink it later 
-            }
+            //}
         } else {
             it = data.insert(it, tmp);
         }

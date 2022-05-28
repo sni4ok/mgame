@@ -113,7 +113,7 @@ struct compact_book
                 }
             }
         }
-        std::sort(buf.begin() + orders.size(), buf.end(), [](const message& l, const message& r) {return l.mb.time.value < r.mb.time.value;});
+        std::sort(buf.begin() + orders.size(), buf.end(), [](const message& l, const message& r) {return l.t.time.value < r.t.time.value;});
         book.resize(buf.size() * message_size);
         std::copy(&buf[0], &buf[0] + buf.size(), (message*)&book[0]);
     }

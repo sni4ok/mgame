@@ -34,7 +34,6 @@ namespace {
             m << t.value << "ns";
         return m;
     }
-    using std::string;
     struct estat
     {
         bool brief;
@@ -69,7 +68,7 @@ namespace {
                     d2 += (delta * delta) / 1000000;
                 ++count;
             }
-            void print(mlog& ml, string name) const
+            void print(mlog& ml, std::string name) const
             {
                 if(count) {
                     int64_t mean = sum / count;

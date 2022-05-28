@@ -4,6 +4,7 @@ ADD_LIBRARY(viktor SHARED viktor.cpp)
 ADD_LIBRARY(mysql SHARED mysql.cpp)
 ADD_LIBRARY(file SHARED efile.cpp)
 ADD_LIBRARY(stat SHARED estat.cpp)
+ADD_LIBRARY(stat_ticker SHARED stat_ticker.cpp)
 
 TARGET_LINK_LIBRARIES(viktor tyra evie)
 TARGET_LINK_LIBRARIES(file evie)

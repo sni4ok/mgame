@@ -21,6 +21,7 @@ config::config(const char* fname)
     log_lws = get_config_param<bool>(cs, "log_lws");
 
     mlog() << "config() tickers: " << smb
+        << ", trades: " << trades << ", orders: " << orders << ", depth: " << depth
         << ", exchange_id: " << exchange_id << ", feed_id: " << feed_id
         << ",\n    push: " << push << ", log_lws: " << log_lws;
 }
