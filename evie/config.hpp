@@ -95,11 +95,21 @@ inline std::string get_log_name(const std::string& fname)
 
 inline void print_init(int argc, char** argv)
 {
-    mlog l;
+    mlog l(mlog::no_cout);
     for(int i = 0; i != argc; ++i) {
         if(i)
             l << " ";
         l << _str_holder(argv[i]);
     }
+}
+
+inline std::vector<std::string> init_params(int argc, char** argv, bool log_params = true)
+{
+    if(log_params)
+        print_init(argc, argv);
+    std::vector<std::string> ret(argc);
+    for(int i = 0; i != argc; ++i)
+        ret[i] = std::string(argv[i]);
+    return ret;
 }
 

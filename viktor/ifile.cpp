@@ -30,23 +30,22 @@ std::string::const_iterator find_last(const std::string& fname, const char c)
 
 struct compact_book
 {
-    uint64_t readed;
+    struct orders_t : std::map<int64_t/*level_id*/, message_book>
+    {
+        message_instr mi;
+    };
 
+    uint64_t readed;
     std::vector<char> book;
     uint64_t book_off;
     ttime_t last_time;
+    std::map<uint32_t/*security_id*/, orders_t> orders;
 
     compact_book() : readed(), book_off(), last_time()
     {
     }
 
-    struct orders_t : std::map<int64_t/*level_id*/, message_book>
-    {
-        message_instr mi;
-    };
-    std::map<uint32_t/*security_id*/, orders_t> orders;
-
-    void read(const std::string& fname, ttime_t tf)
+    void read(const std::string& fname, ttime_t tf, uint64_t off)
     {
         uint32_t buf_size = 1024;
         std::vector<message> buf(buf_size);
@@ -54,6 +53,10 @@ struct compact_book
         int f = ::open(fname.c_str(), O_RDONLY);
         if(!f)
             throw std::runtime_error(es() % "open file " % fname % " error");
+
+        if(::lseek(f, off, SEEK_SET) < 0)
+            throw_system_failure("lseek() error");
+
         for(;;) {
             int32_t sz = ::read(f, (char*)&buf[0], message_size * buf_size);
             if(sz < 0)
@@ -100,6 +103,7 @@ struct compact_book
             buf.push_back(m);
         }
         i = orders.begin();
+
         for(; i != e; ++i) {
             auto it = i->second.begin(), ie = i->second.end();
             for(; it != ie; ++it) {
@@ -113,6 +117,7 @@ struct compact_book
                 }
             }
         }
+
         std::sort(buf.begin() + orders.size(), buf.end(), [](const message& l, const message& r) {return l.t.time.value < r.t.time.value;});
         book.resize(buf.size() * message_size);
         std::copy(&buf[0], &buf[0] + buf.size(), (message*)&book[0]);
@@ -121,14 +126,12 @@ struct compact_book
 
 struct ifile
 {
-    int cur_file;
-    compact_book cb;
-
     struct node
     {
         std::string name;
         ttime_t tf, tt;
         uint64_t off, sz;
+
         bool operator<(const node& n) const
         {
             return tf > n.tf;
@@ -139,26 +142,31 @@ struct ifile
         }
     };
 
+    int cur_file;
+    compact_book cb;
     const node main_file;
     std::vector<node> files;
-
     node nt;
     message mt;
+    bool history;
+    message_ping ping;
+    std::vector<char> mc;
+    std::vector<message> read_buf;
 
     template<class type, class pred>
-	static int64_t lower_bound_int(int64_t first, int64_t last, const type& val, pred pr)
-	{
-		int64_t count = last - first;
-		while(count > 0) {
-			int64_t step = count / 2;
-			int64_t mid = first + step;
-			if(pr(mid, val))
-				first = ++mid, count -= step + 1;
-			else
-				count = step;
-		}
-		return first;
-	}
+    static int64_t lower_bound_int(int64_t first, int64_t last, const type& val, pred pr)
+    {
+        int64_t count = last - first;
+        while(count > 0) {
+            int64_t step = count / 2;
+            int64_t mid = first + step;
+            if(pr(mid, val))
+                first = ++mid, count -= step + 1;
+            else
+                count = step;
+        }
+        return first;
+    }
 
     ttime_t add_file_impl(const std::string& fname, bool last_file)
     {
@@ -178,17 +186,46 @@ struct ifile
         nt.tt = mt.t.time;
         if(!nt.tt.value || nt.tt.value < nt.tf.value)
             throw std::runtime_error(es() % "time_to error for " % fname);
+
         if(main_file.crossed(nt) || (!history && files.empty() && last_file)) {
             nt.name = fname;
             if(nt.tt > main_file.tt) {
-                nt.sz = message_size * lower_bound_int(nt.off / message_size, nt.sz / message_size, main_file.tt,
+                auto pred = 
                     [&f](int64_t off, ttime_t tt) {
                         message m;
                         f.seekg(off * message_size);
                         f.read((char*)&m, message_size);
                         return m.mt.time < tt;
+                    };
+
+                if(nt.tf < main_file.tf) {
+                    assert(nt.off == 0);
+                    static const uint64_t buf_size = message_size * 1024 * 1024;
+                    read_buf.resize(buf_size / message_size);
+                    uint64_t off = message_size * lower_bound_int(0, nt.sz / message_size, main_file.tf, pred);
+
+                    while(off > 0) {
+                        uint64_t from = off < buf_size ? 0 : off - buf_size;
+                        f.seekg(from);
+                        f.read((char*)&read_buf[0], off - from);
+                        auto it = read_buf.rbegin(), ie = it + ((off - from) / message_size);
+                        bool need_break = false;
+                        for(; it != ie; ++it, off -= message_size)
+                        {
+                            if(it->id == msg_instr)
+                                need_break = true;
+
+                            else if(need_break)
+                            {
+                                nt.off = off;
+                                off = 0;
+                                break;
+                            }
+                        }
                     }
-                );
+                }
+
+                nt.sz = message_size * lower_bound_int(nt.off / message_size, nt.sz / message_size, main_file.tt, pred);
             }
             files.push_back(nt);
             return nt.tt;
@@ -243,15 +280,11 @@ struct ifile
         std::sort(files.begin(), files.end());
         if(!files.empty()) {
             auto it = files.rbegin();
-            cb.read(it->name, main_file.tf);
-            it->off = cb.readed;
-            it->sz -= cb.readed;
+            cb.read(it->name, main_file.tf, it->off);
+            it->off += cb.readed;
+            it->sz -= it->off;
         }
     }
-
-    bool history;
-    message_ping ping;
-    std::vector<char> mc;
 
     ifile(const std::string& fname, ttime_t tf, ttime_t tt, bool history)
         : cur_file(), main_file({fname, tf, tt, 0, false}), history(history), mc(message_size)

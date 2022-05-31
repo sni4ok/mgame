@@ -8,8 +8,6 @@
 #include "makoa/exports.hpp"
 #include "makoa/types.hpp"
 
-#include "evie/fmap.hpp"
-
 #include <map>
 #include <set>
 #include <optional>
