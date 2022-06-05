@@ -2,10 +2,11 @@
    author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
+#include "makoa/types.hpp"
+
 #include "evie/mfile.hpp"
 #include "evie/utils.hpp"
 #include "evie/profiler.hpp"
-#include "makoa/types.hpp"
 
 #include <map>
 
@@ -30,76 +31,70 @@ std::string::const_iterator find_last(const std::string& fname, const char c)
 
 struct compact_book
 {
-    struct orders_t : std::map<int64_t/*level_id*/, message_book>
-    {
-        message_instr mi;
-    };
-
-    uint64_t readed;
     std::vector<char> book;
     uint64_t book_off;
-    ttime_t last_time;
-    std::map<uint32_t/*security_id*/, orders_t> orders;
 
-    compact_book() : readed(), book_off(), last_time()
+    compact_book() : book_off()
     {
     }
 
-    void read(const std::string& fname, ttime_t tf, uint64_t off)
+    void read(const std::string& fname, uint64_t from, uint64_t to)
     {
-        uint32_t buf_size = 1024;
-        std::vector<message> buf(buf_size);
+        if((to - from) % message_size)
+            throw std::runtime_error(es() % "compact_book::read() " % fname % " from " % from % " to " % to);
 
-        int f = ::open(fname.c_str(), O_RDONLY);
-        if(!f)
-            throw std::runtime_error(es() % "open file " % fname % " error");
+        struct orders_t : std::map<int64_t/*level_id*/, message_book>
+        {
+            message_instr mi;
 
-        if(::lseek(f, off, SEEK_SET) < 0)
-            throw_system_failure("lseek() error");
+            orders_t() : mi()
+            {
+            }
+        };
+        ttime_t last_time = ttime_t();
+        std::map<uint32_t/*security_id*/, orders_t> orders;
 
-        for(;;) {
-            int32_t sz = ::read(f, (char*)&buf[0], message_size * buf_size);
-            if(sz < 0)
-                throw_system_failure(es() % "read file " % fname % " error");
-            auto it = buf.begin(), ie = it + (sz / message_size);
-            for(; it != ie; ++it) {
-                if(it->mt.time.value >= tf.value)
-                    break;
+        //read
+        std::vector<message> buf((to - from) / message_size);
+        mfile f(fname.c_str());
+        f.seekg(from);
+        f.read((char*)&buf[0], to - from);
+        auto it = buf.begin(), ie = buf.end();
 
-                if(it->id == msg_book) {
-                    const message_book& m = it->mb;
-                    message_book& mb = (orders[m.security_id])[m.level_id];
+        for(; it != ie; ++it) {
+            if(it->id == msg_book) {
+                const message_book& m = it->mb;
+                orders_t& o = orders[m.security_id];
+                if(o.mi.security_id) {
+                    message_book& mb = o[m.level_id];
                     price_t price = m.price.value ? m.price : mb.price;
                     mb = m;
                     mb.price = price;
                 }
-                else if(it->id == msg_instr) {
-                    orders_t& o = orders[it->mi.security_id];
-                    o.clear();
-                    o.mi = it->mi;
-                }
-                else if(it->id == msg_clean)
-                    orders[it->mc.security_id].clear();
-
-                readed += message_size;
-                last_time = it->mt.time;
             }
-            if(it != ie || ie != buf.end() || sz % message_size)
-                break;
+            else if(it->id == msg_instr) {
+                orders_t& o = orders[it->mi.security_id];
+                o.clear();
+                o.mi = it->mi;
+            }
+            else if(it->id == msg_clean)
+                orders.erase(it->mc.security_id);
+            else {
+                assert(it->id == msg_trade || it->id == msg_clean || it->id == msg_ping);
+            }
+            last_time = it->mt.time;
         }
-        ::close(f);
-        compact();
-    }
 
-    void compact()
-    {
-        std::vector<message> buf;
+        //compact
+        buf.clear();
         auto i = orders.begin(), e = orders.end();
+
         for(; i != e; ++i) {
+            assert(i->second.mi.id == msg_instr);
             message m;
             m.mi = i->second.mi;
-            m.mt.time = last_time;
-            m.mt.etime = ttime_t();
+            m.mi.time = last_time;
+            m.mi.etime = ttime_t();
             buf.push_back(m);
         }
         i = orders.begin();
@@ -111,16 +106,16 @@ struct compact_book
                     message m;
                     assert(it->second.price.value);
                     m.mb = it->second;
-                    m.mt.time = last_time;
-                    m.mt.etime = ttime_t();
+                    m.mi.time = last_time;
+                    m.mi.etime = ttime_t();
                     buf.push_back(m);
                 }
             }
         }
 
-        std::sort(buf.begin() + orders.size(), buf.end(), [](const message& l, const message& r) {return l.t.time.value < r.t.time.value;});
         book.resize(buf.size() * message_size);
         std::copy(&buf[0], &buf[0] + buf.size(), (message*)&book[0]);
+        mlog() << "compact_book::read() " << fname << " from " << from << " to " << to;
     }
 };
 
@@ -130,7 +125,7 @@ struct ifile
     {
         std::string name;
         ttime_t tf, tt;
-        uint64_t off, sz;
+        uint64_t from, off, sz;
 
         bool operator<(const node& n) const
         {
@@ -150,7 +145,6 @@ struct ifile
     message mt;
     bool history;
     message_ping ping;
-    std::vector<char> mc;
     std::vector<message> read_buf;
 
     template<class type, class pred>
@@ -179,54 +173,61 @@ struct ifile
         nt.tf = mt.t.time;
         if(!nt.tf.value)
             throw std::runtime_error(es() % "time_from error for " % fname);
+        nt.from = 0;
         nt.off = 0;
-        nt.sz = sz;
+        nt.sz = last_file ? 0 : sz;
         f.seekg(sz - message_size);
         f.read((char*)&mt, message_size);
         nt.tt = mt.t.time;
         if(!nt.tt.value || nt.tt.value < nt.tf.value)
             throw std::runtime_error(es() % "time_to error for " % fname);
 
-        if(main_file.crossed(nt) || (!history && files.empty() && last_file)) {
+        if(main_file.crossed(nt) || (!history && last_file)) {
             nt.name = fname;
-            if(nt.tt > main_file.tt) {
-                auto pred = 
-                    [&f](int64_t off, ttime_t tt) {
-                        message m;
-                        f.seekg(off * message_size);
-                        f.read((char*)&m, message_size);
-                        return m.mt.time < tt;
-                    };
+            auto pred =
+                [&f](int64_t off, ttime_t tt) {
+                    message m;
+                    f.seekg(off * message_size);
+                    f.read((char*)&m, message_size);
+                    return m.mt.time < tt;
+                };
 
-                if(nt.tf < main_file.tf) {
-                    assert(nt.off == 0);
-                    static const uint64_t buf_size = message_size * 1024 * 1024;
-                    read_buf.resize(buf_size / message_size);
-                    uint64_t off = message_size * lower_bound_int(0, nt.sz / message_size, main_file.tf, pred);
+            if(nt.tt > main_file.tf || last_file) {
+                assert(nt.from == 0 && nt.off == 0);
+                static const uint64_t buf_size = message_size * 1024 * 1024;
+                read_buf.resize(buf_size / message_size);
+                nt.off = message_size * lower_bound_int(0, sz / message_size, main_file.tf, pred);
+                fmap<uint32_t/*security_id*/, uint64_t /*off*/> tickers;
+                uint64_t off = nt.off;
 
-                    while(off > 0) {
-                        uint64_t from = off < buf_size ? 0 : off - buf_size;
-                        f.seekg(from);
-                        f.read((char*)&read_buf[0], off - from);
-                        auto it = read_buf.rbegin(), ie = it + ((off - from) / message_size);
-                        bool need_break = false;
-                        for(; it != ie; ++it, off -= message_size)
-                        {
-                            if(it->id == msg_instr)
-                                need_break = true;
+                while(!nt.from && off) {
+                    nt.from = off < buf_size ? 0 : off - buf_size;
+                    f.seekg(nt.from);
+                    f.read((char*)&read_buf[0], off - nt.from);
+                    auto it = read_buf.begin(), ie = read_buf.begin() + ((off - nt.from) / message_size);
+                    off = nt.from;
 
-                            else if(need_break)
-                            {
-                                nt.off = off;
-                                off = 0;
-                                break;
-                            }
-                        }
+                    for(; it != ie; ++it, nt.from += message_size)
+                    {
+                        if(it->id == msg_instr)
+                            tickers[it->mi.security_id] = nt.from;
+                        else if(it->id == msg_book)
+                            tickers[it->mb.security_id];
+                        else if(it->id == msg_trade)
+                            tickers[it->mt.security_id];
                     }
-                }
 
-                nt.sz = message_size * lower_bound_int(nt.off / message_size, nt.sz / message_size, main_file.tt, pred);
+                    for(auto& v: tickers)
+                        nt.from = std::min(nt.from, v.second);
+                }
             }
+
+            if(nt.tt > main_file.tt)
+                nt.sz = message_size * lower_bound_int(nt.off / message_size, sz / message_size, main_file.tt, pred);
+
+            mlog() << "ifile::add_file_impl() " << fname << ", last: " << last_file << ", from: "
+                << nt.from << ", off: " << nt.off << ", sz: " << nt.sz;
+
             files.push_back(nt);
             return nt.tt;
         }
@@ -280,14 +281,12 @@ struct ifile
         std::sort(files.begin(), files.end());
         if(!files.empty()) {
             auto it = files.rbegin();
-            cb.read(it->name, main_file.tf, it->off);
-            it->off += cb.readed;
-            it->sz -= it->off;
+            cb.read(it->name, it->from, it->off);
         }
     }
 
     ifile(const std::string& fname, ttime_t tf, ttime_t tt, bool history)
-        : cur_file(), main_file({fname, tf, tt, 0, false}), history(history), mc(message_size)
+        : cur_file(), main_file({fname, tf, tt, 0, 0, 0}), history(history)
     {
         read_directory(fname);
         ping.id = msg_ping;
@@ -319,17 +318,15 @@ struct ifile
                     if(::lseek(cur_file, nt.off, SEEK_SET) < 0)
                         throw_system_failure(es() % "lseek() error for " % nt.name);
                 }
-                if(!history && !nt.sz && files.empty()) {
+
+                if(!history && !nt.sz && files.empty())
                     ret = ::read(cur_file, buf, buf_size);
-                    while(ret > int32_t(buf_size)) {
-                        if(std::equal(&buf[ret - buf_size], &buf[ret], &mc[0]))
-                            ret -= buf_size;
-                        else
-                            break;
-                    }
+                else {
+                    ret = ::read(cur_file, buf, std::min<uint64_t>(buf_size, nt.sz - nt.off));
+                    if(ret > 0)
+                        nt.sz -= ret;
                 }
-                else
-                    ret = ::read(cur_file, buf, std::min<uint64_t>(buf_size, nt.sz));
+
                 if(ret < 0)
                     throw_system_failure("ifile::read file error");
                 else if(!ret) {
@@ -348,8 +345,6 @@ struct ifile
                         return message_size;
                     }
                 }
-                else
-                    nt.sz -= ret;
             }
             return ret;
         }

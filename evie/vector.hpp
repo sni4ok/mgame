@@ -130,7 +130,7 @@ public:
     }
     bool operator==(const mvector& r) const {
         if(size_ == r.size_)
-            return !!memcmp(buf, r.buf, size_ * sizeof(type));
+            return !bcmp(buf, r.buf, size_ * sizeof(type));
         return false;
     }
     bool operator!=(const mvector& r) const {
@@ -173,6 +173,12 @@ struct pvector : mvector<type*>
 {
     struct iterator
     {
+        typedef int64_t difference_type;
+        typedef type value_type;
+        typedef type* pointer;
+        typedef type& reference;
+        typedef std::random_access_iterator_tag iterator_category;
+
         type** it;
         iterator() : it()
         {
@@ -183,6 +189,16 @@ struct pvector : mvector<type*>
         iterator& operator++()
         {
             ++it;
+            return *this;
+        }
+        iterator& operator--()
+        {
+            --it;
+            return *this;
+        }
+        iterator& operator+=(int64_t c)
+        {
+            it += c;
             return *this;
         }
         iterator operator+(int64_t c) const

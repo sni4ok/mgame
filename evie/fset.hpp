@@ -6,14 +6,14 @@
 
 #include "vector.hpp"
 
-template<typename type, typename comp = std::less<type> >
+template<typename type, typename comp = std::less<type>, template <typename> typename vector = mvector>
 struct fset
 {
     typedef type key_type;
-    typedef type value_type;
-    typedef value_type* iterator;
-    typedef const value_type* const_iterator;
-    typedef mvector<type>::reverse_iterator reverse_iterator;
+    typedef vector<type>::value_type value_type;
+    typedef vector<type>::iterator iterator;
+    typedef vector<type>::const_iterator const_iterator;
+    typedef vector<type>::reverse_iterator reverse_iterator;
 
     fset() {
     }
@@ -77,7 +77,7 @@ struct fset
     void swap(fset& r) {
         data.swap(r.data);
     }
-    void swap(mvector<type>& r) {
+    void swap(vector<type>& r) {
         data.swap(r);
     }
     bool operator==(const fset& r) const {
@@ -86,12 +86,18 @@ struct fset
     bool operator!=(const fset& r) const {
         return data != r.data;
     }
-    iterator insert(iterator it, const type& k) {
+    iterator insert(iterator it, const value_type& k) {
+        if(it != data.end())
+        {
+            if(*it == k)
+                return it;
+            assert(comp()(k, *it));
+        }
         return data.insert(it, k);
     }
-    iterator insert(const type& k) {
+    iterator insert(const value_type& k) {
         iterator it = std::lower_bound(data.begin(), data.end(), k, comp());
-        return data.insert(it, k);
+        return insert(it, k);
     }
     void erase(const type& k) {
         iterator it = find(k);
@@ -104,8 +110,8 @@ struct fset
         data.reserve(new_capacity);
     }
 
-private:
-    mvector<type> data;
+protected:
+    vector<type> data;
 };
 
 template<typename cont>
@@ -144,4 +150,29 @@ inserter_t<cont> inserter(cont& c)
 {
     return inserter_t<cont>(c);
 }
+
+template<typename type, typename comp = std::less<type> >
+struct pset : fset<type, comp, pvector>
+{
+    typedef fset<type, comp, pvector> base;
+    using base::fset;
+
+    base::iterator insert(base::iterator it, type* k)
+    {
+        if(it != this->data.end())
+        {
+            if(*it == *k)
+            {
+                delete k;
+                return it;
+            }
+            assert(comp()(*k, *it));
+        }
+        return this->data.insert(it, k);
+    }
+    base::iterator insert(type* k)
+    {
+        return insert(std::lower_bound(this->data.begin(), this->data.end(), *k, comp()), k);
+    }
+};
 
