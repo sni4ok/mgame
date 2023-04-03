@@ -21,7 +21,14 @@ public:
 
     mvector() : buf(), size_(), capacity_() {
     }
+    explicit mvector(uint32_t size) : buf(), size_(), capacity_() {
+        resize(size);
+        memset(buf, 0, size * sizeof(type));
+    }
     mvector(mvector&& r) : buf(r.buf), size_(r.size_), capacity_(r.capacity_) {
+        r.buf = 0;
+        r.size_ = 0;
+        r.capacity_ = 0;
     }
     mvector(const type* from, const type* to): buf(), size_(), capacity_() {
         resize(to - from);
@@ -42,12 +49,16 @@ public:
         if(new_size < size_)
             size_ = new_size;
         if(new_size <= capacity_)
+        {
+            memset(buf + size_, 0, (new_size - size_) * sizeof(type));
             size_ = new_size;
+        }
         else {
             void *new_ptr = realloc((void*)buf, new_size * sizeof(type));
             if(!new_ptr)
                 throw std::bad_alloc();
             buf = (type*)new_ptr;
+            memset(buf + size_, 0, (new_size - size_) * sizeof(type));
             size_ = new_size;
             capacity_ = new_size;
         }

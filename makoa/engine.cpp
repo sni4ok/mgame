@@ -175,6 +175,7 @@ struct context
     }
     ~context()
     {
+        mlog() << "~context()";
         try
         {
             acs.on_disconnect();
@@ -454,24 +455,15 @@ void actives::on_disconnect()
     }
 }
 
-void* import_context_create(void*)
+std::pair<void*, str_holder> import_context_create(void* params)
 {
-    return (void*)(new context());
+    return {new context(), engine::impl::instance().alloc()};
 }
 
-void import_context_destroy(void* ctx)
+void import_context_destroy(std::pair<void*, str_holder> ctx)
 {
-    delete (context*)ctx;
-}
-
-str_holder import_alloc_buffer(void*)
-{
-    return engine::impl::instance().alloc();
-}
-
-void import_free_buffer(str_holder buf, void* ctx)
-{
-    engine::impl::instance().free(buf, (context*)(ctx));
+    engine::impl::instance().free(ctx.second, (context*)(ctx.first));
+    delete (context*)ctx.first;
 }
 
 bool import_proceed_data(str_holder& buf, void* ctx)

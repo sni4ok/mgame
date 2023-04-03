@@ -195,7 +195,7 @@ int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user, void* i
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         {
             ((lws_w*)user)->closed = true;
-            mlog() << "lws closed...";
+            mlog() << "lws closed... " << (len ? str_holder((const char*)in, len) : str_holder(""));
             return 1;
         }
         default:
@@ -282,5 +282,19 @@ void proceed_lws_parser(volatile bool& can_run)
         if(can_run)
             usleep(1000 * 1000);
     }
+}
+
+template<typename lws_i>
+void lws_connect(lws_i& ls, const char* host, uint32_t port, const char* path)
+{
+	lws_client_connect_info ccinfo = lws_client_connect_info();
+	ccinfo.context = ls.context;
+	ccinfo.address = host;
+	ccinfo.port = port;
+    ccinfo.path = path;
+    ccinfo.userdata = (void*)&ls;
+	ccinfo.host = ccinfo.address;
+	ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
+	lws_client_connect_via_info(&ccinfo);
 }
 

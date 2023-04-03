@@ -9,6 +9,7 @@
 #include "string.hpp"
 
 #include <cassert>
+#include <algorithm>
 
 struct noncopyable
 {
@@ -100,6 +101,8 @@ type lexical_cast(const str_holder& str)
 
 std::vector<std::string> split(const std::string& str, char sep = ',');
 void split(std::vector<str_holder>& ret, const char* it, const char* ie, char sep = ',');
+std::string join(std::vector<std::string>::const_iterator it, std::vector<std::string>::const_iterator ie, char sep = ',');
+std::string join(const std::vector<std::string>& s, char sep = ',');
 
 struct crc32
 {
@@ -186,4 +189,34 @@ void write_decimal(stream& s, const decimal& d)
     }
     s << int_ << "." << mlog_fixed<-decimal::exponent>(float_);
 }
+
+struct counting_iterator
+{
+    int64_t value;
+
+    counting_iterator(int64_t value) : value(value)
+    {
+    }
+    int64_t operator-(const counting_iterator& r) const
+    {
+        return value - r.value;
+    }
+    counting_iterator& operator++()
+    {
+        ++value;
+        return *this;
+    }
+    counting_iterator operator+(int64_t v) const
+    {
+        return counting_iterator(value + v);
+    }
+    bool operator!=(const counting_iterator& r) const
+    {
+        return value != r.value;
+    }
+    int64_t operator*() const
+    {
+        return value;
+    }
+};
 

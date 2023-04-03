@@ -131,17 +131,6 @@ void proceed_binance(volatile bool& can_run)
 
 void connect(lws_i& ls)
 {
-	lws_client_connect_info ccinfo = lws_client_connect_info();
-	ccinfo.context = ls.context;
-	ccinfo.address = "stream.binance.com";
-	ccinfo.port = 9443;
-    ccinfo.path = "/ws";
-	
-    ccinfo.userdata = (void*)&ls;
-	ccinfo.protocol = "ws";
-	ccinfo.origin = "origin";
-	ccinfo.host = ccinfo.address;
-	ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
-	lws_client_connect_via_info(&ccinfo);
+    lws_connect(ls, "stream.binance.com", 9443, "/ws");
 }
 

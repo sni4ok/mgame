@@ -23,7 +23,7 @@ struct server::impl : stack_singleton<server::impl>
     impl(volatile bool& can_run, bool quit_on_exit) : can_run(can_run), quit_on_exit(quit_on_exit)
     {
     }
-    void import_thread(std::string str)
+    void import_thread(volatile int& init, std::string str)
     {
         try
         {
@@ -33,6 +33,7 @@ struct server::impl : stack_singleton<server::impl>
             *c = char();
             hole_importer hi = create_importer(f);
             void* i = hi.init(can_run, c + 1);
+            init = 1;
             {
                 my_mutex::scoped_lock lock(mutex);
                 imports.push_back(std::make_pair(hi, i));
@@ -58,12 +59,27 @@ struct server::impl : stack_singleton<server::impl>
     }
     void run(const std::vector<std::string>& imports)
     {
+        std::vector<int> inits(imports.size());
+        uint32_t idx = 0;
+
         for(std::string i: imports)
         {
             if(i.size() > 7 && std::equal(i.begin(), i.begin() + 7, "mmap_cp"))
                 i = i + (pooling_mode ? " 1" : " 0");
 
-            threads.push_back(std::thread(&impl::import_thread, this, i));
+            threads.push_back(std::thread(&impl::import_thread, this, std::ref(inits[idx++]), i));
+        }
+
+        for(uint32_t started = 0, cnt = 0; started != inits.size(); ++cnt)
+        {
+            for(int v: inits)
+                started += v;
+
+            if(started != inits.size()) {
+                if(cnt == 30)
+                    throw std::runtime_error("server::run init imports fails");
+                sleep(1);
+            }
         }
     }
     ~impl()

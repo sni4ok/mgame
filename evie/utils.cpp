@@ -67,6 +67,33 @@ void split(std::vector<str_holder>& ret, const char* it, const char* ie, char se
     }
 }
 
+std::string join(std::vector<std::string>::const_iterator it, std::vector<std::string>::const_iterator ie, char sep)
+{
+    if(it == ie)
+        return std::string();
+
+    uint32_t sz = 0;
+    for(auto v = it; v != ie; ++v)
+        sz += v->size();
+
+    std::string ret;
+    ret.resize(sz + (ie - it) - 1);
+    buf_stream str(&ret[0], &ret[0] + ret.size());
+
+    for(auto v = it; v != ie; ++v) {
+        if(v != it)
+            str << sep;
+        str << *v;
+    }
+
+    return ret;
+}
+
+std::string join(const std::vector<std::string>& s, char sep)
+{
+    return join(s.begin(), s.end(), sep);
+}
+
 class crc32_table : noncopyable
 {
     uint32_t crc_table[256];

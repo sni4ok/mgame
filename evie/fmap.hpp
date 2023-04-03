@@ -162,7 +162,8 @@ struct fmap
     }
     void erase(const key& k) {
         iterator it = find(k);
-        data.erase(it);
+        if(it != data.end())
+            data.erase(it);
     }
     iterator erase(const_iterator it) {
         data.erase(iterator(it));

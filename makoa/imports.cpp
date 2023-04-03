@@ -16,11 +16,9 @@
 #include <sys/socket.h>
 #include <poll.h>
 
-void* import_context_create(void* params);
-str_holder import_alloc_buffer(void* ctx);
-void import_free_buffer(str_holder buf, void* ctx);
+std::pair<void*, str_holder> import_context_create(void* params);
+void import_context_destroy(std::pair<void*, str_holder> ctx);
 bool import_proceed_data(str_holder& buf, void* ctx);
-void import_context_destroy(void* ctx);
 
 template<typename reader_state>
 struct reader : noncopyable
@@ -29,25 +27,23 @@ struct reader : noncopyable
     typedef uint32_t (*func)(reader_state socket, char* buf, uint32_t buf_size);
     func read;
 
-    void* ctx;
-    str_holder buf;
+    std::pair<void*, str_holder> ctx;
     time_t recv_time;
 
     bool proceed()
     {
-        uint32_t readed = read(socket, const_cast<char*>(buf.str), buf.size);
+        uint32_t readed = read(socket, const_cast<char*>(ctx.second.str), ctx.second.size);
         if(unlikely(!readed))
             return false;
-        buf.size = readed;
-        bool ret = import_proceed_data(buf, ctx);
+        ctx.second.size = readed;
+        bool ret = import_proceed_data(ctx.second, ctx.first);
         recv_time = time(NULL);
         return ret;
     }
     reader(void* ctx_params, reader_state socket, func read) : socket(socket), read(read),
-        ctx(import_context_create(ctx_params)), buf(import_alloc_buffer(ctx)), recv_time(time(NULL)){
+        ctx(import_context_create(ctx_params)), recv_time(time(NULL)){
     }
     ~reader() {
-        import_free_buffer(buf, ctx);
         import_context_destroy(ctx);
     }
 };

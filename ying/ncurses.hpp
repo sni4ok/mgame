@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "evie/utils.hpp"
+
 #include <memory>
 
 #include <curses.h>
@@ -30,7 +32,6 @@ struct ncurses_err
 
     ncurses_err(const ncurses_err&) = delete;
 };
-
 
 class window : noncopyable
 {

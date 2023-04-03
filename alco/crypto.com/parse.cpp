@@ -41,38 +41,52 @@ struct lws_i: sec_id_by_name<lws_impl>
         if(cfg.log_lws)
             mlog() << "lws proceed: " << str_holder((const char*)in, len);
         iterator it = (iterator)in, ie = it + len;
-        skip_fixed(it, "{");
-
-        if(skip_if_fixed(it, "\"code\":0,\"method\":\"subscribe\",\"result\":{\"instrument_name\":\""))
+        skip_fixed(it, "{\"id\":");
+        iterator ne = it;
+        it = std::find(it, ie, ',');
+        if(skip_if_fixed(it, ",\"code\":0,\"method\":\"subscribe\",\"result\":{\"channel\":"))
         {
-            iterator ne = std::find(it, ie, '\"');
+            bool book = false;
+            if(skip_if_fixed(it, "\"book\",\"subscription\":\"book."))
+            {
+                ne = std::find(it, ie, '.');
+                book = true;
+            }
+            else
+            {
+                skip_fixed(it, "\"trade\",\"subscription\":\"trade.");
+                ne = std::find(it, ie, '\"');
+            }
+
             uint32_t security_id = get_security_id(it, ne, time);
-            skip_fixed(ne, "\",\"subscription\":\"");
-            if(skip_if_fixed(ne, "book"))
+            search_and_skip_fixed(it, ie, "\"data\":[");
+            if(book)
             {
                 ttime_t etime;
-                if(len > 40)
+                if(len > 80)
                 {
-                    it = ie - 40;
-                    search_and_skip_fixed(it, ie, "\"t\":");
-                    etime.value = lexical_cast<uint64_t>(it, std::find(it, ie, ',')) * (ttime_t::frac / 1000);
+                    ne = ie - 80;
+                    search_and_skip_fixed(ne, ie, "\"t\":");
+                    etime.value = lexical_cast<uint64_t>(ne, std::find(ne, ie, ',')) * (ttime_t::frac / 1000);
                 }
                 else
                     etime = ttime_t();
 
                 add_clean(security_id, ttime_t(), time);
-                it = std::find(ne, ie, '[') + 1;
-                if(skip_if_fixed(it, "{\"bids\":["))
+                if(skip_if_fixed(it, "{\"asks\":["))
                 {
                     for(;;)
                     {
                         if(skip_if_fixed(it, "["))
                         {
-                            ne = std::find(it, ie, ',');
+                            skip_fixed(it, "\"");
+                            ne = std::find(it, ie, '"');
                             price_t price = read_price(it, ne);
-                            it = ne + 1;
-                            ne = std::find(it, ie, ',');
+                            it = ne + 2;
+                            skip_fixed(it, "\"");
+                            ne = std::find(it, ie, '"');
                             count_t count = read_count(it, ne);
+                            count.value = -count.value;
                             add_order(security_id, price.value, price, count, etime, time);
                             it = std::find(ne, ie, ']');
                             ++it;
@@ -88,18 +102,19 @@ struct lws_i: sec_id_by_name<lws_impl>
                         }
                     }
                 }
-                if(skip_if_fixed(it, "\"asks\":["))
+                if(skip_if_fixed(it, "\"bids\":["))
                 {
                     for(;;)
                     {
                         if(skip_if_fixed(it, "["))
                         {
-                            ne = std::find(it, ie, ',');
+                            skip_fixed(it, "\"");
+                            ne = std::find(it, ie, '"');
                             price_t price = read_price(it, ne);
-                            it = ne + 1;
-                            ne = std::find(it, ie, ',');
+                            it = ne + 2;
+                            skip_fixed(it, "\"");
+                            ne = std::find(it, ie, '"');
                             count_t count = read_count(it, ne);
-                            count.value = -count.value;
                             add_order(security_id, price.value, price, count, etime, time);
                             it = std::find(ne, ie, ']');
                             ++it;
@@ -117,14 +132,24 @@ struct lws_i: sec_id_by_name<lws_impl>
                 skip_fixed(it, "]}}");
                 send_messages();
             }
-            else if(skip_if_fixed(ne, "trade."))
+            else
             {
-                it = std::find(ne, ie, '[') + 1;
-
                 for(;;)
                 {
-                    skip_fixed(it, "{\"dataTime\":");
-                    search_and_skip_fixed(it, ie, "\"s\":\"");
+                    skip_fixed(it, "{\"d\":\"");
+                    search_and_skip_fixed(it, ie, "\",\"t\":");
+                    ne = std::find(it, ie, ',');
+                    ttime_t etime;
+                    etime.value = lexical_cast<uint64_t>(it, ne) * (ttime_t::frac / 1000);
+                    skip_fixed(ne, ",\"p\":\"");
+                    it = std::find(ne, ie, '\"');
+                    price_t price = read_price(ne, it);
+                    it = it + 2;
+                    skip_fixed(it, "\"q\":\"");
+                    ne = std::find(it, ie, '\"');
+                    count_t count = read_count(it, ne);
+                    it = ne + 2;
+                    skip_fixed(it, "\"s\":\"");
                     uint32_t direction;
                     if(skip_if_fixed(it, "BUY"))
                         direction = 1;
@@ -132,49 +157,29 @@ struct lws_i: sec_id_by_name<lws_impl>
                         skip_fixed(it, "SELL");
                         direction = 2;
                     }
-                    skip_fixed(it, "\",\"p\":");
-                    ne = std::find(it, ie, ',');
-                    price_t price = read_price(it, ne);
-                    it = ne + 1;
-                    skip_fixed(it, "\"q\":");
-                    ne = std::find(it, ie, ',');
-                    count_t count = read_count(it, ne);
-                    it = ne + 1;
-                    skip_fixed(it, "\"t\":");
-                    ne = std::find(it, ie, ',');
-                    ttime_t etime;
-                    etime.value = lexical_cast<uint64_t>(it, ne) * (ttime_t::frac / 1000);
-                    it = std::find(ne + 1, ie, '}');
+                    it = std::find(it, ie, '}');
                     ++it;
+                    add_trade(security_id, price, count, direction, etime, time);
                     if(it == ie || *it == ']')
                         break;
                     if(*it == ',')
                         ++it;
-                    add_trade(security_id, price, count, direction, etime, time);
                 }
                 skip_fixed(it, "]}}");
                 send_messages();
             }
-            else
-                throw std::runtime_error(es() % "unsupported table type in message: " % std::string((iterator)in, ie));
         }
-        else if(skip_if_fixed(it, "\"id\":0,\"code\":0,\"method\":\"subscribe\"}"))
+        else if(skip_if_fixed(it, ",\"code\":0,\"method\":\"subscribe\",\"channel\""))
         {
         }
-        else if(skip_if_fixed(it, "\"id\":"))
+        else if(skip_if_fixed(it, ",\"method\":\"public/heartbeat\",\"code\":0}"))
         {
-            iterator ne = std::find(it, ie, ',');
-            uint64_t id = lexical_cast<uint64_t>(it, ne);
-            if(skip_if_fixed(ne, ",\"method\":\"public/heartbeat\"}"))
-            {
-                bs << "{\"id\":" << id << ",\"method\":\"public/respond-heartbeat\"}";
-                send(wsi);
-            }
-            else
-                throw std::runtime_error(es() % "unsupported message: " % std::string((iterator)in, ie));
+            int64_t id = lexical_cast<int64_t>(ne, std::find(ne, it, ','));
+            bs << "{\"id\":" << id << ",\"method\":\"public/respond-heartbeat\"}";
+            send(wsi);
         }
         else
-            throw std::runtime_error(es() % "unsupported message: " % std::string(it, ie));
+            throw std::runtime_error(es() % "unsupported message: " % str_holder((const char*)in, len));
     }
 };
 
@@ -185,17 +190,6 @@ void proceed_crypto_com(volatile bool& can_run)
 
 void connect(lws_i& ls)
 {
-	lws_client_connect_info ccinfo = lws_client_connect_info();
-	ccinfo.context = ls.context;
-	ccinfo.address = "stream.crypto.com";
-	ccinfo.port = 443;
-    ccinfo.path = "/v2/market";
-	
-    ccinfo.userdata = (void*)&ls;
-	ccinfo.protocol = "ws";
-	ccinfo.origin = "origin";
-	ccinfo.host = ccinfo.address;
-	ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
-	lws_client_connect_via_info(&ccinfo);
+    lws_connect(ls, "stream.crypto.com", 443, "/v2/market");
 }
 

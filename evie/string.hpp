@@ -77,6 +77,10 @@ struct buf_stream
     uint32_t size() const {
         return cur - from;
     }
+    str_holder str() const
+    {
+        return str_holder(begin(), size());
+    }
     bool empty() const {
         return cur == from;
     }
@@ -165,7 +169,7 @@ stream& operator<<(stream& s, const str_holder& str)
 
 class es
 {
-    buf_stream_fixed<1024> s;
+    buf_stream_fixed<16 * 1024> s;
 public:
     template<typename t>
     es& operator%(const t& v) {

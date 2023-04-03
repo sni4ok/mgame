@@ -324,9 +324,8 @@ struct ifile
                 else {
                     ret = ::read(cur_file, buf, std::min<uint64_t>(buf_size, nt.sz - nt.off));
                     if(ret > 0)
-                        nt.sz -= ret;
+                        nt.off += ret;
                 }
-
                 if(ret < 0)
                     throw_system_failure("ifile::read file error");
                 else if(!ret) {
@@ -337,6 +336,17 @@ struct ifile
                     else if(history)
                         return ret;
                     else {
+/*                {
+                    if(nt.sz == nt.off)
+                    {
+                        struct stat st;
+                        if(fstat(cur_file, &st))
+                            throw_system_failure("fstat() error");
+                        nt.sz = st.st_size;
+                    }
+                    uint64_t read_size = std::min<uint64_t>(buf_size, nt.sz - nt.off);
+                    ret = read_size ? ::read(cur_file, buf, read_size) : 0;
+                }*/
                         usleep(10 * 1000);
                         ping.time = cur_ttime();
                         if(ping.time > main_file.tt)

@@ -6,6 +6,9 @@
 
 #include "vector.hpp"
 
+#include <cassert>
+#include <algorithm>
+
 template<typename type, typename comp = std::less<type>, template <typename> typename vector = mvector>
 struct fset
 {
@@ -101,7 +104,8 @@ struct fset
     }
     void erase(const type& k) {
         iterator it = find(k);
-        data.erase(it);
+        if(it != data.end())
+            data.erase(it);
     }
     void erase(const_iterator it) {
         data.erase(const_cast<iterator>(it));

@@ -25,7 +25,8 @@ stream& operator<<(stream& s, const count_t& c)
 
 struct brief_time : ttime_t
 {
-    explicit brief_time(ttime_t time) : ttime_t(time)
+    bool show_frac;
+    explicit brief_time(ttime_t time, bool show_frac = true) : ttime_t(time), show_frac(show_frac)
     {
     }
 };
@@ -37,7 +38,9 @@ stream& operator<<(stream& s, const brief_time& t)
     tt = tt % (3600 * 24);
     uint32_t h = tt / 3600;
     uint32_t m = (tt - h * 3600) / 60;
-    s << print2chars(h) << ':' << print2chars(m) << ':' << print2chars(tt % 60) << '.' << t.value % ttime_t::frac;
+    s << print2chars(h) << ':' << print2chars(m) << ':' << print2chars(tt % 60);
+    if(t.show_frac)
+        s << '.' << mlog_fixed<9>(t.value % ttime_t::frac);
     return s;
 }
 

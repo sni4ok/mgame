@@ -51,6 +51,7 @@ struct lws_i : lws_impl, read_time_impl
             security& s = get_security(it, ne, time);
             it = ne + 1;
             skip_fixed(it, ",\"changes\":[[\"");
+        repeat:
             bool ask;
             if(skip_if_fixed(it, "sell\",\""))
                 ask = true;
@@ -67,13 +68,19 @@ struct lws_i : lws_impl, read_time_impl
             if(ask)
                 c.value = -c.value;
             it = ne + 1;
-            skip_fixed(it, "]],\"time\":\"");
+            skip_fixed(it, "]");
+            s.proceed_book(e, p, c, ttime_t(), time);
+            if(skip_if_fixed(it, ","))
+            {
+                skip_fixed(it, "[\"");
+                goto repeat;
+            }
+            skip_fixed(it, "],\"time\":\"");
             ttime_t etime = read_time<6>(it);
+            my_unused(etime);
             skip_fixed(it, "Z\"}");
             if(unlikely(it != ie))
                 throw std::runtime_error(es() % "parsing message error: " % std::string((iterator)in, ie));
-
-            s.proceed_book(e, p, c, etime, time);
         }
         else if(skip_if_fixed(it, "match\",\"trade_id\":"))
         {
@@ -127,17 +134,6 @@ void proceed_coinbase(volatile bool& can_run)
 
 void connect(lws_i& ls)
 {
-	lws_client_connect_info ccinfo =lws_client_connect_info();
-	ccinfo.context = ls.context;
-	ccinfo.address = "ws-feed.pro.coinbase.com";
-	ccinfo.port = 443;
-    ccinfo.path = "/ws/2";
-	
-    ccinfo.userdata = (void*)&ls;
-	ccinfo.protocol = "ws";
-	ccinfo.origin = "origin";
-	ccinfo.host = ccinfo.address;
-	ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
-	lws_client_connect_via_info(&ccinfo);
+    lws_connect(ls, "ws-feed.pro.coinbase.com", 443, "/ws/2");
 }
 
