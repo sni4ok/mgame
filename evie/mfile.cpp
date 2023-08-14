@@ -85,21 +85,27 @@ void write_file(const char* fname, const char* buf, uint32_t size, bool trunc)
         throw_system_failure(es() % "write_file(), " % _str_holder(fname) % ", size: " % size % ", w: " % w);
 }
 
-bool is_file_exist(const char* fname, uint64_t* fsize)
+bool get_file_stat(const char* fname, struct stat& st)
 {
 	int hfile = ::open(fname, O_RDONLY);
 	if(hfile < 0)
         return false;
 
-    struct stat st;
 	bool ret = !(::fstat(hfile, &st));
     ::close(hfile);
 
     if(!ret)
 		throw_system_failure(es() % "fstat() error for " % fname);
 
-    ret = S_ISREG(st.st_mode);
+    return ret;
+}
 
+bool is_file_exist(const char* fname, uint64_t* fsize)
+{
+    struct stat st;
+    bool ret = get_file_stat(fname, st);
+
+    ret = S_ISREG(st.st_mode);
     if(fsize && ret)
         *fsize = st.st_size;
 
@@ -148,17 +154,20 @@ void create_directories(const char* fname)
 
 bool is_directory(const char* fname)
 {
-	int hfile = ::open(fname, O_RDONLY);
-	if(hfile < 0)
-        return false;
-
     struct stat st;
-	bool ret = !(::fstat(hfile, &st));
-    ::close(hfile);
-
+    bool ret = get_file_stat(fname, st);
     if(!ret)
 		throw_system_failure(es() % "fstat() error for " % fname);
 
     return S_ISDIR(st.st_mode);
+}
+
+ttime_t get_file_mtime(const char* fname)
+{
+    struct stat st;
+    bool ret = get_file_stat(fname, st);
+    if(!ret)
+		throw_system_failure(es() % "fstat() error for " % fname);
+    return {st.st_mtime * ttime_t::frac};
 }
 

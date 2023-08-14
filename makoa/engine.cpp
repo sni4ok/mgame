@@ -455,7 +455,7 @@ void actives::on_disconnect()
     }
 }
 
-std::pair<void*, str_holder> import_context_create(void* params)
+std::pair<void*, str_holder> import_context_create(void*)
 {
     return {new context(), engine::impl::instance().alloc()};
 }

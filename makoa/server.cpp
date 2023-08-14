@@ -53,6 +53,7 @@ struct server::impl : stack_singleton<server::impl>
             hi.destroy(i);
         }
         catch(std::exception& e) {
+            init = 1;
             can_run = false;
             mlog() << "import_thread ended, " << str << " " << e;
         }

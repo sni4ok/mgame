@@ -28,4 +28,5 @@ void rename_file(const char* from, const char* to);
 bool create_directory(const char* fname);
 void create_directories(const char* fname);
 bool is_directory(const char* fname);
+ttime_t get_file_mtime(const char* fname);
 

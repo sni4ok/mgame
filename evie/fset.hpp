@@ -107,8 +107,9 @@ struct fset
         if(it != data.end())
             data.erase(it);
     }
-    void erase(const_iterator it) {
+    iterator erase(const_iterator it) {
         data.erase(const_cast<iterator>(it));
+        return iterator(it);
     }
     void reserve(uint32_t new_capacity) {
         data.reserve(new_capacity);

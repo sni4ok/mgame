@@ -150,15 +150,17 @@ struct fmap
     void swap(vector<pair>& r) {
         data.swap(r);
     }
-    void insert(const pair& v) {
+    iterator insert(const pair& v) {
         auto it = lower_bound(v.first);
         if(it == data.end() || it->first != v.first)
-            data.insert(it, v);
+            it = data.insert(it, v);
+        return it;
     }
-    void insert(const key& k, const value_type& v) {
+    iterator insert(const key& k, const value_type& v) {
         auto it = lower_bound(k);
         if(it == data.end() || it->first != k)
             it = data.insert(it, v);
+        return it;
     }
     void erase(const key& k) {
         iterator it = find(k);
