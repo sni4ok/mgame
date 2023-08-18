@@ -134,6 +134,11 @@ struct mirror::impl
         while(w.rows <= trades.size())
             trades.pop_front();
         uint32_t i = 0;
+        if(trades_from == 0)
+        {
+            trades_from = 48;
+            trades_width_limit = w.cols - trades_from;
+        }
         for(auto&& v : trades)
         {
             bs << brief_time(v.etime) << " " << brief_time(v.time) << " " << v.price << " " << v.count << " " << get_direction(v.direction);

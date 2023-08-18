@@ -124,6 +124,8 @@ struct lws_i : lws_impl, read_time_impl
             if(ie - it > 120)
                 throw std::runtime_error(es() % "parsing message error: " % std::string((iterator)in, ie));
         }
+        else if(skip_if_fixed(it, "error\""))
+            throw std::runtime_error(es() % "error message: " % str_holder((iterator)in, len));
     }
 };
 

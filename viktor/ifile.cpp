@@ -292,7 +292,7 @@ struct ifile
         ping.id = msg_ping;
     }
 
-    uint32_t read(char* buf, uint32_t buf_size)
+    virtual uint32_t read(char* buf, uint32_t buf_size)
     {
         if(unlikely(buf_size % message_size))
             throw std::runtime_error(es() % "ifile::read(): inapropriate size: " % buf_size);
@@ -360,27 +360,86 @@ struct ifile
         }
     }
 
-    ~ifile()
+    virtual ~ifile()
     {
         if(cur_file)
             close(cur_file);
     }
 };
 
+struct ifile_replay : ifile
+{
+    const double speed;
+    ttime_t file_time, start_time;
+    std::vector<char> b, b2;
+
+    ifile_replay(const std::string& fname, ttime_t tf, ttime_t tt, double speed)
+        : ifile(fname, tf, tt, true), speed(speed), file_time()
+    {
+        start_time = cur_ttime();
+    }
+    uint32_t read(char* buf, uint32_t buf_size)
+    {
+        uint32_t sz = b.size();
+        if(buf_size - sz) {
+            b2.resize(buf_size - sz);
+            uint32_t r = ifile::read(&b2[0], buf_size - sz);
+            if(r)
+                b.insert(b.end(), b2.begin(), b2.begin() + r);
+            else if(b.empty())
+                return 0;
+        }
+        message *mb = (message*)&b[0], *me = mb + b.size() / message_size, *mi = mb;
+        if(!file_time.value)
+            file_time.value = mb->t.time.value;
+        ttime_t t = cur_ttime();
+        int64_t dt = (t - start_time) * speed;
+        ttime_t f_to{file_time.value + dt};
+        for(; mi != me; ++mi) {
+            if(mi->t.time.value > f_to.value)
+                break;
+        }
+        uint32_t ret = (mi - mb) * message_size;
+        std::copy((char*)mb, (char*)mi, buf);
+        b.erase(b.begin(), b.begin() + ret);
+        if(!ret && !b.empty())
+        {
+            int64_t s = ((mb->t.time - file_time) - dt) * speed;
+            if(s < int64_t(9 * ttime_t::frac))
+                usleep(s / 1000);
+            else
+            {
+                sleep(10);
+                start_time = cur_ttime();
+                file_time.value = mb->t.time.value;
+            }
+            return read(buf, buf_size);
+        }
+        return ret;
+    }
+};
+
 void* ifile_create(const char* params)
 {
     std::vector<std::string> p = split(params, ' ');
-    if(p.empty() || p.size() > 4)
-        throw std::runtime_error("ifile_create() [history ]file_name[ time_from[ time_to]]");
+    if(p.empty() || p.size() > 5)
+        throw std::runtime_error("ifile_create() [history ,replay speed ]file_name[ time_from[ time_to]]");
 
     bool history = (p[0] == "history");
     if(history)
         p.erase(p.begin());
 
+    bool replay = (p[0] == "replay");
+    double speed;
+    if(replay) {
+        speed = lexical_cast<double>(p[1]);
+        p.erase(p.begin(), p.begin() + 2);
+    }
+
     ttime_t tf = ttime_t(), tt = ttime_t();
     if(p.size() >= 2)
         tf = parse_time(p[1]);
-    else
+    else if(!history && !replay)
         tf = cur_ttime();
 
     if(p.size() == 3)
@@ -388,7 +447,10 @@ void* ifile_create(const char* params)
     else
         tt.value = std::numeric_limits<uint64_t>::max();
 
-    return new ifile(p[0], tf, tt, history);
+    if(replay)
+        return new ifile_replay(p[0], tf, tt, speed);
+    else
+        return new ifile(p[0], tf, tt, history);
 }
 
 void ifile_destroy(void *v)
