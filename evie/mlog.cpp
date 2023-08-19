@@ -229,7 +229,7 @@ static void make_key()
     pthread_key_create(&key, NULL);
 }
 
-static int get_thread_id()
+int get_thread_id()
 {
     void *ptr;
     pthread_once(&key_once, make_key);

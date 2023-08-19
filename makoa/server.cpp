@@ -7,24 +7,30 @@
 
 #include "evie/mutex.hpp"
 #include "evie/utils.hpp"
+#include "evie/fmap.hpp"
 
 #include <unistd.h>
 
 extern bool pooling_mode;
 
-struct server::impl : stack_singleton<server::impl>
+server::impl* server_impl = nullptr;
+
+struct server::impl
 {
     volatile bool& can_run;
     bool quit_on_exit;
     std::vector<std::thread> threads;
-    std::vector<std::pair<hole_importer, void*> > imports;
+    fmap<int, std::pair<hole_importer, void*> > imports;
     my_mutex mutex;
+    my_condition cond;
 
     impl(volatile bool& can_run, bool quit_on_exit) : can_run(can_run), quit_on_exit(quit_on_exit)
     {
+        server_impl = this;
     }
-    void import_thread(volatile int& init, std::string str)
+    void import_thread(uint32_t& count, std::string str)
     {
+        bool need_init = true;
         try
         {
             std::string params = str;
@@ -33,10 +39,12 @@ struct server::impl : stack_singleton<server::impl>
             *c = char();
             hole_importer hi = create_importer(f);
             void* i = hi.init(can_run, c + 1);
-            init = 1;
             {
                 my_mutex::scoped_lock lock(mutex);
-                imports.push_back(std::make_pair(hi, i));
+                imports[get_thread_id()] = {hi, i};
+                ++count;
+                need_init = false;
+                cond.notify_all();
             }
             while(can_run) {
                 try {
@@ -49,59 +57,69 @@ struct server::impl : stack_singleton<server::impl>
                         sleep(1);
                 }
             }
-
             hi.destroy(i);
         }
-        catch(std::exception& e) {
-            init = 1;
+        catch(std::exception& e)
+        {
             can_run = false;
             mlog() << "import_thread ended, " << str << " " << e;
         }
+        my_mutex::scoped_lock lock(mutex);
+        if(need_init)
+            ++count;
+        else
+            imports.erase(get_thread_id());
+        cond.notify_all();
     }
     void run(const std::vector<std::string>& imports)
     {
-        std::vector<int> inits(imports.size());
-        uint32_t idx = 0;
+        uint32_t count = 0;
 
         for(std::string i: imports)
         {
             if(i.size() > 7 && std::equal(i.begin(), i.begin() + 7, "mmap_cp"))
                 i = i + (pooling_mode ? " 1" : " 0");
 
-            threads.push_back(std::thread(&impl::import_thread, this, std::ref(inits[idx++]), i));
+            threads.push_back(std::thread(&impl::import_thread, this, std::ref(count), i));
         }
-
-        for(uint32_t started = 0, cnt = 0; started != inits.size(); ++cnt)
+        while(count != imports.size())
         {
-            for(int v: inits)
-                started += v;
-
-            if(started != inits.size()) {
-                if(cnt == 30)
-                    throw std::runtime_error("server::run init imports fails");
-                sleep(1);
-            }
+            my_mutex::scoped_lock lock(mutex);
+            cond.wait(lock);
+        }
+    }
+    void set_close()
+    {
+        my_mutex::scoped_lock lock(mutex);
+        for(auto& i: imports) {
+            if(i.second.first.set_close)
+                i.second.first.set_close(i.second.second);
         }
     }
     ~impl()
     {
-        for(auto& i: imports) {
-            if(i.first.set_close)
-                i.first.set_close(i.second);
-        }
         for(auto&& t: threads)
             t.join();
+        server_impl = nullptr;
     }
 };
+
+void server_set_close()
+{
+    if(server_impl)
+        server_impl->set_close();
+}
 
 void server::run(const std::vector<std::string>& imports)
 {
     pimpl->run(imports);
 }
+
 server::server(volatile bool& can_run, bool quit_on_exit)
 {
     pimpl = std::make_unique<server::impl>(can_run, quit_on_exit);
 }
+
 server::~server()
 {
 }

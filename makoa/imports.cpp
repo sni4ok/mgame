@@ -9,7 +9,6 @@
 #include "evie/profiler.hpp"
 
 #include <map>
-#include <atomic>
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -76,25 +75,26 @@ uint32_t pipe_read(int hfile, char* buf, uint32_t buf_size)
 
 uint32_t mmap_cp_read(void *v, char* buf, uint32_t buf_size)
 {
-    std::atomic_uchar* f = ((std::atomic_uchar*)v), *e = f + message_size, *i = f;
+    uint8_t* f = (uint8_t*)v, *e = f + message_size, *i = f;
     uint8_t w = *f;
     uint8_t r = *(f + 1);
-    if(unlikely(w < 2 || w > message_size || r < 2 || r > message_size))
+    if(unlikely(w < 2 || w >= message_size || r < 2 || r >= message_size))
         throw std::runtime_error(es() % "mmap_cp_read() internal error, wp: " % uint32_t(w) % ", rp: " % uint32_t(r));
 
     i += r;
     const message* p = (((const message*)v) + 1) + (r - 2) * 255;
-    uint32_t cur_count = atomic_load(i);
+    uint8_t cur_count = mmap_load(i);
     if(cur_count) {
         if(unlikely(buf_size < cur_count))
             throw std::runtime_error(es() % "mmap_cp_read() buf_size too small, wp: " % uint32_t(w) %
                 ", rp: " % uint32_t(r) % ", buf_size: " % buf_size % ", cur_count: " % cur_count);
-        memcpy(buf, p, cur_count * message_size);
-        atomic_store(i, 0);
+        memcpy(buf, p, uint32_t(cur_count) * message_size);
+        mmap_store(i, 0);
         ++i;
         if(i == e)
             i = f + 2;
-        *(f + 1) = i - f;
+        *(f + 1) = uint8_t(i - f);
+        //mlog() << "mmap_cp_read(" << w << "," << r << "," << cur_count << "," << uint32_t(*(f)) << "," << uint32_t(*(f + 1)) << ")";
     }
     return cur_count * message_size;
 }
@@ -114,7 +114,7 @@ struct import_mmap_cp
         pooling_mode = lexical_cast<bool>(p[1]);
         ptr = mmap_create(p[0].c_str(), true);
         shared_memory_sync* s = get_smc(ptr);
-        atomic_store((std::atomic_uchar*)&s->pooling_mode, pooling_mode ? uint8_t(1) : uint8_t(2));
+        mmap_store(&s->pooling_mode, pooling_mode ? 1 : 2);
     }
     ~import_mmap_cp()
     {
@@ -137,17 +137,18 @@ void import_mmap_cp_start(void* imc, void* params)
     import_mmap_cp& ic = *((import_mmap_cp*)(imc));
     reader<void*> rr(params, ic.ptr, mmap_cp_read);
     void* p = ic.ptr;
-
     shared_memory_sync* s = get_smc(p);
-    std::atomic_uchar* w = ((std::atomic_uchar*)p), *r = w + 1;
+    uint8_t* w = (uint8_t*)p, *r = w + 1;
     bool initialized = false;
-    pthread_mutex_lock(&(s->mutex));
+
+    if(pthread_mutex_lock(&(s->mutex)))
+        throw std::runtime_error("import_mmap_cp_start()::mmap_lock error");
     while(!initialized && ic.can_run)
     {
-        uint8_t wc = atomic_load(w);
-        uint8_t rc = atomic_load(r);
+        uint8_t wc = mmap_load(w);
+        uint8_t rc = mmap_load(r);
         if(rc != 1 && rc != 0) {
-            atomic_store(w, 0);
+            mmap_store(w, 0);
             pthread_mutex_unlock(&(s->mutex));
             throw std::runtime_error("mmap inconsistence");
         }
@@ -171,15 +172,15 @@ void import_mmap_cp_start(void* imc, void* params)
             if(!ic.pooling_mode) {
                 if(!pthread_mutex_lock(&(s->mutex)))
                 {
-                    uint8_t dr = atomic_load(r);
-                    if(dr < 2)
-                        throw std::runtime_error("mmap inconsistence 2");
-
-                    std::atomic_uchar *i = w + dr;
-                    if(!atomic_load(i)) {
-                        pthread_cond_wait(&(s->condition), &(s->mutex));
+                    uint8_t dr = *r;
+                    if(dr < 2) {
                         pthread_mutex_unlock(&(s->mutex));
+                        throw std::runtime_error("mmap inconsistence 2");
                     }
+                    uint8_t count = mmap_load(w + dr);
+                    if(!count)
+                        pthread_cond_wait(&(s->condition), &(s->mutex));
+                    pthread_mutex_unlock(&(s->mutex));
                 }
             }
         }

@@ -24,6 +24,7 @@ extern "C"
     {
         mlog() << "Termination signal received: " << sign;
         can_run = false;
+        server_set_close();
     }
 
     void on_signal(int sign)

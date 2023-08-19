@@ -18,3 +18,5 @@ private:
     std::unique_ptr<impl> pimpl;
 };
 
+void server_set_close();
+

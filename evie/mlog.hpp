@@ -164,4 +164,5 @@ uint32_t& log_params();
 void log_test(size_t thread_count, size_t log_count);
 void set_significant_thread();
 void set_trash_thread();
+int get_thread_id();
 

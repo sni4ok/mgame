@@ -13,14 +13,13 @@
 #include "evie/mlog.hpp"
 #include "evie/profiler.hpp"
 
+#include <list>
+#include <map>
+
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
-
-#include <atomic>
-#include <list>
-#include <map>
 
 namespace
 {
@@ -197,17 +196,16 @@ namespace
     }
     void mmap_destroy(void *p)
     {
-        if(munmap(p, mmap_alloc_size) < 0)
-            throw_system_failure(es() % "munmmap error");
+        mmap_close(p);
     }
     void mmap_proceed(void* v, const message* m, uint32_t count)
     {
         bool flub = false;
-        std::atomic_uchar* f = ((std::atomic_uchar*)v), *e = f + message_size, *i = f;
+        uint8_t* f = (uint8_t*)v, *e = f + message_size, *i = f;
 
         uint8_t w = *f;
         uint8_t r = *(f + 1);
-        if(w < 2 || w >= message_size || !r || r >= message_size)
+        if(unlikely(w < 2 || w >= message_size || !r || r >= message_size))
             throw std::runtime_error(es() % "mmap_proceed() internal error, wp: " % uint32_t(w) % ", rp: " % uint32_t(r));
 
         i += w;
@@ -220,29 +218,27 @@ namespace
             if(cur_count > 255)
                 cur_count = 255;
 
-            uint8_t nf = atomic_load(i);
+            uint8_t nf = mmap_load(i);
             if(nf) {
                 //reader not exists or overloaded
                 time_t tf = time(NULL);
                 flub = true;
                 while(nf && tf + 5 >= time(NULL)){
                     usleep(10);
-                    nf = atomic_load(i);
+                    nf = mmap_load(i);
                 }
                 if(nf)
                     throw std::runtime_error(es() % "mmap_proceed() map overload, wp: " % uint32_t(*f) % ", rp: " % uint32_t(*(f + 1)));
             }
             memcpy(p, m + c, cur_count * message_size);
-            atomic_store(i, uint8_t(cur_count));
+            mmap_store(i, cur_count);
             //mlog() << "mmap_proceed(" << uint64_t(v) << "," << uint64_t(p) << "," << c << "," << cur_count
-            //    << "," << uint32_t(atomic_load(f)) << "," << uint32_t(atomic_load(f + 1)) << ")";
+            //    << "," << uint32_t(*f) << "," << uint32_t(*(f + 1)) << ")";
             p += 255;
-
             ++i;
             if(i == e)
                 i = f + 2;
-            
-            *f = i - f;
+            *f = uint8_t(i - f);
             c += cur_count;
         }
 

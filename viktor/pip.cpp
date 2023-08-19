@@ -33,6 +33,7 @@ void proceed_pip(volatile bool& can_run)
 
 int main(int argc, char** argv)
 {
+    on_term_signal = server_set_close;
     return parser_main(argc, argv, "pip", proceed_pip);
 }
 

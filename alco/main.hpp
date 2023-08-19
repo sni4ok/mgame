@@ -8,12 +8,16 @@
 
 volatile bool parser_can_run = true;
 
+void (*on_term_signal)() = nullptr;
+
 extern "C"
 {
     void term_signal(int sign)
     {
         mlog() << "Termination signal received: " << sign;
         parser_can_run = false;
+        if(on_term_signal)
+            on_term_signal();
     }
 
     void on_signal(int sign)
