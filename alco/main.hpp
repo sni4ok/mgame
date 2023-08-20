@@ -10,6 +10,11 @@ volatile bool parser_can_run = true;
 
 void (*on_term_signal)() = nullptr;
 
+bool program_can_run()
+{
+    return parser_can_run;
+}
+
 extern "C"
 {
     void term_signal(int sign)

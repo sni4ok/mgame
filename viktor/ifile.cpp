@@ -367,6 +367,8 @@ struct ifile
     }
 };
 
+bool program_can_run();
+
 struct ifile_replay : ifile
 {
     const double speed;
@@ -380,6 +382,7 @@ struct ifile_replay : ifile
     }
     uint32_t read(char* buf, uint32_t buf_size)
     {
+    rep:
         uint32_t sz = b.size();
         if(buf_size - sz) {
             b2.resize(buf_size - sz);
@@ -404,8 +407,11 @@ struct ifile_replay : ifile
         b.erase(b.begin(), b.begin() + ret);
         if(!ret && !b.empty())
         {
-            int64_t s = ((mb->t.time - file_time) - dt) * speed;
-            if(s < int64_t(9 * ttime_t::frac))
+            if(!program_can_run())
+                return ret;
+
+            int64_t s = mb->t.time - file_time;
+            if(s < int64_t(11 * ttime_t::frac))
                 usleep(s / 1000);
             else
             {
@@ -413,7 +419,7 @@ struct ifile_replay : ifile
                 start_time = cur_ttime();
                 file_time.value = mb->t.time.value;
             }
-            return read(buf, buf_size);
+            goto rep;
         }
         return ret;
     }

@@ -18,6 +18,11 @@
 
 volatile bool can_run = true;
 
+bool program_can_run()
+{
+    return can_run;
+}
+
 extern "C" 
 {
     void term_signal(int sign)
