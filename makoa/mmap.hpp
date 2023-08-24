@@ -39,3 +39,8 @@ inline uint8_t mmap_load(uint8_t* ptr)
     return __atomic_load_n(ptr, __ATOMIC_RELAXED);
 }
 
+inline bool mmap_compare_exchange(uint8_t* ptr, uint8_t from, uint8_t to)
+{
+    return __atomic_compare_exchange_n(ptr, &from, to, false/*weak*/, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
+}
+

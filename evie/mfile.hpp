@@ -14,13 +14,13 @@ struct mfile : noncopyable
     mfile(const char* file);
     uint64_t size() const;
     void seekg(uint64_t pos);
-    void read(char* ptr, uint32_t size);
+    void read(char* ptr, uint64_t size);
     ~mfile();
 };
 
 bool read_file(std::vector<char>& buf, const char* fname, bool can_empty = false);
 std::vector<char> read_file(const char* fname, bool can_empty = false);
-void write_file(const char* fname, const char* buf, uint32_t size, bool trunc);
+void write_file(const char* fname, const char* buf, uint64_t size, bool trunc);
 bool is_file_exist(const char* fname, uint64_t* fsize = nullptr);
 uint64_t file_size(const char* fname);
 void remove_file(const char* fname);

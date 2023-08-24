@@ -436,7 +436,7 @@ void* ifile_create(const char* params)
         p.erase(p.begin());
 
     bool replay = (p[0] == "replay");
-    double speed;
+    double speed = 1.;
     if(replay) {
         speed = lexical_cast<double>(p[1]);
         p.erase(p.begin(), p.begin() + 2);

@@ -50,7 +50,7 @@ public:
             size_ = new_size;
         if(new_size <= capacity_)
         {
-            memset(buf + size_, 0, (new_size - size_) * sizeof(type));
+            memset((void*)(buf + size_), 0, (new_size - size_) * sizeof(type));
             size_ = new_size;
         }
         else {
@@ -58,7 +58,7 @@ public:
             if(!new_ptr)
                 throw std::bad_alloc();
             buf = (type*)new_ptr;
-            memset(buf + size_, 0, (new_size - size_) * sizeof(type));
+            memset((void*)(buf + size_), 0, (new_size - size_) * sizeof(type));
             size_ = new_size;
             capacity_ = new_size;
         }

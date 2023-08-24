@@ -21,6 +21,8 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+bool program_can_run();
+
 namespace
 {
     void log_message(void*, const message* m, uint32_t count)
@@ -182,17 +184,43 @@ namespace
     }
     void* mmap_init(const char* params)
     {
+        mlog() << "mmap_init() open: " << params;
         void *p = mmap_create(params, false);
+        std::unique_ptr<void, void(*)(void*)> ptr(p, &mmap_close);
         shared_memory_sync* s = get_smc(p);
-        if(unlikely(pthread_mutex_lock(&(s->mutex))))
-            throw std::runtime_error("mmap_init()::mmap_lock error");
-        memset(p, 0, message_size);
+
         uint8_t* c = (uint8_t*)p;
+        {
+            char& s = *((char*)p + mmap_alloc_size);
+            if(s != '1')
+            {
+                mmap_store(c, 1);
+                mmap_store(c + 1, 0);
+                throw std::runtime_error(es() % "mmap_init() mmap already open: " % s);
+            }
+            ++s;
+        }
+        if(pthread_mutex_lock(&(s->mutex)))
+            throw std::runtime_error("mmap_init()::mmap_lock error");
+        for(uint8_t* s = c; s != c + mmap_alloc_size_base; ++s)
+        {
+            if(*s)
+                throw std::runtime_error(es() % "mmap_init() mmap already filled: " % params);
+        }
         *c = 2;
-        *(++c) = 1;
-        pthread_cond_signal(&(s->condition));
-		pthread_mutex_unlock(&(s->mutex));
-        return p;
+        *(c + 1) = 1;
+
+        while(*(c + 1) != 2 && program_can_run())
+        {
+            pthread_cond_signal(&(s->condition));
+            timespec t;
+            clock_gettime(CLOCK_REALTIME, &t);
+            t.tv_sec += 1;
+            pthread_cond_timedwait(&(s->condition), &(s->mutex), &t);
+        }
+        pthread_mutex_unlock(&(s->mutex));
+        mlog() << "mmap_init() successfully opened: " << params;
+        return ptr.release();
     }
     void mmap_destroy(void *p)
     {
@@ -238,7 +266,8 @@ namespace
             ++i;
             if(i == e)
                 i = f + 2;
-            *f = uint8_t(i - f);
+            if(!mmap_compare_exchange(f, w, i - f))
+                throw std::runtime_error(es() % "mmap_proceed() set w error, w: " % uint32_t(w) % ", new_w: " % uint32_t(i - f));
             c += cur_count;
         }
 
@@ -247,10 +276,16 @@ namespace
             MPROFILE("mmap_proceed_flub")
         }
 
-        shared_memory_sync* ps = get_smc(v);
-        if(ps->pooling_mode == 2 && !pthread_mutex_lock(&(ps->mutex))) {
-            pthread_cond_signal(&(ps->condition));
-            pthread_mutex_unlock(&(ps->mutex));
+        shared_memory_sync* s = get_smc(v);
+        /*bool mmap_good = (s->mutex.__data.__lock == 0 || s->mutex.__data.__lock == 1)
+            && (s->mutex.__data.__nusers == 0 || s->mutex.__data.__nusers == 1);
+        if(!mmap_good)
+            throw_system_failure(es() % "mmap_proceed() bad mmap, __lock: " % s->mutex.__data.__lock % ", __nusers: " % s->mutex.__data.__nusers);
+            */
+
+        if(s->pooling_mode == 2 && !pthread_mutex_lock(&(s->mutex))) {
+            pthread_cond_signal(&(s->condition));
+            pthread_mutex_unlock(&(s->mutex));
         }
     }
 }

@@ -10,9 +10,9 @@
 
 mfile::mfile(const char* file)
 {
-	hfile = ::open(file, O_RDONLY);
-	if(hfile < 0)
-		throw_system_failure(es() % "open file " % file % " error");
+    hfile = ::open(file, O_RDONLY);
+    if(hfile < 0)
+        throw_system_failure(es() % "open file " % file % " error");
 }
 
 mfile::mfile(int hfile) : hfile(hfile)
@@ -21,28 +21,33 @@ mfile::mfile(int hfile) : hfile(hfile)
 
 uint64_t mfile::size() const
 {
-	struct stat st;
-	if(::fstat(hfile, &st))
-		throw_system_failure("fstat() error");
-	return st.st_size;
+    struct stat st;
+    if(::fstat(hfile, &st))
+        throw_system_failure("fstat() error");
+    return st.st_size;
 }
 
 void mfile::seekg(uint64_t pos)
 {
-	if(::lseek(hfile, pos, SEEK_SET) < 0)
-		throw_system_failure("lseek() error");
+    if(::lseek(hfile, pos, SEEK_SET) < 0)
+        throw_system_failure("lseek() error");
 }
 
-void mfile::read(char* ptr, uint32_t size)
+void mfile::read(char* ptr, uint64_t size)
 {
-	uint32_t read_bytes = ::read(hfile, ptr, size);
-	if(read_bytes != size)
-		throw_system_failure(es() % "read() error, read_bytes: " % read_bytes % ", required: " % size);
+    uint64_t read_bytes = 0;
+    while(read_bytes != size)
+    {
+        ssize_t r = ::read(hfile, ptr + read_bytes, size - read_bytes);
+        if(r <= 0)
+            throw_system_failure(es() % "read() error, read_bytes: " % read_bytes % ", required: " % size);
+        read_bytes += r;
+    }
 }
 
 mfile::~mfile()
 {
-	::close(hfile);
+    ::close(hfile);
 }
 
 bool read_file(std::vector<char>& buf, const char* fname, bool can_empty)
@@ -50,7 +55,8 @@ bool read_file(std::vector<char>& buf, const char* fname, bool can_empty)
     bool ret = false;
     uint64_t buf_size = buf.size();
     int hfile = ::open(fname, O_RDONLY);
-    if(hfile > 0) {
+    if(hfile > 0)
+    {
         mfile f(hfile);
         uint64_t size = f.size();
         buf.resize(buf_size + size);
@@ -69,7 +75,7 @@ std::vector<char> read_file(const char* fname, bool can_empty)
     return buf;
 }
 
-void write_file(const char* fname, const char* buf, uint32_t size, bool trunc)
+void write_file(const char* fname, const char* buf, uint64_t size, bool trunc)
 {
     int flags = O_CREAT | O_APPEND | O_RDWR;
     if(trunc)
@@ -78,24 +84,30 @@ void write_file(const char* fname, const char* buf, uint32_t size, bool trunc)
     if(hfile < 0)
         throw_system_failure(es() % "open file " % _str_holder(fname) % " error");
 
-    uint32_t w = ::write(hfile, buf, size);
+    uint64_t write_bytes = 0;
+    while(write_bytes != size)
+    {
+        ssize_t w = ::write(hfile, buf + write_bytes, size - write_bytes);
+        if(w <= 0)
+            break;
+        write_bytes += w;
+    }
     ::close(hfile);
-
-    if(w != size)
-        throw_system_failure(es() % "write_file(), " % _str_holder(fname) % ", size: " % size % ", w: " % w);
+    if(write_bytes != size)
+        throw_system_failure(es() % "write_file(), " % _str_holder(fname) % ", size: " % size);
 }
 
 bool get_file_stat(const char* fname, struct stat& st)
 {
-	int hfile = ::open(fname, O_RDONLY);
-	if(hfile < 0)
+    int hfile = ::open(fname, O_RDONLY);
+    if(hfile < 0)
         return false;
 
-	bool ret = !(::fstat(hfile, &st));
+    bool ret = !(::fstat(hfile, &st));
     ::close(hfile);
 
     if(!ret)
-		throw_system_failure(es() % "fstat() error for " % fname);
+        throw_system_failure(es() % "fstat() error for " % fname);
 
     return ret;
 }
@@ -157,7 +169,7 @@ bool is_directory(const char* fname)
     struct stat st;
     bool ret = get_file_stat(fname, st);
     if(!ret)
-		throw_system_failure(es() % "fstat() error for " % fname);
+        throw_system_failure(es() % "fstat() error for " % fname);
 
     return S_ISDIR(st.st_mode);
 }
@@ -167,7 +179,7 @@ ttime_t get_file_mtime(const char* fname)
     struct stat st;
     bool ret = get_file_stat(fname, st);
     if(!ret)
-		throw_system_failure(es() % "fstat() error for " % fname);
+        throw_system_failure(es() % "fstat() error for " % fname);
     return {st.st_mtime * ttime_t::frac};
 }
 

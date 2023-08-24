@@ -24,10 +24,10 @@ namespace
             std::multiset<count_t> trades;
 
             order_book_ba<> ob;
-            ttime_t last_ob_time;
+            ttime_t first_ob_time, last_ob_time;
             std::multiset<price_t> spreads;
 
-            info() : asks(), bids()
+            info() : asks(), bids(), first_ob_time(), last_ob_time()
             {
             }
         };
@@ -53,6 +53,8 @@ namespace
                     v.bids_p.insert(p);
                 }
                 v.ob.proceed(*m);
+                if(!v.first_ob_time.value)
+                    v.first_ob_time = m->mb.time;
                 if(v.last_ob_time != m->mb.time && !v.ob.asks.empty() && !v.ob.bids.empty())
                 {
                     v.spreads.insert({v.ob.asks.begin()->first.value - v.ob.bids.begin()->first.value});
@@ -84,11 +86,12 @@ namespace
             mlog ml;
             for(auto&& v: data)
             {
-                ml << "exchange: " << v.second.first.exchange_id << ", feed: " << v.second.first.feed_id
-                    << ", security: " << v.second.first.security << ", security_id: " << v.second.first.security_id << "\n ";
                 const info& i = v.second.second;
+                ml << "exchange: " << v.second.first.exchange_id << ", feed: " << v.second.first.feed_id
+                    << ", security: " << v.second.first.security << ", security_id: " << v.second.first.security_id << "\n"
+                    << "  from " << i.first_ob_time << " to " << i.last_ob_time << "\n";
                 if(i.min_trade)
-                    ml << " min_trade: " << *i.min_trade;
+                    ml << "  min_trade: " << *i.min_trade;
                 if(i.max_trade)
                     ml << " max_trade: " << *i.max_trade;
                 if(i.min_bid)
@@ -118,7 +121,7 @@ namespace
                     << i.bids << "(min price step " << get_pips(i.bids_p) << ") asks: " << i.asks << "(min price step " << get_pips(i.asks_p) << ")";
                 if(!i.trades.empty()) {
                     auto it = i.trades.begin();
-                    ml << "\n min_trade_count: " << *it;
+                    ml << "\n  min_trade_count: " << *it;
                     std::advance(it, trades / 10);
                     ml << " 10%_trades_count: " << *it;
                     std::advance(it, 4 * trades / 10);

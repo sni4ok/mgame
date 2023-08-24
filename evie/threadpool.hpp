@@ -87,7 +87,7 @@ class Workers : public stack_singleton<Workers<Worker, worker> >
 
 public:
     Workers(volatile bool* can_run = NULL, bool can_not_run_on_exit = false)
-        : my_can_run(true), can_run(can_run), can_not_run_on_exit(can_not_run_on_exit), can_exit()
+        : can_run(can_run), my_can_run(true), can_not_run_on_exit(can_not_run_on_exit), can_exit()
     {
         if(!this->can_run)
             this->can_run = &my_can_run;

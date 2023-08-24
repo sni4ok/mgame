@@ -5,6 +5,8 @@
 #include "mmap.hpp"
 
 #include "evie/utils.hpp"
+#include "evie/mfile.hpp"
+#include <sys/stat.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -37,21 +39,38 @@ inline void init_smc(void* ptr)
 
 void* mmap_create(const char* params, bool create)
 {
-    bool need_init = false;
-    int h = ::open(params, O_RDWR, 0666);
-    if(h <= 0 && create) {
-        h = ::open(params, O_RDWR | O_CREAT | O_TRUNC, 0666);
-        need_init = true;
+    if(create)
+    {
+        if(is_file_exist(params)) {
+            mlog(mlog::critical) << "remove_file: " << params;
+            remove_file(params);
+        }
     }
+    int h = ::open(params, create ? O_RDWR | O_CREAT | O_TRUNC: O_RDWR, 0666);
     if(h <= 0)
         throw_system_failure(es() % "open " % _str_holder(params) % " error");
-
-    bool r = lseek(h, mmap_alloc_size, SEEK_SET) >= 0;
-    r &= (write(h, "", 1) == 1);
-    r &= (lseek(h, 0, SEEK_SET) >= 0);
-    if(!r) {
-        ::close(h);
-        throw_system_failure(es() % "mmap creating file error " % _str_holder(params));
+    if(create)
+    {
+        bool r = lseek(h, mmap_alloc_size, SEEK_SET) >= 0;
+        r &= (write(h, "1", 1) == 1);
+        r &= (lseek(h, 0, SEEK_SET) >= 0);
+        if(!r) {
+            ::close(h);
+            throw_system_failure(es() % "mmap creating file error " % _str_holder(params));
+        }
+    }
+    else
+    {
+        struct stat st;
+        int res = ::fstat(h, &st);
+        if(res || (st.st_size != mmap_alloc_size + 1))
+        {
+            ::close(h);
+            if(res)
+                throw_system_failure(es() % "fstat() error for " % params);
+            else
+                throw std::runtime_error(es() % "mmap_create error for " % params % ", file_sz: " % st.st_size);
+        }
     }
 
     void* p = mmap(NULL, mmap_alloc_size, PROT_READ | PROT_WRITE, MAP_SHARED, h, 0);
@@ -59,7 +78,7 @@ void* mmap_create(const char* params, bool create)
     if(!p)
         throw_system_failure(es() % "mmap error for " % _str_holder(params));
 
-    if(need_init)
+    if(create)
         init_smc(p);
 
     return p;

@@ -76,8 +76,8 @@ uint32_t pipe_read(int hfile, char* buf, uint32_t buf_size)
 uint32_t mmap_cp_read(void *v, char* buf, uint32_t buf_size)
 {
     uint8_t* f = (uint8_t*)v, *e = f + message_size, *i = f;
-    uint8_t w = *f;
-    uint8_t r = *(f + 1);
+    uint8_t w = mmap_load(f);
+    uint8_t r = mmap_load(f + 1);
     if(unlikely(w < 2 || w >= message_size || r < 2 || r >= message_size))
         throw std::runtime_error(es() % "mmap_cp_read() internal error, wp: " % uint32_t(w) % ", rp: " % uint32_t(r));
 
@@ -102,84 +102,84 @@ uint32_t mmap_cp_read(void *v, char* buf, uint32_t buf_size)
 struct import_mmap_cp
 {
     volatile bool& can_run;
-    std::string params;
-    void* ptr;
+    std::vector<std::string> params;
     bool pooling_mode;
 
-    import_mmap_cp(volatile bool& can_run, const std::string& params) : can_run(can_run), params(params)
+    import_mmap_cp(volatile bool& can_run, const std::string& params) : can_run(can_run)
     {
-        std::vector<std::string> p = split(params, ' ');
-        if(p.size() != 2)
+        this->params = split(params, ' ');
+        if(this->params.size() != 2)
             throw std::runtime_error(es() % " import_mmap_cp() required 2 params (fname,pooling_mode): " % params);
-        pooling_mode = lexical_cast<bool>(p[1]);
-        ptr = mmap_create(p[0].c_str(), true);
-        shared_memory_sync* s = get_smc(ptr);
-        mmap_store(&s->pooling_mode, pooling_mode ? 1 : 2);
+        pooling_mode = lexical_cast<bool>(this->params[1]);
     }
-    ~import_mmap_cp()
+    std::unique_ptr<void, void(*)(void*)> init() const
     {
-        mmap_close(ptr);
+        void* p = mmap_create(params[0].c_str(), true);
+        std::unique_ptr<void, void(*)(void*)> ptr(p, &mmap_close);
+        shared_memory_sync* s = get_smc(p);
+        mmap_store(&s->pooling_mode, pooling_mode ? 1 : 2);
+
+        uint8_t* w = (uint8_t*)p, *r = w + 1;
+        bool initialized = false;
+
+        if(pthread_mutex_lock(&(s->mutex)))
+            throw std::runtime_error("import_mmap_cp_start()::mmap_lock error");
+        while(!initialized && can_run)
+        {
+            uint8_t wc = mmap_load(w);
+            uint8_t rc = mmap_load(r);
+            if((rc != 1 && rc != 0) || wc == 1) {
+                mmap_store(w, 0);
+                pthread_mutex_unlock(&(s->mutex));
+                throw std::runtime_error(es() % "mmap inconsistence, wp: " % wc % ", rp: " % rc);
+            }
+            initialized = (wc == 2 && rc == 1);
+            if(!initialized) {
+                timespec t;
+                clock_gettime(CLOCK_REALTIME, &t);
+                t.tv_sec += 1;
+                pthread_cond_timedwait(&(s->condition), &(s->mutex), &t);
+            }
+        }
+        *r = 2;
+        pthread_cond_signal(&(s->condition));
+        pthread_mutex_unlock(&(s->mutex));
+        if(initialized)
+            mlog() << "receiving data from " << params[0] << " started";
+        return ptr;
     }
 };
-
-void mmap_cp_set_closed(void* imc)
-{
-    import_mmap_cp& ic = *((import_mmap_cp*)(imc));
-    shared_memory_sync* sms = get_smc(ic.ptr);
-    if(!pthread_mutex_lock(&(sms->mutex))) {
-        pthread_cond_signal(&(sms->condition));
-        pthread_mutex_unlock(&(sms->mutex));
-    }
-}
 
 void import_mmap_cp_start(void* imc, void* params)
 {
     import_mmap_cp& ic = *((import_mmap_cp*)(imc));
-    reader<void*> rr(params, ic.ptr, mmap_cp_read);
-    void* p = ic.ptr;
+    auto ptr = ic.init();
+    void* p = ptr.get();
+    reader<void*> rr(params, p, mmap_cp_read);
     shared_memory_sync* s = get_smc(p);
     uint8_t* w = (uint8_t*)p, *r = w + 1;
-    bool initialized = false;
-
-    if(pthread_mutex_lock(&(s->mutex)))
-        throw std::runtime_error("import_mmap_cp_start()::mmap_lock error");
-    while(!initialized && ic.can_run)
-    {
-        uint8_t wc = mmap_load(w);
-        uint8_t rc = mmap_load(r);
-        if(rc != 1 && rc != 0) {
-            mmap_store(w, 0);
-            pthread_mutex_unlock(&(s->mutex));
-            throw std::runtime_error("mmap inconsistence");
-        }
-        initialized = (wc && rc == 1);
-        if(!initialized) {
-            timespec t;
-            clock_gettime(CLOCK_REALTIME, &t);
-            t.tv_sec += 1;
-            pthread_cond_timedwait(&(s->condition), &(s->mutex), &t);
-        }
-    }
-    pthread_mutex_unlock(&(s->mutex));
-    *r = 2;
-    if(initialized)
-        mlog() << "reaceiving data from " << ic.params << " started";
 
     while(ic.can_run)
     {
         if(!rr.proceed())
         {
-            if(!ic.pooling_mode) {
-                if(!pthread_mutex_lock(&(s->mutex)))
+            if(!ic.pooling_mode)
+            {
+                if(!pthread_mutex_trylock(&(s->mutex)))
                 {
-                    uint8_t dr = *r;
-                    if(dr < 2) {
+                    uint8_t rc = *r;
+                    if(rc < 2) {
                         pthread_mutex_unlock(&(s->mutex));
-                        throw std::runtime_error("mmap inconsistence 2");
+                        throw std::runtime_error(es() % "mmap inconsistence 2, rp: " % rc);
                     }
-                    uint8_t count = mmap_load(w + dr);
+                    uint8_t count = mmap_load(w + rc);
                     if(!count)
-                        pthread_cond_wait(&(s->condition), &(s->mutex));
+                    {
+                        timespec t;
+                        clock_gettime(CLOCK_REALTIME, &t);
+                        t.tv_sec += 1;
+                        pthread_cond_timedwait(&(s->condition), &(s->mutex), &t);
+                    }
                     pthread_mutex_unlock(&(s->mutex));
                 }
             }
@@ -351,7 +351,7 @@ uint32_t register_importer(const std::string& name, hole_importer hi)
 }
 
 static const int _import_mmap_cp = register_importer("mmap_cp",
-    {importer_init<import_mmap_cp>, importer_destroy<import_mmap_cp>, import_mmap_cp_start, mmap_cp_set_closed}
+    {importer_init<import_mmap_cp>, importer_destroy<import_mmap_cp>, import_mmap_cp_start, nullptr}
 );
 static const int _import_pipe = register_importer("pipe",
     {importer_init<import_pipe>, importer_destroy<import_pipe>, import_pipe_start, nullptr}
