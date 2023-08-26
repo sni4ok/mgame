@@ -6,6 +6,8 @@
 
 #include "messages.hpp"
 
+#include "evie/utils.hpp"
+
 #include <atomic>
 
 #include <sys/mman.h>
@@ -18,6 +20,19 @@ struct shared_memory_sync
     uint8_t pooling_mode; //0 unitialized, 1 pooling mode on, 2 pooling mode off
 };
 
+struct pthread_lock : noncopyable
+{
+    pthread_mutex_t* mutex;
+    bool mlock;
+
+    pthread_lock(pthread_mutex_t& mutex);
+    ~pthread_lock();
+    void lock();
+    void unlock();
+};
+
+void pthread_timedwait(pthread_cond_t& condition, pthread_mutex_t& mutex, uint32_t sec);
+
 static const uint32_t mmap_alloc_size_base = message_size + (message_size - 2) * 255 * message_size;
 static const uint32_t mmap_alloc_size = mmap_alloc_size_base + sizeof(shared_memory_sync);
 
@@ -28,6 +43,7 @@ inline shared_memory_sync* get_smc(void* ptr)
 
 void* mmap_create(const char* params, bool create);
 void mmap_close(void* ptr);
+uint8_t mmap_nusers(const char* params);
 
 inline void mmap_store(uint8_t* ptr, uint8_t value)
 {

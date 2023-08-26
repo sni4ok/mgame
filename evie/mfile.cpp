@@ -115,9 +115,10 @@ bool get_file_stat(const char* fname, struct stat& st)
 bool is_file_exist(const char* fname, uint64_t* fsize)
 {
     struct stat st;
-    bool ret = get_file_stat(fname, st);
+    if(!get_file_stat(fname, st))
+        return false;
 
-    ret = S_ISREG(st.st_mode);
+    int ret = S_ISREG(st.st_mode);
     if(fsize && ret)
         *fsize = st.st_size;
 

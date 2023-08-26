@@ -122,28 +122,21 @@ struct import_mmap_cp
         uint8_t* w = (uint8_t*)p, *r = w + 1;
         bool initialized = false;
 
-        if(pthread_mutex_lock(&(s->mutex)))
-            throw std::runtime_error("import_mmap_cp_start()::mmap_lock error");
+        pthread_lock lock(s->mutex);
         while(!initialized && can_run)
         {
             uint8_t wc = mmap_load(w);
             uint8_t rc = mmap_load(r);
             if((rc != 1 && rc != 0) || wc == 1) {
                 mmap_store(w, 0);
-                pthread_mutex_unlock(&(s->mutex));
                 throw std::runtime_error(es() % "mmap inconsistence, wp: " % wc % ", rp: " % rc);
             }
             initialized = (wc == 2 && rc == 1);
-            if(!initialized) {
-                timespec t;
-                clock_gettime(CLOCK_REALTIME, &t);
-                t.tv_sec += 1;
-                pthread_cond_timedwait(&(s->condition), &(s->mutex), &t);
-            }
+            if(!initialized)
+                pthread_timedwait(s->condition, s->mutex, 1);
         }
         *r = 2;
         pthread_cond_signal(&(s->condition));
-        pthread_mutex_unlock(&(s->mutex));
         if(initialized)
             mlog() << "receiving data from " << params[0] << " started";
         return ptr;
@@ -174,12 +167,7 @@ void import_mmap_cp_start(void* imc, void* params)
                     }
                     uint8_t count = mmap_load(w + rc);
                     if(!count)
-                    {
-                        timespec t;
-                        clock_gettime(CLOCK_REALTIME, &t);
-                        t.tv_sec += 1;
-                        pthread_cond_timedwait(&(s->condition), &(s->mutex), &t);
-                    }
+                        pthread_timedwait(s->condition, s->mutex, 1);
                     pthread_mutex_unlock(&(s->mutex));
                 }
             }

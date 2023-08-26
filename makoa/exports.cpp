@@ -200,8 +200,7 @@ namespace
             }
             ++s;
         }
-        if(pthread_mutex_lock(&(s->mutex)))
-            throw std::runtime_error("mmap_init()::mmap_lock error");
+        pthread_lock lock(s->mutex);
         for(uint8_t* s = c; s != c + mmap_alloc_size_base; ++s)
         {
             if(*s)
@@ -212,13 +211,11 @@ namespace
 
         while(*(c + 1) != 2 && program_can_run())
         {
+            if(mmap_nusers(params) != 2)
+                throw std::runtime_error("import_mmap_cp_init() nusers != 2");
             pthread_cond_signal(&(s->condition));
-            timespec t;
-            clock_gettime(CLOCK_REALTIME, &t);
-            t.tv_sec += 1;
-            pthread_cond_timedwait(&(s->condition), &(s->mutex), &t);
+            pthread_timedwait(s->condition, s->mutex, 1);
         }
-        pthread_mutex_unlock(&(s->mutex));
         mlog() << "mmap_init() successfully opened: " << params;
         return ptr.release();
     }
@@ -277,12 +274,6 @@ namespace
         }
 
         shared_memory_sync* s = get_smc(v);
-        /*bool mmap_good = (s->mutex.__data.__lock == 0 || s->mutex.__data.__lock == 1)
-            && (s->mutex.__data.__nusers == 0 || s->mutex.__data.__nusers == 1);
-        if(!mmap_good)
-            throw_system_failure(es() % "mmap_proceed() bad mmap, __lock: " % s->mutex.__data.__lock % ", __nusers: " % s->mutex.__data.__nusers);
-            */
-
         if(s->pooling_mode == 2 && !pthread_mutex_lock(&(s->mutex))) {
             pthread_cond_signal(&(s->condition));
             pthread_mutex_unlock(&(s->mutex));

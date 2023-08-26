@@ -31,18 +31,39 @@ inline void init_smc(void* ptr)
     ret &= pthread_mutexattr_setpshared(&m_attr, PTHREAD_PROCESS_SHARED);
     ret &= pthread_mutex_init(&(p->mutex), &m_attr);
     ret &= pthread_mutexattr_destroy(&m_attr);
-    if(ret) {
+    if(ret)
+    {
         mmap_close(ptr);
         throw std::runtime_error("init_smc error");
     }
+}
+
+uint8_t mmap_nusers(const char* params)
+{
+    int h = ::open(params, O_RDONLY, 0666);
+    if(h <= 0)
+        throw_system_failure(es() % "mmap open " % _str_holder(params) % " error");
+    uint8_t c;
+    bool r = lseek(h, mmap_alloc_size, SEEK_SET) >= 0;
+    r &= (read(h, &c, 1) == 1);
+    ::close(h);
+    if(!r)
+        throw_system_failure(es() % "mmap read " % _str_holder(params) % " error");
+    return c - '1' + 1;
 }
 
 void* mmap_create(const char* params, bool create)
 {
     if(create)
     {
-        if(is_file_exist(params)) {
+        if(is_file_exist(params))
+        {
             mlog(mlog::critical) << "remove_file: " << params;
+            {
+                int h = ::open(params, O_WRONLY, 0666);
+                write(h, "", 1);
+                ::close(h);
+            }
             remove_file(params);
         }
     }
@@ -87,5 +108,39 @@ void* mmap_create(const char* params, bool create)
 void mmap_close(void* ptr)
 {
     munmap(ptr, mmap_alloc_size);
+}
+
+pthread_lock::pthread_lock(pthread_mutex_t& mutex) : mutex(&mutex), mlock()
+{
+    lock();
+}
+
+pthread_lock::~pthread_lock()
+{
+    if(mlock)
+        pthread_mutex_unlock(mutex);
+}
+
+void pthread_lock::lock()
+{
+    assert(!mlock);
+    if(pthread_mutex_lock(mutex))
+        throw std::runtime_error("mmap::mmap_lock error");
+    mlock = true;
+}
+
+void pthread_lock::unlock()
+{
+    assert(mlock);
+    pthread_mutex_unlock(mutex);
+    mlock = false;
+}
+
+void pthread_timedwait(pthread_cond_t& condition, pthread_mutex_t& mutex, uint32_t sec)
+{
+    timespec t;
+    clock_gettime(CLOCK_REALTIME, &t);
+    t.tv_sec += sec;
+    pthread_cond_timedwait(&condition, &mutex, &t);
 }
 
