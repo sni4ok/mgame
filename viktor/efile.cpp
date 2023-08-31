@@ -153,9 +153,9 @@ void efile_proceed(void* v, const message* m, uint32_t count)
 
 extern "C"
 {
-    void create_hole(hole_exporter* m, simple_log* sl)
+    void create_hole(hole_exporter* m, exporter_params params)
     {
-        log_set(sl);
+        log_set(params.sl);
         m->init = &efile_init;
         m->destroy = &efile_destroy;
         m->proceed = &efile_proceed;

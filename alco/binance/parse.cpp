@@ -31,12 +31,12 @@ struct lws_i : sec_id_by_name<lws_impl>
         sub << "],\"id\":1}";
         subscribes.push_back(sub.str());
     }
-    void proceed(lws*, void* in, size_t len)
+    void proceed(lws*, const char* in, size_t len)
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
-            mlog() << "lws proceed: " << str_holder((const char*)in, len);
-        iterator it = (iterator)in, ie = it + len;
+            mlog() << "lws proceed: " << str_holder(in, len);
+        iterator it = in, ie = it + len;
         skip_fixed(it, "{\"");
         if(*it == 'u')
         {
@@ -65,7 +65,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             skip_fixed(it, "}");
             
             if(unlikely(it != ie))
-                throw std::runtime_error(es() % "parsing message error: " % std::string((iterator)in, ie));
+                throw std::runtime_error(es() % "parsing message error: " % str_holder(in, ie - in));
             
             add_order(security_id, 2, ap, ac, ttime_t(), time);
             add_order(security_id, 1, bp, bc, ttime_t(), time);
@@ -112,15 +112,15 @@ struct lws_i : sec_id_by_name<lws_impl>
                 direction = 2;
             }
             else 
-                throw std::runtime_error(es() % "parsing message error: " % std::string((iterator)in, ie));
+                throw std::runtime_error(es() % "parsing message error: " % str_holder(in, ie - in));
             ne = std::find(it, ie, '}');
             if(((ne - it) != 4 && (ne - it) != 5) || (ne + 1) != ie)
-                throw std::runtime_error(es() % "parsing message error: " % std::string((iterator)in, ie));
+                throw std::runtime_error(es() % "parsing message error: " % str_holder(in, ie - in));
             add_trade(security_id, p, c, direction, etime, time);
             send_messages();
         }
         else if(!skip_if_fixed(it, "result"))
-            throw std::runtime_error(es() % "unknown message type: " % std::string((iterator)in, ie));
+            throw std::runtime_error(es() % "unknown message type: " % str_holder(in, ie - in));
     }
 };
 

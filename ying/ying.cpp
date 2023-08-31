@@ -13,9 +13,9 @@ void ying_proceed(void* w, const message* m, uint32_t count);
 
 extern "C"
 {
-    void create_hole(hole_exporter* m, simple_log* sl)
+    void create_hole(hole_exporter* m, exporter_params params)
     {
-        log_set(sl);
+        log_set(params.sl);
         m->init = &ying_init;
         m->destroy = &ying_destroy;
         m->proceed = &ying_proceed;

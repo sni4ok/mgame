@@ -205,9 +205,9 @@ void mysql_proceed(void* v, const message* m, uint32_t count)
 
 extern "C"
 {
-    void create_hole(hole_exporter* m, simple_log* sl)
+    void create_hole(hole_exporter* m, exporter_params params)
     {
-        log_set(sl);
+        log_set(params.sl);
         m->init = &mysql_init;
         m->destroy = &mysql_destroy;
         m->proceed = &mysql_proceed;

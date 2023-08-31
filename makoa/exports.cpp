@@ -21,7 +21,19 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-bool program_can_run();
+volatile bool* can_run_impl = nullptr;
+
+void set_can_run(volatile bool* can_run)
+{
+    can_run_impl = can_run;
+}
+
+void init_exporter_params(exporter_params params)
+{
+    log_set(params.sl);
+    profilerinfo::set_instance(params.pf);
+    set_can_run(params.can_run);
+}
 
 namespace
 {
@@ -94,14 +106,20 @@ namespace
     {
         ((exports_chain*)ec)->proceed(m, count);
     }
+
     exporter shared_exporter(const std::string& module);
+
     struct exports_factory : noncopyable
     {
+        std::map<std::string, hole_exporter> exporters;
+        std::list<exporter> dyn_exporters;
+
         uint32_t register_exporter(const std::string& module, hole_exporter he)
         {
             auto it = exporters.find(module);
             if(it != exporters.end())
-                throw std::runtime_error(es() % "exports_factory() double registration for " % module);
+                return 0;
+                //throw std::runtime_error(es() % "exports_factory() double registration for " % module);
             exporters[module] = he;
             return exporters.size();
         }
@@ -116,12 +134,9 @@ namespace
             exporters[module] = he;
             return he;
         }
-
-        std::map<std::string, hole_exporter> exporters;
-        std::list<exporter> dyn_exporters;
     };
 
-    exports_factory efactory;
+    static exports_factory efactory;
     
     void shared_destroy(void* handle)
     {
@@ -136,14 +151,15 @@ namespace
         ret.p = dlopen(lib.c_str(), RTLD_LAZY);
         if(!ret.p)
             throw_system_failure(es() % "load library '" % lib % "' error");
-        typedef void (create_hole)(hole_exporter* m, simple_log* sl);
+        typedef void (create_hole)(hole_exporter* m, exporter_params params);
         create_hole *hole = (create_hole*)dlsym(ret.p, "create_hole");
         if(!hole)
             throw_system_failure(es() % "not found create_hole() in '" % lib % "'");
 
         efactory.dyn_exporters.push_back(std::move(ret));
         exporter e;
-        hole(&e.he, log_get());
+        assert(can_run_impl);
+        hole(&e.he, {log_get(), &profilerinfo::instance(), can_run_impl});
         return e;
     }
     exporter create_impl(const std::string& m)
@@ -209,7 +225,7 @@ namespace
         *c = 2;
         *(c + 1) = 1;
 
-        while(*(c + 1) != 2 && program_can_run())
+        while(*(c + 1) != 2 && *can_run_impl)
         {
             if(mmap_nusers(params) != 2)
                 throw std::runtime_error("import_mmap_cp_init() nusers != 2");

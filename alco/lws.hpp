@@ -2,6 +2,8 @@
    author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
+#pragma once
+
 #include "alco.hpp"
 
 #include "evie/profiler.hpp"
@@ -15,6 +17,10 @@ struct lws_dump
 {
     int hfile;
     bool lws_not_fake, lws_dump_en;
+    char dump_buf[8];
+    std::vector<char> read_buf;
+    uint64_t dump_readed, dump_size;
+
     lws_dump() : hfile(), lws_not_fake(true), lws_dump_en(), dump_buf("\n    \n")
     {
         char* dump = getenv("lws_dump");
@@ -41,7 +47,6 @@ struct lws_dump
             dump_size = st.st_size;
         }
     }
-    char dump_buf[8];
     void dump(const char* p, uint32_t sz)
     {
         if(sz) {
@@ -52,9 +57,6 @@ struct lws_dump
                 throw_system_failure("lws_dump writing error");
         }
     }
-
-    std::vector<char> read_buf;
-    uint64_t dump_readed, dump_size;
     str_holder read_dump()
     {
         if(dump_readed < dump_size)
@@ -71,25 +73,23 @@ struct lws_dump
         }
         return str_holder(nullptr, 0);
     }
-
     ~lws_dump()
     {
         if(hfile)
             ::close(hfile);
     }
-
 };
 
 struct lws_impl : emessages, lws_dump, stack_singleton<lws_impl>
 {
-    char buf[512];
-    buf_stream bs;
     typedef const char* iterator;
 
+    char buf[512];
+    buf_stream bs;
     bool closed;
     time_t data_time;
-    
     std::vector<std::string> subscribes;
+    lws_context* context;
     
     lws_impl() : emessages(config::instance().push), bs(buf, buf + sizeof(buf) - 1), closed(), data_time(time(NULL))
     {
@@ -97,15 +97,18 @@ struct lws_impl : emessages, lws_dump, stack_singleton<lws_impl>
     }
     void init(lws* wsi)
     {
-        if(likely(lws_not_fake))
-        for(auto& s: subscribes) {
-            bs << s;
-            send(wsi);
+        if(lws_not_fake)
+        {
+            for(auto& s: subscribes) {
+                bs << s;
+                send(wsi);
+            }
         }
     }
     void send(lws* wsi)
     {
-        if(lws_not_fake && bs.size() != LWS_PRE) {
+        if(likely(lws_not_fake) && bs.size() != LWS_PRE)
+        {
             int sz = bs.size() - LWS_PRE;
             char* ptr = bs.from + LWS_PRE;
             if(config::instance().log_lws)
@@ -121,13 +124,11 @@ struct lws_impl : emessages, lws_dump, stack_singleton<lws_impl>
     {
         try {
             if(lws_not_fake)
-            lws_context_destroy(context);
+                lws_context_destroy(context);
         } catch (std::exception& e) {
             mlog() << "~lws_impl() " << e;
         }
     }
-
-    lws_context* context;
 };
 
 template<typename str>
@@ -182,7 +183,7 @@ int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user, void* i
                 w->dump((const char*)in, len);
             if(unlikely(config::instance().log_lws))
                 mlog() << "lws receive len: " << len;
-            w->proceed(wsi, in, len);
+            w->proceed(wsi, (const char*)in, len);
             w->data_time = time(NULL);
             return 0;
         }
@@ -245,7 +246,7 @@ void proceed_lws_parser_fake(volatile bool& can_run)
         str_holder str = ls.read_dump();
         if(str.size) {
             MPROFILE("lws_fake")
-            ls.proceed(nullptr, (void*)str.str, str.size);
+            ls.proceed(nullptr, str.str, str.size);
         }
         else
             break;
@@ -255,18 +256,23 @@ void proceed_lws_parser_fake(volatile bool& can_run)
 template<typename lws_w>
 void proceed_lws_parser(volatile bool& can_run)
 {
+    set_can_run(&can_run);
     if(getenv("lws_fake"))
         proceed_lws_parser_fake<lws_w>(can_run);
     else
-    while(can_run) {
-        try {
+    while(can_run)
+    {
+        try
+        {
             lws_w ls;
             ls.context = create_context<lws_w>();
             connect(ls);
 
             int n = 0, i = 0;
-            while(can_run && n >= 0 && !ls.closed) {
-                if(!((++i) % 50)) {
+            while(can_run && n >= 0 && !ls.closed)
+            {
+                if(!((++i) % 50))
+                {
                     i = 0;
                     if(ls.data_time + 10 < time(NULL))
                         throw std::runtime_error(es() % " no data from " % ls.data_time);

@@ -367,16 +367,15 @@ struct ifile
     }
 };
 
-bool program_can_run();
-
 struct ifile_replay : ifile
 {
+    volatile bool& can_run;
     const double speed;
     ttime_t file_time, start_time;
     std::vector<char> b, b2;
 
-    ifile_replay(const std::string& fname, ttime_t tf, ttime_t tt, double speed)
-        : ifile(fname, tf, tt, true), speed(speed), file_time()
+    ifile_replay(volatile bool& can_run, const std::string& fname, ttime_t tf, ttime_t tt, double speed)
+        : ifile(fname, tf, tt, true), can_run(can_run), speed(speed), file_time()
     {
         start_time = cur_ttime();
     }
@@ -407,10 +406,11 @@ struct ifile_replay : ifile
         b.erase(b.begin(), b.begin() + ret);
         if(!ret && !b.empty())
         {
-            if(!program_can_run())
+            if(!can_run)
                 return ret;
 
-            int64_t s = mb->t.time - file_time;
+            int64_t s = (mb->t.time - file_time) - dt;
+            assert(s >= 0);
             if(s < int64_t(11 * ttime_t::frac))
                 usleep(s / 1000);
             else
@@ -418,6 +418,7 @@ struct ifile_replay : ifile
                 sleep(10);
                 start_time = cur_ttime();
                 file_time.value = mb->t.time.value;
+                mlog() << "ifile_replay() reinit, start_time: " << start_time << ", file_time: " << file_time;
             }
             goto rep;
         }
@@ -425,7 +426,7 @@ struct ifile_replay : ifile
     }
 };
 
-void* ifile_create(const char* params)
+void* ifile_create(const char* params, volatile bool& can_run)
 {
     std::vector<std::string> p = split(params, ' ');
     if(p.empty() || p.size() > 5)
@@ -454,7 +455,7 @@ void* ifile_create(const char* params)
         tt.value = std::numeric_limits<uint64_t>::max();
 
     if(replay)
-        return new ifile_replay(p[0], tf, tt, speed);
+        return new ifile_replay(can_run, p[0], tf, tt, speed);
     else
         return new ifile(p[0], tf, tt, history);
 }

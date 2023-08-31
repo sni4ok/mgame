@@ -210,7 +210,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             }
         }
     }
-    void proceed(lws* wsi, void* in, size_t len)
+    void proceed(lws* wsi, const char* in, size_t len)
     {
         ttime_t time = cur_ttime();
         str_holder str = zlib.decompress(in, len);

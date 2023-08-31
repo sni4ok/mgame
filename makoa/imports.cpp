@@ -288,7 +288,7 @@ void import_tcp_start(void* c, void* p)
     }
 }
 
-void* ifile_create(const char* params);
+void* ifile_create(const char* params, volatile bool& can_run);
 void ifile_destroy(void *v);
 uint32_t ifile_read(void *v, char* buf, uint32_t buf_size);
 
@@ -299,7 +299,7 @@ struct import_ifile
 
     import_ifile(volatile bool& can_run, const std::string& params) : can_run(can_run)
     {
-        ptr = ifile_create(params.c_str());
+        ptr = ifile_create(params.c_str(), can_run);
     }
     ~import_ifile()
     {
@@ -334,6 +334,9 @@ std::map<std::string, hole_importer> _importers;
 
 uint32_t register_importer(const std::string& name, hole_importer hi)
 {
+    auto it = _importers.find(name);
+    if(it != _importers.end())
+        throw std::runtime_error(es() % "register_importer() double registration for " % name);
     _importers[name] = hi;
     return _importers.size();
 }
@@ -355,9 +358,7 @@ hole_importer create_importer(const char* name)
 {
     auto it = _importers.find(name);
     if(it == _importers.end())
-    {
         throw std::runtime_error(es() % "import " % _str_holder(name) % " not registered");
-    }
     return it->second;
 }
 

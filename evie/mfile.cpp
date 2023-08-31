@@ -170,7 +170,7 @@ bool is_directory(const char* fname)
     struct stat st;
     bool ret = get_file_stat(fname, st);
     if(!ret)
-        throw_system_failure(es() % "fstat() error for " % fname);
+        return false;
 
     return S_ISDIR(st.st_mode);
 }

@@ -54,7 +54,7 @@ struct order_book
     }
     void proceed(const message& m)
     {
-		if(m.id == msg_book)
+        if(m.id == msg_book)
             return set(m.mb);
         else if(m.id == msg_clean || m.id == msg_instr) {
             orders_l.clear();

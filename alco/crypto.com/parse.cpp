@@ -35,12 +35,12 @@ struct lws_i: sec_id_by_name<lws_impl>
         subscribes.push_back(sub.str());
     }
 
-    void proceed(lws* wsi, void* in, size_t len)
+    void proceed(lws* wsi, const char* in, size_t len)
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
-            mlog() << "lws proceed: " << str_holder((const char*)in, len);
-        iterator it = (iterator)in, ie = it + len;
+            mlog() << "lws proceed: " << str_holder(in, len);
+        iterator it = in, ie = it + len;
         skip_fixed(it, "{\"id\":");
         iterator ne = it;
         it = std::find(it, ie, ',');
@@ -179,7 +179,7 @@ struct lws_i: sec_id_by_name<lws_impl>
             send(wsi);
         }
         else
-            throw std::runtime_error(es() % "unsupported message: " % str_holder((const char*)in, len));
+            throw std::runtime_error(es() % "unsupported message: " % str_holder(in, len));
     }
 };
 

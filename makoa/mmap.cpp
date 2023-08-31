@@ -61,7 +61,8 @@ void* mmap_create(const char* params, bool create)
             mlog(mlog::critical) << "remove_file: " << params;
             {
                 int h = ::open(params, O_WRONLY, 0666);
-                write(h, "", 1);
+                ssize_t res = write(h, "", 1);
+                my_unused(res);
                 ::close(h);
             }
             remove_file(params);

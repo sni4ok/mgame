@@ -27,7 +27,7 @@ struct zlibe
         allocated += req;
         return (void*)ret;
     }
-    str_holder decompress(void* p, uint32_t size)
+    str_holder decompress(const char* p, uint32_t size)
     {
         allocated = 0;
         

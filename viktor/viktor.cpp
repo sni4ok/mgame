@@ -22,8 +22,17 @@ struct viktor
     std::unique_ptr<exporter> e;
     time_t last_connect;
 
+    typedef std::map<int64_t/*level_id*/, message_book> snapshot;
+    std::map<uint32_t, snapshot> snapshots;
+    std::vector<message> s;
+
     viktor(const std::string& params) : last_times(), params(params), last_connect()
     {
+    }
+    void clear(uint32_t security_id)
+    {
+        messages[security_id].clear();
+        snapshots[security_id].clear();
     }
     void save(const message* m, uint32_t count)
     {
@@ -48,46 +57,52 @@ struct viktor
                     instrs.push_back(m->mi);
                     messages[m->mi.security_id];
                 }
-                messages[m->mi.security_id].clear();
+                clear(m->mi.security_id);
             }
-            else if(m->id == msg_instr)
+            else if(m->id == msg_clean)
             {
-                messages[m->mi.security_id].clear();
+                clear(m->mc.security_id);
             }
         }
     }
     void send_snapshots()
     {
+        s.clear();
+
         for(message_instr& mi: instrs)
         {
             static_cast<message_times&>(mi) = last_times;
-            e->proceed((const message*)(&mi), 1);
+            s.push_back((message&)mi);
         }
 
-        std::map<int64_t/*level_id*/, message_book> snapshot;
-        std::vector<message_book> s;
         for(const auto& mes: messages)
         {
-            snapshot.clear();
+            snapshot& sn = snapshots[mes.first];
             for(const message_book& m: mes.second)
             {
-                message_book& mb = snapshot[mb.level_id];
+                message_book& mb = sn[m.level_id];
                 price_t price = m.price.value ? m.price : mb.price;
+                assert(price.value);
                 mb = m;
                 mb.price = price;
             }
-            for(auto& mb: snapshot)
+        }
+
+        for(auto& mes: messages)
+            mes.second.clear();
+
+        for(auto& sn: snapshots)
+        for(auto& mb: sn.second)
+        {
+            if(mb.second.count != count_t())
             {
-                s.clear();
-                if(mb.second.count != count_t())
-                {
-                    static_cast<message_times&>(mb.second) = last_times;
-                    s.push_back(mb.second);
-                }
-                if(!s.empty())
-                    e->proceed((const message*)(&s[0]), s.size());
+                static_cast<message_times&>(mb.second) = last_times;
+                s.push_back((message&)mb.second);
             }
         }
+
+        if(!s.empty())
+            e->proceed(&s[0], s.size());
     }
     void reconnect()
     {
@@ -135,9 +150,9 @@ extern "C"
         ((viktor*)(v))->proceed(m, count);
     }
 
-    void create_hole(hole_exporter* m, simple_log* sl)
+    void create_hole(hole_exporter* m, exporter_params params)
     {
-        log_set(sl);
+        init_exporter_params(params);
         m->init = &viktor_init;
         m->destroy = &viktor_destroy;
         m->proceed = &viktor_proceed;

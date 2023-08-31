@@ -153,12 +153,12 @@ struct lws_i : sec_id_by_name<lws_impl>
         else
             i.f = &lws_i::parse_orders;
     }
-    void proceed(lws* wsi, void* in, size_t len)
+    void proceed(lws* wsi, const char* in, size_t len)
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
-            mlog() << "lws proceed: " << str_holder((const char*)in, len);
-        iterator it = (iterator)in, ie = it + len;
+            mlog() << "lws proceed: " << str_holder(in, len);
+        iterator it = in, ie = it + len;
 
         if(likely(*it == '['))
         {
@@ -172,7 +172,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                 impl& i = parsers.at(channel);
                 ((this)->*(i.f))(i, time, ne, ie);
                 if(ne != ie)
-                    throw std::runtime_error(es() % "parsing market message error: " % str_holder((const char*)in, len));
+                    throw std::runtime_error(es() % "parsing market message error: " % str_holder(in, len));
             }
             else {
                 //possible "hb" message
@@ -201,7 +201,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                     add_channel(channel, ticker, is_trades, time);
                     it = std::find(it, ie, '}') + 1;
                     if(it != ie)
-                        throw std::runtime_error(es() % "parsing logic error message: " % str_holder((const char*)in, len));
+                        throw std::runtime_error(es() % "parsing logic error message: " % str_holder(in, len));
                 }
             }
             else

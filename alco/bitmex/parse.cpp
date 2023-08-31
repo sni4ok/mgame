@@ -52,12 +52,12 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
         skip_fixed(it, "]");
     }
 
-    void proceed(lws*, void* in, size_t len)
+    void proceed(lws*, const char* in, size_t len)
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
-            mlog() << "lws proceed: " << str_holder((const char*)in, len);
-        iterator it = (iterator)in, ie = it + len;
+            mlog() << "lws proceed: " << str_holder(in, len);
+        iterator it = in, ie = it + len;
 
         skip_fixed(it, "{\"");
         if(skip_if_fixed(it, "table\":\""))
@@ -147,7 +147,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                                 }
                                 send_messages();
                                 if(unlikely(it != ie))
-                                    throw std::runtime_error(es() % "parsing message error: " % str_holder((iterator)in, len));
+                                    throw std::runtime_error(es() % "parsing message error: " % str_holder(in, len));
                                 return;
                             }
                         }
@@ -155,7 +155,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                 }
                 send_messages();
                 if(unlikely(it != ie))
-                    throw std::runtime_error(es() % "parsing message error: " % str_holder((iterator)in, len));
+                    throw std::runtime_error(es() % "parsing message error: " % str_holder(in, len));
             }
             else if(table == trades_table)
             {
@@ -180,7 +180,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                     else if(side == str_holder("Sell"))
                         direction = 2;
                     else
-                        throw std::runtime_error(es() % "unknown trade direction in message: " % str_holder((iterator)in, len));
+                        throw std::runtime_error(es() % "unknown trade direction in message: " % str_holder(in, len));
                     count_t c = read_named_value(",\"size\":", it, ie, ',', read_count);
                     price_t p = read_named_value("\"price\":", it, ie, ',', read_price);
                     add_trade(security_id, p, c, direction, etime, time);
@@ -198,22 +198,22 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
             }
             else
             {
-                throw std::runtime_error(es() % "unknown table name: " % str_holder((iterator)in, len));
+                throw std::runtime_error(es() % "unknown table name: " % str_holder(in, len));
             }
             if(unlikely(it != ie))
-                throw std::runtime_error(es() % "parsing message error: " % str_holder((iterator)in, len));
+                throw std::runtime_error(es() % "parsing message error: " % str_holder(in, len));
         }
         else if(skip_if_fixed(it, "success\""))
         {
-            mlog(mlog::info) << str_holder((iterator)in, len);
+            mlog(mlog::info) << str_holder(in, len);
         }
         else if(skip_if_fixed(it, "info\""))
         {
-            mlog(mlog::info) << str_holder((iterator)in, len);
+            mlog(mlog::info) << str_holder(in, len);
         }
         else
         {
-            mlog(mlog::critical) << "unsupported message: " << str_holder((iterator)in, len);
+            mlog(mlog::critical) << "unsupported message: " << str_holder(in, len);
         }
     }
 };

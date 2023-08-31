@@ -38,12 +38,12 @@ struct lws_i : lws_impl, read_time_impl
         sub << "{\"name\": \"ticker\",\"product_ids\": [" << tickers << "]}]}";
         subscribes.push_back(sub.str());
     }
-    void proceed(lws*, void* in, size_t len)
+    void proceed(lws*, const char* in, size_t len)
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
-            mlog() << "lws proceed: " << str_holder((const char*)in, len);
-        iterator it = (iterator)in, ie = it + len;
+            mlog() << "lws proceed: " << str_holder(in, len);
+        iterator it = in, ie = it + len;
         skip_fixed(it, "{\"type\":\"");
         if(skip_if_fixed(it, "l2update\",\"product_id\":\""))
         {
@@ -80,7 +80,7 @@ struct lws_i : lws_impl, read_time_impl
             my_unused(etime);
             skip_fixed(it, "Z\"}");
             if(unlikely(it != ie))
-                throw std::runtime_error(es() % "parsing message error: " % std::string((iterator)in, ie));
+                throw std::runtime_error(es() % "parsing message error: " % str_holder(in, ie - in));
         }
         else if(skip_if_fixed(it, "match\",\"trade_id\":"))
         {
@@ -115,17 +115,17 @@ struct lws_i : lws_impl, read_time_impl
             ttime_t etime = read_time<6>(it);
             skip_fixed(it, "Z\"}");
             if(unlikely(it != ie))
-                throw std::runtime_error(es() % "parsing message error: " % std::string((iterator)in, ie));
+                throw std::runtime_error(es() % "parsing message error: " % str_holder(in, ie - in));
         
             s.proceed_trade(e, direction, p, c, etime, time);
         }
         else if(skip_if_fixed(it, "heartbeat\""))
         {
             if(ie - it > 120)
-                throw std::runtime_error(es() % "parsing message error: " % std::string((iterator)in, ie));
+                throw std::runtime_error(es() % "parsing message error: " % str_holder(in, ie - in));
         }
         else if(skip_if_fixed(it, "error\""))
-            throw std::runtime_error(es() % "error message: " % str_holder((iterator)in, len));
+            throw std::runtime_error(es() % "error message: " % str_holder(in, len));
     }
 };
 

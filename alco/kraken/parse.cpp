@@ -164,12 +164,12 @@ struct lws_i : sec_id_by_name<lws_impl>
         it = ie;
         send_messages();
     }
-    void proceed(lws*, void* in, size_t len)
+    void proceed(lws*, const char* in, size_t len)
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
-            mlog() << "lws proceed: " << str_holder((const char*)in, len);
-        iterator it = (iterator)in, ie = it + len;
+            mlog() << "lws proceed: " << str_holder(in, len);
+        iterator it = in, ie = it + len;
 
         if(*it == '[')
         {
@@ -206,7 +206,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             else if(type == str_holder("spread"))
                 i.f = &lws_i::parse_spread;
             else
-                throw std::runtime_error(es() % "unsupported type: " % str_holder((iterator)in, len));
+                throw std::runtime_error(es() % "unsupported type: " % str_holder(in, len));
         }
         else if(skip_if_fixed(it, "{\"connectionID\":"))
             it = ie;
@@ -215,7 +215,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         }
         if(unlikely(it != ie))
         {
-            mlog(mlog::critical) << "unsupported message: " << str_holder((iterator)in, len);
+            mlog(mlog::critical) << "unsupported message: " << str_holder(in, len);
         }
     }
 };

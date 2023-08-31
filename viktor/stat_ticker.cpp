@@ -170,9 +170,9 @@ namespace
 
 extern "C"
 {
-    void create_hole(hole_exporter* m, simple_log* sl)
+    void create_hole(hole_exporter* m, exporter_params params)
     {
-        log_set(sl);
+        log_set(params.sl);
         m->init = &stat_init;
         m->destroy = &stat_destroy;
         m->proceed = &stat_proceed;

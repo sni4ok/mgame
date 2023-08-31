@@ -431,6 +431,7 @@ public:
 
 engine::engine(volatile bool& can_run, bool pooling, const std::vector<std::string>& exports, uint32_t export_threads)
 {
+    set_can_run(&can_run);
     pooling_mode = pooling;
     pimpl = std::make_unique<engine::impl>(can_run);
     pimpl->init(exports, export_threads);
