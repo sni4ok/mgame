@@ -280,7 +280,8 @@ namespace
             if(i == e)
                 i = f + 2;
             if(!mmap_compare_exchange(f, w, i - f))
-                throw std::runtime_error(es() % "mmap_proceed() set w error, w: " % uint32_t(w) % ", new_w: " % uint32_t(i - f));
+                throw std::runtime_error(es() % "mmap_proceed() set w error, w: " % *f % ", from: " % uint32_t(w) % ", to: " % uint32_t(i - f));
+            w = i - f;
             c += cur_count;
         }
 

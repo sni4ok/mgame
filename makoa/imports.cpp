@@ -22,10 +22,10 @@ bool import_proceed_data(str_holder& buf, void* ctx);
 template<typename reader_state>
 struct reader : noncopyable
 {
-    reader_state socket;
     typedef uint32_t (*func)(reader_state socket, char* buf, uint32_t buf_size);
-    func read;
 
+    reader_state socket;
+    func read;
     std::pair<void*, str_holder> ctx;
     time_t recv_time;
 
@@ -40,9 +40,11 @@ struct reader : noncopyable
         return ret;
     }
     reader(void* ctx_params, reader_state socket, func read) : socket(socket), read(read),
-        ctx(import_context_create(ctx_params)), recv_time(time(NULL)){
+        ctx(import_context_create(ctx_params)), recv_time(time(NULL))
+    {
     }
-    ~reader() {
+    ~reader()
+    {
         import_context_destroy(ctx);
     }
 };
@@ -84,7 +86,8 @@ uint32_t mmap_cp_read(void *v, char* buf, uint32_t buf_size)
     i += r;
     const message* p = (((const message*)v) + 1) + (r - 2) * 255;
     uint8_t cur_count = mmap_load(i);
-    if(cur_count) {
+    if(cur_count)
+    {
         if(unlikely(buf_size < cur_count))
             throw std::runtime_error(es() % "mmap_cp_read() buf_size too small, wp: " % uint32_t(w) %
                 ", rp: " % uint32_t(r) % ", buf_size: " % buf_size % ", cur_count: " % cur_count);
@@ -112,10 +115,10 @@ struct import_mmap_cp
             throw std::runtime_error(es() % " import_mmap_cp() required 2 params (fname,pooling_mode): " % params);
         pooling_mode = lexical_cast<bool>(this->params[1]);
     }
-    std::unique_ptr<void, void(*)(void*)> init() const
+    std::unique_ptr<void, decltype(&mmap_close)> init() const
     {
         void* p = mmap_create(params[0].c_str(), true);
-        std::unique_ptr<void, void(*)(void*)> ptr(p, &mmap_close);
+        std::unique_ptr<void, decltype(&mmap_close)> ptr(p, &mmap_close);
         shared_memory_sync* s = get_smc(p);
         mmap_store(&s->pooling_mode, pooling_mode ? 1 : 2);
 

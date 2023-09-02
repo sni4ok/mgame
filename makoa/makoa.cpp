@@ -9,42 +9,21 @@
 #include "engine.hpp"
 #include "server.hpp"
 #include "config.hpp"
+#include "signals.hpp"
 
-#include "evie/profiler.hpp"
 #include "evie/config.hpp"
 
 #include <iostream>
-#include <csignal>
-
-volatile bool can_run = true;
-
-extern "C" 
-{
-    void term_signal(int sign)
-    {
-        mlog() << "Termination signal received: " << sign;
-        can_run = false;
-        server_set_close();
-    }
-
-    void on_signal(int sign)
-    {
-        mlog() << "Signal received: " << sign;
-    }
-}
 
 int main(int argc, char** argv)
 {
-    std::signal(SIGTERM, &term_signal);
-    std::signal(SIGINT, &term_signal);
-    std::signal(SIGHUP, &on_signal);
-    std::signal(SIGPIPE, &on_signal);
     if(argc > 2) {
         std::cout << "Usage: ./makoa_server [config file]" << std::endl;
         return 1;
     }
     auto log = log_init(argc == 1 ? "makoa_server.log" : get_log_name(argv[1]).c_str(), mlog::store_tid | mlog::always_cout | mlog::lock_file);
     profilerinfo pff_info;
+    init_signals(server_set_close);
     std::string name;
     try {
         mlog(mlog::always_cout) << "makoa started";

@@ -146,6 +146,9 @@ struct ifile
     bool history;
     message_ping ping;
     std::vector<message> read_buf;
+    static const int64_t check_time = {1 * ttime_t::frac};
+    ttime_t last_file_check_time;
+    ino_t last_file_ino;
 
     template<class type, class pred>
     static int64_t lower_bound_int(int64_t first, int64_t last, const type& val, pred pr)
@@ -162,9 +165,21 @@ struct ifile
         return first;
     }
 
+    static ino_t file_ino(int handle, uint64_t* fsize = nullptr)
+    {
+        struct stat st;
+        if(fstat(handle, &st))
+            throw_system_failure(es() % "fstat() error for " % handle);
+        if(fsize)
+            *fsize = st.st_size;
+        return st.st_ino;
+    }
+
     ttime_t add_file_impl(const std::string& fname, bool last_file)
     {
         mfile f(fname.c_str());
+        if(last_file)
+            last_file_ino = file_ino(f.hfile);
         uint64_t sz = f.size();
         if(sz < message_size)
             return ttime_t();
@@ -222,7 +237,7 @@ struct ifile
                 }
             }
 
-            if(nt.tt > main_file.tt)
+            if((nt.tt > main_file.tt) || (last_file && history))
                 nt.sz = message_size * lower_bound_int(nt.off / message_size, sz / message_size, main_file.tt, pred);
 
             mlog() << "ifile::add_file_impl() " << fname << ", last: " << last_file << ", from: "
@@ -286,10 +301,30 @@ struct ifile
     }
 
     ifile(const std::string& fname, ttime_t tf, ttime_t tt, bool history)
-        : cur_file(), main_file({fname, tf, tt, 0, 0, 0}), history(history)
+        : cur_file(), main_file({fname, tf, tt, 0, 0, 0}), history(history), last_file_check_time()
     {
         read_directory(fname);
         ping.id = msg_ping;
+    }
+
+    bool last_file_moved()
+    {
+        int f = ::open(main_file.name.c_str(), O_RDONLY);
+        if(f < 0)
+            return false;
+        uint64_t sz = 0;
+        ino_t c = file_ino(f, &sz);
+        if(c != last_file_ino && sz >= message_size)
+        {
+            mlog() << main_file.name << " probably moved";
+            ::close(cur_file);
+            last_file_ino = c;
+            cur_file = f;
+            nt.off = 0;
+            return true;
+        }
+        ::close(f);
+        return false;
     }
 
     virtual uint32_t read(char* buf, uint32_t buf_size)
@@ -321,14 +356,25 @@ struct ifile
 
                 if(!history && !nt.sz && files.empty())
                     ret = ::read(cur_file, buf, buf_size);
-                else {
+                else
                     ret = ::read(cur_file, buf, std::min<uint64_t>(buf_size, nt.sz - nt.off));
-                    if(ret > 0)
-                        nt.off += ret;
+
+                if(ret > 0)
+                {
+                    if(ret % message_size)
+                    {
+                        MPROFILE("ifile::fix_read_size()")
+                        int32_t d = (ret % message_size);
+                        ret = ret - d;
+                        if(::lseek(cur_file, -d, SEEK_CUR) < 0)
+                            throw_system_failure(es() % "lseek() error for " % nt.name);
+                    }
+                    nt.off += ret;
                 }
                 if(ret < 0)
                     throw_system_failure("ifile::read file error");
-                else if(!ret) {
+                else if(!ret)
+                {
                     if(!files.empty()) {
                         close(cur_file);
                         cur_file = 0;
@@ -336,19 +382,14 @@ struct ifile
                     else if(history)
                         return ret;
                     else {
-/*                {
-                    if(nt.sz == nt.off)
-                    {
-                        struct stat st;
-                        if(fstat(cur_file, &st))
-                            throw_system_failure("fstat() error");
-                        nt.sz = st.st_size;
-                    }
-                    uint64_t read_size = std::min<uint64_t>(buf_size, nt.sz - nt.off);
-                    ret = read_size ? ::read(cur_file, buf, read_size) : 0;
-                }*/
-                        usleep(10 * 1000);
                         ping.time = cur_ttime();
+                        if(ping.time + check_time > last_file_check_time)
+                        {
+                            last_file_check_time = ping.time;
+                            if(last_file_moved())
+                                continue;
+                        }
+                        usleep(10 * 1000);
                         if(ping.time > main_file.tt)
                             return ret;
                         memcpy(buf, &ping, message_size);
@@ -362,7 +403,7 @@ struct ifile
 
     virtual ~ifile()
     {
-        if(cur_file)
+        if(cur_file > 0)
             close(cur_file);
     }
 };
