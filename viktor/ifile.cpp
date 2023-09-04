@@ -4,6 +4,7 @@
 
 #include "makoa/types.hpp"
 
+#include "evie/fmap.hpp"
 #include "evie/mfile.hpp"
 #include "evie/utils.hpp"
 #include "evie/profiler.hpp"

@@ -4,134 +4,162 @@
 
 #pragma once
 
-#include "mutex.hpp"
-#include "fmap.hpp"
 #include "utils.hpp"
 
-#include <sys/time.h>
-#include <sys/times.h>
-#include <sys/resource.h>
-#include <unistd.h>
+#define CONCAT_(a, b) a##b
+#define CONCAT(a, b) CONCAT_(a, b)
+#define CLINE(a) CONCAT(a, __LINE__)
 
-#ifndef MPROFILE
-#define MPROFILE(id) mprofiler profile_me ## __LINE__ (id);
-#endif
+#define MPROFILE(id) static const uint64_t CLINE(counter_id) = profilerinfo::instance().register_counter(id); \
+    mprofiler CLINE(profile_me)(CLINE(counter_id));
+#define MPROFILE_USER(id, time) static const uint64_t CLINE(counter_id) = profilerinfo::instance().register_counter(id); \
+    profilerinfo::instance().add_info(CLINE(counter_id), time);
 
-static_assert(RUSAGE_THREAD, "rusage_thread");
+inline void atomic_add(volatile uint64_t& v, uint64_t value)
+{
+    __atomic_add_fetch(&v, value, __ATOMIC_RELAXED);
+}
+
+inline uint64_t atomic_load(uint64_t& v)
+{
+    return __atomic_load_n(&v, __ATOMIC_RELAXED);
+}
+
+inline bool atomic_compare_exchange(uint64_t& v, uint64_t from, uint64_t to)
+{
+    return __atomic_compare_exchange_n(&v, &from, to, false/*weak*/, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
+}
+
+inline bool atomic_compare_exchange(const char*& v, const char* from, const char* to)
+{
+    return __atomic_compare_exchange_n(&v, &from, to, false/*weak*/, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
+}
+
+struct write_time
+{
+    uint64_t time;
+
+    write_time(uint64_t time) : time(time)
+    {
+    }
+};
+
+static mlog& operator<<(mlog &log,  const write_time& t)
+{
+    log << (t.time / 1000000) << "ms";
+    if(t.time / 1000000 < 100)
+        log << " (" << (t.time / 1000) << "us)";
+    return log;
+}
 
 class profilerinfo : public stack_singleton<profilerinfo>
 {
+    static const uint32_t max_counters = 100;
+
     struct info
     {
-        uint64_t time;
-        uint64_t time_max, time_min;
-        uint64_t count;
+        uint64_t time, time_max, time_min, count;
+        const char* name;
+
+        info() : time(), time_max(), time_min(std::numeric_limits<uint64_t>::max()), count(), name()
+        {
+        }
     };
 
-    typedef fmap<const char*, info> data_type;
-    data_type data;
-    my_mutex mutex;
+    info counters[max_counters];
+    uint64_t cur_counters;
 
-    template<typename type>
-    static void write_time(type &t, uint64_t time)
+    void print_impl(const long param)
     {
-        t << (time / 10000) << "ms";
-        if(time / 10000 < 100)
-            t << " (" << (time / 10) << "mics)";
-    }
-    static void print_impl(const data_type& data, const long param)
-    {
-        if(data.empty())
+        uint64_t ncounters = atomic_load(cur_counters);
+        if(!ncounters)
             return;
+
         mlog log(param);
-        log << "profiler: " << std::endl;
-        for(auto& v: data)
+        log << "profiler: \n";
+        for(uint64_t c = 0; c != ncounters; ++c)
         {
-            const info &i = v.second;
+            const info i = counters[c];
             uint64_t time_av = i.time / i.count;
-            log << _str_holder(v.first) << ": average time: ";
-            write_time(log, time_av);
-            log << ", minimum time: ";
-            write_time(log, i.time_min);
-            log << ", maximum time: ";
-            write_time(log, i.time_max);
-            log << ", all time: ";
-            {
-                log << (i.time / 10000000) << "sec";
-                if(i.time / 10000000 < 100)
-                    log << " (" << (i.time / 10000) << "msec)";
-            }
+            log << _str_holder(i.name) << ": average time: " << write_time(time_av)
+                << ", minimum time: " << write_time(i.time_min) << ", maximum time: " <<  write_time(i.time_max)
+                << ", all time: " << (i.time / ttime_t::frac) << "sec";
+                if(i.time / ttime_t::frac < 100)
+                    log << " (" << (i.time / 1000000) << "ms)";
             log << ", count: " << i.count << std::endl;
         }
     }
 public:
-    profilerinfo()
+
+    bool log_on_exit;
+
+    profilerinfo() : cur_counters(), log_on_exit(true)
     {
     }
-    void add_info(const char* id, uint64_t time)
+    uint64_t register_counter(const char* id)
     {
-        time /= 100;
+        for(;;)
+        {
+            uint64_t c = atomic_load(cur_counters);
+
+            if(c == max_counters)
+                throw std::runtime_error("profilerinfo::register_counter() overloaded");
+
+            if(atomic_compare_exchange(counters[c].name, nullptr, id))
+            {
+                atomic_add(cur_counters, 1);
+                return c;
+            }
+        }
+    }
+    void add_info(uint64_t counter_id, uint64_t time)
+    {
         if(!time)
             time = 1;
-        my_mutex::scoped_lock lock(mutex);
-        info& i = data[id];
-        i.time += time;
-        i.time_max = std::max(i.time_max, time);
-        if(!i.time_min)
-            i.time_min = time;
-        else
-            i.time_min = std::min(i.time_min, time);
-        ++i.count;
-    }
-    void print(bool clear = false)
-    {
-        data_type data_cpy;
+        info& i = counters[counter_id];
+        atomic_add(i.time, time);
+
+        uint64_t t;
+        do
         {
-            my_mutex::scoped_lock lock(mutex);
-            if(clear)
-                data_cpy.swap(data);
-            else
-                data_cpy = data;
+            t = atomic_load(i.time_max);
+            if(time <= t)
+                break;
         }
-        if(clear)
-            mlog(mlog::critical) << "profiler successfully cleared";
-        print_impl(data_cpy, mlog::critical);
-    }
-    void clear()
-    {
-        data_type tmp;
+        while(!atomic_compare_exchange(i.time_max, t, time));
+
+        do
         {
-            my_mutex::scoped_lock lock(mutex);
-            tmp.swap(data);
+            t = atomic_load(i.time_min);
+            if(time >= t)
+                break;
         }
-        mlog(mlog::critical) << "profiler successfully cleared";
-        print_impl(tmp, mlog::critical);
+        while(!atomic_compare_exchange(i.time_min, t, time));
+
+        atomic_add(i.count, 1);
+    }
+    void print()
+    {
+        print_impl(mlog::critical);
     }
     ~profilerinfo()
     {
-        my_mutex::scoped_lock lock(mutex);
-        print_impl(data, mlog::info);
+        if(log_on_exit)
+            print_impl(mlog::info);
     }
 };
 
 struct mprofiler : noncopyable
 {
-    const char* id;
+    uint64_t counter_id;
     ttime_t time;
 
-    mprofiler(const char* id) : id(id), time(cur_ttime())
+    mprofiler(uint64_t counter_id) : counter_id(counter_id), time(cur_ttime())
     {
     }
     ~mprofiler()
     {
-        try
-        {
-            int64_t dt = cur_ttime() - time;
-            profilerinfo::instance().add_info(id, dt);
-        }
-        catch(...)
-        {
-        }
+        profilerinfo::instance().add_info(counter_id, cur_ttime() - time);
     }
 };
 

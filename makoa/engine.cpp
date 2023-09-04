@@ -7,6 +7,7 @@
 #include "exports.hpp"
 #include "types.hpp"
 
+#include "evie/mutex.hpp"
 #include "evie/fast_alloc.hpp"
 
 bool pooling_mode = false;

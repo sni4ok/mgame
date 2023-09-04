@@ -5,6 +5,8 @@
 #include "utils.hpp"
 #include "fast_alloc.hpp"
 
+#include <thread>
+
 #include <sys/stat.h>
 #include <fcntl.h>
 

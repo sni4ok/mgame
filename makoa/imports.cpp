@@ -7,6 +7,7 @@
 
 #include "evie/socket.hpp"
 #include "evie/profiler.hpp"
+#include "evie/mutex.hpp"
 
 #include <map>
 
