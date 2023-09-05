@@ -56,12 +56,17 @@ struct fmap
 
     fmap() {
     }
-    fmap(const fmap& r) {
-        data = r.data;
+    fmap(fmap&& r) : data(std::move(r.data)) {
+    }
+    fmap(const fmap& r) : data(r.data) {
     }
 	fmap(std::initializer_list<value_type> init) {
         for(const auto& v: init)
             insert(v);
+    }
+    fmap& operator=(fmap&& r) {
+        data = std::move(r.data);
+        return *this;
     }
     fmap& operator=(const fmap& r) {
         data = r.data;

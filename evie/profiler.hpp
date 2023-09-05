@@ -46,9 +46,27 @@ struct write_time
 
 static mlog& operator<<(mlog &log,  const write_time& t)
 {
-    log << (t.time / 1000000) << "ms";
-    if(t.time / 1000000 < 100)
-        log << " (" << (t.time / 1000) << "us)";
+    uint64_t sec = t.time / ttime_t::frac;
+    if(sec)
+    {
+        log << sec << "sec";
+        if(sec < 100)
+            log << " (" << (t.time / 1000000) << "ms)";
+        return log;
+    }
+
+    uint64_t ms = t.time / 1000000;
+    if(ms)
+    {
+        log << ms << "ms";
+        if(ms < 100)
+            log << " (" << (t.time / 1000) << "us)";
+        return log;
+    }
+
+    log << (t.time / 1000) << "us";
+    if(t.time / 1000 < 100)
+        log << " (" << t.time << "ns)";
     return log;
 }
 
@@ -80,13 +98,12 @@ class profilerinfo : public stack_singleton<profilerinfo>
         for(uint64_t c = 0; c != ncounters; ++c)
         {
             const info i = counters[c];
+            if(!i.count)
+                continue;
             uint64_t time_av = i.time / i.count;
             log << _str_holder(i.name) << ": average time: " << write_time(time_av)
                 << ", minimum time: " << write_time(i.time_min) << ", maximum time: " <<  write_time(i.time_max)
-                << ", all time: " << (i.time / ttime_t::frac) << "sec";
-                if(i.time / ttime_t::frac < 100)
-                    log << " (" << (i.time / 1000000) << "ms)";
-            log << ", count: " << i.count << std::endl;
+                << ", all time: " << write_time(i.time) << ", count: " << i.count << std::endl;
         }
     }
 public:

@@ -429,7 +429,6 @@ void set_trash_thread()
 
 void set_significant_thread()
 {
-    return;
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     for(uint32_t i = 0; i != 11; ++i)

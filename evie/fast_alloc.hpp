@@ -136,7 +136,6 @@ public:
 template<typename type, uint32_t capacity_size>
 class lockfree_queue : noncopyable
 {
-    std::string name;
     struct node
     {
         type elem;
@@ -147,21 +146,23 @@ class lockfree_queue : noncopyable
         std::atomic<uint32_t> status;
         node() : status(){}
     };
-    array<node, capacity_size> elems;
 
+    std::string name;
+    array<node, capacity_size> elems;
     std::atomic<uint64_t> push_cnt, pop_cnt;
+
     static uint64_t get_idx(uint64_t idx) {
         return idx % capacity_size;
     }
 
     void throw_exception(const char* reason, uint32_t status)
     {
-        throw std::runtime_error(es() % name % ":lockfree_queue:" % _str_holder(reason) % ", (" % capacity % "," % uint64_t(pop_cnt) % ","
+        throw std::runtime_error(es() % name % ": lockfree_queue: " % _str_holder(reason) % ", (" % capacity % "," % uint64_t(pop_cnt) % ","
             % uint64_t(push_cnt) % "," % status % ")");
     }
+
 public:
-    lockfree_queue(const std::string& name) : name(name), push_cnt(), pop_cnt()
-    {
+    lockfree_queue(const std::string& name) : name(name), push_cnt(), pop_cnt() {
     }
     static const constexpr uint32_t capacity = capacity_size;
 
@@ -173,8 +174,8 @@ public:
         uint32_t status = 0;
         while((!n.status.compare_exchange_strong(status, 1))) {
             if(status != 3) {
-                usleep(1);
-                //throw_exception("push() overloaded", status);
+                MPROFILE("lockfree_queue::push() overloaded")
+                usleep(0);
             }
             status = 0;
         }
@@ -207,6 +208,7 @@ public:
             throw_exception("pop_strong() internal error", status);
     }
     bool pop_weak(type& t) {
+rep:
         node& n = elems[get_idx(pop_cnt)];
         uint32_t status = 2;
         if(n.status.compare_exchange_strong(status, 3)) {
@@ -216,6 +218,11 @@ public:
             if(!n.status.compare_exchange_strong(status, 0))
                 throw_exception("pop_weak() internal error", status);
             return true;
+        }
+        else
+        {
+            if(status == 1 || status == 3)
+                goto rep;
         }
         return false;
     }

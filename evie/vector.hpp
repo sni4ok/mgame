@@ -14,33 +14,51 @@ class mvector
     type* buf;
     uint32_t size_, capacity_;
 
+protected:
+    void __clear()
+    {
+        buf = nullptr;
+        size_ = 0;
+        capacity_ = 0;
+    }
+
 public:
     typedef type* iterator;
     typedef const type* const_iterator;
     typedef type value_type;
 
-    mvector() : buf(), size_(), capacity_() {
+    mvector() {
+        __clear();
     }
-    explicit mvector(uint32_t size) : buf(), size_(), capacity_() {
+    explicit mvector(uint32_t size) {
+        __clear();
         resize(size);
         memset(buf, 0, size * sizeof(type));
     }
-    mvector(mvector&& r) : buf(r.buf), size_(r.size_), capacity_(r.capacity_) {
-        r.buf = 0;
-        r.size_ = 0;
-        r.capacity_ = 0;
+    mvector(mvector&& r) {
+        __clear();
+        swap(r);
     }
-    mvector(const type* from, const type* to): buf(), size_(), capacity_() {
-        resize(to - from);
-        memmove((void*)&buf[0], from, (to - from) * sizeof(type));
+    mvector(const type* from, const type* to) {
+        __clear();
+        insert(from, to);
     }
-    mvector(const mvector& r) : buf(), size_(), capacity_() {
-        resize(r.size());
-        memmove((void*)&buf[0], &r.buf[0], (r.size()) * sizeof(type));
+    mvector(const mvector& r) {
+        __clear();
+        insert(r.begin(), r.end());
+    }
+	mvector(std::initializer_list<value_type> r) {
+        __clear();
+        insert(r.begin(), r.end());
+    }
+    mvector& operator=(mvector&& r) {
+        clear();
+        swap(r);
+        return *this;
     }
     mvector& operator=(const mvector& r) {
-        resize(r.size());
-        memmove((void*)&buf[0], &r.buf[0], (r.size()) * sizeof(type));
+        clear();
+        insert(r.begin(), r.end());
         return *this;
     }
     void resize(uint32_t new_size) {
@@ -101,9 +119,11 @@ public:
     iterator end() {
         return begin() + size_;
     }
+
     struct reverse_iterator
     {
         const type* ptr;
+
         reverse_iterator& operator++()
         {
             --ptr;
@@ -122,6 +142,7 @@ public:
             return ptr != r.ptr;
         }
     };
+
     reverse_iterator rbegin() const
     {
         return reverse_iterator({end() - 1});
@@ -191,6 +212,7 @@ struct pvector : mvector<type*>
         typedef std::random_access_iterator_tag iterator_category;
 
         type** it;
+
         iterator() : it()
         {
         }
@@ -258,8 +280,21 @@ struct pvector : mvector<type*>
     iterator end() {
         return iterator({base::end()});
     }
-    pvector()
+
+    using base::mvector;
+    pvector(const pvector&) = delete;
+    pvector& operator=(const pvector&) = delete;
+
+    pvector(pvector&& r)
     {
+        base::__clear();
+        base::swap(r);
+    }
+    pvector& operator=(pvector&& r)
+    {
+        clear();
+        static_cast<base&>(*this) = std::move(r);
+        return *this;
     }
     type& operator[](uint32_t elem) {
         return *(base::begin()[elem]);

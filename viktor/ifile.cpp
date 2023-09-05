@@ -18,6 +18,9 @@
 
 static ttime_t parse_time(const std::string& time)
 {
+    if(time == "now")
+        return cur_ttime();
+
     const char* it = time.c_str();
     return read_time_impl().read_time<0>(it);
 }
