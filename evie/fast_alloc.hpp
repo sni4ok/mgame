@@ -12,6 +12,7 @@ template<typename type, uint32_t size>
 struct array
 {
     type elems[size];
+
     type& operator[](uint32_t idx) {
         return elems[idx];
     }
@@ -20,17 +21,27 @@ struct array
     }
 };
 
+template<typename type>
+type atomic_exchange(type* ptr, type val)
+{
+    return __atomic_exchange_n(ptr, val, __ATOMIC_RELAXED);
+}
+
 //with follower can work one writer and many readers without synchronization
-template<typename type, uint32_t block_size = 16384, uint32_t num_blocks = 16384>
+template<typename type, uint32_t block_size = 65536, uint32_t num_blocks = 16384, bool enable_run_once = true>
 class follower : noncopyable
 {
     typedef array<type*, num_blocks> bulks_type;
     bulks_type bulks;
     std::atomic<uint32_t> num_elems;
+    type* ptr;
+
 public:
     typedef type value_type;
 
-    follower() : num_elems() {
+    follower() : num_elems(), ptr() {
+        if(enable_run_once)
+            run_once();
     }
     ~follower() {
         uint32_t elems = num_elems;
@@ -40,6 +51,22 @@ public:
             ++end_bulk;
         for(uint32_t i = 0; i != end_bulk; ++i)
             delete[] bulks[i];
+        if(ptr)
+            delete[] ptr;
+    }
+    bool run_once() {
+        if(!ptr)
+        {
+            type* p = new type[block_size];
+            p = atomic_exchange(&ptr, p);
+            if(p)
+            {
+                MPROFILE("follower::run_once() race")
+                delete p;
+            }
+            return true;
+        }
+        return false;
     }
     void push_back(const type& value) {
         uint32_t elems = num_elems;
@@ -47,8 +74,19 @@ public:
         uint32_t end_element = elems % block_size;
 
         if(!end_element) {
-            MPROFILE("follower::new")
-            bulks[end_bulk] = new type[block_size];
+            type* p = nullptr;
+            if(enable_run_once)
+                p = atomic_exchange(&ptr, (type*)nullptr);
+            if(p)
+            {
+                MPROFILE("follower::new_atomic")
+                bulks[end_bulk] = p;
+            }
+            else
+            {
+                MPROFILE("follower::new")
+                bulks[end_bulk] = new type[block_size];
+            }
         }
 
         (bulks[end_bulk])[end_element] = value;
@@ -228,27 +266,54 @@ rep:
     }
 };
 
-template<typename type_t, uint32_t pool_size = 16 * 1024>
+template<typename type_t, uint32_t pool_size = 16 * 1024, bool enable_run_once = true>
 struct fast_alloc
 {
     typedef type_t type;
     lockfree_queue<type*, pool_size> elems;
+    std::atomic<int32_t> free_elems;
 
-    fast_alloc(const std::string& name, uint32_t pre_alloc = 1) : elems(name) {
+    fast_alloc(const std::string& name, uint32_t pre_alloc = 1) : elems(name), free_elems() {
         assert(pre_alloc <= pool_size);
         for(uint32_t i = 0; i != pre_alloc; ++i)
             elems.push(new type);
     }
     type* alloc() {
         type* p;
-        if(!elems.pop_weak(p))
+        if(!elems.pop_weak(p)) {
+            MPROFILE("fast_alloc::alloc() slow")
             return new type;
-        else
+        }
+        else {
+            if(enable_run_once)
+                ++free_elems;
             return p;
+        }
     }
     void free(type* m) {
-        if(!elems.push_weak(m))
+        if(!elems.push_weak(m)) {
+            MPROFILE("fast_alloc::free() slow")
             delete m;
+        }
+        else if(enable_run_once)
+            --free_elems;
+    }
+    bool run_once() {
+        static_assert(enable_run_once);
+        int32_t c = free_elems;
+        bool ret = false;
+        for(int32_t i = 0; i < c; ++i) {
+            type* p = new type;
+            if(elems.push_weak(p)) {
+                --free_elems;
+                ret = true;
+            }
+            else {
+                delete p;
+                break;
+            }
+        }
+        return ret;
     }
     ~fast_alloc() {
         type* p;

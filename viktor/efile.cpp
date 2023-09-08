@@ -31,7 +31,7 @@ struct efile
     {
         std::vector<std::string> p = split(params, ' ');
         if(p.size() != 3)
-            throw std::runtime_error(es() % "efile() bad params: " % params);
+            throw std::runtime_error(es() % "efile() \"file (bin,csv) (truncate,append,rename_new) file_name\", params: " % params);
         if(p[0] == "bin")
             bin = true;
         else if(p[0] != "csv")

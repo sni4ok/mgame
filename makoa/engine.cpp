@@ -39,7 +39,7 @@ class linked_list : public fast_alloc<linked_node, 4 * 1024>
     std::atomic<linked_node*> tail;
     
 public:
-    linked_list() : fast_alloc("messages_linked_list"), tail(&root)
+    linked_list() : fast_alloc("messages_linked_list", 2 * 1024), tail(&root)
     {
     }
     void push(linked_node* t) //push element in list, always success
@@ -219,16 +219,14 @@ class engine::impl : public stack_singleton<engine::impl>
         }
     }
 
-    struct imple
+    struct imple : noncopyable
     {
+        volatile bool& can_run;
         linked_list* ll;
         exporter exp;
         linked_list::type *prev, *ptmp;
 
-        imple()
-        {
-        }
-        imple(linked_list& ll, const std::string& eparams) : ll(&ll), exp(eparams), prev(), ptmp()
+        imple(volatile bool& can_run, linked_list& ll, const std::string& eparams) : can_run(can_run), ll(&ll), exp(eparams), prev(), ptmp()
         {
         }
         bool proceed()
@@ -242,6 +240,8 @@ class engine::impl : public stack_singleton<engine::impl>
                 if(prev)
                     ll->release_node(prev);
                 prev = ptmp;
+                if(!can_run)
+                    break;
                 ptmp = ll->next(prev);
             }
             return ret;
@@ -333,7 +333,7 @@ public:
     {
         consumers = exports.size();
         for(const auto& e: exports)
-            ies.push(new imple(ll, e));
+            ies.push(new imple(can_run, ll, e));
 
         for(uint32_t i = 0; i != export_threads; ++i)
             threads.push_back(std::thread(&impl::work_thread, this));

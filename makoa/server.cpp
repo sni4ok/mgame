@@ -51,6 +51,8 @@ struct server::impl
                     hi.start(i, nullptr);
                     if(quit_on_exit)
                         break;
+                    else
+                        usleep(1000 * 1000);
                 } catch (std::exception& e) {
                     mlog() << "import_thread " << str << " " << e;
                     for(uint i = 0; can_run && i != 5; ++i)

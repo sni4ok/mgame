@@ -48,10 +48,10 @@ namespace
 class simple_log
 {
     static const uint32_t pool_size = 4 * 1024;
-    static const uint32_t pre_alloc = 128;
+    static const uint32_t pre_alloc = 1024;
     static const uint32_t log_no_cout_size = 10;
 
-    typedef fast_alloc<mlog::node, pool_size> string_pool;
+    typedef fast_alloc<mlog::node, pool_size, true> string_pool;
     typedef lockfree_queue<mlog::data, pool_size> nodes_type;
 
     void write_impl(char* str, uint32_t size, uint32_t extra_param, uint32_t all_sz, uint32_t cur_size)
@@ -109,6 +109,7 @@ class simple_log
                     break;
                 if(!all_sz)
                 {
+                    pool.run_once();
                     usleep(cntr);
                     if(cntr != cntr_to)
                         cntr *= 2;
