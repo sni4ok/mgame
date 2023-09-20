@@ -4,13 +4,26 @@
 
 #pragma once
 
-#include <string>
+#include "str_holder.hpp"
+
 #include <limits>
-#include <stdexcept>
-#include <type_traits>
+#include <exception>
 
 #define unlikely(x)     __builtin_expect(!!(x),0)
 #define likely(x)       __builtin_expect(!!(x),1)
+
+struct str_exception : std::exception
+{
+    const char* msg;
+
+    str_exception(const char* msg) : msg(msg)
+    {
+    }
+    const char* what() const noexcept
+    {
+        return msg;
+    }
+};
 
 namespace my_cvt
 {
@@ -29,6 +42,14 @@ namespace my_cvt
         return 1;
     }
 
+    struct exception : std::exception
+    {
+        char buf[64];
+
+        exception(str_holder h, str_holder m);
+        const char* what() const noexcept;
+    };
+
     template<typename type>
     type atoi_u(const char* buf, uint32_t size) {
         static_assert(std::is_unsigned<type>::value);
@@ -36,10 +57,10 @@ namespace my_cvt
         static const type mm = (std::numeric_limits<type>::max()) / 10;
         for(uint32_t i = 0; i != size; ++i) {
             if(unlikely(ret > mm))
-                throw std::runtime_error(std::string("atoi() max possible size exceed for: ") + std::string(&buf[0], &buf[size]));
+                throw exception(str_holder("atoi() max possible size exceed for: "), {buf, size});
             char ch = buf[i];
             if(unlikely(ch < '0' || ch > '9'))
-                throw std::runtime_error(std::string("atoi() bad integral number: ") + std::string(&buf[0], &buf[size]));
+                throw exception(str_holder("atoi() bad integral number: "), {buf, size});
             ret *= 10;
             ret += (ch - '0');
         }
@@ -62,7 +83,7 @@ namespace my_cvt
     template<>
     inline bool atoi<bool>(const char* buf, uint32_t size) {
         if(unlikely(size != 1 || (buf[0] != '0' && buf[0] != '1')))
-            throw std::runtime_error(std::string("atoi() bad bool number: ") + std::string(&buf[0], &buf[size]));
+            throw exception(str_holder("atoi() bad bool number: "), {buf, size});
         return(buf[0] == '1');
     }
 
@@ -99,6 +120,19 @@ namespace my_cvt
         static const uint32_t value = (std::is_unsigned<type>::value ? atoi_u_ps : atoi_s_ps)[sizeof(type) / 2];
     };
 }
+
+template<typename type>
+std::enable_if_t<std::is_integral<type>::value, type>
+lexical_cast(char_cit from, char_cit to)
+{
+    return my_cvt::atoi<type>(from, to - from);
+}
+
+template<typename type>
+std::enable_if_t<!(std::is_integral<type>::value), type>
+lexical_cast(char_cit from, char_cit to);
+
+template<> double lexical_cast<double>(char_cit from, char_cit to);
 
 template<typename ... args>
 inline void my_unused(args& ...) {

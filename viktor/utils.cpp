@@ -2,18 +2,19 @@
    author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
-#include "evie/mfile.hpp"
 
 #include "makoa/types.hpp"
+
+#include "evie/mfile.hpp"
 
 #include <unistd.h>
 
 void fix_zero_tail(const char* fname)
 {
-    std::cout << "fix_zero_tail(" << fname << "):" << std::endl;
+    cout_write(es() % "fix_zero_tail(" % _str_holder(fname) % "):" % endl);
     mfile f(fname);
     uint64_t fsz = f.size();
-    std::vector<char> m(message_size), mc(message_size);
+    mvector<char> m(message_size), mc(message_size);
     int64_t nsz = fsz - fsz % message_size;
     while(nsz > 0) {
         f.seekg(nsz - message_size);
@@ -22,9 +23,9 @@ void fix_zero_tail(const char* fname)
             break;
         nsz -= message_size;
     }
-    std::cout << "  orig_file_size: " << fsz << ", new_file_size: " << nsz << std::endl;
+    cout_write(es() % "  orig_file_size: " % fsz % ", new_file_size: " % nsz % endl);
     if(truncate(fname, nsz))
-        throw std::runtime_error("truncate file error");
+        throw str_exception("truncate file error");
 }
 
 template<typename type>
@@ -75,16 +76,16 @@ int main(int argc, char** argv)
 {
     try
     {
-        if(argc == 3 && std::string(argv[1]) == "fix_zero_tail")
+        if(argc == 3 && _str_holder(argv[1]) == "fix_zero_tail")
             fix_zero_tail(argv[2]);
-        else if(argc == 2 && std::string(argv[1]) == "amount_test")
+        else if(argc == 2 && _str_holder(argv[1]) == "amount_test")
             amount_test();
         else
-            throw std::runtime_error("unsupported params");
+            throw str_exception("unsupported params");
     }
     catch(std::exception& e)
     {
-        std::cerr << "main() exception: " << e.what() << std::endl;
+        cerr_write(es() % "main() exception: " % _str_holder(e.what()) % endl);
         return 1;
     }
     return 0;

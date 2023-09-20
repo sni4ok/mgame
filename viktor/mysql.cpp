@@ -9,10 +9,10 @@
 
 #include "makoa/exports.hpp"
 #include "makoa/types.hpp"
-#include "evie/mlog.hpp"
 
-#include <string>
-#include <memory>
+#include "evie/mlog.hpp"
+#include "evie/mstring.hpp"
+#include "evie/smart_ptr.hpp"
 
 #include <mysql/mysql.h>
 
@@ -20,22 +20,21 @@ namespace {
 
 struct mysql
 {
-    std::vector<char> bufi, bufo, buft;
+    static const uint32_t prealloc = 1024 * 1024;
+    char bufi[prealloc], bufo[prealloc], buft[prealloc];
     buf_stream bsi, bso, bst;
     uint32_t si, so, st;
 
-    std::unique_ptr<MYSQL, decltype(&mysql_close)> sql;
+    unique_ptr<MYSQL, mysql_close> sql;
     bool truncate, rename_new;
-    static const uint32_t prealloc = 1024 * 1024;
-    mysql(const std::string& params) : bufi(prealloc), bufo(prealloc), buft(prealloc),
-       bsi(bufi), bso(bufo), bst(buft), sql(mysql_init(0), &mysql_close),
-        truncate(), rename_new()
+
+    mysql(const mstring& params) : bufi(), bufo(), buft(), bsi(bufi), bso(bufo), bst(buft), sql(mysql_init(0)), truncate(), rename_new()
     {
         if(!sql)
-            throw std::runtime_error("mysql() mysql_init error");
-        std::vector<std::string> p = split(params, ' ');
+            throw str_exception("mysql() mysql_init error");
+        mvector<mstring> p = split(params, ' ');
         if(p.size() != 6)
-            throw std::runtime_error(es() % "mysql() \"mysql (truncate,append,rename_new) host port dbname user password\", params: " % params);
+            throw mexception(es() % "mysql() \"mysql (truncate,append,rename_new) host port dbname user password\", params: " % params);
 
         if(p[0] == "truncate")
             truncate = true;
@@ -45,7 +44,7 @@ struct mysql
         else if(p[0] == "rename_new")
             rename_new = true;
         else
-            throw std::runtime_error(es() % "mysql() bad open_mode: " % params);
+            throw mexception(es() % "mysql() bad open_mode: " % params);
 
         if(!mysql_real_connect(sql.get(), p[1].c_str(), p[4].c_str(), p[5].c_str(), p[3].c_str(), lexical_cast<uint16_t>(p[2]), NULL, 0))
             throw_error();
@@ -133,11 +132,11 @@ struct mysql
     }
     void throw_error()
     {
-        throw std::runtime_error(mysql_error(sql.get()));
+        throw mexception(mysql_error(sql.get()));
     }
     void throw_error(buf_stream& bs)
     {
-        throw std::runtime_error(es() % _str_holder(mysql_error(sql.get())) % ", query: " % bs.str());
+        throw mexception(es() % _str_holder(mysql_error(sql.get())) % ", query: " % bs.str());
     }
     void flush_stream(buf_stream& bs, uint32_t s)
     {
@@ -192,7 +191,7 @@ struct mysql
 
 void* mysql_init(const char* params)
 {
-    return new mysql(params);
+    return new mysql(mstring(params));
 }
 
 void mysql_destroy(void* v)

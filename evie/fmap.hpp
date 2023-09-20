@@ -5,40 +5,9 @@
 #pragma once
 
 #include "vector.hpp"
+#include "algorithm.hpp"
 
-template<class It, class T, class Pr>
-It lower_bound_simple(It first, It last, const T& val, Pr pred)
-{
-    int64_t count = last - first;
-    while(count > 0)
-    {
-        int64_t step = count / 2;
-        It mid = first + step;
-        if(pred(*mid, val))
-            first = ++mid, count -= step + 1;
-        else
-            count = step;
-    }
-    return first;
-}
-
-template <class It, class T, class Pr>
-It upper_bound_simple(It first, It last, const T& val, Pr pred)
-{
-  int64_t count = last - first;
-  while(count > 0)
-  {
-    int64_t step = count / 2;
-    It mid = first + step;
-    if(!pred(val, *mid))
-        first = ++mid, count -= step + 1;
-    else
-        count = step;
-  }
-  return first;
-}
-
-template<typename key, typename value, typename comp = std::less<key>, template <typename> typename vector = mvector>
+template<typename key, typename value, typename comp = less<key>, template <typename> typename vector = mvector>
 struct fmap
 {
     struct pair
@@ -84,7 +53,7 @@ struct fmap
     const value& at(const key& k) const {
         auto it = lower_bound(k);
         if(unlikely(it == data.end() || it->first != k))
-            throw std::runtime_error("fmap::at() error");
+            throw mexception("fmap::at() error");
         return it->second;
     }
     value& at(const key& k) {
@@ -103,17 +72,15 @@ struct fmap
         return (*this)[key_type(k)];
     }
     const_iterator lower_bound(const key& k) const {
-        return lower_bound_simple(data.begin(), data.end(), k,
+        return ::lower_bound(data.begin(), data.end(), k,
             [](const pair& v, const key_type& k) { return comp()(v.first, k); }
         );
     }
     iterator lower_bound(const key& k) {
-        return lower_bound_simple(data.begin(), data.end(), k,
-            [](const pair& v, const key_type& k) { return comp()(v.first, k); }
-        );
+        return iterator(const_cast<const fmap*>(this)->lower_bound(k));
     }
     const_iterator upper_bound(const key& k) const {
-        return upper_bound_simple(data.begin(), data.end(), k,
+        return ::upper_bound(data.begin(), data.end(), k,
             [](const key_type& k, const pair& v) { return comp()(k, v.first); }
         );
     }
@@ -188,8 +155,8 @@ private:
 };
 
 template<typename key, typename value>
-struct pmap : fmap<key, value, std::less<key>, pvector>
+struct pmap : fmap<key, value, less<key>, pvector>
 {
-    using fmap<key, value, std::less<key>, pvector>::fmap;
+    using fmap<key, value, less<key>, pvector>::fmap;
 };
 

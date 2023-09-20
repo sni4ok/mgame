@@ -3,9 +3,13 @@
 */
 
 #include "utils.hpp"
+#include "thread.hpp"
+#include "smart_ptr.hpp"
 #include "fast_alloc.hpp"
 
 #include <thread>
+#include <vector>
+#include <iostream>
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -14,8 +18,9 @@ namespace
 {
     class ofile
     {
-        std::string name;
+        mstring name;
         int hfile;
+
     public:
         ofile(const char* file) : name(file)
         {
@@ -45,6 +50,20 @@ namespace
     };
 }
 
+void cout_write(str_holder str, bool flush)
+{
+    std::cout << str;
+    if(flush)
+        std::cout.flush();
+}
+
+void cerr_write(str_holder str, bool flush)
+{
+    std::cerr << str;
+    if(flush)
+        std::cerr.flush();
+}
+
 class simple_log
 {
     static const uint32_t pool_size = 4 * 1024;
@@ -59,18 +78,18 @@ class simple_log
         if(str)
         {
             if(stream)
-                (*stream).write(str, size);
+                stream->write(str, size);
             if((extra_param & mlog::critical) && stream_crit)
-                (*stream_crit).write(str, size);
+                stream_crit->write(str, size);
             if((!stream || ((params & mlog::always_cout) && !(extra_param & mlog::no_cout))) && !no_cout)
             {
                 if(all_sz >= log_no_cout_size)
                 {
                     if(!cur_size)
-                        std::cout << "[[skipped " << all_sz << " rows from logging to stdout, see log file for found it]]" << std::endl;
+                        cout_write(es() % "[[skipped " % all_sz % " rows from logging to stdout, see log file for found it]]" % endl, true);
                 }
                 else
-                    std::cout.write(str, size);
+                    cout_write({str, size}, false);
             }
         }
     }
@@ -118,11 +137,11 @@ class simple_log
         }
         catch(std::exception& e)
         {
-            std::cout << "simple_log::write_thread error: " << e.what() << std::endl;
+            cout_write(es() % "simple_log::write_thread error: " % _str_holder(e.what()) % endl);
         }
     }
 
-    std::unique_ptr<ofile> stream, stream_crit;
+    unique_ptr<ofile> stream, stream_crit;
     volatile bool can_run;
     std::thread work_thread;
     std::atomic<uint32_t> all_size;
@@ -158,7 +177,7 @@ public:
             stream.reset(new ofile(file_name));
             if(!(params & mlog::no_crit_file))
             {
-                std::string crit_file = std::string(file_name) + "_crit";
+                mstring crit_file = mstring(file_name) + "_crit";
                 stream_crit.reset(new ofile(crit_file.c_str()));
             }
             if(params & mlog::lock_file)
@@ -194,14 +213,40 @@ void mlog::set_no_cout()
     simple_log::instance().no_cout = true;
 }
 
-void log_destroy(simple_log* log)
+log_holder::log_holder(simple_log *ptr) : ptr(ptr)
 {
-    delete log;
 }
 
-std::unique_ptr<simple_log, void (*)(simple_log*)> log_init(const char* file_name, uint32_t params, bool set_instance)
+log_holder::log_holder(log_holder&& r)
 {
-    std::unique_ptr<simple_log, void (*)(simple_log*)> log(new simple_log(), &log_destroy);
+    ptr = r.ptr;
+    r.ptr = nullptr;
+}
+
+log_holder& log_holder::operator=(log_holder&& r)
+{
+    std::swap(ptr, r.ptr);
+    return *this;
+}
+
+simple_log* log_holder::get()
+{
+    return ptr;
+}
+
+simple_log* log_holder::operator->()
+{
+    return ptr;
+}
+
+log_holder::~log_holder()
+{
+    delete ptr;
+}
+
+log_holder log_init(const char* file_name, uint32_t params, bool set_instance)
+{
+    log_holder log(new simple_log());
     log->init(file_name, params);
     if(set_instance)
         log->set_instance(log.get());
@@ -221,27 +266,6 @@ simple_log* log_get()
 uint32_t& log_params()
 {
     return log_get()->params;
-}
-
-std::atomic<uint32_t> thread_tss_id;
-static pthread_key_t key;
-static pthread_once_t key_once = PTHREAD_ONCE_INIT;
-
-static void make_key()
-{
-    pthread_key_create(&key, NULL);
-}
-
-int get_thread_id()
-{
-    void *ptr;
-    pthread_once(&key_once, make_key);
-    if((ptr = pthread_getspecific(key)) == NULL)
-    {
-        ptr = new int(++thread_tss_id);
-        pthread_setspecific(key, ptr);
-    }
-    return *((int*)ptr);
 }
 
 void mlog::init()
@@ -309,25 +333,6 @@ void mlog::write(const char* it, uint32_t size)
     write_string(it, size);
 }
 
-mlog& mlog::operator<<(const str_holder& str)
-{
-    write(str.str, str.size);
-    return *this;
-}
-
-mlog& mlog::operator<<(const std::string& s)
-{
-    write_string(&s[0], s.size());
-    return *this;
-}
-
-mlog& mlog::operator<<(std::ostream& (std::ostream&))
-{
-    check_size(1);
-    buf.tail->buf[(buf.tail->size)++] = '\n';
-    return *this;
-}
-
 mlog& mlog::operator<<(const time_duration& t)
 {
     *this << print2chars(t.hours) << ':' << print2chars(t.minutes) << ':' << print2chars(t.seconds)
@@ -361,7 +366,7 @@ void mlog::check_size(uint32_t delta)
     if(buf.tail->size + delta > buf_size)
     {
         if(delta > buf_size)
-            throw std::runtime_error("mlog() max size exceed");
+            throw mexception("mlog() max size exceed");
         node* tail = buf.tail;
         buf.tail = log.alloc();
         tail->next = buf.tail;
@@ -407,39 +412,6 @@ void log_test(size_t thread_count, size_t log_count)
 }
 
 simple_log* simple_log::log = 0;
-static const uint32_t trash_t1 = 3, trash_t2 = 9;
-
-void set_affinity_thread(uint32_t thrd)
-{
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    CPU_SET(thrd, &cpuset);
-    if(pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset))
-        mlog(mlog::critical) << "pthread_setaffinity_np() error";
-}
-
-void set_trash_thread()
-{
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    CPU_SET(trash_t1, &cpuset);
-    CPU_SET(trash_t2, &cpuset);
-    if(pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset))
-        mlog(mlog::critical) << "pthread_setaffinity_np() error";
-}
-
-void set_significant_thread()
-{
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    for(uint32_t i = 0; i != 11; ++i)
-    {
-        if(i != trash_t1 && i != trash_t2)
-            CPU_SET(i, &cpuset);
-    }
-    if(pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset))
-        mlog(mlog::critical) << "pthread_setaffinity_np() error";
-}
 
 const char binary16[] = "000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F202122232425262728292A2B2C2D2E2F303132333435363738393A3B3C3D3E3F404142434445464748494A4B4C4D4E4F505152535455565758595A5B5C5D5E5F606162636465666768696A6B6C6D6E6F707172737475767778797A7B7C7D7E7F808182838485868788898A8B8C8D8E8F909192939495969798999A9B9C9D9E9FA0A1A2A3A4A5A6A7A8A9AAABACADAEAFB0B1B2B3B4B5B6B7B8B9BABBBCBDBEBFC0C1C2C3C4C5C6C7C8C9CACBCCCDCECFD0D1D2D3D4D5D6D7D8D9DADBDCDDDEDFE0E1E2E3E4E5E6E7E8E9EAEBECEDEEEFF0F1F2F3F4F5F6F7F8F9FAFBFCFDFEFF";
 

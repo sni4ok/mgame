@@ -3,14 +3,18 @@
 */
 
 #include "socket.hpp"
-
+#include "string.hpp"
 #include "profiler.hpp"
+#include "mlog.hpp"
 
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <netdb.h>
+
+#include <cerrno>
 
 socket_holder::socket_holder(int s) : s(s)
 {
@@ -38,7 +42,7 @@ socket_holder::~socket_holder()
         close(s);
 }
 
-int socket_connect(const std::string& host, uint16_t port, uint32_t timeout)
+int socket_connect(const mstring& host, uint16_t port, uint32_t timeout)
 {
     bool local = (host == "127.0.0.1") || (host == "localhost");
     int socket = ::socket(AF_INET, local ? AF_LOCAL : SOCK_STREAM /*| SOCK_NONBLOCK*/, IPPROTO_TCP);
@@ -77,7 +81,7 @@ int socket_connect(const std::string& host, uint16_t port, uint32_t timeout)
         if((result = select(socket + 1, NULL, &fdset, NULL, &tv)) < 0)
             throw_system_failure(es() % "socket_connect select, err: " % result % ": " % host % ":" % port);
         if(result == 0)
-            throw std::runtime_error("socket_connect timeout");
+            throw mexception("socket_connect timeout");
 
         int error = 0;
         socklen_t len = sizeof(error);
@@ -161,11 +165,11 @@ void socket_send_async(int socket, const char* ptr, uint32_t sz)
     }
 }
 
-int my_accept_async(uint32_t port, bool local, bool sync, std::string* client_ip_ptr, volatile bool* can_run, const char* name)
+int my_accept_async(uint32_t port, bool local, bool sync, mstring* client_ip_ptr, volatile bool* can_run, const char* name)
 {
     int socket = ::socket(AF_INET, local ? AF_LOCAL : SOCK_STREAM /*| SOCK_NONBLOCK*/, IPPROTO_TCP);
     if(socket < 0) 
-        throw_system_failure(es() % name % ": Open socket error");
+        throw_system_failure(es() % _str_holder(name) % ": Open socket error");
     socket_holder sh(socket);
 
     int flag = 1;
@@ -201,7 +205,7 @@ int my_accept_async(uint32_t port, bool local, bool sync, std::string* client_ip
                 throw_system_failure(es() % "my_accept_async select, err: " % result);
         }
         if(can_run && !*can_run)
-            throw std::runtime_error("socket_sender can_run = false reached");
+            throw mexception("socket_sender can_run = false reached");
     }
 
     int socket_cl = accept(socket, (struct sockaddr *)&cli_addr, &cli_sz);
@@ -222,26 +226,26 @@ int my_accept_async(uint32_t port, bool local, bool sync, std::string* client_ip
             throw_system_failure("set O_NONBLOCK for client socket error");
     }
 
-    std::string client_ip(str);
+    mstring client_ip(str);
     mlog() << "socket_sender connection accepted from " << client_ip << ":" << port;
     if(client_ip_ptr)
-        *client_ip_ptr = client_ip;
+        *client_ip_ptr = std::move(client_ip);
     return sc.release();
 }
 
-int my_accept_async(uint32_t port, const std::string& possible_client_ip, bool sync,
-    std::string* client_ip_ptr, volatile bool* can_run, const char* name)
+int my_accept_async(uint32_t port, const mstring& possible_client_ip, bool sync,
+    mstring* client_ip_ptr, volatile bool* can_run, const char* name)
 {
-    std::string client_ip;
+    mstring client_ip;
     int s = my_accept_async(port, (possible_client_ip == "127.0.0.1"), sync, &client_ip, can_run, name);
 
     if(possible_client_ip != "*" && client_ip != possible_client_ip)
     {
         close(s);
-        throw std::runtime_error(es() % "socket_sender connected client with ip: " % client_ip % ", possible_ip: " % possible_client_ip);
+        throw mexception(es() % "socket_sender connected client with ip: " % client_ip % ", possible_ip: " % possible_client_ip);
     }
     if(client_ip_ptr)
-        *client_ip_ptr = client_ip;
+        *client_ip_ptr = std::move(client_ip);
     return s;
 }
 
@@ -282,13 +286,13 @@ int socket_stream::recv()
     return ret;
 }
 
-socket_stream::socket_stream(uint32_t timeout, std::vector<char>& buf, int s, bool have_socket, socket_stream_op* op)
-    : op(op), cur(&buf[0]), readed(cur), beg(cur), all_sz(buf.size()), timeout(timeout), socket(s), have_socket(have_socket)
+socket_stream::socket_stream(uint32_t timeout, char* buf, uint32_t buf_size, int s, bool have_socket, socket_stream_op* op)
+    : op(op), cur(buf), readed(cur), beg(cur), all_sz(buf_size), timeout(timeout), socket(s), have_socket(have_socket)
 {
 }
 
-socket_stream::socket_stream(uint32_t timeout, std::vector<char>& buf, const std::string& host, uint16_t port, socket_stream_op* op)
-    : op(op), cur(&buf[0]), readed(cur), beg(cur), all_sz(buf.size()), timeout(timeout), socket(), have_socket(true)
+socket_stream::socket_stream(uint32_t timeout, char* buf, uint32_t buf_size, const mstring& host, uint16_t port, socket_stream_op* op)
+    : op(op), cur(buf), readed(cur), beg(cur), all_sz(buf_size), timeout(timeout), socket(), have_socket(true)
 {
     socket = socket_connect(host, port);
 }

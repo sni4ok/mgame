@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include "evie/string.hpp"
-
 struct hole_importer
 {
     void* (*init)(volatile bool& can_run, const char* params) = 0;
@@ -14,6 +12,6 @@ struct hole_importer
     void (*set_close)(void* c) = 0;
 };
 
-uint32_t register_importer(const std::string& name, hole_importer hi);
+int register_importer(const char* name, hole_importer hi);
 hole_importer create_importer(const char* name);
 

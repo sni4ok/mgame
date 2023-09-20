@@ -55,7 +55,7 @@ struct security
         mi.time = ttime_t(); //get_export_mtime
         e.proceed((message*)(&mp), 1);
     }
-    void init(const std::string& exchange_id, const std::string& feed_id, const std::string& ticker)
+    void init(const mstring& exchange_id, const mstring& feed_id, const mstring& ticker)
     {
         mb = message_book();
         mb.id = msg_book;
@@ -73,16 +73,16 @@ struct security
         memset(&mi.security, 0, sizeof(mi.security));
 
         if(exchange_id.size() > sizeof(mi.exchange_id))
-            throw std::runtime_error(es() % "exchange_id too big: " % exchange_id);
-        std::copy(exchange_id.begin(), exchange_id.end(), &mi.exchange_id[0]);
+            throw mexception(es() % "exchange_id too big: " % exchange_id);
+        my_fast_copy(exchange_id.begin(), exchange_id.end(), &mi.exchange_id[0]);
 
         if(feed_id.size() > sizeof(mi.feed_id))
-            throw std::runtime_error(es() % "feed_id too big: " % feed_id);
-        std::copy(feed_id.begin(), feed_id.end(), &mi.feed_id[0]);
+            throw mexception(es() % "feed_id too big: " % feed_id);
+        my_fast_copy(feed_id.begin(), feed_id.end(), &mi.feed_id[0]);
         
         if(ticker.size() > sizeof(mi.security))
-            throw std::runtime_error(es() % "security too big: " % ticker);
-        std::copy(ticker.begin(), ticker.end(), &mi.security[0]);
+            throw mexception(es() % "security too big: " % ticker);
+        my_fast_copy(ticker.begin(), ticker.end(), &mi.security[0]);
 
         mi.security_id = calc_crc(mi);
         mi.time = cur_ttime();
@@ -101,7 +101,7 @@ struct emessages : noncopyable
     message ms[pre_alloc];
     uint32_t m_s;
 
-    emessages(const std::string& push) : e(push), m_s()
+    emessages(const mstring& push) : e(push), m_s()
     {
     }
     void ping(ttime_t etime, ttime_t time)

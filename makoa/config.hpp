@@ -5,14 +5,15 @@
 
 #pragma once
 
-#include "evie/utils.hpp"
+#include "evie/mstring.hpp"
+#include "evie/singleton.hpp"
 
 struct config : stack_singleton<config>
 {
-    std::string name;
+    mstring name;
 
-    std::vector<std::string> imports;
-    std::vector<std::string> exports;
+    mvector<mstring> imports;
+    mvector<mstring> exports;
     uint32_t export_threads;
 
     bool pooling;

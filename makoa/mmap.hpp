@@ -6,10 +6,6 @@
 
 #include "messages.hpp"
 
-#include "evie/utils.hpp"
-
-#include <atomic>
-
 #include <sys/mman.h>
 #include <pthread.h>
 
@@ -20,12 +16,13 @@ struct shared_memory_sync
     uint8_t pooling_mode; //0 unitialized, 1 pooling mode on, 2 pooling mode off
 };
 
-struct pthread_lock : noncopyable
+struct pthread_lock
 {
     pthread_mutex_t* mutex;
     bool mlock;
 
     pthread_lock(pthread_mutex_t& mutex);
+    pthread_lock(const pthread_lock&) = delete;
     ~pthread_lock();
     void lock();
     void unlock();

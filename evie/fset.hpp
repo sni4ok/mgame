@@ -5,11 +5,11 @@
 #pragma once
 
 #include "vector.hpp"
+#include "algorithm.hpp"
 
 #include <cassert>
-#include <algorithm>
 
-template<typename type, typename comp = std::less<type>, template <typename> typename vector = mvector>
+template<typename type, typename comp = less<type>, template <typename> typename vector = mvector>
 struct fset
 {
     typedef type key_type;
@@ -44,14 +44,14 @@ struct fset
         return data.empty();
     }
     const_iterator lower_bound(const type& k) const {
-        return std::lower_bound(data.begin(), data.end(), k, comp());
+        return ::lower_bound(data.begin(), data.end(), k, comp());
     }
     const_iterator upper_bound(const type& k) const {
-        return std::upper_bound(data.begin(), data.end(), k, comp());
+        return upper_bound(data.begin(), data.end(), k, comp());
     }
     const_iterator find(const type& k) const {
         auto ie = data.end();
-        auto it = std::lower_bound(data.begin(), ie, k, comp());
+        auto it = ::lower_bound(data.begin(), ie, k, comp());
         if(it != ie && !comp()(*it, k) && !comp()(k, *it))
             return it;
         return ie;
@@ -101,7 +101,7 @@ struct fset
         return data.insert(it, k);
     }
     iterator insert(const value_type& k) {
-        iterator it = std::lower_bound(data.begin(), data.end(), k, comp());
+        iterator it = ::lower_bound(data.begin(), data.end(), k, comp());
         return insert(it, k);
     }
     void erase(const type& k) {
@@ -158,7 +158,7 @@ inserter_t<cont> inserter(cont& c)
     return inserter_t<cont>(c);
 }
 
-template<typename type, typename comp = std::less<type> >
+template<typename type, typename comp = less<type> >
 struct pset : fset<type, comp, pvector>
 {
     typedef fset<type, comp, pvector> base;
@@ -179,7 +179,7 @@ struct pset : fset<type, comp, pvector>
     }
     base::iterator insert(type* k)
     {
-        return insert(std::lower_bound(this->data.begin(), this->data.end(), *k, comp()), k);
+        return insert(::lower_bound(this->data.begin(), this->data.end(), *k, comp()), k);
     }
 };
 

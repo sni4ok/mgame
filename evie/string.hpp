@@ -5,16 +5,15 @@
 #pragma once
 
 #include "myitoa.hpp"
+#include "vector.hpp"
 
 #include <cstring>
-#include <vector>
-#include <iostream>
 
-inline void my_fast_copy(const char* from, uint32_t size, char* out)
+inline void my_fast_copy(const char* from, uint64_t size, char* out)
 {
     memcpy(out, from, size);
 }
-inline void my_fast_move(const char* from, uint32_t size, char* out)
+inline void my_fast_move(const char* from, uint64_t size, char* out)
 {
     memmove(out, from, size);
 }
@@ -27,57 +26,16 @@ inline void my_fast_move(const char* from, const char* to, char* out)
     memmove(out, from, to - from);
 }
 
-struct str_holder
-{
-    const char* str;
-    uint32_t size;
-
-    str_holder() : str(), size()
-    {
-    }
-    str_holder(const char* str, uint32_t size) : str(str), size(size)
-    {
-    }
-
-    template<typename array>
-    explicit str_holder(const array& v, typename std::enable_if_t<std::is_array<array>::value>* = 0)
-    {
-        static_assert(sizeof(v[0]) == 1 && std::is_array<array>::value, "str_holder");
-        size = sizeof(v);
-        str = &v[0];
-        while(size && v[size - 1] == char())
-            --size;
-    }
-    bool operator==(const str_holder& r) const
-    {
-        if(size == r.size)
-            return std::equal(str, str + size, r.str);
-        return false;
-    }
-    bool operator!=(const str_holder& r) const
-    {
-        return !(*this == r);
-    }
-    bool operator<(const str_holder& r) const
-    {
-        return std::lexicographical_compare(str, str + size, r.str, r.str + r.size);
-    }
-};
-
 struct buf_stream
 {
     char *from, *cur, *to;
 
-    buf_stream(std::vector<char>& v) : from(&v[0]), cur(from), to(from + v.size())
-    {
-    }
     buf_stream(char* from, char* to) : from(from), cur(from), to(to)
     {
     }
 
-    template<typename array>
-    buf_stream(array& v, typename std::enable_if<std::is_array<array>::value>* = 0)
-        : from(&v[0]), cur(from), to(from + sizeof(v))
+    template<uint64_t size>
+    buf_stream(char (&v)[size]) : from(v), cur(from), to(from + size)
     {
     }
     const char* begin() const
@@ -88,7 +46,7 @@ struct buf_stream
     {
         return cur;
     }
-    uint32_t size() const
+    uint64_t size() const
     {
         return cur - from;
     }
@@ -104,17 +62,17 @@ struct buf_stream
     {
         cur = from;
     }
-    void resize(uint32_t new_sz)
+    void resize(uint64_t new_sz)
     {
-        uint32_t cur_sz = size();
+        uint64_t cur_sz = size();
         if(new_sz > cur_sz)
             check_size(new_sz - cur_sz);
         cur = from + new_sz;
     }
-    void write(const char* v, uint32_t s)
+    void write(const char* v, uint64_t s)
     {
-        if(unlikely(s > to - cur))
-            throw std::runtime_error("buf_stream::write() overloaded");
+        if(unlikely(cur + s > to))
+            throw str_exception("buf_stream::write() overloaded");
         my_fast_copy(v, s, cur);
         cur += s;
     }
@@ -129,32 +87,16 @@ struct buf_stream
     {
         (*this) << c;
     }
-    buf_stream& operator<<(const std::string& str)
+    void check_size(uint64_t delta) const
     {
-        write(str.c_str(), str.size());
-        return *this;
-    }
-    void check_size(uint32_t delta) const
-    {
-        if(unlikely(delta > to - cur))
-            throw std::runtime_error("buf_stream::check_size() overloaded");
+        if(unlikely(cur + delta > to))
+            throw str_exception("buf_stream::check_size() overloaded");
     }
 
-    template<typename array>
-    typename std::enable_if_t<std::is_array<array>::value, buf_stream&> operator<<(const array& v)
+    template<typename type>
+    typename std::enable_if_t<std::is_integral<type>::value, buf_stream&> operator<<(type t)
     {
-        static_assert(std::is_array<array>::value, "buf_stream::operator<<");
-        uint32_t sz = sizeof(v) / 1;
-        while(sz && v[sz - 1] == char())
-            --sz;
-        write(&v[0], sz);
-        return *this;
-    }
-
-    template<typename T>
-    typename std::enable_if_t<std::is_integral<T>::value, buf_stream&> operator<<(T t)
-    {
-        check_size(my_cvt::atoi_size<T>::value);
+        check_size(my_cvt::atoi_size<type>::value);
         cur += my_cvt::itoa(cur, t);
         return *this;
     }
@@ -163,11 +105,6 @@ struct buf_stream
     {
         check_size(30);
         cur += my_cvt::dtoa(cur, d);
-        return *this;
-    }
-    buf_stream& operator<<(std::ostream& (std::ostream&))
-    {
-        (*this) << '\n';
         return *this;
     }
 };
@@ -187,34 +124,24 @@ inline str_holder _str_holder(const char* str)
     return str_holder(str, strlen(str));
 }
 
-inline str_holder _str_holder(const std::string& str)
-{
-    return str_holder(str.c_str(), str.size());
-}
+typedef buf_stream_fixed<16 * 1024> my_stream;
 
-template<typename stream>
-stream& operator<<(stream& s, const str_holder& str)
+struct es : my_stream
 {
-    s.write(str.str, str.size);
-    return s;
-}
-
-class es
-{
-    buf_stream_fixed<16 * 1024> s;
-
-public:
-    template<typename t>
-    es& operator%(const t& v)
+    template<typename type>
+    es& operator % (const type& t)
     {
-        s << v;
+        (*this) << t;
         return *this;
     }
-    operator std::string()
+
+    operator str_holder()
     {
-        return std::string(s.begin(), s.end());
+        return str();
     }
 };
+
+void throw_system_failure(str_holder msg);
 
 template<uint32_t stack_sz = 252>
 class my_basic_string
@@ -235,7 +162,7 @@ public:
     my_basic_string(const char* from, uint32_t size)
     {
         if(unlikely(size > stack_sz - 1))
-            throw std::runtime_error(es() % "my_basic_string, impossible construct from c_str, sz: " % size % ", stack_sz: " % stack_sz);
+            throw mexception(es() % "my_basic_string, impossible construct from c_str, sz: " % size % ", stack_sz: " % stack_sz);
         sz = size;
         my_fast_copy(from, sz, begin());
     }
@@ -245,48 +172,25 @@ public:
     my_basic_string(const str_holder& str) : my_basic_string(str.str, str.size)
     {
     }
-    my_basic_string(const std::string& r) : my_basic_string(r.c_str(), r.size())
-    {
-    }
 
     template<uint32_t sz>
     my_basic_string(const my_basic_string<sz>& r) : my_basic_string(r.begin(), r.size())
     {
     }
 
-    template<typename array>
-    my_basic_string(const array& v, typename std::enable_if<std::is_array<array>::value >* = 0)
+    template<uint32_t sz>
+    my_basic_string(const char (&str)[sz]) : my_basic_string(str, sz - 1)
     {
-        static_assert(sizeof(v[0]) == 1 && std::is_array<array>::value && sizeof(v) < stack_sz, "my_basic_string()");
-        sz = sizeof(v);
-        while(sz && v[sz - 1] == char())
-            --sz;
-        my_fast_copy(&v[0], sz, &buf[0]);
     }
 
-    template<typename array>
-    typename std::enable_if_t<std::is_array<array>::value, bool> operator==(const array& v) const
+    bool operator==(str_holder s)
     {
-        static_assert(sizeof(v[0]) == 1 && std::is_array<array>::value && sizeof(v) < stack_sz, "my_basic_string==");
-        uint32_t arr_sz = sizeof(v);
-        while(arr_sz && v[arr_sz - 1] == char())
-            --arr_sz;
-        if(arr_sz == sz)
-            return std::equal(begin(), end(), &v[0]);
-        return false;
+        return str() == s;
     }
-
-    template<typename array>
-    typename std::enable_if_t<std::is_array<array>::value, bool>
-    operator!=(const array& v) const
-    {
-        return !(*this == v);
-    }
-
     bool operator==(const my_basic_string& r) const
     {
         if(sz == r.sz)
-            return std::equal(begin(), end(), r.begin());
+            return !memcmp(buf, r.buf, sz);
         return false;
     }
     bool operator!=(const my_basic_string& r) const
@@ -313,13 +217,13 @@ public:
     void resize(uint32_t new_sz)
     {
         if(unlikely(new_sz > stack_sz - 1))
-            throw std::runtime_error(es() % "my_basic_string, impossible resize, new_sz: " % new_sz % ", stack_sz: " % stack_sz);
+            throw mexception(es() % "my_basic_string, impossible resize, new_sz: " % new_sz % ", stack_sz: " % stack_sz);
         sz = new_sz;
     }
     void push_back(char c)
     {
         if(unlikely(sz > stack_sz - 2))
-            throw std::runtime_error(es() % "my_basic_string, impossible push_back, sz: " % sz % ", stack_sz: " % stack_sz);
+            throw mexception(es() % "my_basic_string, impossible push_back, sz: " % sz % ", stack_sz: " % stack_sz);
         buf[sz] = c;
         ++sz;
     }
@@ -351,7 +255,7 @@ public:
     iterator insert(iterator it, char c)
     {
         if(unlikely(sz > stack_sz - 2))
-            throw std::runtime_error(es() % "my_basic_string, impossible insert_1, sz: " % sz % ", stack_sz: " % stack_sz);
+            throw mexception(es() % "my_basic_string, impossible insert_1, sz: " % sz % ", stack_sz: " % stack_sz);
         my_fast_move(it, end(), it + 1);
         *it = c;
         ++sz;
@@ -361,7 +265,7 @@ public:
     {
         uint32_t delta_sz = to - from;
         if(unlikely(sz + delta_sz > stack_sz - 1))
-            throw std::runtime_error(es() % "my_basic_string, impossible insert_2, sz: " % sz % ", delta_sz: " % delta_sz % ", stack_sz: " % stack_sz);
+            throw mexception(es() % "my_basic_string, impossible insert_2, sz: " % sz % ", delta_sz: " % delta_sz % ", stack_sz: " % stack_sz);
         my_fast_move(it, end(), it + delta_sz);
         my_fast_copy(from, to, it);
         sz += delta_sz;
@@ -377,38 +281,28 @@ public:
     const char& front() const
     {
         if(unlikely(!sz))
-            throw std::runtime_error("my_basic_string try to call front() for empty string");
+            throw str_exception("my_basic_string try to call front() for empty string");
         return buf[0];
     }
     const char& back() const
     {
         if(unlikely(!sz))
-            throw std::runtime_error("my_basic_string try to call back() for empty string");
+            throw str_exception("my_basic_string try to call back() for empty string");
         return buf[sz - 1];
     }
     bool operator<(const my_basic_string& r) const
     {
-        return std::lexicographical_compare(begin(), end(), r.begin(), r.end());
+        return lexicographical_compare(begin(), end(), r.begin(), r.end());
     }
     bool operator<(const str_holder& s) const
     {
-        return std::lexicographical_compare(begin(), end(), s.str,  s.str + s.size);
+        return lexicographical_compare(begin(), end(), s.str,  s.str + s.size);
     }
     str_holder str() const
     {
-        return str_holder(begin(), sz);
+        return str_holder(buf, sz);
     }
 };
-
-template<typename array>
-std::string get_std_string(const array& v)
-{
-    static_assert(std::is_array<array>::value, "get_std_string");
-    uint32_t sz = sizeof(v);
-    while(sz && v[sz - 1] == char())
-        --sz;
-    return std::string(&v[0], &v[sz]);
-}
 
 template<typename stream, uint32_t stack_sz>
 stream& operator<<(stream& str, const my_basic_string<stack_sz>& v)
@@ -418,20 +312,4 @@ stream& operator<<(stream& str, const my_basic_string<stack_sz>& v)
 }
 
 typedef my_basic_string<> my_string;
-
-template<uint32_t stack_sz>
-std::string get_std_string(const my_basic_string<stack_sz>& v)
-{
-    return std::string(v.begin(), v.end());
-}
-
-inline const std::string& get_std_string(const std::string& v)
-{
-    return v;
-}
-
-inline std::string get_std_string(str_holder v)
-{
-    return std::string(v.str, v.str + v.size);
-}
 

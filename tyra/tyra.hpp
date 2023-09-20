@@ -6,8 +6,6 @@
 
 #include "makoa/messages.hpp"
 
-#include "evie/utils.hpp"
-
 class tyra
 {
     uint64_t send_from_call, send_from_buffer;
@@ -21,7 +19,7 @@ class tyra
     message_ping mp;
 
 public:
-    tyra(const std::string& host);
+    tyra(const char* host);
 
     void send(const message& m);
     void send(const message* m, uint32_t count);

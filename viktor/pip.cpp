@@ -2,21 +2,23 @@
    author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
-#include "evie/mfile.hpp"
-#include "evie/config.hpp"
-
 #include "makoa/engine.hpp"
 #include "makoa/server.hpp"
 
+#include "evie/mfile.hpp"
+#include "evie/config.hpp"
+#include "evie/singleton.hpp"
+#include "evie/mlog.hpp"
+
 struct config : stack_singleton<config>
 {
-    std::string push, import;
+    mstring push, import;
 
     config(const char* fname)
     {
         auto cs = read_file(fname);
-        push = get_config_param<std::string>(cs, "push");
-        import = get_config_param<std::string>(cs, "import");
+        push = get_config_param<mstring>(cs, "push");
+        import = get_config_param<mstring>(cs, "import");
 
         mlog() << "config() import: " << import << ", push: " << push;
     }

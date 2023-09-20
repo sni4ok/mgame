@@ -4,16 +4,17 @@
 
 #pragma once
 
-#include "evie/config.hpp"
+#include "evie/mstring.hpp"
+#include "evie/singleton.hpp"
 
 struct config : stack_singleton<config>
 {
-    std::vector<std::string> tickers;
+    mvector<mstring> tickers;
     bool trades, orders, bba;
     uint32_t depth; //orders depth 10, 25, 100, 500, 1000
 
-    std::string exchange_id, feed_id;
-    std::string push;
+    mstring exchange_id, feed_id;
+    mstring push;
     bool log_lws;
 
     config(const char* fname);

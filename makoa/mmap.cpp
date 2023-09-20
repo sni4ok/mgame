@@ -6,6 +6,7 @@
 
 #include "evie/utils.hpp"
 #include "evie/mfile.hpp"
+
 #include <sys/stat.h>
 
 #include <unistd.h>
@@ -34,7 +35,7 @@ inline void init_smc(void* ptr)
     if(ret)
     {
         mmap_close(ptr);
-        throw std::runtime_error("init_smc error");
+        throw mexception("init_smc error");
     }
 }
 
@@ -58,7 +59,7 @@ void* mmap_create(const char* params, bool create)
     {
         if(is_file_exist(params))
         {
-            mlog(mlog::critical) << "remove_file: " << params;
+            mlog(mlog::critical) << "remove_file: " << _str_holder(params);
             {
                 int h = ::open(params, O_WRONLY, 0666);
                 ssize_t res = write(h, "", 1);
@@ -89,9 +90,9 @@ void* mmap_create(const char* params, bool create)
         {
             ::close(h);
             if(res)
-                throw_system_failure(es() % "fstat() error for " % params);
+                throw_system_failure(es() % "fstat() error for " % _str_holder(params));
             else
-                throw std::runtime_error(es() % "mmap_create error for " % params % ", file_sz: " % st.st_size);
+                throw mexception(es() % "mmap_create error for " % _str_holder(params) % ", file_sz: " % st.st_size);
         }
     }
 
@@ -126,7 +127,7 @@ void pthread_lock::lock()
 {
     assert(!mlock);
     if(pthread_mutex_lock(mutex))
-        throw std::runtime_error("mmap::mmap_lock error");
+        throw str_exception("mmap::mmap_lock error");
     mlock = true;
 }
 

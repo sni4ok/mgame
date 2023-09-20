@@ -6,19 +6,21 @@
 
 #include "evie/socket.hpp"
 #include "evie/time.hpp"
+#include "evie/mlog.hpp"
+#include "evie/string.hpp"
+#include "evie/algorithm.hpp"
 
 #include <unistd.h>
 
-tyra::tyra(const std::string& host) : send_from_call(), send_from_buffer(), bf(buf), bt(buf + sizeof(buf)), c(buf), e(buf) 
+tyra::tyra(const char* h) : send_from_call(), send_from_buffer(), bf(buf), bt(buf + sizeof(buf)), c(buf), e(buf) 
 {
+    str_holder host = _str_holder(h);
     mlog() << "tyra() " << host;
-    auto ie = host.end(), i = std::find(host.begin(), ie, ':');
+    auto ie = host.end(), i = find(host.begin(), ie, ':');
     if(i == ie || i + 1 == ie)
-        throw std::runtime_error(es() % "tyra::tyra() bad host: " % host);
+        throw mexception(es() % "tyra::tyra() bad host: " % host);
 
-    std::string h(host.begin(), i);
-    std::string port(i + 1, host.end());
-    socket = socket_connect(h.c_str(), atoi(port.c_str()));
+    socket = socket_connect(mstring(host.begin(), i), lexical_cast<uint16_t>(i + 1, host.end()));
     mlog() << "tyra() connected to socket " << socket;
 }
 
@@ -30,12 +32,12 @@ tyra::~tyra()
 
 void tyra::send(const message& m)
 {
-    const char* ptr = (const char*)(&m);
+    char_cit ptr = (char_cit)(&m);
     const uint32_t sz = message_size;
     if(c != e) {
         if(unlikely(bt - e > sz))
-            throw std::runtime_error("tyra::send() message buffer overloaded");
-        std::copy(ptr, ptr + sz, e);
+            throw str_exception("tyra::send() message buffer overloaded");
+        my_fast_copy(ptr, ptr + sz, e);
         e += sz;
 
         uint32_t s = try_socket_send(socket, c, e - c);
@@ -50,7 +52,7 @@ void tyra::send(const message& m)
         uint32_t s = try_socket_send(socket, ptr, sz);
         send_from_call += s;
         if(s != sz) {
-            std::copy(ptr + s, ptr + sz, e);
+            my_fast_copy(ptr + s, ptr + sz, e);
             e += (sz - s);
         }
     }
@@ -62,15 +64,15 @@ void tyra::send(const message* m, uint32_t count)
     const uint32_t sz = count * message_size;
     if(c != e) {
         if(unlikely(bt - e > sz))
-            throw std::runtime_error("tyra::send() messages buffer overloaded");
-        std::copy(ptr, ptr + sz, e);
+            throw str_exception("tyra::send() messages buffer overloaded");
+        my_fast_copy(ptr, ptr + sz, e);
         e += sz;
         flush();
     } else {
         uint32_t s = try_socket_send(socket, ptr, sz);
         send_from_call += s;
         if(s != sz) {
-            std::copy(ptr + s, ptr + sz, e);
+            my_fast_copy(ptr + s, ptr + sz, e);
             e += (sz - s);
         }
     }

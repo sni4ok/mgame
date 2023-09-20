@@ -65,7 +65,7 @@ struct parser : emessages, stack_singleton<parser>
     }
     void init_tickers(volatile bool& can_run)
     {
-        cg_listener_h instruments(conn, "instruments", cfg_cli_instruments, instruments_callback, &tickers);
+        cg_listener_h instruments(conn, mstring("instruments"), mstring(cfg_cli_instruments), instruments_callback, &tickers);
         if(!conn.cli)
             conn.connect(can_run);
         instruments.open();
@@ -90,10 +90,10 @@ struct parser : emessages, stack_singleton<parser>
             v.second.proceed_clean(e);
     }
     parser() : emessages(config::instance().push), tickers_initialized(), conn(config::instance().cli_conn_recv),
-        orders(conn, "orders", cfg_cli_orders, orders_callback, &tickers),
-        trades(conn, "trades", cfg_cli_trades, trades_callback, &tickers)
+        orders(conn, mstring("orders"), mstring(cfg_cli_orders), orders_callback, &tickers),
+        trades(conn, mstring("trades"), mstring(cfg_cli_trades), trades_callback, &tickers)
     {
-        std::string env = "ini=./plaza_recv.ini;key=" + config::instance().key;
+        mstring env = mstring("ini=./plaza_recv.ini;key=") + config::instance().key;
         mlog() << "cg_env_open " << env;
         check_plaza_fail(cg_env_open(env.c_str()), "env_open");
     }
@@ -149,7 +149,7 @@ CG_RESULT instruments_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg,
             config& c= config::instance();
             if(msg->data_size == sizeof(fut_sess_contents)){
                 fut_sess_contents* f = (fut_sess_contents*)msg->data;
-                std::string ticker(f->short_isin.buf);
+                mstring ticker(f->short_isin.buf);
                 if(config::instance().proceed_ticker(ticker)) {
                     parser::tickers_type& tickers = *((parser::tickers_type*)p);
                     if(c.log_plaza)
@@ -157,11 +157,11 @@ CG_RESULT instruments_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg,
                     auto it = tickers.find(f->isin_id);
                     if(it == tickers.end()) {
                         security& sec = tickers[f->isin_id];
-                        sec.init(c.exchange_id, c.feed_id, std::string(f->short_isin.buf));
+                        sec.init(c.exchange_id, c.feed_id, mstring(f->short_isin.buf));
                     }
                     else {
                         if(!parser::instance().tickers_initialized)
-                            mlog() << "security " << f->isin_id << ", " << std::string(f->short_isin.buf) << " already initialized";
+                            mlog() << "security " << f->isin_id << ", " << mstring(f->short_isin.buf) << " already initialized";
                         parser::instance().tickers_initialized = true;
                     }
                 }
@@ -232,7 +232,7 @@ CG_RESULT orders_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
     case CG_MSG_STREAM_DATA: 
         {
             if(unlikely(msg->data_size != sizeof(orders_aggr)))
-                throw std::runtime_error(es() % "orders_callback() not orders_aggr received, msg_size: " % msg->data_size);
+                throw mexception(es() % "orders_callback() not orders_aggr received, msg_size: " % msg->data_size);
             orders_aggr* o = (orders_aggr*)msg->data;
             parser::tickers_type& tickers = *((parser::tickers_type*)p);
             auto it = tickers.find(o->isin_id);
@@ -249,7 +249,7 @@ CG_RESULT orders_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
             }
             else {
                 o->print_brief();
-                throw std::runtime_error("orders_aggr bad dir");
+                throw str_exception("orders_aggr bad dir");
             }
             parser::instance().set_order(it, o->replID, price, count, etime);
             if(config::instance().log_plaza)
@@ -357,7 +357,7 @@ CG_RESULT trades_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
                         h->print_brief();
                     break;
                 }
-                else throw std::runtime_error(es() % "trades_callback unknown message, size: " % msg->data_size);
+                else throw mexception(es() % "trades_callback unknown message, size: " % msg->data_size);
             }
             else {
                 //mlog() << "deals_callback stream_data skipped due to not online";

@@ -3,13 +3,27 @@
 */
 
 #include "myitoa.hpp"
+#include "math.hpp"
 
-#include <cmath>
 #include <cassert>
-#include <cstring>
 
 namespace my_cvt
 {
+    exception::exception(str_holder h, str_holder m)
+    {
+        memcpy(buf, h.str, h.size);
+        uint32_t sz = sizeof(buf) - 1 - h.size;
+        if(sz > m.size)
+            sz = m.size;
+        memcpy(buf + h.size, m.str, sz);
+        buf[h.size + sz] = char();
+    }
+
+    const char* exception::what() const noexcept
+    {
+        return buf;
+    }
+
     template<uint32_t digits_s>
     struct itoa_prealloc
     {
@@ -223,7 +237,7 @@ namespace my_cvt
             *buf = 'F';
             return 4;
         }
-        if(std::abs(v) > d_max_d) {
+        if(m::abs(v) > d_max_d) {
             uint32_t sz = 0;
             uint32_t exp = 0;
             if(v < 0.) {
@@ -244,7 +258,7 @@ namespace my_cvt
             return sz;
         } else {
             double intp = 0.0;
-            double frac = modf(v, &intp);
+            double frac = m::modf(v, &intp);
             int64_t iv = int64_t(intp);
             if(iv < 0)
                 iv = -iv;
@@ -295,49 +309,54 @@ namespace my_cvt
             my_unused(sz);
         }
         uint32_t sz = itoa(buf, true);
-        assert(std::string(&buf[0], &buf[sz]) == "1");
+        auto check = [&](const char* s)
+        {
+            my_unused(s);
+            assert(str_holder(buf, sz) == str_holder(s, strlen(s)));
+        };
+        check("1");
         sz = itoa(buf, uint16_t(1267));
-        assert(std::string(&buf[0], &buf[sz]) == "1267");
+        check("1267");
         sz = itoa(buf, uint16_t(52346));
-        assert(std::string(&buf[0], &buf[sz]) == "52346");
+        check("52346");
         assert(atoi<uint16_t>(buf, sz) == 52346);
         sz = itoa(buf, uint32_t(44));
-        assert(std::string(&buf[0], &buf[sz]) == "44");
+        check("44");
         assert(atoi<uint32_t>(buf, sz) == 44);
         sz = itoa(buf, uint32_t(60701));
-        assert(std::string(&buf[0], &buf[sz]) == "60701");
+        check("60701");
         assert(atoi<uint32_t>(buf, sz) == 60701);
         sz = itoa(buf, uint32_t(1486666));
-        assert(std::string(&buf[0], &buf[sz]) == "1486666");
+        check("1486666");
         assert(atoi<uint32_t>(buf, sz) == 1486666);
         sz = itoa(buf, int16_t(-2346));
-        assert(std::string(&buf[0], &buf[sz]) == "-2346");
+        check("-2346");
         assert(atoi<int16_t>(buf, sz) == -2346);
         sz = itoa(buf, -52578631);
-        assert(std::string(&buf[0], &buf[sz]) == "-52578631");
+        check("-52578631");
         assert(atoi<int32_t>(buf, sz) == -52578631);
         sz = itoa(buf, int64_t(-947593471239506712LL));
-        assert(std::string(&buf[0], &buf[sz]) == "-947593471239506712");
+        check("-947593471239506712");
         assert(atoi<int64_t>(buf, sz) == -947593471239506712);
         sz = itoa(buf, uint64_t(9475934712395012ULL));
-        assert(std::string(&buf[0], &buf[sz]) == "9475934712395012");
+        check("9475934712395012");
         assert(atoi<uint64_t>(buf, sz) == 9475934712395012);
         sz = dtoa(buf, 3.03);
-        assert(std::string(&buf[0], &buf[sz]) == "3.03");
+        check("3.03");
         sz = dtoa(buf, -155.6999);
-        assert(std::string(&buf[0], &buf[sz]) == "-155.6999");
+        check("-155.6999");
         sz = dtoa(buf, 155.6999);
-        assert(std::string(&buf[0], &buf[sz]) == "155.6999");
+        check("155.6999");
         sz = dtoa(buf, -155.0000001);
-        assert(std::string(&buf[0], &buf[sz]) == "-155.0000001");
+        check("-155.0000001");
         sz = dtoa(buf, std::numeric_limits<double>::quiet_NaN());
-        assert(std::string(&buf[0], &buf[sz]) == "NAN");
+        check("NAN");
         sz = dtoa(buf, std::numeric_limits<double>::signaling_NaN());
-        assert(std::string(&buf[0], &buf[sz]) == "NAN");
+        check("NAN");
         sz = dtoa(buf, std::numeric_limits<double>::infinity());
-        assert(std::string(&buf[0], &buf[sz]) == "INF");
+        check("INF");
         sz = dtoa(buf, -std::numeric_limits<double>::infinity());
-        assert(std::string(&buf[0], &buf[sz]) == "-INF");
+        check("-INF");
         my_unused(sz);
     }
 }

@@ -3,16 +3,20 @@
 */
 
 #include "mfile.hpp"
+#include "string.hpp"
+#include "mstring.hpp"
+#include "algorithm.hpp"
 
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stdio.h>
 #include <fcntl.h>
 
 mfile::mfile(const char* file)
 {
     hfile = ::open(file, O_RDONLY);
     if(hfile < 0)
-        throw_system_failure(es() % "open file " % file % " error");
+        throw_system_failure(es() % "open file " % _str_holder(file) % " error");
 }
 
 mfile::mfile(int hfile) : hfile(hfile)
@@ -50,7 +54,7 @@ mfile::~mfile()
     ::close(hfile);
 }
 
-bool read_file(std::vector<char>& buf, const char* fname, bool can_empty)
+bool read_file(mvector<char>& buf, const char* fname, bool can_empty)
 {
     bool ret = false;
     uint64_t buf_size = buf.size();
@@ -64,13 +68,13 @@ bool read_file(std::vector<char>& buf, const char* fname, bool can_empty)
         ret = true;
     }
     if(!can_empty && buf_size == buf.size())
-        throw std::runtime_error(es() % "read \"" % _str_holder(fname) % "\" error");
+        throw mexception(es() % "read \"" % _str_holder(fname) % "\" error");
     return ret;
 }
 
-std::vector<char> read_file(const char* fname, bool can_empty)
+mvector<char> read_file(const char* fname, bool can_empty)
 {
-    std::vector<char> buf;
+    mvector<char> buf;
     read_file(buf, fname, can_empty);
     return buf;
 }
@@ -107,7 +111,7 @@ bool get_file_stat(const char* fname, struct stat& st)
     ::close(hfile);
 
     if(!ret)
-        throw_system_failure(es() % "fstat() error for " % fname);
+        throw_system_failure(es() % "fstat() error for " % _str_holder(fname));
 
     return ret;
 }
@@ -133,13 +137,13 @@ uint64_t file_size(const char* fname)
 void remove_file(const char* fname)
 {
     if(unlink(fname))
-        throw_system_failure(es() % "unlink file error, " % fname);
+        throw_system_failure(es() % "unlink file error, " % _str_holder(fname));
 }
 
 void rename_file(const char* from, const char* to)
 {
     if(rename(from, to) == -1)
-        throw_system_failure(es() % "rename_file error from " % from % ", to " % to);
+        throw_system_failure(es() % "rename_file error from " % _str_holder(from) % ", to " % _str_holder(to));
 }
 
 bool create_directory(const char* fname)
@@ -149,11 +153,11 @@ bool create_directory(const char* fname)
 
 void create_directories(const char* fname)
 {
-    std::string buf = fname;
-    std::string::iterator it = buf.begin(), ie = buf.end();
+    mstring buf(fname);
+    mstring::iterator it = buf.begin(), ie = buf.end();
     while(it != ie)
     {
-        it = std::find(it, ie, '/');
+        it = find(it, ie, '/');
         if(it != ie)
         {
             *it = char();
@@ -180,7 +184,7 @@ ttime_t get_file_mtime(const char* fname)
     struct stat st;
     bool ret = get_file_stat(fname, st);
     if(!ret)
-        throw_system_failure(es() % "fstat() error for " % fname);
+        throw_system_failure(es() % "fstat() error for " % _str_holder(fname));
     return {st.st_mtime * ttime_t::frac};
 }
 

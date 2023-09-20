@@ -7,8 +7,9 @@
 
 #include "makoa/types.hpp"
 
-#include "evie/mutex.hpp"
+#include "evie/thread.hpp"
 
+#include <thread>
 #include <deque>
 
 #include <unistd.h>
@@ -17,12 +18,12 @@ ncurses_err e;
 
 struct security_filter
 {
-    std::string security;
+    mstring security;
     uint32_t security_id;
 
-    security_filter(const std::string& s) : security(s), security_id() {
+    security_filter(const mstring& s) : security(s), security_id() {
         uint32_t sid = atoi(s.c_str());
-        std::string sec = std::to_string(sid);
+        mstring sec = to_string(sid);
         if(sec == s)
             security_id = sid;
     }
@@ -38,7 +39,7 @@ struct security_filter
                 security_id = m.mi.security_id;
             return m.mi.security_id == security_id;
         }
-        throw std::logic_error("security_filter() unsupported msg type");
+        throw str_exception("security_filter() unsupported msg type");
     }
 };
 
@@ -50,7 +51,7 @@ char get_direction(uint32_t direction)
         return 'B';
     if(direction == 2)
         return 'S';
-    throw std::runtime_error(es() % "bad direction: " % direction);
+    throw mexception(es() % "bad direction: " % direction);
 }
 
 struct print_dt
@@ -83,7 +84,7 @@ struct mirror::impl
     order_book ob;
     std::deque<message_trade> trades;
     message_instr mi;
-    std::string head_msg;
+    mstring head_msg;
 
     price_t top_order_p;
     uint32_t trades_from, trades_width_limit;
@@ -98,7 +99,7 @@ struct mirror::impl
     std::thread refresh_thrd;
 
     const char empty[10];
-    impl(const std::string& sec, uint32_t refresh_rate_ms) :
+    impl(const mstring& sec, uint32_t refresh_rate_ms) :
         sec(sec), refresh_rate(refresh_rate_ms * 1000),
         top_order_p(), trades_from(), trades_width_limit(), bs(buf, buf + sizeof(buf) - 1),
         dE(), dP(), can_run(true), refresh_thrd(&impl::refresh_thread, this),
@@ -113,7 +114,7 @@ struct mirror::impl
     void set_instrument(const message_instr& i)
     {
         mi = i;
-        head_msg = get_std_string(mi.exchange_id) + "/" + get_std_string(mi.feed_id) + "/" + get_std_string(mi.security);
+        head_msg = mstring(from_array(mi.exchange_id)) + "/" + from_array(mi.feed_id) + "/" + from_array(mi.security);
     }
     order_book::price_iterator get_top_order()
     {
@@ -293,18 +294,18 @@ struct mirror::impl
     }
 };
 
-inline mirror::impl* create_mirror(const std::string& params)
+inline mirror::impl* create_mirror(const mstring& params)
 {
     auto p = split(params, ' ');
     if(p.size() > 2)
-        throw std::runtime_error(es() % "mirror::mirror() bad params: " % params);
+        throw mexception(es() % "mirror::mirror() bad params: " % params);
     uint32_t refresh_rate = p.size() == 2 ? atoi(p[1].c_str()) : 100;
     if(!refresh_rate)
-        throw std::runtime_error(es() % "mirror::mirror() bad params: " % params % ", refresh_rate should be at least 1");
+        throw mexception(es() % "mirror::mirror() bad params: " % params % ", refresh_rate should be at least 1");
     return new mirror::impl(p[0], refresh_rate);
 }
 
-mirror::mirror(const std::string& params)
+mirror::mirror(const mstring& params)
 {
     pimpl = create_mirror(params);
 }
@@ -322,7 +323,7 @@ void mirror::proceed(const message* m, uint32_t count)
 void* ying_init(const char* params)
 {
     mlog() << "ying " << _str_holder(params) << " started";
-    return create_mirror(params);
+    return create_mirror(mstring(params));
 }
 
 void ying_destroy(void* w)

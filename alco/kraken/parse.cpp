@@ -9,7 +9,7 @@
 
 ttime_t read_time(const char* it, const char* ie)
 {
-    const char* ne = std::find(it, ie, '.');
+    const char* ne = find(it, ie, '.');
     uint64_t time = my_cvt::atoi<uint32_t>(it, ne - it);
     it = ne + 1;
     uint64_t time_us = my_cvt::atoi<uint32_t>(it, 6);
@@ -31,9 +31,9 @@ struct lws_i : sec_id_by_name<lws_impl>
 
     lws_i() : cfg(config::instance())
     {
-        std::string s = std::string("{\"event\":\"subscribe\",\"pair\":[") + join_tickers(cfg.tickers) + std::string("],\"subscription\": {");
+        mstring s = mstring("{\"event\":\"subscribe\",\"pair\":[") + join_tickers(cfg.tickers) + mstring("],\"subscription\": {");
         if(cfg.orders) {
-            std::stringstream sub;
+            my_stream sub;
             sub << s;
             if(cfg.depth)
                 sub << "\"depth\":" << cfg.depth << ",";
@@ -67,7 +67,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         ask_count.value = -ask_count.value;
         skip_fixed(it, "],\"spread\",\"");
         if(*(ie - 1) != ']' || ie - it > 20)
-            throw std::runtime_error(es() % "parsing spread message error: " % str_holder(f, ie - f));
+            throw mstring(es() % "parsing spread message error: " % str_holder(f, ie - f));
         it = ie;
         
         add_order(security_id, 1, bid_price, bid_count, etime, time);
@@ -87,7 +87,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                 ask = false;
             else if(*it == 'a')
                 ask = true;
-            else throw std::runtime_error(es() % "parsing book message error: " % str_holder(f, ie - f));
+            else throw mstring(es() % "parsing book message error: " % str_holder(f, ie - f));
             ++it;
             if(*it == 's') { //snapshot
                 ++it;
@@ -120,12 +120,12 @@ struct lws_i : sec_id_by_name<lws_impl>
             else if(skip_if_fixed(it, "},{"))
                 continue;
             else
-                throw std::runtime_error(es() % "parsing book message error: " % str_holder(f, ie - f));
+                throw mstring(es() % "parsing book message error: " % str_holder(f, ie - f));
             if(skip_if_fixed(it, "\"c\":\""))
                 break;
         }
         if(*(ie - 1) != ']' || ie - it > 35)
-            throw std::runtime_error(es() % "parsing book message error: " % str_holder(f, ie - f));
+            throw mstring(es() % "parsing book message error: " % str_holder(f, ie - f));
         it = ie;
         send_messages();
     }
@@ -143,14 +143,14 @@ struct lws_i : sec_id_by_name<lws_impl>
                 dir = 1;
             else if(*it == 's')
                 dir = 2;
-            else throw std::runtime_error(es() % "unsupported trade direction, " % str_holder(f, ie - f));
+            else throw mstring(es() % "unsupported trade direction, " % str_holder(f, ie - f));
             add_trade(security_id, t_price, t_count, dir, t_time, time);
             ++it;
             skip_fixed(it, "\",\"");
             ++it;//market or limit
             skip_fixed(it, "\",\"");
             //miscellaneous
-            it = std::find(it, ie, '\"') + 1;
+            it = find(it, ie, '\"') + 1;
             skip_fixed(it, "]");
             if(*it == ',')
                 ++it;
@@ -160,7 +160,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         ++it;
         skip_fixed(it, ",\"trade\",\"");
         if(*(ie - 1) != ']' || ie - it > 20)
-            throw std::runtime_error(es() % "parsing trade message error: " % str_holder(f, ie - f));
+            throw mstring(es() % "parsing trade message error: " % str_holder(f, ie - f));
         it = ie;
         send_messages();
     }
@@ -174,7 +174,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         if(*it == '[')
         {
             ++it;
-            iterator ne = std::find(it, ie, ',');
+            iterator ne = find(it, ie, ',');
             uint32_t channel = my_cvt::atoi<uint32_t>(it, ne - it);
             impl& i = parsers.at(channel);
             it = ne + 1;
@@ -183,17 +183,17 @@ struct lws_i : sec_id_by_name<lws_impl>
         else if(skip_if_fixed(it, "{\"channelID\":"))
         {
             if(!cfg.log_lws)
-                mlog() << str_holder(it, ie - it);
-            iterator ne = std::find(it, ie, ',');
+                mlog() << "" << str_holder(it, ie - it);
+            iterator ne = find(it, ie, ',');
             uint32_t channel = my_cvt::atoi<uint32_t>(it, ne - it);
             it = ne + 1;
             skip_fixed(it, "\"channelName\":\"");
             search_and_skip_fixed(it, ie, "\"pair\":\"");
-            ne = std::find(it, ie, '\"');
+            ne = find(it, ie, '\"');
             uint32_t security_id = get_security_id(it, ne, time);
             it = ne + 1;
             search_and_skip_fixed(it, ie, "\"name\":\"");
-            ne = std::find(it, ie, '\"');
+            ne = find(it, ie, '\"');
             str_holder type(it, ne - it);
             it = ne + 1;
             skip_fixed(it, "}}");
@@ -206,7 +206,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             else if(type == str_holder("spread"))
                 i.f = &lws_i::parse_spread;
             else
-                throw std::runtime_error(es() % "unsupported type: " % str_holder(in, len));
+                throw mstring(es() % "unsupported type: " % str_holder(in, len));
         }
         else if(skip_if_fixed(it, "{\"connectionID\":"))
             it = ie;

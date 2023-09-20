@@ -10,13 +10,14 @@
 #include "evie/profiler.hpp"
 
 #include <map>
+#include <algorithm>
 
 #include <fcntl.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/stat.h>
 
-static ttime_t parse_time(const std::string& time)
+static ttime_t parse_time(const mstring& time)
 {
     if(time == "now")
         return cur_ttime();
@@ -25,9 +26,9 @@ static ttime_t parse_time(const std::string& time)
     return read_time_impl().read_time<0>(it);
 }
 
-std::string::const_iterator find_last(const std::string& fname, const char c)
+mstring::const_iterator find_last(const mstring& fname, const char c)
 {
-    std::string::const_iterator it = fname.end() - 1, ib = fname.begin();
+    auto it = fname.end() - 1, ib = fname.begin();
     while(it != ib && *it != c)
         --it;
     return it;
@@ -35,17 +36,17 @@ std::string::const_iterator find_last(const std::string& fname, const char c)
 
 struct compact_book
 {
-    std::vector<char> book;
+    mvector<char> book;
     uint64_t book_off;
 
     compact_book() : book_off()
     {
     }
 
-    void read(const std::string& fname, uint64_t from, uint64_t to)
+    void read(const mstring& fname, uint64_t from, uint64_t to)
     {
         if((to - from) % message_size)
-            throw std::runtime_error(es() % "compact_book::read() " % fname % " from " % from % " to " % to);
+            throw mexception(es() % "compact_book::read() " % fname % " from " % from % " to " % to);
 
         struct orders_t : std::map<int64_t/*level_id*/, message_book>
         {
@@ -59,7 +60,7 @@ struct compact_book
         std::map<uint32_t/*security_id*/, orders_t> orders;
 
         //read
-        std::vector<message> buf((to - from) / message_size);
+        mvector<message> buf((to - from) / message_size);
         mfile f(fname.c_str());
         f.seekg(from);
         f.read((char*)&buf[0], to - from);
@@ -127,7 +128,7 @@ struct ifile
 {
     struct node
     {
-        std::string name;
+        mstring name;
         ttime_t tf, tt;
         uint64_t from, off, sz;
 
@@ -144,12 +145,12 @@ struct ifile
     int cur_file;
     compact_book cb;
     const node main_file;
-    std::vector<node> files;
+    mvector<node> files;
     node nt;
     message mt;
     bool history;
     message_ping ping;
-    std::vector<message> read_buf;
+    mvector<message> read_buf;
     static const int64_t check_time = {1 * ttime_t::frac};
     ttime_t last_file_check_time;
     ino_t last_file_ino;
@@ -179,7 +180,7 @@ struct ifile
         return st.st_ino;
     }
 
-    ttime_t add_file_impl(const std::string& fname, bool last_file)
+    ttime_t add_file_impl(const mstring& fname, bool last_file)
     {
         mfile f(fname.c_str());
         if(last_file)
@@ -191,7 +192,7 @@ struct ifile
         f.read((char*)&mt, message_size);
         nt.tf = mt.t.time;
         if(!nt.tf.value)
-            throw std::runtime_error(es() % "time_from error for " % fname);
+            throw mexception(es() % "time_from error for " % fname);
         nt.from = 0;
         nt.off = 0;
         nt.sz = last_file ? 0 : sz;
@@ -199,7 +200,7 @@ struct ifile
         f.read((char*)&mt, message_size);
         nt.tt = mt.t.time;
         if(!nt.tt.value || nt.tt.value < nt.tf.value)
-            throw std::runtime_error(es() % "time_to error for " % fname);
+            throw mexception(es() % "time_to error for " % fname);
 
         if(main_file.crossed(nt) || (!history && last_file)) {
             nt.name = fname;
@@ -237,7 +238,7 @@ struct ifile
                     }
 
                     for(auto& v: tickers)
-                        nt.from = std::min(nt.from, v.second);
+                        nt.from = min(nt.from, v.second);
                 }
             }
 
@@ -253,7 +254,7 @@ struct ifile
         return ttime_t();
     }
 
-    ttime_t add_file(const std::string& fname, bool last_file = false)
+    ttime_t add_file(const mstring& fname, bool last_file = false)
     {
         try {
             return add_file_impl(fname, last_file);
@@ -264,12 +265,12 @@ struct ifile
         return ttime_t();
     }
 
-    void read_directory(const std::string& fname)
+    void read_directory(const mstring& fname)
     {
         MPROFILE("ifile::read_directory")
-        std::string::const_iterator it = find_last(fname, '/') + 1;
-        std::string dir(fname.begin(), it);
-        std::string f(it, fname.end());
+        mstring::const_iterator it = find_last(fname, '/') + 1;
+        mstring dir(fname.begin(), it);
+        mstring f(it, fname.end());
 
         dirent **ee;
         int n = scandir(dir.c_str(), &ee, NULL, alphasort);
@@ -304,7 +305,7 @@ struct ifile
         }
     }
 
-    ifile(const std::string& fname, ttime_t tf, ttime_t tt, bool history)
+    ifile(const mstring& fname, ttime_t tf, ttime_t tt, bool history)
         : cur_file(), main_file({fname, tf, tt, 0, 0, 0}), history(history), last_file_check_time()
     {
         read_directory(fname);
@@ -320,7 +321,7 @@ struct ifile
         ino_t c = file_ino(f, &sz);
         if(c != last_file_ino && sz >= message_size)
         {
-            mlog() << main_file.name << " probably moved";
+            mlog() << "" << main_file.name << " probably moved";
             ::close(cur_file);
             last_file_ino = c;
             cur_file = f;
@@ -334,14 +335,14 @@ struct ifile
     virtual uint32_t read(char* buf, uint32_t buf_size)
     {
         if(unlikely(buf_size % message_size))
-            throw std::runtime_error(es() % "ifile::read(): inapropriate size: " % buf_size);
+            throw mexception(es() % "ifile::read(): inapropriate size: " % buf_size);
         else {
             int32_t ret = 0;
             while(!ret)
             {
                 if(!cur_file) {
                     if(!cb.book.empty()) {
-                        uint32_t read_size = std::min<uint32_t>(buf_size, cb.book.size() - cb.book_off);
+                        uint32_t read_size = min<uint32_t>(buf_size, cb.book.size() - cb.book_off);
                         std::copy(&cb.book[0] + cb.book_off, &cb.book[0] + cb.book_off + read_size, buf);
                         cb.book_off += read_size;
                         if(cb.book_off == cb.book.size())
@@ -361,7 +362,7 @@ struct ifile
                 if(!history && !nt.sz && files.empty())
                     ret = ::read(cur_file, buf, buf_size);
                 else
-                    ret = ::read(cur_file, buf, std::min<uint64_t>(buf_size, nt.sz - nt.off));
+                    ret = ::read(cur_file, buf, min<uint64_t>(buf_size, nt.sz - nt.off));
 
                 if(ret > 0)
                 {
@@ -417,9 +418,9 @@ struct ifile_replay : ifile
     volatile bool& can_run;
     const double speed;
     ttime_t file_time, start_time;
-    std::vector<char> b, b2;
+    mvector<char> b, b2;
 
-    ifile_replay(volatile bool& can_run, const std::string& fname, ttime_t tf, ttime_t tt, double speed)
+    ifile_replay(volatile bool& can_run, const mstring& fname, ttime_t tf, ttime_t tt, double speed)
         : ifile(fname, tf, tt, true), can_run(can_run), speed(speed), file_time()
     {
         start_time = cur_ttime();
@@ -432,7 +433,7 @@ struct ifile_replay : ifile
             b2.resize(buf_size - sz);
             uint32_t r = ifile::read(&b2[0], buf_size - sz);
             if(r)
-                b.insert(b.end(), b2.begin(), b2.begin() + r);
+                b.insert(b2.begin(), b2.begin() + r);
             else if(b.empty())
                 return 0;
         }
@@ -473,9 +474,9 @@ struct ifile_replay : ifile
 
 void* ifile_create(const char* params, volatile bool& can_run)
 {
-    std::vector<std::string> p = split(params, ' ');
+    mvector<mstring> p = split(mstring(params), ' ');
     if(p.empty() || p.size() > 5)
-        throw std::runtime_error("ifile_create() [history ,replay speed ]file_name[ time_from[ time_to]]");
+        throw str_exception("ifile_create() [history ,replay speed ]file_name[ time_from[ time_to]]");
 
     bool history = (p[0] == "history");
     if(history)

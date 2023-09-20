@@ -5,11 +5,7 @@
 #pragma once
 
 #include "myitoa.hpp"
-#include "string.hpp"
 #include "mtime.hpp"
-
-#include <type_traits>
-#include <memory>
 
 class simple_log;
 
@@ -58,7 +54,7 @@ struct print_binary
     explicit print_binary(const str_holder& str) : data((const uint8_t*)str.str), size(str.size)
     {
     }
-    explicit print_binary(const uint8_t* data, uint32_t size) : data(data), size(size)
+    print_binary(const uint8_t* data, uint32_t size) : data(data), size(size)
     {
     }
 };
@@ -77,6 +73,8 @@ stream& operator<<(stream& log, const print_binary& v)
     }
     return log;
 }
+
+static const char endl = '\n';
 
 struct mlog
 {
@@ -101,7 +99,6 @@ struct mlog
     mlog(const mlog&) = delete;
     void write(const char* v, uint32_t s);
     mlog& operator<<(char s);
-    mlog& operator<<(const str_holder& str);
 
     template<typename array>
     typename std::enable_if_t<std::is_array<array>::value, mlog&> operator<<(const array& v)
@@ -114,9 +111,7 @@ struct mlog
         return *this;
     }
 
-    mlog& operator<<(const std::string& s);
     mlog& operator<<(const std::exception& e);
-    mlog& operator<<(std::ostream& (std::ostream&));
     mlog& operator<<(const date& d);
     mlog& operator<<(const time_duration& t);
     mlog& operator<<(const time_parsed& p);
@@ -157,12 +152,25 @@ private:
     data buf;
 };
 
-std::unique_ptr<simple_log, void (*)(simple_log*)> log_init(const char* file_name = 0, uint32_t params = 0, bool set_log_instance = true);
+struct log_holder
+{
+    simple_log *ptr;
+
+    log_holder(simple_log *ptr);
+    log_holder(log_holder&& r);
+    log_holder& operator=(log_holder&& r);
+    log_holder& operator=(const log_holder&) = delete;
+    simple_log* get();
+    simple_log* operator->();
+    ~log_holder();
+};
+
+log_holder log_init(const char* file_name = 0, uint32_t params = 0, bool set_log_instance = true);
 simple_log* log_get();
 void log_set(simple_log* sl);
 uint32_t& log_params();
 void log_test(size_t thread_count, size_t log_count);
-void set_significant_thread();
-void set_trash_thread();
-int get_thread_id();
+void cout_write(str_holder str, bool flush = true);
+void cerr_write(str_holder str, bool flush = true);
+
 

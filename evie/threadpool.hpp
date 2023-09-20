@@ -1,9 +1,14 @@
+/*
+   author: Ilya Andronov <sni4ok@yandex.ru>
+*/
+
 #pragma once
 
-#include "mutex.hpp"
+#include "thread.hpp"
 #include "utils.hpp"
+#include "singleton.hpp"
 
-#include <pthread.h>
+#include <thread>
 
 #include <list>
 
@@ -44,22 +49,13 @@ class Workers : public stack_singleton<Workers<Worker, worker> >
     volatile bool my_can_run;
     bool can_not_run_on_exit;
     bool can_exit;
-    std::vector<std::thread> threads;
+    std::list<std::thread> threads;
     std::list<typename Worker::Data> datas;
     my_mutex mutex;
     my_condition condition;
 
-    void WorkThread(size_t worker_id, bool set_affinity)
+    void WorkThread()
     {
-        if(set_affinity)
-        {
-            cpu_set_t cpuset;
-            CPU_ZERO(&cpuset);
-            CPU_SET(worker_id, &cpuset);
-            if(pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset))
-                mlog(mlog::critical) << "pthread_setaffinity_np() error";
-        }
-
         my_mutex::scoped_lock lock(mutex);
         while(*can_run)
         {
@@ -92,10 +88,10 @@ public:
         if(!this->can_run)
             this->can_run = &my_can_run;
     }
-    void Load(size_t threads_count, bool set_affinity = false)
+    void Load(size_t threads_count)
     {
         for(size_t i = 0; i != threads_count; ++i)
-            threads.push_back(std::thread(&Workers::WorkThread, this, i, set_affinity));
+            threads.push_back(std::thread(&Workers::WorkThread, this));
     }
     void Add(typename Worker::Data&& data)
     {

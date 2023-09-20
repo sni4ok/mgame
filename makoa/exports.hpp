@@ -8,7 +8,7 @@
 
 #include "messages.hpp"
 
-#include <string>
+#include "evie/mstring.hpp"
 
 struct hole_exporter
 {
@@ -25,7 +25,7 @@ struct exporter
     exporter() : p(), he()
     {
     }
-    exporter(const std::string& params);
+    exporter(const mstring& params);
     exporter(exporter&& r);
     void operator=(exporter&& r);
 
@@ -38,7 +38,7 @@ struct exporter
     }
 };
 
-uint32_t register_exporter(const std::string& module, hole_exporter he);
+uint32_t register_exporter(str_holder module, hole_exporter he);
 
 inline ttime_t get_export_mtime(const message* m)
 {

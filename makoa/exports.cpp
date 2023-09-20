@@ -9,17 +9,14 @@
 
 #include "tyra/tyra.hpp"
 
-#include "evie/utils.hpp"
-#include "evie/mlog.hpp"
 #include "evie/profiler.hpp"
+#include "evie/smart_ptr.hpp"
+#include "evie/fmap.hpp"
 
-#include <list>
-#include <map>
-
+#include <sys/stat.h>
+#include <unistd.h>
 #include <dlfcn.h>
 #include <fcntl.h>
-#include <unistd.h>
-#include <sys/stat.h>
 
 volatile bool* can_run_impl = nullptr;
 
@@ -94,7 +91,7 @@ namespace
         void add(exporter&& e)
         {
             if(size == max_size)
-                throw std::runtime_error("exports_chain max_size exceed");
+                throw str_exception("exports_chain max_size exceed");
             exporters[size++] = std::move(e);
         }
     };
@@ -107,23 +104,23 @@ namespace
         ((exports_chain*)ec)->proceed(m, count);
     }
 
-    exporter shared_exporter(const std::string& module);
+    exporter shared_exporter(const mstring& module);
 
     struct exports_factory : noncopyable
     {
-        std::map<std::string, hole_exporter> exporters;
-        std::list<exporter> dyn_exporters;
+        fmap<mstring, hole_exporter> exporters;
+        mvector<exporter> dyn_exporters;
 
-        uint32_t register_exporter(const std::string& module, hole_exporter he)
+        uint32_t register_exporter(const mstring& module, hole_exporter he)
         {
             auto it = exporters.find(module);
             if(it != exporters.end())
                 return 0;
-                //throw std::runtime_error(es() % "exports_factory() double registration for " % module);
+                //throw mexception(es() % "exports_factory() double registration for " % module);
             exporters[module] = he;
             return exporters.size();
         }
-        hole_exporter get(const std::string& module)
+        hole_exporter get(const mstring& module)
         {
             auto it = exporters.find(module);
             if(it != exporters.end())
@@ -143,9 +140,9 @@ namespace
         if(handle)
             dlclose(handle);
     }
-    exporter shared_exporter(const std::string& module)
+    exporter shared_exporter(const mstring& module)
     {
-        std::string lib = "./lib" + module + ".so";
+        mstring lib = mstring("./lib") + module + ".so";
         exporter ret;
         ret.he.destroy = &shared_destroy;
         ret.p = dlopen(lib.c_str(), RTLD_LAZY);
@@ -162,15 +159,15 @@ namespace
         hole(&e.he, {log_get(), &profilerinfo::instance(), can_run_impl});
         return e;
     }
-    exporter create_impl(const std::string& m)
+    exporter create_impl(const mstring& m)
     {
-        auto ib = m.begin(), ie = m.end(), it = std::find(ib, ie, ' ');
-        std::string module, params;
+        auto ib = m.begin(), ie = m.end(), it = find(ib, ie, ' ');
+        mstring module, params;
         if(it == ie || it + 1 == ie)
             module = m;
         else {
-            module = std::string(ib, it);
-            params = std::string(it + 1, ie);
+            module = mstring(ib, it);
+            params = mstring(it + 1, ie);
         }
         exporter ret;
         ret.he = efactory.get(module);
@@ -200,9 +197,9 @@ namespace
     }
     void* mmap_init(const char* params)
     {
-        mlog() << "mmap_init() open: " << params;
+        mlog() << "mmap_init() open: " << _str_holder(params);
         void *p = mmap_create(params, false);
-        std::unique_ptr<void, void(*)(void*)> ptr(p, &mmap_close);
+        unique_ptr<void, mmap_close> ptr(p);
         shared_memory_sync* s = get_smc(p);
 
         uint8_t* c = (uint8_t*)p;
@@ -212,7 +209,7 @@ namespace
             {
                 mmap_store(c, 1);
                 mmap_store(c + 1, 0);
-                throw std::runtime_error(es() % "mmap_init() mmap already open: " % s);
+                throw mexception(es() % "mmap_init() mmap already open: " % s);
             }
             ++s;
         }
@@ -220,7 +217,7 @@ namespace
         for(uint8_t* s = c; s != c + mmap_alloc_size_base; ++s)
         {
             if(*s)
-                throw std::runtime_error(es() % "mmap_init() mmap already filled: " % params);
+                throw mexception(es() % "mmap_init() mmap already filled: " % _str_holder(params));
         }
         *c = 2;
         *(c + 1) = 1;
@@ -228,11 +225,11 @@ namespace
         while(*(c + 1) != 2 && *can_run_impl)
         {
             if(mmap_nusers(params) != 2)
-                throw std::runtime_error("import_mmap_cp_init() nusers != 2");
+                throw str_exception("import_mmap_cp_init() nusers != 2");
             pthread_cond_signal(&(s->condition));
             pthread_timedwait(s->condition, s->mutex, 1);
         }
-        mlog() << "mmap_init() successfully opened: " << params;
+        mlog() << "mmap_init() successfully opened: " << _str_holder(params);
         return ptr.release();
     }
     void mmap_destroy(void *p)
@@ -247,7 +244,7 @@ namespace
         uint8_t w = *f;
         uint8_t r = *(f + 1);
         if(unlikely(w < 2 || w >= message_size || !r || r >= message_size))
-            throw std::runtime_error(es() % "mmap_proceed() internal error, wp: " % uint32_t(w) % ", rp: " % uint32_t(r));
+            throw mexception(es() % "mmap_proceed() internal error, wp: " % uint32_t(w) % ", rp: " % uint32_t(r));
 
         i += w;
         message* p = (((message*)v) + 1) + (w - 2) * 255;
@@ -269,7 +266,7 @@ namespace
                     nf = mmap_load(i);
                 }
                 if(nf)
-                    throw std::runtime_error(es() % "mmap_proceed() map overload, wp: " % uint32_t(*f) % ", rp: " % uint32_t(*(f + 1)));
+                    throw mexception(es() % "mmap_proceed() map overload, wp: " % uint32_t(*f) % ", rp: " % uint32_t(*(f + 1)));
             }
             memcpy(p, m + c, cur_count * message_size);
             mmap_store(i, cur_count);
@@ -280,7 +277,7 @@ namespace
             if(i == e)
                 i = f + 2;
             if(!mmap_compare_exchange(f, w, i - f))
-                throw std::runtime_error(es() % "mmap_proceed() set w error, w: " % *f % ", from: " % uint32_t(w) % ", to: " % uint32_t(i - f));
+                throw mexception(es() % "mmap_proceed() set w error, w: " % *f % ", from: " % uint32_t(w) % ", to: " % uint32_t(i - f));
             w = i - f;
             c += cur_count;
         }
@@ -298,16 +295,16 @@ namespace
     }
 }
 
-uint32_t register_exporter(const std::string& module, hole_exporter he)
+uint32_t register_exporter(str_holder module, hole_exporter he)
 {
     return efactory.register_exporter(module, he);
 }
 
-exporter::exporter(const std::string& params)
+exporter::exporter(const mstring& params)
 {
-    std::vector<std::string> exports = split(params, ';');
+    mvector<mstring> exports = split(params, ';');
     if(params.empty())
-        throw std::runtime_error("create_exporter() with empty params");
+        throw str_exception("create_exporter() with empty params");
     if(exports.size() == 1)
         (*this) = std::move(create_impl(exports[0]));
     else {

@@ -18,7 +18,7 @@ struct lws_dump
     int hfile;
     bool lws_not_fake, lws_dump_en;
     char dump_buf[8];
-    std::vector<char> read_buf;
+    mvector<char> read_buf;
     uint64_t dump_readed, dump_size;
 
     lws_dump() : hfile(), lws_not_fake(true), lws_dump_en(), dump_buf("\n    \n")
@@ -26,7 +26,7 @@ struct lws_dump
         char* dump = getenv("lws_dump");
         char* fake = getenv("lws_fake");
         if(dump && fake)
-            throw std::runtime_error("lws_dump and lws_fake not works together");
+            throw str_exception("lws_dump and lws_fake not works together");
         
         if(dump) {
             lws_dump_en = true;
@@ -47,7 +47,7 @@ struct lws_dump
             dump_size = st.st_size;
         }
     }
-    void dump(const char* p, uint32_t sz)
+    void dump(char_cit p, uint32_t sz)
     {
         if(sz) {
             memcpy(dump_buf + 1, &sz, sizeof(sz));
@@ -71,7 +71,7 @@ struct lws_dump
             dump_readed += (sz + 6);
             return str_holder(&read_buf[0], sz);
         }
-        return str_holder(nullptr, 0);
+        return str_holder(nullptr, nullptr);
     }
     ~lws_dump()
     {
@@ -82,13 +82,13 @@ struct lws_dump
 
 struct lws_impl : emessages, lws_dump, stack_singleton<lws_impl>
 {
-    typedef const char* iterator;
+    typedef char_cit iterator;
 
     char buf[512];
     buf_stream bs;
     bool closed;
     time_t data_time;
-    std::vector<std::string> subscribes;
+    mvector<mstring> subscribes;
     lws_context* context;
     
     lws_impl() : emessages(config::instance().push), bs(buf, buf + sizeof(buf) - 1), closed(), data_time(time(NULL))
@@ -116,7 +116,7 @@ struct lws_impl : emessages, lws_dump, stack_singleton<lws_impl>
             int n = lws_write(wsi, (unsigned char*)ptr, sz, LWS_WRITE_TEXT);
                 
             if(unlikely(sz != n))
-                throw std::runtime_error(es() % "lws_write ret: " % n % ", sz: " % sz);
+                throw mexception(es() % "lws_write ret: " % n % ", sz: " % sz);
         }
         bs.resize(LWS_PRE);
     }
@@ -132,34 +132,34 @@ struct lws_impl : emessages, lws_dump, stack_singleton<lws_impl>
 };
 
 template<typename str>
-inline void skip_fixed(const char* &it, const str& v)
+inline void skip_fixed(char_cit& it, const str& v)
 {
     static_assert(std::is_array<str>::value);
-    bool eq = std::equal(it, it + sizeof(v) - 1, v);
+    //bool eq = std::equal(it, it + sizeof(v) - 1, v);
     //bool eq = !(strncmp(it, v, sizeof(v) - 1));
-    //bool eq = !(memcmp(it, v, sizeof(v) - 1));
+    bool eq = !(memcmp(it, v, sizeof(v) - 1));
     if(unlikely(!eq))
-        throw std::runtime_error(es() % "skip_fixed error, expect: |" % str_holder(v) % "| in |" % str_holder(it, strnlen(it, 100)) % "|");
+        throw mexception(es() % "skip_fixed error, expect: |" % str_holder(v) % "| in |" % str_holder(it, strnlen(it, 100)) % "|");
     it += sizeof(v) - 1;
 }
 
 template<typename str>
-inline void search_and_skip_fixed(const char* &it, const char* ie, const str& v)
+inline void search_and_skip_fixed(char_cit& it, char_cit ie, const str& v)
 {
     static_assert(std::is_array<str>::value);
-    const char* i = std::search(it, ie, v, v + (sizeof(v) - 1));
+    char_cit i = search(it, ie, v, v + (sizeof(v) - 1));
     if(unlikely(i == ie))
-        throw std::runtime_error(es() % "search_and_skip_fixed error, expect: |" % str_holder(v) % "| in |" % str_holder(it, ie - it) % "|");
+        throw mexception(es() % "search_and_skip_fixed error, expect: |" % str_holder(v) % "| in |" % str_holder(it, ie - it) % "|");
     it  = i + (sizeof(v) - 1);
 }
 
 template<typename str>
-inline bool skip_if_fixed(const char* &it, const str& v)
+inline bool skip_if_fixed(char_cit &it, const str& v)
 {
     static_assert(std::is_array<str>::value);
-    bool eq = std::equal(it, it + sizeof(v) - 1, v);
+    //bool eq = std::equal(it, it + sizeof(v) - 1, v);
     //bool eq = !(strncmp(it, v, sizeof(v) - 1));
-    //bool eq = !(memcmp(it, v, sizeof(v) - 1));
+    bool eq = !(memcmp(it, v, sizeof(v) - 1));
     if(eq)
         it += sizeof(v) - 1;
     return eq;
@@ -180,10 +180,10 @@ int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user, void* i
         {
             lws_w* w = (lws_w*)user;
             if(unlikely(w->lws_dump_en))
-                w->dump((const char*)in, len);
+                w->dump((char_cit)in, len);
             if(unlikely(config::instance().log_lws))
                 mlog() << "lws receive len: " << len;
-            w->proceed(wsi, (const char*)in, len);
+            w->proceed(wsi, (char_cit)in, len);
             w->data_time = time(NULL);
             return 0;
         }
@@ -196,7 +196,7 @@ int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user, void* i
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         {
             ((lws_w*)user)->closed = true;
-            mlog() << "lws closed... " << (len ? str_holder((const char*)in, len) : str_holder(""));
+            mlog() << "lws closed... " << (len ? str_holder((char_cit)in, len) : str_holder(""));
             return 1;
         }
         default:
@@ -210,7 +210,7 @@ int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user, void* i
 }
 
 template<typename lws_w>
-lws_context* create_context(const char* ssl_ca_file = 0)
+lws_context* create_context(char_cit ssl_ca_file = 0)
 {
     int logs = LLL_ERR | LLL_WARN ;
     lws_set_log_level(logs, NULL);
@@ -232,7 +232,7 @@ lws_context* create_context(const char* ssl_ca_file = 0)
         info.client_ssl_ca_filepath = ssl_ca_file;
     lws_context* context = lws_create_context(&info);
     if(!context)
-        throw std::runtime_error("lws_create_context error");
+        throw str_exception("lws_create_context error");
     return context;
 }
 
@@ -275,7 +275,7 @@ void proceed_lws_parser(volatile bool& can_run)
                 {
                     i = 0;
                     if(ls.data_time + 10 < time(NULL))
-                        throw std::runtime_error(es() % " no data from " % ls.data_time);
+                        throw mexception(es() % " no data from " % ls.data_time);
                 }
                 n = lws_service(ls.context, 0);
             }
@@ -291,7 +291,7 @@ void proceed_lws_parser(volatile bool& can_run)
 }
 
 template<typename lws_i>
-void lws_connect(lws_i& ls, const char* host, uint32_t port, const char* path)
+void lws_connect(lws_i& ls, char_cit host, uint32_t port, char_cit path)
 {
 	lws_client_connect_info ccinfo = lws_client_connect_info();
 	ccinfo.context = ls.context;

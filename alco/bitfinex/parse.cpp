@@ -45,10 +45,10 @@ struct lws_i : sec_id_by_name<lws_impl>
         prec_R0 = (cfg.precision == "R0");
         for(auto& v: cfg.tickers) {
             if(cfg.trades) {
-                subscribes.push_back("{\"event\":\"subscribe\",\"channel\":\"trades\",\"symbol\":\"" + v + "\"}");
+                subscribes.push_back(mstring("{\"event\":\"subscribe\",\"channel\":\"trades\",\"symbol\":\"") + v + "\"}");
             }
             if(cfg.orders) {
-                subscribes.push_back("{\"event\":\"subscribe\",\"channel\":\"book\",\"symbol\":\""
+                subscribes.push_back(mstring("{\"event\":\"subscribe\",\"channel\":\"book\",\"symbol\":\"")
                     + v + "\",\"prec\":\"" + cfg.precision + "\",\"freq\":\"" + cfg.frequency + "\",\"len\":\"" + cfg.length + "\"}");
             }
         }
@@ -64,13 +64,13 @@ struct lws_i : sec_id_by_name<lws_impl>
             return;
         }
         skip_fixed(it, "[");
-        iterator ne = std::find(it, ie, ',');
+        iterator ne = find(it, ie, ',');
         uint32_t id = my_cvt::atoi<uint32_t>(it, ne - it);
         ++ne;
         ttime_t etime = {my_cvt::atoi<uint64_t>(ne, 13) * (ttime_t::frac / 1000)};
         ne += 13;
         skip_fixed(ne, ",");
-        it = std::find(ne, ie, ',');
+        it = find(ne, ie, ',');
         count_t count = read_count(ne, it);
         int dir = 1;
         if(count.value < 0)
@@ -79,7 +79,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             count.value = -count.value;
         }
         skip_fixed(it, ",");
-        ne = std::find(it, ie, ']');
+        ne = find(it, ie, ']');
         price_t price = read_price(it, ne);
         
         if(likely(*ne == ']' && *(ne + 1) == ']'))
@@ -102,15 +102,15 @@ struct lws_i : sec_id_by_name<lws_impl>
         for(;;)
         {
             skip_fixed(it, "[");
-            ne = std::find(it, ie, ',');
+            ne = find(it, ie, ',');
             if(prec_R0)
             {
                 int64_t level_id = my_cvt::atoi<int64_t>(it, ne - it);
                 ++ne;
-                it = std::find(ne, ie, ',');
+                it = find(ne, ie, ',');
                 price_t price = read_price(ne, it);
                 ++it;
-                ne = std::find(it, ie, ']');
+                ne = find(it, ie, ']');
                 count_t amount = read_count(it, ne);
                 if(price != price_t())
                     add_order(i.security_id, level_id, price, amount, ttime_t(), time);
@@ -121,10 +121,10 @@ struct lws_i : sec_id_by_name<lws_impl>
             {
                 price_t price = read_price(it, ne);
                 ++ne;
-                it = std::find(ne, ie, ',');
+                it = find(ne, ie, ',');
                 uint32_t count = my_cvt::atoi<uint32_t>(ne, it - ne);
                 ++it;
-                ne = std::find(it, ie, ']');
+                ne = find(it, ie, ']');
                 count_t amount = read_count(it, ne);
                 if(count > 0)
                     add_order(i.security_id, price.value, price, amount, ttime_t(), time);
@@ -163,16 +163,16 @@ struct lws_i : sec_id_by_name<lws_impl>
         if(likely(*it == '['))
         {
             ++it;
-            iterator ne = std::find(it, ie, ',');
+            iterator ne = find(it, ie, ',');
             uint32_t channel = my_cvt::atoi<uint32_t>(it, ne - it);
             skip_fixed(ne, ",");
-            ne = std::find(ne, ie, '[');
+            ne = find(ne, ie, '[');
 
             if(likely(ne != ie)) {
                 impl& i = parsers.at(channel);
                 ((this)->*(i.f))(i, time, ne, ie);
                 if(ne != ie)
-                    throw std::runtime_error(es() % "parsing market message error: " % str_holder(in, len));
+                    throw mexception(es() % "parsing market message error: " % str_holder(in, len));
             }
             else {
                 //possible "hb" message
@@ -191,17 +191,17 @@ struct lws_i : sec_id_by_name<lws_impl>
                         is_trades = true;
                     else
                         skip_fixed(it, book);
-                    iterator ne = std::find(it, ie, ',');
+                    iterator ne = find(it, ie, ',');
                     uint32_t channel = my_cvt::atoi<uint32_t>(it, ne - it);
                     ++ne;
                     skip_fixed(ne, symbol);
-                    it = std::find(ne, ie, '\"');
+                    it = find(ne, ie, '\"');
 
                     str_holder ticker(ne, it - ne);
                     add_channel(channel, ticker, is_trades, time);
-                    it = std::find(it, ie, '}') + 1;
+                    it = find(it, ie, '}') + 1;
                     if(it != ie)
-                        throw std::runtime_error(es() % "parsing logic error message: " % str_holder(in, len));
+                        throw mexception(es() % "parsing logic error message: " % str_holder(in, len));
                 }
             }
             else

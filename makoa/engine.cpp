@@ -7,8 +7,12 @@
 #include "exports.hpp"
 #include "types.hpp"
 
-#include "evie/mutex.hpp"
+#include "evie/thread.hpp"
+#include "evie/smart_ptr.hpp"
 #include "evie/fast_alloc.hpp"
+
+#include <vector>
+#include <thread>
 
 bool pooling_mode = false;
 
@@ -106,7 +110,7 @@ struct actives : noncopyable
     };
 
 private:
-    std::vector<type> data;
+    mvector<type> data;
     type* last_value;
     type tmp;
 
@@ -120,7 +124,7 @@ public:
         auto it = std::lower_bound(data.begin(), data.end(), tmp);
         if(unlikely(it != data.end() && it->security_id == security_id)) {
             //if(!it->disconnected)
-            //    throw std::runtime_error(es() % "activites, security_id " % security_id % " already in active list");
+            //    throw mexception(es() % "activites, security_id " % security_id % " already in active list");
             //else {
                 it->disconnected = false;
                 it->time = ttime_t(); //TODO: this for several usage makoa_test etc, remove or overthink it later 
@@ -139,7 +143,7 @@ public:
         tmp.security_id = security_id;
         auto it = std::lower_bound(data.begin(), data.end(), tmp);
         if(unlikely(it == data.end() || it->security_id != security_id))
-            throw std::runtime_error(es() % "activites, security_id " % security_id % " not found in active list");
+            throw mexception(es() % "activites, security_id " % security_id % " not found in active list");
 
         last_value = &(*it);
         return *last_value;
@@ -164,7 +168,7 @@ struct context
     {
         auto& m = acs.get(security_id);
         if(unlikely(m.time > time))
-            throw std::runtime_error(es() % "context::check() m.time: " % m.time.value % " > time: " % time.value);
+            throw mexception(es() % "context::check() m.time: " % m.time.value % " > time: " % time.value);
         m.time = time;
         return m;
     }
@@ -226,7 +230,7 @@ class engine::impl : public stack_singleton<engine::impl>
         exporter exp;
         linked_list::type *prev, *ptmp;
 
-        imple(volatile bool& can_run, linked_list& ll, const std::string& eparams) : can_run(can_run), ll(&ll), exp(eparams), prev(), ptmp()
+        imple(volatile bool& can_run, linked_list& ll, const mstring& eparams) : can_run(can_run), ll(&ll), exp(eparams), prev(), ptmp()
         {
         }
         bool proceed()
@@ -290,10 +294,10 @@ class engine::impl : public stack_singleton<engine::impl>
             mlog(mlog::error) << "exports: " << " " << e;
         }
     }
-    static void log_and_throw_error(const char* data, uint32_t size, const std::string& reason)
+    static void log_and_throw_error(const char* data, uint32_t size, str_holder reason)
     {
         mlog() << "bad message (" << reason << "!): " << print_binary((const uint8_t*)data, std::min<uint32_t>(32, size));
-        throw std::runtime_error(reason);
+        throw mexception(reason);
     }
 
 public:
@@ -329,7 +333,7 @@ public:
         const char* m = (buf.str - ctx->buf_delta - sizeof(messages::_));
         ll.free((linked_node*)m);
     }
-    void init(const std::vector<std::string>& exports, uint32_t export_threads)
+    void init(const mvector<mstring>& exports, uint32_t export_threads)
     {
         consumers = exports.size();
         for(const auto& e: exports)
@@ -385,7 +389,7 @@ public:
                 case(msg_instr) : {
                     uint32_t security_id = calc_crc(m->mi);
                     if(security_id != m->mi.security_id)
-                        throw std::runtime_error(es() % "instrument crc mismatch, in: " % m->mi.security_id % ", calculated: " % security_id);
+                        throw mexception(es() % "instrument crc mismatch, in: " % m->mi.security_id % ", calculated: " % security_id);
                     ctx->insert(security_id, m->mi.time);
                     break;
                 }
@@ -412,7 +416,7 @@ public:
         while(ies.pop_weak(i))
             delete i;
     }
-    void push_clean(const std::vector<actives::type>& secs) //when parser disconnected all OrdersBooks cleans
+    void push_clean(const mvector<actives::type>& secs) //when parser disconnected all OrdersBooks cleans
     {
         uint32_t count = secs.size();
         for(uint32_t ci = 0; ci != count;)
@@ -430,16 +434,18 @@ public:
     }
 };
 
-engine::engine(volatile bool& can_run, bool pooling, const std::vector<std::string>& exports, uint32_t export_threads)
+engine::engine(volatile bool& can_run, bool pooling, const mvector<mstring>& exports, uint32_t export_threads) : pimpl()
 {
     set_can_run(&can_run);
     pooling_mode = pooling;
-    pimpl = std::make_unique<engine::impl>(can_run);
-    pimpl->init(exports, export_threads);
+    unique_ptr<engine::impl> p(new engine::impl(can_run));
+    p->init(exports, export_threads);
+    pimpl = p.release();
 }
 
 engine::~engine()
 {
+    delete pimpl;
 }
 
 void actives::on_disconnect()
@@ -457,12 +463,12 @@ void actives::on_disconnect()
     }
 }
 
-std::pair<void*, str_holder> import_context_create(void*)
+pair<void*, str_holder> import_context_create(void*)
 {
     return {new context(), engine::impl::instance().alloc()};
 }
 
-void import_context_destroy(std::pair<void*, str_holder> ctx)
+void import_context_destroy(pair<void*, str_holder> ctx)
 {
     engine::impl::instance().free(ctx.second, (context*)(ctx.first));
     delete (context*)ctx.first;

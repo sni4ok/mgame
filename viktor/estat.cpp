@@ -37,7 +37,7 @@ namespace {
     struct estat
     {
         bool brief;
-        std::string name;
+        mstring name;
 
         uint32_t count;
 
@@ -68,7 +68,7 @@ namespace {
                     d2 += (delta * delta) / 1000000;
                 ++count;
             }
-            void print(mlog& ml, std::string name) const
+            void print(mlog& ml, mstring name) const
             {
                 if(count) {
                     int64_t mean = sum / count;
@@ -90,8 +90,9 @@ namespace {
         {
             stat et, tm, mc, tc, ec;
 
-            void print(mlog& ml, std::string name) const
+            void print(mlog& ml, str_holder n) const
             {
+                mstring name(n);
                 et.print(ml, name + "_et");
                 tm.print(ml, name + "_tm");
                 mc.print(ml, name + "_mc");
@@ -126,7 +127,7 @@ namespace {
                 ml << '\n';
             }
         }
-        estat(std::string params) : brief(params == "brief"), name(params), count()
+        estat(mstring params) : brief(params == "brief"), name(params), count()
         {
             mlog() << "stat " << params << " initialized";
         }
@@ -167,7 +168,7 @@ namespace {
 
     void* estat_init(const char* params)
     {
-        return new estat(params);
+        return new estat(mstring(params));
     }
     void estat_destroy(void* v)
     {

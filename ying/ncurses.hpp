@@ -20,13 +20,13 @@ struct ncurses_err
     ncurses_err& operator=(int ret)
     {
         if(ret != OK)
-            throw std::runtime_error("ncurses error");
+            throw str_exception("ncurses error");
         return *this;
     }
     ncurses_err& operator&(int ret)
     {
         if(ret != OK)
-            throw std::runtime_error("ncurses error");
+            throw str_exception("ncurses error");
         return *this;
     }
 
@@ -46,7 +46,7 @@ class window : noncopyable
 
 public:
     uint32_t rows, cols;
-    std::vector<char> blank_row;
+    mvector<char> blank_row;
 
     window() : w(initscr(), &end_win)
     {
@@ -55,13 +55,13 @@ public:
         
         winsize size;
         if(ioctl(0, TIOCGWINSZ, (char *)&size) < 0)
-            throw std::runtime_error("TIOCGWINSZ error");
+            throw str_exception("TIOCGWINSZ error");
         
         rows = size.ws_row;
         cols = size.ws_col;
 
         if(!w)
-            throw std::runtime_error("initscr() error");
+            throw str_exception("initscr() error");
         e = wresize(w.get(), rows, cols);
         e = nodelay(w.get(), TRUE);
 
@@ -69,7 +69,8 @@ public:
         e = keypad(stdscr, TRUE);
         e = cbreak();
         
-        blank_row.resize(cols, ' ');
+        blank_row.resize(cols);
+        std::fill(blank_row.begin(), blank_row.end(), ' ');
     }
     void clear()
     {

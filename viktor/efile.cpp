@@ -11,31 +11,32 @@
 #include "makoa/types.hpp"
 #include "evie/mlog.hpp"
 
-#include <string>
-
-#include <fcntl.h>
-#include <unistd.h>
 #include <sys/stat.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <fcntl.h>
+
+#include <cerrno>
 
 namespace {
 
 struct efile
 {
-    std::vector<char> buf;
+    char buf[1024 * 1024];
     buf_stream bs;
     bool bin;
-    std::string fname;
+    mstring fname;
     int hfile;
 
-    efile(const std::string& params) : buf(1024 * 1024), bs(buf), bin()
+    efile(const mstring& params) : buf(), bs(buf), bin()
     {
-        std::vector<std::string> p = split(params, ' ');
+        mvector<mstring> p = split(params, ' ');
         if(p.size() != 3)
-            throw std::runtime_error(es() % "efile() \"file (bin,csv) (truncate,append,rename_new) file_name\", params: " % params);
+            throw mexception(es() % "efile() \"file (bin,csv) (truncate,append,rename_new) file_name\", params: " % params);
         if(p[0] == "bin")
             bin = true;
         else if(p[0] != "csv")
-            throw std::runtime_error(es() % "efile() bad file_type: " % params);
+            throw mexception(es() % "efile() bad file_type: " % params);
         fname = std::move(p[2]);
 
         int fp = O_WRONLY | O_CREAT | O_APPEND;
@@ -56,7 +57,7 @@ struct efile
                 close(hfile);
             }
             if(fsz) {
-                std::string backup = fname + "_" + std::to_string(time(NULL));
+                mstring backup = fname + "_" + to_string(time(NULL));
                 int r = rename(fname.c_str(), backup.c_str());
                 if(r) {
                     mlog(mlog::critical) << "rename file from " << fname << ", to " << backup
@@ -70,7 +71,7 @@ struct efile
                 fp |= O_EXCL;
         }
         else
-            throw std::runtime_error(es() % "efile() bad open_mode: " % params);
+            throw mexception(es() % "efile() bad open_mode: " % params);
 
         hfile = ::open(fname.c_str(), fp, S_IWRITE | S_IREAD | S_IRGRP | S_IWGRP);
         if(hfile < 0)
@@ -136,7 +137,7 @@ struct efile
 
 void* efile_init(const char* params)
 {
-    return new efile(params);
+    return new efile(mstring(params));
 }
 
 void efile_destroy(void* v)

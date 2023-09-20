@@ -5,11 +5,14 @@
 #include "server.hpp"
 #include "imports.hpp"
 
-#include "evie/mutex.hpp"
+#include "evie/thread.hpp"
 #include "evie/utils.hpp"
 #include "evie/fmap.hpp"
 
 #include <unistd.h>
+
+#include <vector>
+#include <thread>
 
 extern bool pooling_mode;
 
@@ -20,7 +23,7 @@ struct server::impl
     volatile bool& can_run;
     bool quit_on_exit;
     std::vector<std::thread> threads;
-    fmap<int, std::pair<hole_importer, void*> > imports;
+    fmap<int, pair<hole_importer, void*> > imports;
     my_mutex mutex;
     my_condition cond;
 
@@ -28,14 +31,14 @@ struct server::impl
     {
         server_impl = this;
     }
-    void import_thread(uint32_t& count, std::string str)
+    void import_thread(uint32_t& count, mstring str)
     {
         bool need_init = true;
         try
         {
-            std::string params = str;
-            char* f = (char*)params.c_str();
-            char* c = (char*)std::find(f, f + params.size(), ' ');
+            mstring params = str;
+            char* f = params.begin();
+            char* c = find(f, params.end(), ' ');
             *c = char();
             hole_importer hi = create_importer(f);
             void* i = hi.init(can_run, c + 1);
@@ -73,13 +76,13 @@ struct server::impl
             imports.erase(get_thread_id());
         cond.notify_all();
     }
-    void run(const std::vector<std::string>& imports)
+    void run(const mvector<mstring>& imports)
     {
         uint32_t count = 0;
 
-        for(std::string i: imports)
+        for(mstring i: imports)
         {
-            if(i.size() > 7 && std::equal(i.begin(), i.begin() + 7, "mmap_cp"))
+            if(i.size() > 7 && str_holder(i.begin(), i.begin() + 7) == "mmap_cp")
                 i = i + (pooling_mode ? " 1" : " 0");
 
             threads.push_back(std::thread(&impl::import_thread, this, std::ref(count), i));
@@ -112,17 +115,18 @@ void server_set_close()
         server_impl->set_close();
 }
 
-void server::run(const std::vector<std::string>& imports)
+void server::run(const mvector<mstring>& imports)
 {
     pimpl->run(imports);
 }
 
 server::server(volatile bool& can_run, bool quit_on_exit)
+    : pimpl(new server::impl(can_run, quit_on_exit))
 {
-    pimpl = std::make_unique<server::impl>(can_run, quit_on_exit);
 }
 
 server::~server()
 {
+    delete pimpl;
 }
 

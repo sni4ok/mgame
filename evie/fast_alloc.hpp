@@ -8,19 +8,6 @@
 
 #include <atomic>
 
-template<typename type, uint32_t size>
-struct array
-{
-    type elems[size];
-
-    type& operator[](uint32_t idx) {
-        return elems[idx];
-    }
-    const type& operator[](uint32_t idx) const {
-        return elems[idx];
-    }
-};
-
 template<typename type>
 type atomic_exchange(type* ptr, type val)
 {
@@ -31,7 +18,8 @@ type atomic_exchange(type* ptr, type val)
 template<typename type, uint32_t block_size = 65536, uint32_t num_blocks = 16384, bool enable_run_once = true>
 class follower : noncopyable
 {
-    typedef array<type*, num_blocks> bulks_type;
+    typedef type* bulks_type[num_blocks];
+
     bulks_type bulks;
     std::atomic<uint32_t> num_elems;
     type* ptr;
@@ -68,7 +56,7 @@ public:
         }
         return false;
     }
-    void push_back(const type& value) {
+    void push_back(type&& value) {
         uint32_t elems = num_elems;
         uint32_t end_bulk = elems / block_size;
         uint32_t end_element = elems % block_size;
@@ -89,8 +77,11 @@ public:
             }
         }
 
-        (bulks[end_bulk])[end_element] = value;
+        (bulks[end_bulk])[end_element] = std::move(value);
         ++num_elems;
+    }
+    void push_back(const type& value) {
+        push_back(type(value));
     }
     class const_iterator
     {
@@ -185,8 +176,8 @@ class lockfree_queue : noncopyable
         node() : status(){}
     };
 
-    std::string name;
-    array<node, capacity_size> elems;
+    str_holder name;
+    node elems[capacity_size];
     std::atomic<uint64_t> push_cnt, pop_cnt;
 
     static uint64_t get_idx(uint64_t idx) {
@@ -195,12 +186,12 @@ class lockfree_queue : noncopyable
 
     void throw_exception(const char* reason, uint32_t status)
     {
-        throw std::runtime_error(es() % name % ": lockfree_queue: " % _str_holder(reason) % ", (" % capacity % "," % uint64_t(pop_cnt) % ","
+        throw mexception(es() % name % ": lockfree_queue: " % _str_holder(reason) % ", (" % capacity % "," % uint64_t(pop_cnt) % ","
             % uint64_t(push_cnt) % "," % status % ")");
     }
 
 public:
-    lockfree_queue(const std::string& name) : name(name), push_cnt(), pop_cnt() {
+    lockfree_queue(str_holder name) : name(name), push_cnt(), pop_cnt() {
     }
     static const constexpr uint32_t capacity = capacity_size;
 
@@ -246,34 +237,73 @@ public:
             throw_exception("pop_strong() internal error", status);
     }
     bool pop_weak(type& t) {
-rep:
-        node& n = elems[get_idx(pop_cnt)];
-        uint32_t status = 2;
-        if(n.status.compare_exchange_strong(status, 3)) {
-            ++pop_cnt;
-            t = std::move(n.elem);
-            status = 3;
-            if(!n.status.compare_exchange_strong(status, 0))
-                throw_exception("pop_weak() internal error", status);
-            return true;
+        for(;;) {
+            node& n = elems[get_idx(pop_cnt)];
+            uint32_t status = 2;
+            if(n.status.compare_exchange_strong(status, 3)) {
+                ++pop_cnt;
+                t = std::move(n.elem);
+                status = 3;
+                if(!n.status.compare_exchange_strong(status, 0))
+                    throw_exception("pop_weak() internal error", status);
+                return true;
+            }
+            else {
+                if(status != 1 && status != 3)
+                    return false;
+            }
         }
-        else
-        {
-            if(status == 1 || status == 3)
-                goto rep;
-        }
-        return false;
     }
 };
 
-template<typename type_t, uint32_t pool_size = 16 * 1024, bool enable_run_once = true>
+template<typename type, uint32_t capacity_size>
+struct st_queue
+{
+    type elems[capacity_size];
+    uint64_t push_cnt, pop_cnt;
+
+    st_queue(str_holder) : elems() {
+    }
+
+    bool push_weak(type t) {
+        push_cnt = push_cnt % capacity_size;
+        type& v = elems[push_cnt];
+        if(v)
+            return false;
+        ++push_cnt;
+        v = t;
+        return true;
+    }
+
+    void push(type t) {
+        if(!push_weak(t))
+        {
+            MPROFILE("st_queue::push() overloaded")
+            delete t;
+        }
+    }
+
+    bool pop_weak(type& t) {
+        pop_cnt = pop_cnt % capacity_size;
+        type& v = elems[pop_cnt];
+        if(!v)
+            return false;
+        ++pop_cnt;
+        t = v;
+        v = nullptr;
+        return true;
+    }
+};
+
+template<typename type_t, uint32_t pool_size = 16 * 1024, bool enable_run_once = true,
+    template<typename, uint32_t> class queue = lockfree_queue>
 struct fast_alloc
 {
     typedef type_t type;
-    lockfree_queue<type*, pool_size> elems;
+    queue<type_t*, pool_size> elems;
     std::atomic<int32_t> free_elems;
 
-    fast_alloc(const std::string& name, uint32_t pre_alloc = 1) : elems(name), free_elems() {
+    fast_alloc(str_holder name, uint32_t pre_alloc = 1) : elems(name), free_elems() {
         assert(pre_alloc <= pool_size);
         for(uint32_t i = 0; i != pre_alloc; ++i)
             elems.push(new type);

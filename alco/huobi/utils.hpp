@@ -8,7 +8,7 @@ void zlib_free_func(voidpf, voidpf)
 
 struct zlibe
 {
-    std::vector<char> buf, dest;
+    mvector<char> buf, dest;
     uint32_t allocated;
     z_stream strm;
 
@@ -22,7 +22,7 @@ struct zlibe
     {
         uint32_t req = items * size;
         if(unlikely(allocated + req > buf.size()))
-            throw std::runtime_error("zlibe::alloc() bad alloc");
+            throw str_exception("zlibe::alloc() bad alloc");
         char* ret = &buf[allocated];
         allocated += req;
         return (void*)ret;
@@ -39,13 +39,13 @@ struct zlibe
 
         int err = inflateInit2(&strm, MAX_WBITS + 16);
         if(unlikely(err != Z_OK))
-            throw std::runtime_error("inflateInit2 error");
+            throw str_exception("inflateInit2 error");
         
         err = inflate(&strm, Z_FINISH);
         if(likely(err == Z_STREAM_END)){
             return str_holder(&dest[0], strm.total_out);
         }
-        throw std::runtime_error(es() % "zlib::inflate error for size: " % size);
+        throw mexception(es() % "zlib::inflate error for size: " % size);
     }
 };
 

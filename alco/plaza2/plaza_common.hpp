@@ -6,6 +6,9 @@
 
 #include "makoa/messages.hpp"
 
+#include "evie/mlog.hpp"
+#include "evie/string.hpp"
+
 #include "cgate.h"
 
 #include <unistd.h>
@@ -22,7 +25,7 @@ struct cg_string
 	cg_string(const char* str, uint32_t size)
     {
         if(size > sz)
-            throw std::runtime_error("cg_string::operator= size overflow");
+            throw mexception("cg_string::operator= size overflow");
         my_fast_copy(str, size, &buf[0]);
         memset(&buf[sz], 0, sizeof(buf) - size);
     }
@@ -33,7 +36,7 @@ struct cg_string
         my_fast_copy(&v[0], sizeof(v), &buf[0]);
         memset(&buf[sizeof(v)], 0, sizeof(buf) - sizeof(v));
     }
-    cg_string& operator=(const std::string& str)
+    cg_string& operator=(const mstring& str)
     {
         new (this) cg_string(&str[0], str.size());
         return *this;
@@ -99,11 +102,11 @@ inline mlog& operator<<(mlog& ml, const cg_time_t& t)
 
 #pragma pack(pop)
 
-inline void check_plaza_fail(uint32_t res, const char* msg)
+inline void check_plaza_fail(uint32_t res, str_holder msg)
 {
     if(unlikely(res != CG_ERR_OK)) {
-        mlog(mlog::critical) << "Client gate error (" << _str_holder(msg) << "): " << res;
-        throw std::runtime_error(es() % "Client gate error (" % msg % "): " % res);
+        mlog(mlog::critical) << "Client gate error (" << msg << "): " << res;
+        throw mexception(es() % "Client gate error (" % msg % "): " % res);
     }
 }
 
@@ -116,8 +119,8 @@ inline void warn_plaza_fail(uint32_t res, const char* msg)
 struct cg_conn_h
 {
     cg_conn_t *cli;
-    std::string cli_conn;
-    cg_conn_h(const std::string& cli_conn) : cli(), cli_conn(cli_conn)
+    mstring cli_conn;
+    cg_conn_h(const mstring& cli_conn) : cli(), cli_conn(cli_conn)
     {
     }
     void wait_active(volatile bool& can_run)
@@ -126,7 +129,7 @@ struct cg_conn_h
             uint32_t state = 0;
             check_plaza_fail(cg_conn_getstate(cli, &state), "conn_getstate");
             if(state == CG_STATE_ERROR)
-                throw std::runtime_error("Failed to open plaza2 connection");
+                throw mexception("Failed to open plaza2 connection");
             if(state == CG_STATE_ACTIVE)
                 break;
             usleep(50);
@@ -135,7 +138,7 @@ struct cg_conn_h
     void connect(volatile bool& can_run)
     {
         if(cli)
-            throw std::runtime_error("cg_conn_h cli already initialized");
+            throw mexception("cg_conn_h cli already initialized");
         mlog() << "cg_conn_new: " << cli_conn;
         try {
             check_plaza_fail(cg_conn_new(cli_conn.c_str(), &cli), "conn_new");
@@ -167,17 +170,17 @@ struct cg_listener_h
     cg_listener_t* listener;
     cg_conn_h& conn;
     bool closed;
-    std::string name, cli_listener;
+    mstring name, cli_listener;
     plaza_func func;
     void* func_state;
-    std::string def_state;
-    std::string rev;
+    mstring def_state;
+    mstring rev;
     time_t last_call_time;
     void set_call()
     {
         last_call_time = time(NULL);
     }
-    cg_listener_h(cg_conn_h& conn, const std::string& name, const std::string cli_listener, plaza_func func, void* func_state = 0, std::string def_state = "")
+    cg_listener_h(cg_conn_h& conn, const mstring& name, const mstring cli_listener, plaza_func func, void* func_state = 0, mstring def_state = mstring())
         : listener(), conn(conn), closed(true), name(name), cli_listener(cli_listener), func(func), func_state(func_state), def_state(def_state)
     {
         set_call();
@@ -185,9 +188,9 @@ struct cg_listener_h
     void set_replstate(cg_msg_t* msg)
     {
         if(def_state.empty())
-            rev = "replstate=" + std::string((char*)msg->data);
+            rev = mstring("replstate=") + mstring((char*)msg->data);
         else
-            rev = def_state + ";" + "replstate=" + std::string((char*)msg->data);
+            rev = def_state + ";" + "replstate=" + mstring((char*)msg->data);
     }
     void set_closed()
     {
@@ -228,7 +231,7 @@ struct cg_listener_h
             uint32_t r = cg_lsn_getstate(listener, &state);
             if(r != CG_ERR_OK || (state != CG_STATE_ACTIVE && state != CG_STATE_OPENING)) {
                 mlog(mlog::critical) << "stream: " << name << ", bad state: " << state;
-                throw std::runtime_error("open stream error");
+                throw mexception("open stream error");
             }
         }
         closed = false;

@@ -6,14 +6,16 @@
 #include "config.hpp"
 
 #include "evie/config.hpp"
+#include "evie/mfile.hpp"
+#include "evie/mlog.hpp"
 
 config::config(const char* fname)
 {
     auto cs = read_file(fname);
-    name = get_config_param<std::string>(cs, "name");
+    name = get_config_param<mstring>(cs, "name");
 
-    imports = get_config_params<std::string>(cs, "import");
-    exports = get_config_params<std::string>(cs, "export");
+    imports = get_config_params(cs, "import");
+    exports = get_config_params(cs, "export");
     export_threads = get_config_param<uint32_t>(cs, "export_threads");
 
     pooling = get_config_param<bool>(cs, "pooling");

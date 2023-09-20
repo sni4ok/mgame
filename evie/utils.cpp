@@ -3,24 +3,23 @@
 */
 
 #include "utils.hpp"
-#include "mlog.hpp"
 
 #include <errno.h>
 
-void throw_system_failure(const std::string& msg)
+void throw_system_failure(str_holder msg)
 {
-    throw std::runtime_error(es() % (errno ? strerror(errno) : "") % ", " % msg);
+    throw mexception(es() % _str_holder((errno ? strerror(errno) : "")) % ", " % msg);
 }
 
-std::string to_string(double value)
+mstring to_string(double value)
 {
     char buf[32];
     uint32_t size = my_cvt::dtoa(buf, value);
-    return std::string(buf, buf + size);
+    return mstring(buf, buf + size);
 }
 
 template<>
-double lexical_cast<double>(const char* from, const char* to)
+double lexical_cast<double>(char_cit from, char_cit to)
 {
     char* ep;
     double ret;
@@ -32,23 +31,23 @@ double lexical_cast<double>(const char* from, const char* to)
         ep = (char*)(from + (ep - buf.begin()));
     }
     if(ep != to)
-        throw std::runtime_error(es() % "bad lexical_cast to double from " % str_holder(from, to - from));
+        throw mexception(es() % "bad lexical_cast to double from " % str_holder(from, to - from));
     return ret;
 }
 
 template<>
-std::string lexical_cast<std::string>(const char* from, const char* to)
+mstring lexical_cast<mstring>(char_cit from, char_cit to)
 {
-    return std::string(from, to);
+    return mstring(from, to);
 }
 
-std::vector<std::string> split(const std::string& str, char sep)
+mvector<mstring> split(const mstring& str, char sep)
 {
-    std::vector<std::string> ret;
+    mvector<mstring> ret;
     auto it = str.begin(), ie = str.end(), i = it;
     while(it != ie) {
-        i = std::find(it, ie, sep);
-        ret.push_back(std::string(it, i));
+        i = find(it, ie, sep);
+        ret.push_back(mstring(it, i));
         if(i != ie)
             ++i;
         it = i;
@@ -56,10 +55,10 @@ std::vector<std::string> split(const std::string& str, char sep)
     return ret;
 }
 
-void split(std::vector<str_holder>& ret, const char* it, const char* ie, char sep)
+void split(mvector<str_holder>& ret, char_cit it, char_cit ie, char sep)
 {
     while(it != ie) {
-        const char* i = std::find(it, ie, sep);
+        char_cit i = find(it, ie, sep);
         ret.push_back(str_holder(it, i - it));
         if(i != ie)
             ++i;
@@ -67,16 +66,23 @@ void split(std::vector<str_holder>& ret, const char* it, const char* ie, char se
     }
 }
 
-std::string join(std::vector<std::string>::const_iterator it, std::vector<std::string>::const_iterator ie, char sep)
+mvector<str_holder> split(char_cit it, char_cit ie, char sep)
+{
+    mvector<str_holder> ret;
+    split(ret, it, ie, sep);
+    return ret;
+}
+
+mstring join(mvector<mstring>::const_iterator it, mvector<mstring>::const_iterator ie, char sep)
 {
     if(it == ie)
-        return std::string();
+        return mstring();
 
     uint32_t sz = 0;
     for(auto v = it; v != ie; ++v)
         sz += v->size();
 
-    std::string ret;
+    mstring ret;
     ret.resize(sz + (ie - it) - 1);
     buf_stream str(&ret[0], &ret[0] + ret.size());
 
@@ -89,7 +95,7 @@ std::string join(std::vector<std::string>::const_iterator it, std::vector<std::s
     return ret;
 }
 
-std::string join(const std::vector<std::string>& s, char sep)
+mstring join(const mvector<mstring>& s, char sep)
 {
     return join(s.begin(), s.end(), sep);
 }
@@ -116,7 +122,7 @@ crc32::crc32(uint32_t init) : crc_table(crc32_table::get()), crc(init ^ 0xFFFFFF
 {
 }
 
-void crc32::process_bytes(const char* p, uint32_t len)
+void crc32::process_bytes(char_cit p, uint32_t len)
 {
     const unsigned char* buf = reinterpret_cast<const unsigned char*>(p);
     while(len--)
@@ -129,7 +135,7 @@ uint32_t crc32::checksum() const
 }
 
 template<uint32_t frac_size>
-ttime_t read_time_impl::read_time(const char* &it)
+ttime_t read_time_impl::read_time(char_cit& it)
 {
     //2020-01-26T10:45:21 //frac_size 0
     //2020-01-26T10:45:21.418 //frac_size 3
@@ -138,7 +144,7 @@ ttime_t read_time_impl::read_time(const char* &it)
     if(unlikely(cur_date != str_holder(it, 10)))
     {
         if(*(it + 4) != '-' || *(it + 7) != '-')
-            throw std::runtime_error(es() % "bad time: " % std::string(it, it + 26));
+            throw mexception(es() % "bad time: " % str_holder(it, 26));
         struct tm t = tm();
         int y = my_cvt::atoi<int>(it, 4); 
         int m = my_cvt::atoi<int>(it + 5, 2); 
@@ -151,7 +157,7 @@ ttime_t read_time_impl::read_time(const char* &it)
     }
     it += 10;
     if(*it != 'T' || *(it + 3) != ':' || *(it + 6) != ':' || (frac_size ? *(it + 9) != '.' : false))
-        throw std::runtime_error(es() % "bad time: " % std::string(it - 10, it + 10 + (frac_size ? 1 + frac_size : 0)));
+        throw mexception(es() % "bad time: " % str_holder(it - 10, 20 + (frac_size ? 1 + frac_size : 0)));
     uint64_t h = my_cvt::atoi<uint64_t>(it + 1, 2);
     uint64_t m = my_cvt::atoi<uint64_t>(it + 4, 2);
     uint64_t s = my_cvt::atoi<uint64_t>(it + 7, 2);
@@ -166,10 +172,10 @@ ttime_t read_time_impl::read_time(const char* &it)
     return ttime_t{cur_date_time + ns + (s + m * 60 + h * 3600) * ttime_t::frac};
 }
 
-template ttime_t read_time_impl::read_time<0>(const char*&);
-template ttime_t read_time_impl::read_time<3>(const char*&);
-template ttime_t read_time_impl::read_time<6>(const char*&);
-template ttime_t read_time_impl::read_time<9>(const char*&);
+template ttime_t read_time_impl::read_time<0>(char_cit&);
+template ttime_t read_time_impl::read_time<3>(char_cit&);
+template ttime_t read_time_impl::read_time<6>(char_cit&);
+template ttime_t read_time_impl::read_time<9>(char_cit&);
 
 namespace
 {
@@ -277,5 +283,58 @@ ttime_t time_from_date(const date& t)
     time_parsed p;
     p.date() = t;
     return pack_time(p);
+}
+
+inline uint64_t get_decimal_pow(uint32_t e)
+{
+    if(e > 19)
+        return std::numeric_limits<uint64_t>::max();
+    else
+        return my_cvt::decimal_pow[e];
+}
+
+int64_t read_decimal_impl(char_cit it, char_cit ie, int exponent)
+{
+    bool minus = (*it == '-');
+    if(minus)
+        ++it;
+    char_cit p = find(it, ie, '.');
+    char_cit E = find_if((p == ie ? it : p + 1), ie,
+            [](char c) {
+                return c == 'E' || c == 'e';
+                });
+
+    int64_t ret = my_cvt::atoi<int64_t>(it, min(p, E) - it);
+    int digits = 0;
+    int64_t _float = 0;
+
+    if(p != ie) {
+        ++p;
+        digits = E - p;
+        _float = my_cvt::atoi<int64_t>(p, digits);
+    }
+    int e = 0;
+    if(E != ie) {
+        ++E;
+        e = my_cvt::atoi<int>(E, ie - E);
+    }
+
+    int em = -exponent + e;
+    int fm = -exponent - digits + e;
+
+    if(em < 0)
+        ret /= get_decimal_pow(-em);
+    else
+        ret *= get_decimal_pow(em);
+
+    if(fm < 0)
+        _float /= get_decimal_pow(-fm);
+    else
+        _float *= get_decimal_pow(fm);
+    ret += _float;
+
+    if(minus)
+        ret = -ret;
+    return ret;
 }
 

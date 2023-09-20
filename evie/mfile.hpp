@@ -4,22 +4,24 @@
 
 #pragma once
 
-#include "utils.hpp"
+#include "time.hpp"
+#include "vector.hpp"
 
-struct mfile : noncopyable
+struct mfile
 {
     int hfile;
 
     mfile(int hfile);
     mfile(const char* file);
+    mfile(const mfile&) = delete;
     uint64_t size() const;
     void seekg(uint64_t pos);
     void read(char* ptr, uint64_t size);
     ~mfile();
 };
 
-bool read_file(std::vector<char>& buf, const char* fname, bool can_empty = false);
-std::vector<char> read_file(const char* fname, bool can_empty = false);
+bool read_file(mvector<char>& buf, const char* fname, bool can_empty = false);
+mvector<char> read_file(const char* fname, bool can_empty = false);
 void write_file(const char* fname, const char* buf, uint64_t size, bool trunc);
 bool is_file_exist(const char* fname, uint64_t* fsize = nullptr);
 uint64_t file_size(const char* fname);

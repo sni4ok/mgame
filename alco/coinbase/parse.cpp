@@ -19,7 +19,7 @@ struct lws_i : lws_impl, read_time_impl
         auto it = securities.find(symbol);
         if(unlikely(it == securities.end())) {
             security& s = securities[symbol];
-            s.init(cfg.exchange_id, cfg.feed_id, std::string(i, ie));
+            s.init(cfg.exchange_id, cfg.feed_id, mstring(i, ie));
             s.proceed_instr(e, time);
             return s;
         }
@@ -28,8 +28,8 @@ struct lws_i : lws_impl, read_time_impl
     }
     lws_i() : cfg(config::instance())
     {
-        std::string tickers = join_tickers(cfg.tickers);
-        std::stringstream sub;
+        mstring tickers = join_tickers(cfg.tickers);
+        my_stream sub;
         sub << "{\"type\":\"subscribe\",\"product_ids\": [" << tickers << "],\"channels\": [";
         if(cfg.orders)
             sub << "\"level2\",";
@@ -47,7 +47,7 @@ struct lws_i : lws_impl, read_time_impl
         skip_fixed(it, "{\"type\":\"");
         if(skip_if_fixed(it, "l2update\",\"product_id\":\""))
         {
-            iterator ne = std::find(it, ie, '\"');
+            iterator ne = find(it, ie, '\"');
             security& s = get_security(it, ne, time);
             it = ne + 1;
             skip_fixed(it, ",\"changes\":[[\"");
@@ -59,11 +59,11 @@ struct lws_i : lws_impl, read_time_impl
                 skip_fixed(it, "buy\",\"");
                 ask = false;
             }
-            ne = std::find(it, ie, '\"');
+            ne = find(it, ie, '\"');
             price_t p = read_price(it, ne);
             it = ne + 1;
             skip_fixed(it, ",\"");
-            ne = std::find(it, ie, '\"');
+            ne = find(it, ie, '\"');
             count_t c = read_count(it, ne);
             if(ask)
                 c.value = -c.value;
@@ -80,15 +80,15 @@ struct lws_i : lws_impl, read_time_impl
             my_unused(etime);
             skip_fixed(it, "Z\"}");
             if(unlikely(it != ie))
-                throw std::runtime_error(es() % "parsing message error: " % str_holder(in, ie - in));
+                throw mexception(es() % "parsing message error: " % str_holder(in, ie - in));
         }
         else if(skip_if_fixed(it, "match\",\"trade_id\":"))
         {
-            it = std::find(it, ie, ',') + 1;
+            it = find(it, ie, ',') + 1;
             skip_fixed(it, "\"maker_order_id\":\"");
-            it = std::find(it, ie, '\"') + 1;
+            it = find(it, ie, '\"') + 1;
             skip_fixed(it, ",\"taker_order_id\":\"");
-            it = std::find(it, ie, '\"') + 1;
+            it = find(it, ie, '\"') + 1;
             skip_fixed(it, ",\"side\":\"");
             int direction;
             if(skip_if_fixed(it, "sell\",\""))
@@ -98,34 +98,34 @@ struct lws_i : lws_impl, read_time_impl
                 direction = 2;
             }
             skip_fixed(it, "size\":\"");
-            iterator ne = std::find(it, ie, '\"');
+            iterator ne = find(it, ie, '\"');
             count_t c = read_count(it, ne);
             it = ne + 1;
             skip_fixed(it, ",\"price\":\"");
-            ne = std::find(it, ie, '\"');
+            ne = find(it, ie, '\"');
             price_t p = read_price(it, ne);
             it = ne + 1;
             skip_fixed(it, ",\"product_id\":\"");
-            ne = std::find(it, ie, '\"');
+            ne = find(it, ie, '\"');
             security& s = get_security(it, ne, time);
             it = ne + 1;
             skip_fixed(it, ",\"sequence\":");
-            it = std::find(it, ie, ',') + 1;
+            it = find(it, ie, ',') + 1;
             skip_fixed(it, "\"time\":\"");
             ttime_t etime = read_time<6>(it);
             skip_fixed(it, "Z\"}");
             if(unlikely(it != ie))
-                throw std::runtime_error(es() % "parsing message error: " % str_holder(in, ie - in));
+                throw mexception(es() % "parsing message error: " % str_holder(in, ie - in));
         
             s.proceed_trade(e, direction, p, c, etime, time);
         }
         else if(skip_if_fixed(it, "heartbeat\""))
         {
             if(ie - it > 120)
-                throw std::runtime_error(es() % "parsing message error: " % str_holder(in, ie - in));
+                throw mexception(es() % "parsing message error: " % str_holder(in, ie - in));
         }
         else if(skip_if_fixed(it, "error\""))
-            throw std::runtime_error(es() % "error message: " % str_holder(in, len));
+            throw mexception(es() % "error message: " % str_holder(in, len));
     }
 };
 

@@ -55,22 +55,22 @@ struct lws_i : sec_id_by_name<lws_impl>
     {
         //MPROFILE("parse_bbo")
 
-        it = std::find(it, ie, ',');
+        it = find(it, ie, ',');
         skip_fixed(it, ask);
-        iterator ne = std::find(it, ie, ',');
+        iterator ne = find(it, ie, ',');
         price_t ask_price = read_price(it, ne);
         skip_fixed(ne, askSize);
-        it = std::find(ne, ie, ',');
+        it = find(ne, ie, ',');
         count_t ask_count = read_count(ne, it);
         ask_count.value = -ask_count.value;
         skip_fixed(it, bid);
-        ne = std::find(it, ie, ',');
+        ne = find(it, ie, ',');
         price_t bid_price = read_price(it, ne);
         skip_fixed(ne, bidSize);
-        it = std::find(ne, ie, ',');
+        it = find(ne, ie, ',');
         count_t bid_count = read_count(ne, it);
 
-        it = std::find(it, ie, '}');
+        it = find(it, ie, '}');
         skip_fixed(it, end);
 
         add_order(i.security_id, 2, ask_price, ask_count, etime, time);
@@ -84,10 +84,10 @@ struct lws_i : sec_id_by_name<lws_impl>
         {
             for(;;) {
                 skip_fixed(it, "[");
-                iterator ne = std::find(it, ie, ',');
+                iterator ne = find(it, ie, ',');
                 price_t p = read_price(it, ne);
                 skip_fixed(ne, ",");
-                it = std::find(ne, ie, ']');
+                it = find(ne, ie, ']');
                 count_t c = read_count(ne, it);
                 if(a)
                     c.value = -c.value;
@@ -132,24 +132,24 @@ struct lws_i : sec_id_by_name<lws_impl>
     {
         add_clean(i.security_id, etime, time);
         parse_orders_impl(i, etime, time, it, ie);
-        it = std::find(it, ie, '}');
+        it = find(it, ie, '}');
         skip_fixed(it, end);
         send_messages();
     }
     void parse_trades(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie)
     {
-        it = std::find(it, ie, '[') + 1;
+        it = find(it, ie, '[') + 1;
         for(;;)
         {
             skip_fixed(it, id);
-            it = std::find(it, ie, ',');
-            it = std::find(it + 1, ie, ',');
-            it = std::find(it + 1, ie, ',');
+            it = find(it, ie, ',');
+            it = find(it + 1, ie, ',');
+            it = find(it + 1, ie, ',');
             skip_fixed(it, amount);
-            iterator ne = std::find(it, ie, ',');
+            iterator ne = find(it, ie, ',');
             count_t c = read_count(it, ne);
             skip_fixed(ne, price);
-            it = std::find(ne, ie, ',');
+            it = find(ne, ie, ',');
             price_t p = read_price(ne, it);
             skip_fixed(it, direction);
             uint32_t dir;
@@ -193,20 +193,20 @@ struct lws_i : sec_id_by_name<lws_impl>
         config& c = config::instance();
         for(auto& v: c.tickers) {
             if(c.snapshot) {
-                parsers[v + ".depth." + c.step] = impl(v, &lws_i::parse_snapshot);
-                subscribes.push_back("{\"sub\":\"market." + v + ".depth." + c.step + "\",\"id\":\"snapshot_" + v + "\"}");
+                parsers[(v + ".depth." + c.step).str()] = impl(v.str(), &lws_i::parse_snapshot);
+                subscribes.push_back(mstring("{\"sub\":\"market.") + v + ".depth." + c.step + "\",\"id\":\"snapshot_" + v + "\"}");
             }
             if(c.orders) {
-                parsers[v + ".mbp." + c.levels] = impl(v, &lws_i::parse_orders);
-                subscribes.push_back("{\"sub\":\"market." + v + ".mbp." + c.levels + "\",\"id\":\"orders_" + v + "\"}");
+                parsers[(v + ".mbp." + c.levels).str()] = impl(v.str(), &lws_i::parse_orders);
+                subscribes.push_back(mstring("{\"sub\":\"market.") + v + ".mbp." + c.levels + "\",\"id\":\"orders_" + v + "\"}");
             }
             if(c.bbo) {
-                parsers[v + ".bbo"] = impl(v, &lws_i::parse_bbo);
-                subscribes.push_back("{\"sub\":\"market." + v + ".bbo\",\"id\":\"bbo_" + v + "\"}");
+                parsers[(v + ".bbo").str()] = impl(v.str(), &lws_i::parse_bbo);
+                subscribes.push_back(mstring("{\"sub\":\"market.") + v + ".bbo\",\"id\":\"bbo_" + v + "\"}");
             }
             if(c.trades) {
-                parsers[v + ".trade.detail"] = impl(v, &lws_i::parse_trades);
-                subscribes.push_back("{\"sub\":\"market." + v + ".trade.detail\",\"id\":\"trades_" + v + "\"}");
+                parsers[(v + ".trade.detail").str()] = impl(v.str(), &lws_i::parse_trades);
+                subscribes.push_back(mstring("{\"sub\":\"market.") + v + ".trade.detail\",\"id\":\"trades_" + v + "\"}");
             }
         }
     }
@@ -218,17 +218,17 @@ struct lws_i : sec_id_by_name<lws_impl>
             mlog() << "lws proceed: " << str;
         iterator it = str.str, ie = str.str + str.size;
         if(unlikely(*it != '{' || *(it + 1) != '\"'))
-            throw std::runtime_error(es() % "bad message: " % str);
+            throw mexception(es() % "bad message: " % str);
         it = it + 2;
 
-        if(likely(std::equal(ch, ch + sizeof(ch) - 1, it)))
+        if(likely(equal(ch, ch + sizeof(ch) - 1, it)))
         {
             it = it + sizeof(ch) - 1;
-            iterator ne = std::find(it, ie, '\"');
+            iterator ne = find(it, ie, '\"');
             str_holder symbol(it, ne - it);
             auto i = parsers.find(symbol);
             if(unlikely(i == parsers.end()))
-                throw std::runtime_error(es() % "unknown symbol in market message: " % str);
+                throw mexception(es() % "unknown symbol in market message: " % str);
             if(unlikely(!i->second.security_id))
                 i->second.security_id = get_security_id(i->second.security.begin(), i->second.security.end(), time);
             ++ne;
@@ -238,21 +238,21 @@ struct lws_i : sec_id_by_name<lws_impl>
             skip_fixed(ne, tick);
             ((this)->*(i->second.f))(i->second, etime, time, ne, ie);
             if(ne != ie)
-                throw std::runtime_error(es() % "parsing market message error: " % str);
+                throw mexception(es() % "parsing market message error: " % str);
         }
-        else if(std::equal(ping, ping + sizeof(ping) - 1, it))
+        else if(equal(ping, ping + sizeof(ping) - 1, it))
         {
             it = it + sizeof(ping) - 1;
             if(unlikely(*(it + 13) != '}' || it + 14 != ie))
-                throw std::runtime_error(es() % "bad ping message: " % str);
+                throw mexception(es() % "bad ping message: " % str);
 
             bs << "{\"pong\":";
             bs.write(it, 13);
             bs << "}";
             send(wsi);
         }
-        else if(unlikely(std::equal(error, error + sizeof(error) - 1, it)))
-            throw std::runtime_error(es() % "error message: " % str);
+        else if(unlikely(equal(error, error + sizeof(error) - 1, it)))
+            throw mexception(es() % "error message: " % str);
         else {
             mlog(mlog::critical) << "unsupported message: " << str;
         }

@@ -6,20 +6,37 @@
 
 #include "myitoa.hpp"
 
-#include <string.h>
+#include <initializer_list>
+#include <type_traits>
+
+#include <stdlib.h>
 
 template<typename type>
 class mvector
 {
-    type* buf;
-    uint32_t size_, capacity_;
-
 protected:
+    type* buf;
+    uint64_t size_, capacity_;
+
     void __clear()
     {
         buf = nullptr;
         size_ = 0;
         capacity_ = 0;
+    }
+
+    static const bool have_destructor = !std::is_trivially_destructible<type>::value;
+
+    void __destroy(type* v)
+    {
+        if(have_destructor)
+            v->type::~type();
+    }
+    void __destroy(type* from, type* to)
+    {
+        if(have_destructor)
+            for(; from != to; ++from)
+                from->type::~type();
     }
 
 public:
@@ -30,10 +47,10 @@ public:
     mvector() {
         __clear();
     }
-    explicit mvector(uint32_t size) {
+    explicit mvector(uint64_t size) {
         __clear();
         resize(size);
-        memset(buf, 0, size * sizeof(type));
+        memset((void*)buf, 0, size * sizeof(type));
     }
     mvector(mvector&& r) {
         __clear();
@@ -61,11 +78,13 @@ public:
         insert(r.begin(), r.end());
         return *this;
     }
-    void resize(uint32_t new_size) {
+    void resize(uint64_t new_size) {
         if(new_size == size_)
             return;
-        if(new_size < size_)
+        if(new_size < size_) {
+            __destroy(begin() + new_size, begin() + size_);
             size_ = new_size;
+        }
         if(new_size <= capacity_)
         {
             memset((void*)(buf + size_), 0, (new_size - size_) * sizeof(type));
@@ -86,7 +105,7 @@ public:
         std::swap(size_, r.size_);
         std::swap(capacity_, r.capacity_);
     }
-    void reserve(uint32_t new_capacity) {
+    void reserve(uint64_t new_capacity) {
         if(new_capacity <= capacity_)
             return;
         void *new_ptr = realloc((void*)buf, new_capacity * sizeof(type));
@@ -98,13 +117,13 @@ public:
     void clear() {
         resize(0);
     }
-    uint32_t size() const {
+    uint64_t size() const {
         return size_;
     }
     bool empty() const {
         return !size_;
     }
-    uint32_t capacity() const {
+    uint64_t capacity() const {
         return capacity_;
     }
     const_iterator begin() const {
@@ -129,6 +148,10 @@ public:
             --ptr;
             return *this;
         }
+        reverse_iterator operator+(int64_t c) const
+        {
+            return reverse_iterator({ptr - c});
+        }
         const type& operator*()
         {
             return *ptr;
@@ -152,13 +175,30 @@ public:
         return reverse_iterator({begin() - 1});
     }
     ~mvector() {
+        __destroy(begin(), end());
         free(buf);
     }
-    type& operator[](uint32_t elem) {
+    type& operator[](uint64_t elem) {
         return begin()[elem];
     }
-    const type& operator[](uint32_t elem) const {
+    const type& operator[](uint64_t elem) const {
         return begin()[elem];
+    }
+    type& at(uint64_t elem) {
+        if(elem >= size_)
+            throw str_exception("mvector<>::at()");
+        return begin()[elem];
+    }
+    const type& at(uint64_t elem) const{
+        if(elem >= size_)
+            throw str_exception("mvector<>::at()");
+        return begin()[elem];
+    }
+    type& back() {
+        return begin()[size_ - 1];
+    }
+    const type& back() const {
+        return begin()[size_ - 1];
     }
     bool operator==(const mvector& r) const {
         if(size_ == r.size_)
@@ -168,39 +208,90 @@ public:
     bool operator!=(const mvector& r) const {
         return !(*this == r);
     }
-    iterator insert(iterator it, const type& v) {
+    void __insert_impl(iterator& it)
+    {
         if(size_ == capacity_) {
-            uint32_t pos = it - buf;
+            uint64_t pos = it - buf;
             reserve(capacity_ ? capacity_ * 2 : 32);
             it = &buf[pos];
         }
         memmove((void*)(it + 1), it, (end() - it) * sizeof(type));
+        if(have_destructor)
+            memset((void*)it, 0, sizeof(type));
+    }
+    iterator insert(iterator it, type&& v) {
+        __insert_impl(it);
+        *it = std::move(v);
+        ++size_;
+        return it;
+    }
+    iterator insert(iterator it, const type& v) {
+        __insert_impl(it);
         *it = v;
         ++size_;
         return it;
     }
     void insert(const type* from, const type* to) {
-        uint32_t size = size_;
+        uint64_t size = size_;
         resize(size_ + (to - from));
-        memmove((void*)&buf[size], from, (to - from) * sizeof(type));
+        if(have_destructor) {
+            for(iterator it = begin() + size; from != to; ++from, ++it)
+                *it = *from;
+        }
+        else
+            memmove((void*)&buf[size], from, (to - from) * sizeof(type));
     }
-    void push_back(const type& v) {
+    void __push_back_impl()
+    {
         if(size_ == capacity_)
             reserve(capacity_ ? capacity_ * 2 : 32);
+        if(have_destructor)
+            memset((void*)(buf + size_), 0, sizeof(type));
+    }
+    void push_back(type&& v) {
+        __push_back_impl();
+        buf[size_] = std::move(v);
+        ++size_;
+    }
+    void push_back(const type& v) {
+        __push_back_impl();
         buf[size_] = v;
         ++size_;
     }
+    void pop_back()
+    {
+        resize(size_ - 1);
+    }
     void erase(iterator it) {
+        __destroy(it);
         memmove((void*)it, it + 1, ((end() - it) - 1) * sizeof(type));
         --size_;
     }
     void erase(iterator from, iterator to) {
+        __destroy(from, to);
         memmove((void*)from, to, (end() - to) * sizeof(type));
         size_ -= to - from;
     }
 };
 
 template<typename type>
+void pvector_free(type* ptr)
+{
+    delete ptr;
+}
+
+template<typename type>
+void pvector_free_array(type* ptr)
+{
+    delete[] ptr;
+}
+
+namespace std
+{
+    struct random_access_iterator_tag;
+};
+
+template<typename type, void (*free)(type*) = pvector_free<type> >
 struct pvector : mvector<type*>
 {
     struct iterator
@@ -296,10 +387,10 @@ struct pvector : mvector<type*>
         static_cast<base&>(*this) = std::move(r);
         return *this;
     }
-    type& operator[](uint32_t elem) {
+    type& operator[](uint64_t elem) {
         return *(base::begin()[elem]);
     }
-    const type& operator[](uint32_t elem) const{
+    const type& operator[](uint64_t elem) const{
         return *(base::begin()[elem]);
     }
     iterator insert(iterator it, type* v) {
@@ -320,7 +411,7 @@ struct pvector : mvector<type*>
     }
     void erase(iterator from, iterator to) {
         for(auto it = from.it; it != to.it; ++it)
-            delete *it;
+            free(*it);
         base::erase(from.it, to.it);
     }
     void erase(iterator it) {
@@ -331,6 +422,40 @@ struct pvector : mvector<type*>
     }
 
 private:
-    void resize(uint32_t new_size);
+    void resize(uint64_t new_size);
+};
+
+template<typename type>
+struct pavector : pvector<type, pvector_free_array>
+{
+    typedef pvector<type, pvector_free_array> base;
+
+    type* operator[](uint64_t elem) {
+        return &(static_cast<base&>(*this))[elem];
+    }
+    type** array()
+    {
+        return this->buf;
+    }
+};
+
+struct mexception : std::exception
+{
+    mvector<char> msg;
+
+    mexception(str_holder str)
+    {
+        msg.reserve(str.size + 1);
+        msg.insert(str.str, str.str + str.size);
+        msg.push_back(char());
+    }
+    mexception(const char* str)
+        : mexception(str_holder(str, strlen(str)))
+    {
+    }
+    const char* what() const noexcept
+    {
+        return msg.begin();
+    }
 };
 

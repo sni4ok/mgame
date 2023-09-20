@@ -16,8 +16,8 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
     lws_i() : cfg(config::instance()), orders_table(cfg.orders_table.c_str(),
         cfg.orders_table.size()), trades_table("trade"), etime()
     {
-        std::string sb = "{\"op\":\"subscribe\",\"args\":\"";
-        std::string se = "\"}";
+        mstring sb("{\"op\":\"subscribe\",\"args\":\"");
+        mstring se("\"}");
 
         for(auto& v: cfg.tickers) {
             //subscribes.push_back(sb + "instrument:" + v + se);
@@ -34,10 +34,10 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
         for(;;)
         {
             skip_fixed(it, "[");
-            iterator ne = std::find(it, ie, ',');
+            iterator ne = find(it, ie, ',');
             price_t p = read_price(it, ne);
             it = ne + 1;
-            ne = std::find(it, ie, ']');
+            ne = find(it, ie, ']');
             count_t c = read_count(it, ne);
             if(ask)
                 c.value = -c.value;
@@ -62,7 +62,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
         skip_fixed(it, "{\"");
         if(skip_if_fixed(it, "table\":\""))
         {
-            iterator ne = std::find(it, ie, '\"');
+            iterator ne = find(it, ie, '\"');
             str_holder table(it, ne - it);
             it = ne;
             if(table == orders_table)
@@ -72,14 +72,14 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                 for(;;)
                 {
                     skip_fixed(it, "\"symbol\":\"");
-                    ne = std::find(it, ie, '\"');
+                    ne = find(it, ie, '\"');
                     uint32_t security_id = get_security_id(it, ne, time);
                     it = ne + 1;
                     skip_fixed(it, ",\"");
 
                     if(skip_if_fixed(it, "id\":"))
                     {
-                        ne = std::find(it, ie, ',');
+                        ne = find(it, ie, ',');
                         uint64_t id  = my_cvt::atoi<uint64_t>(it, ne - it);
                         it = ne + 1;
                         skip_fixed(it, "\"side\":\"");
@@ -93,7 +93,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                         skip_fixed(it, "\"");
                         count_t c = count_t();
                         if(skip_if_fixed(it, ",\"size\":")) {
-                            ne = std::find_if(it, ie, [](char c) {return c == '}' || c == ',';});
+                            ne = find_if(it, ie, [](char c) {return c == '}' || c == ',';});
                             c = read_count(it, ne);
                             if(ask)
                                 c.value = -c.value;
@@ -102,7 +102,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                         price_t p = price_t();
                         if(skip_if_fixed(it, ",\"price\":"))
                         {
-                            ne = std::find(it, ie, ',');
+                            ne = find(it, ie, ',');
                             p = read_price(it, ne);
                             it = ne;
                         }
@@ -111,7 +111,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                             etime = read_time<3>(it);
                             skip_fixed(it, "Z\"");
                         }
-                        it = std::find(ne, ie, '}');
+                        it = find(ne, ie, '}');
                         skip_fixed(it, "}");
                         add_order(security_id, id, p, c, etime, time);
                         if(skip_if_fixed(it, "]}"))
@@ -147,7 +147,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                                 }
                                 send_messages();
                                 if(unlikely(it != ie))
-                                    throw std::runtime_error(es() % "parsing message error: " % str_holder(in, len));
+                                    throw mexception(es() % "parsing message error: " % str_holder(in, len));
                                 return;
                             }
                         }
@@ -155,7 +155,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                 }
                 send_messages();
                 if(unlikely(it != ie))
-                    throw std::runtime_error(es() % "parsing message error: " % str_holder(in, len));
+                    throw mexception(es() % "parsing message error: " % str_holder(in, len));
             }
             else if(table == trades_table)
             {
@@ -170,7 +170,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                     skip_fixed(it, "{\"timestamp\":\"");
                     etime = read_time<3>(it);
                     skip_fixed(it, "Z\",\"symbol\":\"");
-                    ne = std::find(it, ie, '\"');
+                    ne = find(it, ie, '\"');
                     uint32_t security_id = get_security_id(it, ne, time);
                     it = ne + 1;
                     str_holder side = read_named_value(",\"side\":\"", it, ie, '\"', read_str);
@@ -180,11 +180,11 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                     else if(side == str_holder("Sell"))
                         direction = 2;
                     else
-                        throw std::runtime_error(es() % "unknown trade direction in message: " % str_holder(in, len));
+                        throw mexception(es() % "unknown trade direction in message: " % str_holder(in, len));
                     count_t c = read_named_value(",\"size\":", it, ie, ',', read_count);
                     price_t p = read_named_value("\"price\":", it, ie, ',', read_price);
                     add_trade(security_id, p, c, direction, etime, time);
-                    it = std::find(it, ie, '}');
+                    it = find(it, ie, '}');
                     skip_fixed(it, "}");
                     if(*it == ',') {
                         ++it;
@@ -198,18 +198,18 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
             }
             else
             {
-                throw std::runtime_error(es() % "unknown table name: " % str_holder(in, len));
+                throw mexception(es() % "unknown table name: " % str_holder(in, len));
             }
             if(unlikely(it != ie))
-                throw std::runtime_error(es() % "parsing message error: " % str_holder(in, len));
+                throw mexception(es() % "parsing message error: " % str_holder(in, len));
         }
         else if(skip_if_fixed(it, "success\""))
         {
-            mlog(mlog::info) << str_holder(in, len);
+            mlog(mlog::info) << "" << str_holder(in, len);
         }
         else if(skip_if_fixed(it, "info\""))
         {
-            mlog(mlog::info) << str_holder(in, len);
+            mlog(mlog::info) << "" << str_holder(in, len);
         }
         else
         {

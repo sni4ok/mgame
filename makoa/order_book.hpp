@@ -20,7 +20,7 @@ struct order_book
             m.security_id = mb.security_id;
             m.price = mb.price;
         } else if(unlikely(m.security_id != mb.security_id))
-            throw std::runtime_error(es() % "order_book cross securities detected, old: " % m.security_id % ", new: " % mb.security_id);
+            throw mexception(es() % "order_book cross securities detected, old: " % m.security_id % ", new: " % mb.security_id);
 
         assert(m.price.value);
         message_book& o = orders_p[m.price];
@@ -61,7 +61,7 @@ struct order_book
             orders_p.clear();
         }
         else
-            throw std::runtime_error(es() % "order_book::proceed() unsupported message type: " % m.id.id);
+            throw mexception(es() % "order_book::proceed() unsupported message type: " % m.id.id);
     }
 
     std::map<int64_t, message_book> orders_l;
@@ -146,7 +146,7 @@ struct order_book_ba
             m.price = mb.price;
         }
         else if(unlikely(m.security_id != mb.security_id))
-            throw std::runtime_error(es() % "order_book_ba cross securities detected, old: " % m.security_id % ", new: " % mb.security_id);
+            throw mexception(es() % "order_book_ba cross securities detected, old: " % m.security_id % ", new: " % mb.security_id);
         const price_t& price = mb.price.value ? mb.price : m.price;
 
         if(mb.price.value == m.price.value || !mb.price.value)
@@ -179,7 +179,7 @@ struct order_book_ba
             bids.clear();
         }
         else
-            throw std::runtime_error(es() % "order_book::proceed() unsupported message type: " % m.id.id);
+            throw mexception(es() % "order_book::proceed() unsupported message type: " % m.id.id);
     }
     ~order_book_ba()
     {

@@ -2,22 +2,27 @@
     author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
-#include "mmap.hpp"
 #include "imports.hpp"
+#include "mmap.hpp"
 
 #include "evie/socket.hpp"
+#include "evie/fmap.hpp"
+#include "evie/utils.hpp"
+#include "evie/thread.hpp"
 #include "evie/profiler.hpp"
-#include "evie/mutex.hpp"
+#include "evie/smart_ptr.hpp"
 
-#include <map>
-
-#include <fcntl.h>
 #include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <poll.h>
 
-std::pair<void*, str_holder> import_context_create(void* params);
-void import_context_destroy(std::pair<void*, str_holder> ctx);
+#include <thread>
+#include <cerrno>
+
+pair<void*, str_holder> import_context_create(void* params);
+void import_context_destroy(pair<void*, str_holder> ctx);
 bool import_proceed_data(str_holder& buf, void* ctx);
 
 template<typename reader_state>
@@ -27,7 +32,7 @@ struct reader : noncopyable
 
     reader_state socket;
     func read;
-    std::pair<void*, str_holder> ctx;
+    pair<void*, str_holder> ctx;
     time_t recv_time;
 
     bool proceed()
@@ -82,7 +87,7 @@ uint32_t mmap_cp_read(void *v, char* buf, uint32_t buf_size)
     uint8_t w = mmap_load(f);
     uint8_t r = mmap_load(f + 1);
     if(unlikely(w < 2 || w >= message_size || r < 2 || r >= message_size))
-        throw std::runtime_error(es() % "mmap_cp_read() internal error, wp: " % uint32_t(w) % ", rp: " % uint32_t(r));
+        throw mexception(es() % "mmap_cp_read() internal error, wp: " % uint32_t(w) % ", rp: " % uint32_t(r));
 
     i += r;
     const message* p = (((const message*)v) + 1) + (r - 2) * 255;
@@ -90,7 +95,7 @@ uint32_t mmap_cp_read(void *v, char* buf, uint32_t buf_size)
     if(cur_count)
     {
         if(unlikely(buf_size < cur_count))
-            throw std::runtime_error(es() % "mmap_cp_read() buf_size too small, wp: " % uint32_t(w) %
+            throw mexception(es() % "mmap_cp_read() buf_size too small, wp: " % uint32_t(w) %
                 ", rp: " % uint32_t(r) % ", buf_size: " % buf_size % ", cur_count: " % cur_count);
         memcpy(buf, p, uint32_t(cur_count) * message_size);
         mmap_store(i, 0);
@@ -106,20 +111,20 @@ uint32_t mmap_cp_read(void *v, char* buf, uint32_t buf_size)
 struct import_mmap_cp
 {
     volatile bool& can_run;
-    std::vector<std::string> params;
+    mvector<mstring> params;
     bool pooling_mode;
 
-    import_mmap_cp(volatile bool& can_run, const std::string& params) : can_run(can_run)
+    import_mmap_cp(volatile bool& can_run, const mstring& params) : can_run(can_run)
     {
         this->params = split(params, ' ');
         if(this->params.size() != 2)
-            throw std::runtime_error(es() % " import_mmap_cp() required 2 params (fname,pooling_mode): " % params);
+            throw mexception(es() % " import_mmap_cp() required 2 params (fname,pooling_mode): " % params);
         pooling_mode = lexical_cast<bool>(this->params[1]);
     }
-    std::unique_ptr<void, decltype(&mmap_close)> init() const
+    unique_ptr<void, mmap_close> init() const
     {
         void* p = mmap_create(params[0].c_str(), true);
-        std::unique_ptr<void, decltype(&mmap_close)> ptr(p, &mmap_close);
+        unique_ptr<void, &mmap_close> ptr(p);
         shared_memory_sync* s = get_smc(p);
         mmap_store(&s->pooling_mode, pooling_mode ? 1 : 2);
 
@@ -133,7 +138,7 @@ struct import_mmap_cp
             uint8_t rc = mmap_load(r);
             if((rc != 1 && rc != 0) || wc == 1) {
                 mmap_store(w, 0);
-                throw std::runtime_error(es() % "mmap inconsistence, wp: " % wc % ", rp: " % rc);
+                throw mexception(es() % "mmap inconsistence, wp: " % wc % ", rp: " % rc);
             }
             initialized = (wc == 2 && rc == 1);
             if(!initialized)
@@ -167,7 +172,7 @@ void import_mmap_cp_start(void* imc, void* params)
                     uint8_t rc = *r;
                     if(rc < 2) {
                         pthread_mutex_unlock(&(s->mutex));
-                        throw std::runtime_error(es() % "mmap inconsistence 2, rp: " % rc);
+                        throw mexception(es() % "mmap inconsistence 2, rp: " % rc);
                     }
                     uint8_t count = mmap_load(w + rc);
                     if(!count)
@@ -182,9 +187,9 @@ void import_mmap_cp_start(void* imc, void* params)
 struct import_pipe
 {
     volatile bool& can_run;
-    std::string params;
+    mstring params;
 
-    import_pipe(volatile bool& can_run, const std::string& params) : can_run(can_run), params(params)
+    import_pipe(volatile bool& can_run, const mstring& params) : can_run(can_run), params(params)
     {
     }
 };
@@ -203,7 +208,7 @@ void work_thread_reader(reader<int>& r, volatile bool& can_run, uint32_t timeout
         if(ret == 0) {
             //timeout here
             if(time(NULL) > r.recv_time + timeout)
-                throw std::runtime_error("feed timeout");
+                throw str_exception("feed timeout");
             continue;
         }
         if(!r.proceed())
@@ -231,13 +236,13 @@ void import_pipe_start(void* c, void* p)
 struct import_tcp
 {
     volatile bool& can_run;
-    std::string params;
+    mstring params;
     uint16_t port;
     uint32_t count;
     my_mutex mutex;
     my_condition cond;
 
-    import_tcp(volatile bool& can_run, const std::string& params) : can_run(can_run), params(params), port(lexical_cast<uint16_t>(params)), count()
+    import_tcp(volatile bool& can_run, const mstring& params) : can_run(can_run), params(params), port(lexical_cast<uint16_t>(params)), count()
     {
     }
     ~import_tcp()
@@ -248,7 +253,7 @@ struct import_tcp
     }
 };
 
-void import_tcp_thread(import_tcp* it, int socket, std::string client, volatile bool& initialized, void* p)
+void import_tcp_thread(import_tcp* it, int socket, mstring client, volatile bool& initialized, void* p)
 {
     try {
         socket_holder ss(socket);
@@ -258,7 +263,7 @@ void import_tcp_thread(import_tcp* it, int socket, std::string client, volatile 
         if(it->count == max_connections)
             mlog(mlog::warning) << "server(" << it->params << ") max_connections exceed on client " << client;
         if(it->count > max_connections)
-            throw std::runtime_error("limit connections exceed");
+            throw str_exception("limit connections exceed");
         it->cond.notify_all();
         lock.unlock();
         mlog() << "server() thread for " << client << " started";
@@ -277,7 +282,7 @@ void import_tcp_start(void* c, void* p)
 {
     import_tcp& it = *((import_tcp*)(c));
     while(it.can_run) {
-        std::string client;
+        mstring client;
         my_mutex::scoped_lock lock(it.mutex);
         while(it.can_run && it.count >= max_connections)
             it.cond.timed_uwait(lock, 50 * 1000);
@@ -301,7 +306,7 @@ struct import_ifile
     volatile bool& can_run;
     void* ptr;
 
-    import_ifile(volatile bool& can_run, const std::string& params) : can_run(can_run)
+    import_ifile(volatile bool& can_run, const mstring& params) : can_run(can_run)
     {
         ptr = ifile_create(params.c_str(), can_run);
     }
@@ -325,7 +330,7 @@ void import_ifile_start(void* c, void* p)
 template<typename type>
 void* importer_init(volatile bool& can_run, const char* params)
 {
-    return (void*)(new type(can_run, params));
+    return (void*)(new type(can_run, mstring(params)));
 }
 
 template<typename type>
@@ -334,13 +339,14 @@ void importer_destroy(void* ptr)
     delete (type*)ptr;
 }
 
-std::map<std::string, hole_importer> _importers;
+fmap<mstring, hole_importer> _importers;
 
-uint32_t register_importer(const std::string& name, hole_importer hi)
+int register_importer(const char* s, hole_importer hi)
 {
+    mstring name(s);
     auto it = _importers.find(name);
     if(it != _importers.end())
-        throw std::runtime_error(es() % "register_importer() double registration for " % name);
+        throw mexception(es() % "register_importer() double registration for " % name);
     _importers[name] = hi;
     return _importers.size();
 }
@@ -358,11 +364,12 @@ static const int _import_file = register_importer("file",
     {importer_init<import_ifile>, importer_destroy<import_ifile>, import_ifile_start, nullptr}
 );
 
-hole_importer create_importer(const char* name)
+hole_importer create_importer(const char* s)
 {
+    mstring name(s);
     auto it = _importers.find(name);
     if(it == _importers.end())
-        throw std::runtime_error(es() % "import " % _str_holder(name) % " not registered");
+        throw mexception(es() % "import " % name % " not registered");
     return it->second;
 }
 
