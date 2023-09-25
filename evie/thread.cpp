@@ -3,7 +3,9 @@
 */
 
 #include "thread.hpp"
+#include "atomic.hpp"
 #include "mlog.hpp"
+#include "smart_ptr.hpp"
 
 #include <pthread.h>
 
@@ -104,11 +106,6 @@ void my_condition::notify_all()
 
 uint32_t thread_tss_id = 0;
 
-inline uint32_t atomic_inc_tss()
-{
-    return __atomic_add_fetch(&thread_tss_id, uint32_t(1), __ATOMIC_RELAXED);
-}
-
 static pthread_key_t key;
 static pthread_once_t key_once = PTHREAD_ONCE_INIT;
 
@@ -123,7 +120,7 @@ int get_thread_id()
     pthread_once(&key_once, make_key);
     if((ptr = pthread_getspecific(key)) == NULL)
     {
-        ptr = new int(atomic_inc_tss());
+        ptr = new int(atomic_add(thread_tss_id, 1));
         pthread_setspecific(key, ptr);
     }
     return *((int*)ptr);
@@ -161,5 +158,73 @@ void set_significant_thread()
     }
     if(pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset))
         mlog(mlog::critical) << "pthread_setaffinity_np() error";
+}
+
+void* thread_f(void *p)
+{
+    unique_ptr<thread_func> f(reinterpret_cast<thread_func*>(p));
+    f->run();
+    return nullptr;
+}
+
+uint64_t thread_create(thread_func* p)
+{
+    uint64_t tid = 0;
+    int ret = pthread_create(&tid, nullptr, &thread_f, p);
+    if(ret)
+        throw str_exception("pthread_create error");
+    return tid;
+}
+
+thread::thread() : tid()
+{
+}
+
+thread::~thread()
+{
+}
+
+thread::thread(thread&& r)
+{
+    tid = r.tid;
+    r.tid = 0;
+}
+
+thread& thread::operator=(thread&& r)
+{
+    if(tid)
+        throw str_exception("thread already initialized");
+    tid = r.tid;
+    r.tid = 0;
+    return *this;
+}
+
+void thread::swap(thread& r)
+{
+    uint64_t t = tid;
+    tid = r.tid;
+    r.tid = t;
+}
+
+bool thread::joinable() const
+{
+    return !!tid;
+}
+
+void thread::join()
+{
+    if(!tid)
+        return;
+    if(pthread_join(tid, 0))
+    {
+        tid = 0;
+        throw str_exception("thread::join error");
+    }
+    tid = 0;
+}
+
+void thread::detach()
+{
+    pthread_detach(tid);
 }
 

@@ -11,9 +11,6 @@
 #include "evie/smart_ptr.hpp"
 #include "evie/fast_alloc.hpp"
 
-#include <vector>
-#include <thread>
-
 bool pooling_mode = false;
 
 struct messages
@@ -25,7 +22,7 @@ struct messages
     message _;
     message m[255];
     uint32_t count;
-    std::atomic<uint32_t> cnt;
+    uint32_t cnt; //atomic
 };
 
 struct linked_node : messages
@@ -40,7 +37,7 @@ struct linked_node : messages
 class linked_list : public fast_alloc<linked_node, 4 * 1024>
 {
     linked_node root;
-    std::atomic<linked_node*> tail;
+    linked_node* tail; //atomic
     
 public:
     linked_list() : fast_alloc("messages_linked_list", 2 * 1024), tail(&root)
@@ -49,7 +46,7 @@ public:
     void push(linked_node* t) //push element in list, always success
     {
         linked_node* expected = tail;
-        while(!tail.compare_exchange_weak(expected, t))
+        while(!atomic_compare_exchange(tail, expected, t))
             expected = tail;
 
         expected->next = t;
@@ -62,7 +59,7 @@ public:
     }
     void release_node(linked_list::type* node)
     {
-        uint32_t consumers_left = --(node->cnt);
+        uint32_t consumers_left = atomic_sub(node->cnt, 1);
         if(!consumers_left)
         {
             node->next = nullptr;
@@ -121,7 +118,7 @@ public:
     type& insert(uint32_t security_id)
     {
         tmp = {security_id, ttime_t(), false};
-        auto it = std::lower_bound(data.begin(), data.end(), tmp);
+        auto it = lower_bound(data.begin(), data.end(), tmp, less<type>());
         if(unlikely(it != data.end() && it->security_id == security_id)) {
             //if(!it->disconnected)
             //    throw mexception(es() % "activites, security_id " % security_id % " already in active list");
@@ -141,7 +138,7 @@ public:
             return *last_value;
 
         tmp.security_id = security_id;
-        auto it = std::lower_bound(data.begin(), data.end(), tmp);
+        auto it = lower_bound(data.begin(), data.end(), tmp, less<type>());
         if(unlikely(it == data.end() || it->security_id != security_id))
             throw mexception(es() % "activites, security_id " % security_id % " not found in active list");
 
@@ -198,7 +195,7 @@ class engine::impl : public stack_singleton<engine::impl>
     volatile bool can_exit;
     my_mutex mutex;
     my_condition cond;
-    std::vector<std::thread> threads;
+    mvector<thread> threads;
     linked_list ll;
     uint32_t consumers;
 
@@ -296,7 +293,7 @@ class engine::impl : public stack_singleton<engine::impl>
     }
     static void log_and_throw_error(const char* data, uint32_t size, str_holder reason)
     {
-        mlog() << "bad message (" << reason << "!): " << print_binary((const uint8_t*)data, std::min<uint32_t>(32, size));
+        mlog() << "bad message (" << reason << "!): " << print_binary((const uint8_t*)data, min<uint32_t>(32, size));
         throw mexception(reason);
     }
 
@@ -340,7 +337,7 @@ public:
             ies.push(new imple(can_run, ll, e));
 
         for(uint32_t i = 0; i != export_threads; ++i)
-            threads.push_back(std::thread(&impl::work_thread, this));
+            threads.push_back(thread(&impl::work_thread, this));
     }
     bool proceed(str_holder& buf, context* ctx)
     {
@@ -421,7 +418,7 @@ public:
         uint32_t count = secs.size();
         for(uint32_t ci = 0; ci != count;)
         {
-            uint32_t cur_c = std::min<uint32_t>(count - ci, sizeof(messages::m) / message_size);
+            uint32_t cur_c = min<uint32_t>(count - ci, sizeof(messages::m) / message_size);
             linked_node* n = ll.alloc();
             set_export_mtime(n->m);
             n->count = cur_c;

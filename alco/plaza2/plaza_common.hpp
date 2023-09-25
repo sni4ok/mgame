@@ -180,7 +180,7 @@ struct cg_listener_h
     {
         last_call_time = time(NULL);
     }
-    cg_listener_h(cg_conn_h& conn, const mstring& name, const mstring cli_listener, plaza_func func, void* func_state = 0, mstring def_state = mstring())
+    cg_listener_h(cg_conn_h& conn, const char* name, const char* cli_listener, plaza_func func, void* func_state = 0, mstring def_state = mstring())
         : listener(), conn(conn), closed(true), name(name), cli_listener(cli_listener), func(func), func_state(func_state), def_state(def_state)
     {
         set_call();

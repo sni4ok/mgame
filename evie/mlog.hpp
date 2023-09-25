@@ -6,6 +6,7 @@
 
 #include "myitoa.hpp"
 #include "mtime.hpp"
+#include "smart_ptr.hpp"
 
 class simple_log;
 
@@ -152,20 +153,8 @@ private:
     data buf;
 };
 
-struct log_holder
-{
-    simple_log *ptr;
-
-    log_holder(simple_log *ptr);
-    log_holder(log_holder&& r);
-    log_holder& operator=(log_holder&& r);
-    log_holder& operator=(const log_holder&) = delete;
-    simple_log* get();
-    simple_log* operator->();
-    ~log_holder();
-};
-
-log_holder log_init(const char* file_name = 0, uint32_t params = 0, bool set_log_instance = true);
+void simple_log_free(simple_log* ptr);
+unique_ptr<simple_log, simple_log_free> log_init(const char* file_name = 0, uint32_t params = 0, bool set_log_instance = true);
 simple_log* log_get();
 void log_set(simple_log* sl);
 uint32_t& log_params();

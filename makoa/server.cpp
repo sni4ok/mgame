@@ -11,9 +11,6 @@
 
 #include <unistd.h>
 
-#include <vector>
-#include <thread>
-
 extern bool pooling_mode;
 
 server::impl* server_impl = nullptr;
@@ -22,7 +19,7 @@ struct server::impl
 {
     volatile bool& can_run;
     bool quit_on_exit;
-    std::vector<std::thread> threads;
+    mvector<thread> threads;
     fmap<int, pair<hole_importer, void*> > imports;
     my_mutex mutex;
     my_condition cond;
@@ -85,7 +82,7 @@ struct server::impl
             if(i.size() > 7 && str_holder(i.begin(), i.begin() + 7) == "mmap_cp")
                 i = i + (pooling_mode ? " 1" : " 0");
 
-            threads.push_back(std::thread(&impl::import_thread, this, std::ref(count), i));
+            threads.push_back(thread(&impl::import_thread, this, ref(count), i));
         }
         while(count != imports.size())
         {

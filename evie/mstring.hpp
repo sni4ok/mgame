@@ -147,3 +147,5 @@ type lexical_cast(const mstring& str)
     return lexical_cast<type>(str.begin(), str.end());
 }
 
+mstring operator+(str_holder l, const mstring& r);
+

@@ -54,6 +54,12 @@ struct buf_stream
     {
         return str_holder(begin(), size());
     }
+    const char* c_str()
+    {
+        check_size(1);
+        *cur = char();
+        return from;
+    }
     bool empty() const
     {
         return cur == from;
@@ -261,7 +267,7 @@ public:
         ++sz;
         return it;
     }
-    void insert(iterator it, iterator from, iterator to)
+    void insert(iterator it, char_cit from, char_cit to)
     {
         uint32_t delta_sz = to - from;
         if(unlikely(sz + delta_sz > stack_sz - 1))

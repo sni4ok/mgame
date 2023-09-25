@@ -65,7 +65,7 @@ struct parser : emessages, stack_singleton<parser>
     }
     void init_tickers(volatile bool& can_run)
     {
-        cg_listener_h instruments(conn, mstring("instruments"), mstring(cfg_cli_instruments), instruments_callback, &tickers);
+        cg_listener_h instruments(conn, "instruments", cfg_cli_instruments, instruments_callback, &tickers);
         if(!conn.cli)
             conn.connect(can_run);
         instruments.open();
@@ -90,8 +90,8 @@ struct parser : emessages, stack_singleton<parser>
             v.second.proceed_clean(e);
     }
     parser() : emessages(config::instance().push), tickers_initialized(), conn(config::instance().cli_conn_recv),
-        orders(conn, mstring("orders"), mstring(cfg_cli_orders), orders_callback, &tickers),
-        trades(conn, mstring("trades"), mstring(cfg_cli_trades), trades_callback, &tickers)
+        orders(conn, "orders", cfg_cli_orders, orders_callback, &tickers),
+        trades(conn, "trades", cfg_cli_trades, trades_callback, &tickers)
     {
         mstring env = mstring("ini=./plaza_recv.ini;key=") + config::instance().key;
         mlog() << "cg_env_open " << env;

@@ -4,15 +4,12 @@
 
 #include "utils.hpp"
 #include "thread.hpp"
-#include "smart_ptr.hpp"
 #include "fast_alloc.hpp"
-
-#include <thread>
-#include <vector>
-#include <iostream>
 
 #include <sys/stat.h>
 #include <fcntl.h>
+
+#include "stdio.h"
 
 namespace
 {
@@ -52,16 +49,16 @@ namespace
 
 void cout_write(str_holder str, bool flush)
 {
-    std::cout << str;
+    fwrite(str.str, 1, str.size, stdout);
     if(flush)
-        std::cout.flush();
+        fflush(stdout);
 }
 
 void cerr_write(str_holder str, bool flush)
 {
-    std::cerr << str;
+    fwrite(str.str, 1, str.size, stderr);
     if(flush)
-        std::cerr.flush();
+        fflush(stderr);
 }
 
 class simple_log
@@ -104,7 +101,7 @@ class simple_log
             uint32_t cntr = 128;
             for(;;)
             {
-                uint32_t all_sz = all_size - writed_sz;
+                uint32_t all_sz = atomic_load(all_size) - writed_sz;
                 for(uint32_t cur_i = 0; cur_i != all_sz; ++cur_i)
                 {
                     nodes.pop_strong(data);
@@ -143,8 +140,8 @@ class simple_log
 
     unique_ptr<ofile> stream, stream_crit;
     volatile bool can_run;
-    std::thread work_thread;
-    std::atomic<uint32_t> all_size;
+    thread work_thread;
+    uint32_t all_size;
     string_pool pool;
     static simple_log* log;
 
@@ -204,7 +201,7 @@ public:
     void write(const mlog::data& buf)
     {
         nodes.push(buf);
-        ++all_size;
+        atomic_add(all_size, 1);
     }
 };
 
@@ -213,40 +210,14 @@ void mlog::set_no_cout()
     simple_log::instance().no_cout = true;
 }
 
-log_holder::log_holder(simple_log *ptr) : ptr(ptr)
-{
-}
-
-log_holder::log_holder(log_holder&& r)
-{
-    ptr = r.ptr;
-    r.ptr = nullptr;
-}
-
-log_holder& log_holder::operator=(log_holder&& r)
-{
-    std::swap(ptr, r.ptr);
-    return *this;
-}
-
-simple_log* log_holder::get()
-{
-    return ptr;
-}
-
-simple_log* log_holder::operator->()
-{
-    return ptr;
-}
-
-log_holder::~log_holder()
+void simple_log_free(simple_log* ptr)
 {
     delete ptr;
 }
 
-log_holder log_init(const char* file_name, uint32_t params, bool set_instance)
+unique_ptr<simple_log, simple_log_free> log_init(const char* file_name, uint32_t params, bool set_instance)
 {
-    log_holder log(new simple_log());
+    unique_ptr<simple_log, simple_log_free> log(new simple_log());
     log->init(file_name, params);
     if(set_instance)
         log->set_instance(log.get());
@@ -314,7 +285,7 @@ void mlog::write_string(const char* it, uint32_t size)
 {
     while(size)
     {
-        uint32_t cur_write = std::min(size, buf_size - buf.tail->size);
+        uint32_t cur_write = min(size, buf_size - buf.tail->size);
         my_fast_copy(it, cur_write, &buf.tail->buf[buf.tail->size]);
         buf.tail->size += cur_write;
         it += cur_write;
@@ -402,9 +373,9 @@ void log_test(size_t thread_count, size_t log_count)
     mlog() << "mlog test for " << thread_count << " threads and " << log_count << " loops";
     MPROFILE("MlogTest");
     {
-        std::vector<std::thread> threads;
+        mvector<thread> threads;
         for(size_t i = 0; i != thread_count; ++i)
-            threads.push_back(std::thread(&MlogTestThread, i, log_count));
+            threads.push_back(thread(&MlogTestThread, i, log_count));
 		for(auto&& t: threads)
             t.join();
     }

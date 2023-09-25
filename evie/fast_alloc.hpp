@@ -5,23 +5,19 @@
 #pragma once
 
 #include "profiler.hpp"
+#include "string.hpp"
+#include "atomic.hpp"
 
-#include <atomic>
-
-template<typename type>
-type atomic_exchange(type* ptr, type val)
-{
-    return __atomic_exchange_n(ptr, val, __ATOMIC_RELAXED);
-}
+#include <unistd.h>
 
 //with follower can work one writer and many readers without synchronization
 template<typename type, uint32_t block_size = 65536, uint32_t num_blocks = 16384, bool enable_run_once = true>
-class follower : noncopyable
+class follower
 {
     typedef type* bulks_type[num_blocks];
 
     bulks_type bulks;
-    std::atomic<uint32_t> num_elems;
+    mutable uint32_t num_elems;
     type* ptr;
 
 public:
@@ -31,8 +27,9 @@ public:
         if(enable_run_once)
             run_once();
     }
+    follower(const follower&) = delete;
     ~follower() {
-        uint32_t elems = num_elems;
+        uint32_t elems = atomic_load(num_elems);
         uint32_t end_bulk = elems / block_size;
         uint32_t end_element = elems % block_size;
         if(end_element)
@@ -57,7 +54,7 @@ public:
         return false;
     }
     void push_back(type&& value) {
-        uint32_t elems = num_elems;
+        uint32_t elems = atomic_load(num_elems);
         uint32_t end_bulk = elems / block_size;
         uint32_t end_element = elems % block_size;
 
@@ -78,7 +75,7 @@ public:
         }
 
         (bulks[end_bulk])[end_element] = std::move(value);
-        ++num_elems;
+        atomic_add(num_elems, 1);
     }
     void push_back(const type& value) {
         push_back(type(value));
@@ -152,18 +149,18 @@ public:
         return const_iterator(bulks, 0);
     }
     const_iterator end() const {
-        return const_iterator(bulks, num_elems);
+        return const_iterator(bulks, atomic_load(num_elems));
     }
     const type& operator[](uint32_t idx) const {
         return *(begin() + idx);
     }
     uint32_t size() const {
-        return num_elems;
+        return atomic_load(num_elems);
     }
 };
 
 template<typename type, uint32_t capacity_size>
-class lockfree_queue : noncopyable
+class lockfree_queue
 {
     struct node
     {
@@ -172,13 +169,13 @@ class lockfree_queue : noncopyable
         //1 - push lock
         //2 - filled and free
         //3 - pop lock
-        std::atomic<uint32_t> status;
+        uint32_t status;
         node() : status(){}
     };
 
     str_holder name;
     node elems[capacity_size];
-    std::atomic<uint64_t> push_cnt, pop_cnt;
+    uint64_t push_cnt, pop_cnt;
 
     static uint64_t get_idx(uint64_t idx) {
         return idx % capacity_size;
@@ -190,6 +187,7 @@ class lockfree_queue : noncopyable
             % uint64_t(push_cnt) % "," % status % ")");
     }
 
+    lockfree_queue(const lockfree_queue&) = delete;
 public:
     lockfree_queue(str_holder name) : name(name), push_cnt(), pop_cnt() {
     }
@@ -199,9 +197,9 @@ public:
         push(type(t));
     }
     void push(type&& t) {
-        node& n = elems[get_idx(push_cnt++)];
         uint32_t status = 0;
-        while((!n.status.compare_exchange_strong(status, 1))) {
+        node& n = elems[get_idx(atomic_add(push_cnt, 1) - 1)];
+        while(!atomic_compare_exchange_r(n.status, status, 1)) {
             if(status != 3) {
                 MPROFILE("lockfree_queue::push() overloaded")
                 usleep(0);
@@ -210,41 +208,41 @@ public:
         }
         n.elem = std::move(t);
         status = 1;
-        if(!n.status.compare_exchange_strong(status, 2))
+        if(!atomic_compare_exchange_r(n.status, status, 2))
             throw_exception("push() internal error", status);
     }
     bool push_weak(type t) {
-        node& n = elems[get_idx(push_cnt)];
         uint32_t status = 0;
-        if((n.status.compare_exchange_weak(status, 1))) {
-            ++push_cnt;
+        node& n = elems[get_idx(atomic_load(push_cnt))];
+        if(atomic_compare_exchange_r(n.status, status, 1)) {
+            atomic_add(push_cnt, 1);
             n.elem = t;
             status = 1;
-            if(!n.status.compare_exchange_strong(status, 2))
+            if(!atomic_compare_exchange_r(n.status, status, 2))
                 throw_exception("push_weak() internal error", status);
             return true;
         }
         return false;
     }
     void pop_strong(type& t) {
-        node& n = elems[get_idx(pop_cnt++)];
         uint32_t status = 2;
-        if(!n.status.compare_exchange_strong(status, 3))
+        node& n = elems[get_idx(atomic_add(pop_cnt, 1) - 1)];
+        if(!atomic_compare_exchange_r(n.status, status, 3))
             throw_exception("pop_strong() lock error", status);
         t = std::move(n.elem);
         status = 3;
-        if(!n.status.compare_exchange_strong(status, 0))
+        if(!atomic_compare_exchange_r(n.status, status, 0))
             throw_exception("pop_strong() internal error", status);
     }
     bool pop_weak(type& t) {
         for(;;) {
-            node& n = elems[get_idx(pop_cnt)];
             uint32_t status = 2;
-            if(n.status.compare_exchange_strong(status, 3)) {
-                ++pop_cnt;
+            node& n = elems[get_idx(atomic_load(pop_cnt))];
+            if(atomic_compare_exchange_r(n.status, status, 3)) {
+                atomic_add(pop_cnt, 1);
                 t = std::move(n.elem);
                 status = 3;
-                if(!n.status.compare_exchange_strong(status, 0))
+                if(!atomic_compare_exchange_r(n.status, status, 0))
                     throw_exception("pop_weak() internal error", status);
                 return true;
             }
@@ -301,9 +299,9 @@ struct fast_alloc
 {
     typedef type_t type;
     queue<type_t*, pool_size> elems;
-    std::atomic<int32_t> free_elems;
+    int32_t free_elems;
 
-    fast_alloc(str_holder name, uint32_t pre_alloc = 1) : elems(name), free_elems() {
+    fast_alloc(str_holder name, uint32_t pre_alloc = 32) : elems(name), free_elems() {
         assert(pre_alloc <= pool_size);
         for(uint32_t i = 0; i != pre_alloc; ++i)
             elems.push(new type);
@@ -316,7 +314,7 @@ struct fast_alloc
         }
         else {
             if(enable_run_once)
-                ++free_elems;
+                atomic_add(free_elems, 1);
             return p;
         }
     }
@@ -326,16 +324,16 @@ struct fast_alloc
             delete m;
         }
         else if(enable_run_once)
-            --free_elems;
+            atomic_sub(free_elems, 1);
     }
     bool run_once() {
         static_assert(enable_run_once);
-        int32_t c = free_elems;
+        int32_t c = atomic_load(free_elems);
         bool ret = false;
         for(int32_t i = 0; i < c; ++i) {
             type* p = new type;
             if(elems.push_weak(p)) {
-                --free_elems;
+                atomic_sub(free_elems, 1);
                 ret = true;
             }
             else {
@@ -391,11 +389,15 @@ struct lockfree_list
     lockfree_list() : tail(&root) {
     }
     void push(node* t) {
-        node* expected = tail;
-        while(!tail.compare_exchange_weak(expected, t)) {
-            expected = tail;
+        for(;;)
+        {
+            node* expected = atomic_load(tail);
+            if(atomic_compare_exchange(tail, expected, t))
+            {
+                expected->next = t;
+                break;
+            }
         }
-        expected->next = t;
     }
     node* begin() {
         return root.next;
@@ -408,6 +410,6 @@ struct lockfree_list
 
 private:
     node root;
-    std::atomic<node*> tail;
+    node* tail;
 };
 

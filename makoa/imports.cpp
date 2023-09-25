@@ -18,7 +18,6 @@
 #include <sys/socket.h>
 #include <poll.h>
 
-#include <thread>
 #include <cerrno>
 
 pair<void*, str_holder> import_context_create(void* params);
@@ -289,7 +288,7 @@ void import_tcp_start(void* c, void* p)
         lock.unlock();
         int socket = my_accept_async(it.port, false/*local*/, false/*sync*/, &client, &it.can_run, it.params.c_str());
         volatile bool initialized = false;
-        std::thread thrd(&import_tcp_thread, &it, socket, client, std::ref(initialized), p);
+        thread thrd(&import_tcp_thread, &it, socket, client, ref(initialized), p);
         lock.lock();
         while(!initialized)
             it.cond.timed_uwait(lock, 50 * 1000);

@@ -7,8 +7,7 @@
 #include "thread.hpp"
 #include "utils.hpp"
 #include "singleton.hpp"
-
-#include <thread>
+#include "thread.hpp"
 
 #include <list>
 
@@ -49,7 +48,7 @@ class Workers : public stack_singleton<Workers<Worker, worker> >
     volatile bool my_can_run;
     bool can_not_run_on_exit;
     bool can_exit;
-    std::list<std::thread> threads;
+    mvector<thread> threads;
     std::list<typename Worker::Data> datas;
     my_mutex mutex;
     my_condition condition;
@@ -91,7 +90,7 @@ public:
     void Load(size_t threads_count)
     {
         for(size_t i = 0; i != threads_count; ++i)
-            threads.push_back(std::thread(&Workers::WorkThread, this));
+            threads.push_back(thread(&Workers::WorkThread, this));
     }
     void Add(typename Worker::Data&& data)
     {

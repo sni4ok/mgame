@@ -100,6 +100,10 @@ public:
             capacity_ = new_size;
         }
     }
+    void compact() {
+        buf = (type*)realloc((void*)buf, size_ * sizeof(type));
+        capacity_ = size_;
+    }
     void swap(mvector& r) {
         std::swap(buf, r.buf);
         std::swap(size_, r.size_);
@@ -129,10 +133,16 @@ public:
     const_iterator begin() const {
         return buf;
     }
+    const_iterator cbegin() const {
+        return buf;
+    }
     iterator begin() {
         return buf;
     }
     const_iterator end() const {
+        return begin() + size_;
+    }
+    const_iterator cend() const {
         return begin() + size_;
     }
     iterator end() {
@@ -151,6 +161,14 @@ public:
         reverse_iterator operator+(int64_t c) const
         {
             return reverse_iterator({ptr - c});
+        }
+        reverse_iterator operator-(int64_t c) const
+        {
+            return reverse_iterator({ptr + c});
+        }
+        int64_t operator-(const reverse_iterator& r) const
+        {
+            return r.ptr - ptr;
         }
         const type& operator*()
         {

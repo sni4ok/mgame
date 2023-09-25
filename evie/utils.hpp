@@ -112,5 +112,20 @@ struct pair
 {
     f first;
     s second;
+
+    f begin() const
+    {
+        return first;
+    }
+    f end() const
+    {
+        return second;
+    }
 };
+
+template<typename type>
+bool operator<(const mvector<type>& l, const mvector<type>& r)
+{
+    return lexicographical_compare(l.begin(), l.end(), r.begin(), r.end());
+}
 
