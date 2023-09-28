@@ -132,9 +132,18 @@ type max(type l, type r)
 template<typename type>
 struct less
 {
-    constexpr bool operator()(const type& l, const type& r)
+    constexpr bool operator()(const type& l, const type& r) const
     {
         return l < r;
+    }
+};
+
+template<typename type>
+struct greater
+{
+    constexpr bool operator()(const type& l, const type& r) const
+    {
+        return l > r;
     }
 };
 

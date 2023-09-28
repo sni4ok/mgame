@@ -24,10 +24,23 @@ struct unique_ptr
         ptr = r.ptr;
         r.ptr = nullptr;
     }
-    void reset(type* ptr = nullptr)
+    void swap(unique_ptr& r)
     {
-        free(this->ptr);
-        this->ptr = ptr;
+        type* p = ptr;
+        ptr = r.ptr;
+        r.ptr = p;
+    }
+    unique_ptr& operator=(unique_ptr&& r)
+    {
+        free(ptr);
+        ptr = r.ptr;
+        r.ptr = nullptr;
+        return *this;
+    }
+    void reset(type* r = nullptr)
+    {
+        free(ptr);
+        ptr = r;
     }
     type* get()
     {
@@ -45,14 +58,6 @@ struct unique_ptr
     {
         return ptr;
     }
-    /*type& operator*()
-    {
-        return *ptr;
-    }
-    const type& operator*() const
-    {
-        return *ptr;
-    }*/
     operator bool() const
     {
         return ptr;
@@ -68,4 +73,16 @@ struct unique_ptr
         free(ptr);
     }
 };
+
+template<typename type, void (*free)(type*)>
+type& operator*(unique_ptr<type, free>& p)
+{
+    return *p.ptr;
+}
+
+template<typename type, void (*free)(type*)>
+const type& operator*(const unique_ptr<type, free>& p)
+{
+    return *p.ptr;
+}
 

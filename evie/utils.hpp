@@ -123,6 +123,14 @@ struct pair
     }
 };
 
+template<typename t1, typename t2>
+bool operator<(const pair<t1, t2>& l, const pair<t1, t2>& r)
+{
+    if(l.first == r.first)
+        return l.second < r.second;
+    return l.first < r.first;
+}
+
 template<typename type>
 bool operator<(const mvector<type>& l, const mvector<type>& r)
 {

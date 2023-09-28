@@ -7,6 +7,8 @@
 #include "mlog.hpp"
 #include "smart_ptr.hpp"
 
+#include <cassert>
+
 #include <pthread.h>
 
 my_mutex::my_mutex()
@@ -17,7 +19,11 @@ my_mutex::my_mutex()
 
 my_mutex::~my_mutex()
 {
-    pthread_mutex_destroy(&mutex);
+    if(pthread_mutex_destroy(&mutex))
+    {
+        assert(false && "my_mutex::~my_mutex()");
+        mlog(mlog::critical) << "my_mutex::~my_mutex() pthread_mutex_destroy()";
+    }
 }
 
 void my_mutex::lock()
@@ -42,21 +48,28 @@ void my_mutex::unlock()
 my_mutex::scoped_lock::scoped_lock(my_mutex& mutex) : mutex(mutex)
 {
     lock();
+    locked = true;
 }
 
 void my_mutex::scoped_lock::lock()
 {
     mutex.lock();
+    locked = true;
 }
 
 void my_mutex::scoped_lock::unlock()
 {
     mutex.unlock();
+    locked = false;
 }
 
 my_mutex::scoped_lock::~scoped_lock()
 {
-    unlock();
+    if(locked && pthread_mutex_unlock(&mutex.mutex))
+    {
+        assert(false && "my_mutex::scoped_lock::~scoped_lock()");
+        mlog(mlog::critical) << "my_mutex::scoped_lock::~scoped_lock() unlock mutex error";
+    }
 }
 
 my_condition::my_condition()

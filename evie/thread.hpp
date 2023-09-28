@@ -23,6 +23,7 @@ struct my_mutex
     struct scoped_lock
     {
         my_mutex& mutex;
+        bool locked;
 
         scoped_lock(my_mutex& mutex);
         ~scoped_lock();

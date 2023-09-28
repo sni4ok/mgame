@@ -280,15 +280,17 @@ public:
     {
         resize(size_ - 1);
     }
-    void erase(iterator it) {
+    iterator erase(iterator it) {
         __destroy(it);
         memmove((void*)it, it + 1, ((end() - it) - 1) * sizeof(type));
         --size_;
+        return it;
     }
-    void erase(iterator from, iterator to) {
+    iterator erase(iterator from, iterator to) {
         __destroy(from, to);
         memmove((void*)from, to, (end() - to) * sizeof(type));
         size_ -= to - from;
+        return from;
     }
 };
 
@@ -427,13 +429,15 @@ struct pvector : mvector<type*>
     void clear() {
         erase(begin(), end());
     }
-    void erase(iterator from, iterator to) {
+    iterator erase(iterator from, iterator to) {
         for(auto it = from.it; it != to.it; ++it)
             free(*it);
         base::erase(from.it, to.it);
+        return from;
     }
-    void erase(iterator it) {
+    iterator erase(iterator it) {
         erase(it, it + 1);
+        return it;
     }
     ~pvector() {
         clear();
@@ -464,7 +468,7 @@ struct mexception : std::exception
     mexception(str_holder str)
     {
         msg.reserve(str.size + 1);
-        msg.insert(str.str, str.str + str.size);
+        msg.insert(str.str, str.str + uint32_t(str.size));
         msg.push_back(char());
     }
     mexception(const char* str)

@@ -25,6 +25,8 @@ struct mstring : mvector<char>
     mstring(str_holder str) : base(str.str, str.str + str.size)
     {
     }
+	mstring(std::initializer_list<char> r) : base(r.begin(), r.end()) {
+    }
     mstring(const char* from, const char* to) : base(from, to)
     {
     }
