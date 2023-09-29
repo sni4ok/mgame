@@ -5,7 +5,7 @@ INCLUDE_DIRECTORIES(~/develop/libwebsockets/build/include)
 
 find_library(websockets name websockets PATHS ${LIBWEBSOCKET_PATH})
 
-ADD_LIBRARY(lws STATIC lws.cpp)
+ADD_LIBRARY(lws STATIC lws.cpp alco.cpp)
 TARGET_LINK_LIBRARIES(lws evie ${websockets})
 
 SUBDIRS(bitfinex plaza2 huobi binance coinbase kraken bitmex crypto.com)

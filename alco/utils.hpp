@@ -4,7 +4,10 @@
 
 #pragma once
 
+#include "makoa/types.hpp"
+
 #include "evie/fmap.hpp"
+#include "evie/algorithm.hpp"
 
 mstring join_tickers(const mvector<mstring>& tickers, bool quotes = true);
 
@@ -26,11 +29,46 @@ struct sec_id_by_name : base
             return it->second;
     }
 
+    using base::base;
+
 private:
     fmap<ticker, uint32_t> securities;
     security tmp;
 };
 
+template<typename str>
+inline void skip_fixed(char_cit& it, const str& v)
+{
+    static_assert(std::is_array<str>::value);
+    //bool eq = std::equal(it, it + sizeof(v) - 1, v);
+    //bool eq = !(strncmp(it, v, sizeof(v) - 1));
+    bool eq = !(memcmp(it, v, sizeof(v) - 1));
+    if(unlikely(!eq))
+        throw mexception(es() % "skip_fixed error, expect: |" % str_holder(v) % "| in |" % str_holder(it, strnlen(it, 100)) % "|");
+    it += sizeof(v) - 1;
+}
+
+template<typename str>
+inline void search_and_skip_fixed(char_cit& it, char_cit ie, const str& v)
+{
+    static_assert(std::is_array<str>::value);
+    char_cit i = search(it, ie, v, v + (sizeof(v) - 1));
+    if(unlikely(i == ie))
+        throw mexception(es() % "search_and_skip_fixed error, expect: |" % str_holder(v) % "| in |" % str_holder(it, ie - it) % "|");
+    it  = i + (sizeof(v) - 1);
+}
+
+template<typename str>
+inline bool skip_if_fixed(char_cit& it, const str& v)
+{
+    static_assert(std::is_array<str>::value);
+    //bool eq = std::equal(it, it + sizeof(v) - 1, v);
+    //bool eq = !(strncmp(it, v, sizeof(v) - 1));
+    bool eq = !(memcmp(it, v, sizeof(v) - 1));
+    if(eq)
+        it += sizeof(v) - 1;
+    return eq;
+}
 template<typename func>
 auto read_value(char_cit &it, char_cit ie, func f, bool last)
 {

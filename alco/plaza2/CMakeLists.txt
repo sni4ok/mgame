@@ -1,6 +1,6 @@
 INCLUDE_DIRECTORIES(../../)
 ADD_EXECUTABLE(plaza_templater plaza_templater.cpp)
-ADD_EXECUTABLE(plaza plaza.cpp config.cpp parser.cpp)
+ADD_EXECUTABLE(plaza plaza.cpp config.cpp parser.cpp ../alco.cpp)
 
 SET(PLAZA_LIB_PATH ~/plaza/cgate-6.6.0.86/lib)
 INCLUDE_DIRECTORIES(~/plaza/cgate-6.6.0.86/include)

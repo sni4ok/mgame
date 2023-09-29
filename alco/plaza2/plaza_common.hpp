@@ -8,6 +8,7 @@
 
 #include "evie/mlog.hpp"
 #include "evie/string.hpp"
+#include "evie/utils.hpp"
 
 #include "cgate.h"
 

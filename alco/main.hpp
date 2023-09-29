@@ -8,13 +8,11 @@
 
 #include "evie/config.hpp"
 
-#include <iostream>
-
 int parser_main(int argc, char** argv, str_holder parser, void (*proceed)(volatile bool&))
 {
     mstring parser_name(parser);
     if(argc > 2) {
-        std::cout << "Usage: ./" << parser_name << " [config file]" << std::endl;
+        cout_write(es() % "Usage: ./" % parser_name % " [config file]" % endl);
         return 1;
     }
     auto log = log_init(argc == 1 ? (parser_name + ".log").c_str() : get_log_name(mstring(argv[1])).c_str(), mlog::always_cout | mlog::info);

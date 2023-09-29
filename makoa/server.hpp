@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "evie/vector.hpp"
 #include "evie/mstring.hpp"
 
 struct server

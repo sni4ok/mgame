@@ -26,7 +26,7 @@ struct lws_i : lws_impl, read_time_impl
         else
             return it->second;
     }
-    lws_i() : cfg(config::instance())
+    lws_i() : lws_impl(config::instance().push, config::instance().log_lws), cfg(config::instance())
     {
         mstring tickers = join_tickers(cfg.tickers);
         my_stream sub;

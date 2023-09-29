@@ -33,7 +33,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     ttime_t ping_t;
 
     fmap<uint32_t, impl> parsers; //channel, impl
-    lws_i() :
+    lws_i() : sec_id_by_name<lws_impl>(config::instance().push, config::instance().log_lws),
         cfg(config::instance()),
         subscribed("\"subscribed\",\"channel\":"),
         trade("\"trades\",\"chanId\":"),

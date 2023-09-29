@@ -172,7 +172,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         skip_fixed(it, end);
         send_messages();
     }
-    lws_i() :
+    lws_i() : sec_id_by_name<lws_impl>(config::instance().push, config::instance().log_lws), 
         ch("ch\":\"market."),
         ts(",\"ts\":"),
         tick(",\"tick\":{\""),

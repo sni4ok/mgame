@@ -11,7 +11,7 @@ struct lws_i : sec_id_by_name<lws_impl>
 {
     config& cfg;
     
-    lws_i() : cfg(config::instance())
+    lws_i() : sec_id_by_name<lws_impl>(config::instance().push, config::instance().log_lws), cfg(config::instance())
     {
         my_stream sub;
         sub << "{\"method\":\"SUBSCRIBE\",\"params\":[";
