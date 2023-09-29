@@ -194,19 +194,19 @@ struct lws_i : sec_id_by_name<lws_impl>
         for(auto& v: c.tickers) {
             if(c.snapshot) {
                 parsers[(v + ".depth." + c.step).str()] = impl(v.str(), &lws_i::parse_snapshot);
-                subscribes.push_back(mstring("{\"sub\":\"market.") + v + ".depth." + c.step + "\",\"id\":\"snapshot_" + v + "\"}");
+                subscribes.push_back("{\"sub\":\"market." + v + ".depth." + c.step + "\",\"id\":\"snapshot_" + v + "\"}");
             }
             if(c.orders) {
                 parsers[(v + ".mbp." + c.levels).str()] = impl(v.str(), &lws_i::parse_orders);
-                subscribes.push_back(mstring("{\"sub\":\"market.") + v + ".mbp." + c.levels + "\",\"id\":\"orders_" + v + "\"}");
+                subscribes.push_back("{\"sub\":\"market." + v + ".mbp." + c.levels + "\",\"id\":\"orders_" + v + "\"}");
             }
             if(c.bbo) {
                 parsers[(v + ".bbo").str()] = impl(v.str(), &lws_i::parse_bbo);
-                subscribes.push_back(mstring("{\"sub\":\"market.") + v + ".bbo\",\"id\":\"bbo_" + v + "\"}");
+                subscribes.push_back("{\"sub\":\"market." + v + ".bbo\",\"id\":\"bbo_" + v + "\"}");
             }
             if(c.trades) {
                 parsers[(v + ".trade.detail").str()] = impl(v.str(), &lws_i::parse_trades);
-                subscribes.push_back(mstring("{\"sub\":\"market.") + v + ".trade.detail\",\"id\":\"trades_" + v + "\"}");
+                subscribes.push_back("{\"sub\":\"market." + v + ".trade.detail\",\"id\":\"trades_" + v + "\"}");
             }
         }
     }

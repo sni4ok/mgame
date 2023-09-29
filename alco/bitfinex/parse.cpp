@@ -45,10 +45,10 @@ struct lws_i : sec_id_by_name<lws_impl>
         prec_R0 = (cfg.precision == "R0");
         for(auto& v: cfg.tickers) {
             if(cfg.trades) {
-                subscribes.push_back(mstring("{\"event\":\"subscribe\",\"channel\":\"trades\",\"symbol\":\"") + v + "\"}");
+                subscribes.push_back("{\"event\":\"subscribe\",\"channel\":\"trades\",\"symbol\":\"" + v + "\"}");
             }
             if(cfg.orders) {
-                subscribes.push_back(mstring("{\"event\":\"subscribe\",\"channel\":\"book\",\"symbol\":\"")
+                subscribes.push_back("{\"event\":\"subscribe\",\"channel\":\"book\",\"symbol\":\""
                     + v + "\",\"prec\":\"" + cfg.precision + "\",\"freq\":\"" + cfg.frequency + "\",\"len\":\"" + cfg.length + "\"}");
             }
         }

@@ -93,7 +93,7 @@ struct parser : emessages, stack_singleton<parser>
         orders(conn, "orders", cfg_cli_orders, orders_callback, &tickers),
         trades(conn, "trades", cfg_cli_trades, trades_callback, &tickers)
     {
-        mstring env = mstring("ini=./plaza_recv.ini;key=") + config::instance().key;
+        mstring env = "ini=./plaza_recv.ini;key=" + config::instance().key;
         mlog() << "cg_env_open " << env;
         check_plaza_fail(cg_env_open(env.c_str()), "env_open");
     }

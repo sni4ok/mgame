@@ -142,7 +142,7 @@ namespace
     }
     exporter shared_exporter(const mstring& module)
     {
-        mstring lib = mstring("./lib") + module + ".so";
+        mstring lib = "./lib" + module + ".so";
         exporter ret;
         ret.he.destroy = &shared_destroy;
         ret.p = dlopen(lib.c_str(), RTLD_LAZY);

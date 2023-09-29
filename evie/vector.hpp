@@ -229,9 +229,12 @@ public:
     void __insert_impl(iterator& it)
     {
         if(size_ == capacity_) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuse-after-free"
             uint64_t pos = it - buf;
             reserve(capacity_ ? capacity_ * 2 : 32);
             it = &buf[pos];
+#pragma GCC diagnostic pop
         }
         memmove((void*)(it + 1), it, (end() - it) * sizeof(type));
         if(have_destructor)
@@ -465,19 +468,8 @@ struct mexception : std::exception
 {
     mvector<char> msg;
 
-    mexception(str_holder str)
-    {
-        msg.reserve(str.size + 1);
-        msg.insert(str.str, str.str + uint32_t(str.size));
-        msg.push_back(char());
-    }
-    mexception(const char* str)
-        : mexception(str_holder(str, strlen(str)))
-    {
-    }
-    const char* what() const noexcept
-    {
-        return msg.begin();
-    }
+    mexception(str_holder str);
+    mexception(const char* str);
+    const char* what() const noexcept;
 };
 

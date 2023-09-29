@@ -338,12 +338,3 @@ int64_t read_decimal_impl(char_cit it, char_cit ie, int exponent)
     return ret;
 }
 
-mstring operator+(str_holder l, const mstring& r)
-{
-    mstring ret;
-    ret.resize(l.size + r.size());
-    memcpy(&ret[0], l.str, l.size);
-    memcpy(&ret[0] + l.size, &r[0], r.size());
-    return ret;
-}
-

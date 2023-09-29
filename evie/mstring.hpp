@@ -15,113 +15,30 @@ struct mstring : mvector<char>
     typedef const char* const_iterator;
     typedef char value_type;
 
-    mstring()
-    {
-        __clear();
-    }
-    explicit mstring(const char* str) : base(str, str + strlen(str))
-    {
-    }
-    mstring(str_holder str) : base(str.str, str.str + str.size)
-    {
-    }
-	mstring(std::initializer_list<char> r) : base(r.begin(), r.end()) {
-    }
-    mstring(const char* from, const char* to) : base(from, to)
-    {
-    }
-    mstring(const mstring& r) : base(static_cast<const base&>(r))
-    {
-    }
-    mstring(mstring&& r) : base(std::move(static_cast<base&&>(r)))
-    {
-    }
-    mstring& operator=(mstring&& r)
-    {
-        base::swap(r);
-        return *this;
-    }
-    mstring& operator=(const mstring& r)
-    {
-        static_cast<base&>(*this) = r;
-        return *this;
-    }
-    void swap(mstring& r)
-    {
-        base::swap(r);
-    }
-    str_holder str() const
-    {
-        return {begin(), size()};
-    }
-    const char* c_str() const
-    {
-        mstring* p = const_cast<mstring*>(this);
-        p->push_back(char());
-        p->resize(p->size() - 1);
-        return begin();
-    }
-    bool operator==(const mstring& r) const
-    {
-        if(size() == r.size())
-            return !memcmp(begin(), r.begin(), size());
-        return false;
-    }
-    bool operator==(const char* str) const
-    {
-        uint64_t sz = strlen(str);
-        if(sz == size())
-            return !memcmp(begin(), str, sz);
-        return false;
-    }
-    bool operator!=(const mstring& r) const
-    {
-        return !(*this == r);
-    }
-    bool operator<(const mstring& r) const
-    {
-        return lexicographical_compare(begin(), begin() + size(), r.begin(), r.begin() + r.size());
-    }
-    mstring& operator+=(const mstring& r)
-    {
-        base::insert(r.begin(), r.end());
-        return *this;
-    }
-    mstring& operator+=(str_holder r)
-    {
-        base::insert(r.begin(), r.end());
-        return *this;
-    }
-    mstring operator+(const mstring& r) const
-    {
-        mstring ret(*this);
-        return ret += r;
-    }
-    mstring operator+(str_holder r) const
-    {
-        mstring ret(*this);
-        return ret += r;
-    }
-    mstring& operator+=(char c)
-    {
-        push_back(c);
-        return *this;
-    }
-    mstring operator+(char c) const
-    {
-        mstring ret(*this);
-        return ret += c;
-    }
-    mstring& operator+=(const char* str)
-    {
-        base::insert(str, str + strlen(str));
-        return *this;
-    }
-    mstring operator+(const char* str) const
-    {
-        mstring ret(*this);
-        return ret += str;
-    }
+    mstring();
+    explicit mstring(const char* str);
+    mstring(str_holder str);
+	mstring(std::initializer_list<char> r);
+    mstring(const char* from, const char* to);
+    mstring(const mstring& r);
+    mstring(mstring&& r);
+    mstring& operator=(mstring&& r);
+    mstring& operator=(const mstring& r);
+    void swap(mstring& r);
+    str_holder str() const;
+    const char* c_str() const;
+    bool operator==(const mstring& r) const;
+    bool operator==(const char* str) const;
+    bool operator!=(const mstring& r) const;
+    bool operator<(const mstring& r) const;
+    mstring& operator+=(const mstring& r);
+    mstring& operator+=(str_holder r);
+    mstring operator+(const mstring& r) const;
+    mstring operator+(str_holder r) const;
+    mstring& operator+=(char c);
+    mstring operator+(char c) const;
+    mstring& operator+=(const char* str);
+    mstring operator+(const char* str) const;
 };
 
 template<typename stream>

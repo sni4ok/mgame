@@ -31,7 +31,7 @@ struct lws_i : sec_id_by_name<lws_impl>
 
     lws_i() : sec_id_by_name<lws_impl>(config::instance().push, config::instance().log_lws), cfg(config::instance())
     {
-        mstring s = mstring("{\"event\":\"subscribe\",\"pair\":[") + join_tickers(cfg.tickers) + mstring("],\"subscription\": {");
+        mstring s = "{\"event\":\"subscribe\",\"pair\":[" + join_tickers(cfg.tickers) + "],\"subscription\": {";
         if(cfg.orders) {
             my_stream sub;
             sub << s;

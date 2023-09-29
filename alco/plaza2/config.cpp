@@ -13,15 +13,15 @@ config::config(const char* fname)
     auto buf = read_file(fname);
     cgate_host = get_config_param<mstring>(buf, "cgate_host");
     if(cgate_host == "127.0.0.1")
-        cgate_host = mstring("p2lrpcq://") + cgate_host;
+        cgate_host = "p2lrpcq://" + cgate_host;
     else
-        cgate_host = mstring("p2tcp://") + cgate_host;
+        cgate_host = "p2tcp://" + cgate_host;
 
     app_name = get_config_param<mstring>(buf, "app_name");
     key = get_config_param<mstring>(buf, "key");
     local_pass = get_config_param<mstring>(buf, "local_pass", true);
     if(!local_pass.empty())
-        local_pass = mstring(";local_pass=") + local_pass + ";";
+        local_pass = ";local_pass=" + local_pass + ";";
     cli_conn_recv = cgate_host + ":4001;app_name=" + app_name + "_recv;name=noname_recv" + local_pass;
   
     trades = get_config_param<bool>(buf, "trades");

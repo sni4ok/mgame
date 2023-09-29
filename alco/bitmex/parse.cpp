@@ -16,15 +16,15 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
     lws_i() : sec_id_by_name<lws_impl>(config::instance().push, config::instance().log_lws), cfg(config::instance()), orders_table(cfg.orders_table.c_str(),
         cfg.orders_table.size()), trades_table("trade"), etime()
     {
-        mstring sb("{\"op\":\"subscribe\",\"args\":\"");
-        mstring se("\"}");
+        str_holder sb("{\"op\":\"subscribe\",\"args\":\"");
+        str_holder se("\"}");
 
         for(auto& v: cfg.tickers) {
             //subscribes.push_back(sb + "instrument:" + v + se);
             if(cfg.orders)
                 subscribes.push_back(sb + cfg.orders_table + ":" + v + se);
             if(cfg.trades)
-                subscribes.push_back(sb + "trade" + ":" + v + se);
+                subscribes.push_back(sb + mstring("trade") + ":" + v + se);
         }
     }
     void parse_ticks(iterator& it, iterator ie, uint32_t security_id, ttime_t time, bool ask)
