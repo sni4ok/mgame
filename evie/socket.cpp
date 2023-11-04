@@ -46,7 +46,7 @@ int socket_connect(const mstring& host, uint16_t port, uint32_t timeout)
 {
     bool local = (host == "127.0.0.1") || (host == "localhost");
     int socket = ::socket(AF_INET, local ? AF_LOCAL : SOCK_STREAM /*| SOCK_NONBLOCK*/, IPPROTO_TCP);
-    if(socket < 0)
+    if(socket <= 0)
         throw_system_failure("Open socket error");
     socket_holder sh(socket);
     int flag = 1;

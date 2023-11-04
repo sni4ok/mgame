@@ -445,6 +445,9 @@ struct pvector : mvector<type*>
     ~pvector() {
         clear();
     }
+    type** array() {
+        return this->buf;
+    }
 
 private:
     void resize(uint64_t new_size);
@@ -457,10 +460,6 @@ struct pavector : pvector<type, pvector_free_array>
 
     type* operator[](uint64_t elem) {
         return &(static_cast<base&>(*this))[elem];
-    }
-    type** array()
-    {
-        return this->buf;
     }
 };
 

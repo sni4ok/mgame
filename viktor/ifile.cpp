@@ -8,9 +8,10 @@
 #include "evie/mfile.hpp"
 #include "evie/utils.hpp"
 #include "evie/profiler.hpp"
+#include "alco/huobi/utils.hpp"
 
 #include <map>
-#include <algorithm>
+#include <list>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -34,6 +35,103 @@ mstring::const_iterator find_last(const mstring& fname, const char c)
     return it;
 }
 
+struct zip_file
+{
+    str_holder data;
+    unique_ptr<zlibe> zip;
+    const char* data_it;
+    mfile f;
+
+    zip_file() : f(0)
+    {
+    }
+    operator bool() const
+    {
+        if(zip)
+            return !!data.size;
+        else
+            return !!f.hfile;
+    }
+    void open(const char* fname)
+    {
+        mlog() << "zip_file::open " << _str_holder(fname);
+        close();
+        str_holder fn = _str_holder(fname);
+        if(fn.size > 3 && str_holder(fn.end() - 3, fn.end()) == ".gz")
+        {
+            mvector<char> f = read_file(fname);
+            uint64_t alloc = max<uint64_t>(10 * f.size(), 1024);
+            if(!zip)
+                zip.reset(new zlibe);
+            zip->buf.resize(4 * alloc);
+            zip->dest.resize(alloc);
+            data = zip->decompress(f.begin(), f.size());
+            data_it = data.begin();
+        }
+        else
+        {
+            zip.reset();
+            mfile file(fname);
+            f.swap(file);
+        }
+    }
+    void close()
+    {
+        if(zip)
+            data = str_holder();
+        else
+        {
+            mfile file(0);
+            f.swap(file);
+        }
+    }
+    void seekg(uint64_t pos)
+    {
+        if(zip)
+        {
+            if(pos > data.size)
+                throw mexception(es() % "zip_file::seekg(), fsize " % data.size % ", pos " % pos);
+            data_it = data.begin() + pos;
+        }
+        else
+            f.seekg(pos);
+    }
+    void seek_cur(int64_t pos)
+    {
+        if(zip)
+            data_it += pos;
+        else
+        {
+            if(::lseek(f.hfile, pos, SEEK_CUR) < 0)
+                throw_system_failure("lseek() error");
+        }
+    }
+    uint64_t size() const
+    {
+        if(zip)
+            return data.size;
+        else
+            return f.size();
+    }
+    uint64_t read(char* ptr, uint64_t size)
+    {
+        if(zip)
+        {
+            uint64_t sz = min<uint64_t>(size, data.end() - data_it);
+            my_fast_copy(data_it, data_it + sz, ptr);
+            data_it += sz;
+        }
+        else
+        {
+            ssize_t r = ::read(f.hfile, ptr, size);
+            if(r < 0)
+                throw_system_failure(es() % "read() error, size: " % size);
+            return r;
+        }
+        return size;
+    }
+};
+
 struct compact_book
 {
     mvector<char> book;
@@ -43,7 +141,7 @@ struct compact_book
     {
     }
 
-    void read(const mstring& fname, uint64_t from, uint64_t to)
+    void read(zip_file& f, const mstring& fname, uint64_t from, uint64_t to)
     {
         if((to - from) % message_size)
             throw mexception(es() % "compact_book::read() " % fname % " from " % from % " to " % to);
@@ -61,7 +159,6 @@ struct compact_book
 
         //read
         mvector<message> buf((to - from) / message_size);
-        mfile f(fname.c_str());
         f.seekg(from);
         f.read((char*)&buf[0], to - from);
         auto it = buf.begin(), ie = buf.end();
@@ -142,10 +239,10 @@ struct ifile
         }
     };
 
-    int cur_file;
+    zip_file cur_file;
     compact_book cb;
     const node main_file;
-    mvector<node> files;
+    std::list<mstring> dir_files;
     node nt;
     message mt;
     bool history;
@@ -182,33 +279,34 @@ struct ifile
 
     ttime_t add_file_impl(const mstring& fname, bool last_file)
     {
-        mfile f(fname.c_str());
-        if(last_file)
-            last_file_ino = file_ino(f.hfile);
-        uint64_t sz = f.size();
+        cur_file.open(fname.c_str());
+        if(last_file && !cur_file.zip)
+            last_file_ino = file_ino(cur_file.f.hfile);
+        uint64_t sz = cur_file.size();
         if(sz < message_size)
             return ttime_t();
         sz = sz - sz % message_size;
-        f.read((char*)&mt, message_size);
+        cur_file.read((char*)&mt, message_size);
         nt.tf = mt.t.time;
         if(!nt.tf.value)
             throw mexception(es() % "time_from error for " % fname);
         nt.from = 0;
         nt.off = 0;
         nt.sz = last_file ? 0 : sz;
-        f.seekg(sz - message_size);
-        f.read((char*)&mt, message_size);
+        cur_file.seekg(sz - message_size);
+        cur_file.read((char*)&mt, message_size);
         nt.tt = mt.t.time;
+        mlog() << "" << fname << " tf: " << nt.tf.value << ", tt: " << nt.tt.value;
         if(!nt.tt.value || nt.tt.value < nt.tf.value)
             throw mexception(es() % "time_to error for " % fname);
 
         if(main_file.crossed(nt) || (!history && last_file)) {
             nt.name = fname;
             auto pred =
-                [&f](int64_t off, ttime_t tt) {
+                [&](int64_t off, ttime_t tt) {
                     message m;
-                    f.seekg(off * message_size);
-                    f.read((char*)&m, message_size);
+                    cur_file.seekg(off * message_size);
+                    cur_file.read((char*)&m, message_size);
                     return m.mt.time < tt;
                 };
 
@@ -222,8 +320,8 @@ struct ifile
 
                 while(!nt.from && off) {
                     nt.from = off < buf_size ? 0 : off - buf_size;
-                    f.seekg(nt.from);
-                    f.read((char*)&read_buf[0], off - nt.from);
+                    cur_file.seekg(nt.from);
+                    cur_file.read((char*)&read_buf[0], off - nt.from);
                     auto it = read_buf.begin(), ie = read_buf.begin() + ((off - nt.from) / message_size);
                     off = nt.from;
 
@@ -245,10 +343,11 @@ struct ifile
             if((nt.tt > main_file.tt) || (last_file && history))
                 nt.sz = message_size * lower_bound_int(nt.off / message_size, sz / message_size, main_file.tt, pred);
 
+            cur_file.seekg(nt.off);
+
             mlog() << "ifile::add_file_impl() " << fname << ", last: " << last_file << ", from: "
                 << nt.from << ", off: " << nt.off << ", sz: " << nt.sz;
 
-            files.push_back(nt);
             return nt.tt;
         }
         return ttime_t();
@@ -278,57 +377,75 @@ struct ifile
             throw_system_failure(es() % "scandir error " % dir);
 
         uint32_t f_size = f.size();
-        uint32_t tfrom = main_file.tf.value / ttime_t::frac;
+        uint32_t tfrom = main_file.tf.value / ttime_t::frac, tto = main_file.tt.value / ttime_t::frac;
         for(int i = 0; i != n; ++i) {
             dirent *e = ee[i];
             str_holder fname(_str_holder(e->d_name));
-            if(fname.size > f_size && std::equal(fname.str, fname.str + f_size, f.begin())) {
+            if(fname.size > f_size + 10 && std::equal(fname.str, fname.str + f_size, f.begin())) {
+                uint32_t t = 0;
                 if(fname.size > f_size) {
                     if(fname.str[f_size] != '_')
                         continue;
-                    uint32_t t = my_cvt::atoi<uint32_t>(&fname.str[f_size + 1], fname.size - f_size - 1);
+                    t = my_cvt::atoi<uint32_t>(fname.str + f_size + 1, 10);
                     if(t < tfrom)
                         continue;
                 }
-                ttime_t t = add_file(dir + e->d_name);
-                if(t > main_file.tt)
+                dir_files.push_back(dir + fname);
+                if(t && t > tto)
                     break;
             }
             free(e);
         }
-        add_file(fname, true);
+        dir_files.push_back(fname);
         free(ee);
-        std::sort(files.begin(), files.end());
-        if(!files.empty()) {
-            auto it = files.rbegin();
-            cb.read(it->name, it->from, it->off);
+    }
+
+    void load_cb()
+    {
+        if(next_file())
+            cb.read(cur_file, nt.name, nt.from, nt.off);
+    }
+
+    bool next_file()
+    {
+        auto it = dir_files.begin();
+        while(it != dir_files.end())
+        {
+            ttime_t t = add_file(*it);
+            it = dir_files.erase(it);
+            if(t.value)
+                return true;
         }
+        return false;
     }
 
     ifile(const mstring& fname, ttime_t tf, ttime_t tt, bool history)
-        : cur_file(), main_file({fname, tf, tt, 0, 0, 0}), history(history), last_file_check_time()
+        : main_file({fname, tf, tt, 0, 0, 0}), history(history), last_file_check_time()
     {
         read_directory(fname);
+        load_cb();
         ping.id = msg_ping;
     }
 
     bool last_file_moved()
     {
+        if(cur_file.zip)
+            return false;
+
         int f = ::open(main_file.name.c_str(), O_RDONLY);
         if(f < 0)
             return false;
         uint64_t sz = 0;
         ino_t c = file_ino(f, &sz);
+        ::close(f);
         if(c != last_file_ino && sz >= message_size)
         {
             mlog() << "" << main_file.name << " probably moved";
-            ::close(cur_file);
             last_file_ino = c;
-            cur_file = f;
+            cur_file.open(main_file.name.c_str());
             nt.off = 0;
             return true;
         }
-        ::close(f);
         return false;
     }
 
@@ -337,32 +454,25 @@ struct ifile
         if(unlikely(buf_size % message_size))
             throw mexception(es() % "ifile::read(): inapropriate size: " % buf_size);
         else {
+            if(!cb.book.empty())
+            {
+                uint32_t read_size = min<uint32_t>(buf_size, cb.book.size() - cb.book_off);
+                my_fast_copy(&cb.book[0] + cb.book_off, &cb.book[0] + cb.book_off + read_size, buf);
+                cb.book_off += read_size;
+                if(cb.book_off == cb.book.size())
+                    cb.book.clear();
+                return read_size;
+            }
             int32_t ret = 0;
             while(!ret)
             {
-                if(!cur_file) {
-                    if(!cb.book.empty()) {
-                        uint32_t read_size = min<uint32_t>(buf_size, cb.book.size() - cb.book_off);
-                        std::copy(&cb.book[0] + cb.book_off, &cb.book[0] + cb.book_off + read_size, buf);
-                        cb.book_off += read_size;
-                        if(cb.book_off == cb.book.size())
-                            cb.book.clear();
-                        return read_size;
-                    }
-                    if(files.empty())
-                        return 0;
-                    
-                    nt = *files.rbegin();
-                    files.pop_back();
-                    cur_file = ::open(nt.name.c_str(), O_RDONLY);
-                    if(::lseek(cur_file, nt.off, SEEK_SET) < 0)
-                        throw_system_failure(es() % "lseek() error for " % nt.name);
-                }
+                if(!cur_file && !next_file())
+                    return 0;
 
-                if(!history && !nt.sz && files.empty())
-                    ret = ::read(cur_file, buf, buf_size);
+                if(!history && !nt.sz && dir_files.empty())
+                    ret = cur_file.read(buf, buf_size);
                 else
-                    ret = ::read(cur_file, buf, min<uint64_t>(buf_size, nt.sz - nt.off));
+                    ret = cur_file.read(buf, min<uint64_t>(buf_size, nt.sz - nt.off));
 
                 if(ret > 0)
                 {
@@ -371,8 +481,7 @@ struct ifile
                         MPROFILE("ifile::fix_read_size()")
                         int32_t d = (ret % message_size);
                         ret = ret - d;
-                        if(::lseek(cur_file, -d, SEEK_CUR) < 0)
-                            throw_system_failure(es() % "lseek() error for " % nt.name);
+                        cur_file.seek_cur(-d);
                     }
                     nt.off += ret;
                 }
@@ -380,10 +489,8 @@ struct ifile
                     throw_system_failure("ifile::read file error");
                 else if(!ret)
                 {
-                    if(!files.empty()) {
-                        close(cur_file);
-                        cur_file = 0;
-                    }
+                    if(!dir_files.empty())
+                        cur_file.close();
                     else if(history)
                         return ret;
                     else {
@@ -408,8 +515,6 @@ struct ifile
 
     virtual ~ifile()
     {
-        if(cur_file > 0)
-            close(cur_file);
     }
 };
 
@@ -448,7 +553,7 @@ struct ifile_replay : ifile
                 break;
         }
         uint32_t ret = (mi - mb) * message_size;
-        std::copy((char*)mb, (char*)mi, buf);
+        my_fast_copy((char*)mb, (char*)mi, buf);
         b.erase(b.begin(), b.begin() + ret);
         if(!ret && !b.empty())
         {

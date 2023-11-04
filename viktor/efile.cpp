@@ -59,13 +59,14 @@ struct efile
             if(fsz) {
                 mstring backup = fname + "_" + to_string(time(NULL));
                 int r = rename(fname.c_str(), backup.c_str());
-                if(r) {
+                if(r)
                     mlog(mlog::critical) << "rename file from " << fname << ", to " << backup
                         << ", error: " << r << ", " << _str_holder(errno ? strerror(errno) : "");
-                }
-                else {
+                else
                     mlog(mlog::critical) << "file renamed from " << fname << ", to " << backup;
-                }
+                mstring gzip = "gzip " + backup;
+                r = system(gzip.c_str());
+                mlog(mlog::critical) << "" << gzip << (r ? _str_holder(" fail") : _str_holder(" success"));
             }
             if(fsz || !hfile)
                 fp |= O_EXCL;

@@ -15,12 +15,19 @@
 mfile::mfile(const char* file)
 {
     hfile = ::open(file, O_RDONLY);
-    if(hfile < 0)
+    if(hfile <= 0)
         throw_system_failure(es() % "open file " % _str_holder(file) % " error");
 }
 
 mfile::mfile(int hfile) : hfile(hfile)
 {
+}
+
+void mfile::swap(mfile& r)
+{
+    int t = r.hfile;
+    r.hfile = hfile;
+    hfile = t;
 }
 
 uint64_t mfile::size() const
@@ -51,7 +58,8 @@ void mfile::read(char* ptr, uint64_t size)
 
 mfile::~mfile()
 {
-    ::close(hfile);
+    if(hfile)
+        ::close(hfile);
 }
 
 bool read_file(mvector<char>& buf, const char* fname, bool can_empty)
@@ -85,7 +93,7 @@ void write_file(const char* fname, const char* buf, uint64_t size, bool trunc)
     if(trunc)
         flags |= O_TRUNC;
     int hfile = ::open(fname, flags, S_IWRITE | S_IREAD | S_IRGRP | S_IWGRP);
-    if(hfile < 0)
+    if(hfile <= 0)
         throw_system_failure(es() % "open file " % _str_holder(fname) % " error");
 
     uint64_t write_bytes = 0;

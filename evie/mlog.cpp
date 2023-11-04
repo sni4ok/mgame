@@ -22,7 +22,7 @@ namespace
         ofile(const char* file) : name(file)
         {
             hfile = ::open(file, O_WRONLY | O_CREAT | O_APPEND, S_IWRITE | S_IREAD | S_IRGRP | S_IWGRP);
-            if(hfile < 0)
+            if(hfile <= 0)
                 throw_system_failure(es() % "open file " % name % " error");
         }
         void lock()

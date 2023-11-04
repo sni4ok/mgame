@@ -18,6 +18,8 @@ struct mfile
     void seekg(uint64_t pos);
     void read(char* ptr, uint64_t size);
     ~mfile();
+
+    void swap(mfile& r);
 };
 
 bool read_file(mvector<char>& buf, const char* fname, bool can_empty = false);
