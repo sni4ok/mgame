@@ -122,15 +122,15 @@ namespace my_cvt
 }
 
 template<typename type>
-std::enable_if_t<std::is_integral<type>::value, type>
-lexical_cast(char_cit from, char_cit to)
+requires(std::is_integral<type>::value)
+type lexical_cast(char_cit from, char_cit to)
 {
     return my_cvt::atoi<type>(from, to - from);
 }
 
 template<typename type>
-std::enable_if_t<!(std::is_integral<type>::value), type>
-lexical_cast(char_cit from, char_cit to);
+requires(!(std::is_integral<type>::value))
+type lexical_cast(char_cit from, char_cit to);
 
 template<> double lexical_cast<double>(char_cit from, char_cit to);
 

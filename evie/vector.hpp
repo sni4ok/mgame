@@ -29,12 +29,12 @@ protected:
 
     void __destroy(type* v)
     {
-        if(have_destructor)
+        if constexpr(have_destructor)
             v->type::~type();
     }
     void __destroy(type* from, type* to)
     {
-        if(have_destructor)
+        if constexpr(have_destructor)
             for(; from != to; ++from)
                 from->type::~type();
     }
@@ -237,7 +237,7 @@ public:
 #pragma GCC diagnostic pop
         }
         memmove((void*)(it + 1), it, (end() - it) * sizeof(type));
-        if(have_destructor)
+        if constexpr(have_destructor)
             memset((void*)it, 0, sizeof(type));
     }
     iterator insert(iterator it, type&& v) {
@@ -255,7 +255,7 @@ public:
     void insert(const type* from, const type* to) {
         uint64_t size = size_;
         resize(size_ + (to - from));
-        if(have_destructor) {
+        if constexpr(have_destructor) {
             for(iterator it = begin() + size; from != to; ++from, ++it)
                 *it = *from;
         }
@@ -266,7 +266,7 @@ public:
     {
         if(size_ == capacity_)
             reserve(capacity_ ? capacity_ * 2 : 32);
-        if(have_destructor)
+        if constexpr(have_destructor)
             memset((void*)(buf + size_), 0, sizeof(type));
     }
     void push_back(type&& v) {

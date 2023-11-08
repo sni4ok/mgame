@@ -49,8 +49,8 @@ stream& operator<<(stream& m, const mstring& s)
 }
 
 template<typename type>
-std::enable_if_t<std::is_integral<type>::value, mstring>
-to_string(type value)
+requires(std::is_integral<type>::value)
+mstring to_string(type value)
 {
     char buf[24];
     uint32_t size = my_cvt::itoa(buf, value);

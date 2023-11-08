@@ -102,7 +102,8 @@ struct mlog
     mlog& operator<<(char s);
 
     template<typename array>
-    typename std::enable_if_t<std::is_array<array>::value, mlog&> operator<<(const array& v)
+    requires(std::is_array<array>::value)
+    mlog& operator<<(const array& v)
     {
         static_assert(sizeof(v[0]) == 1, "char array");
         uint32_t sz = sizeof(v);
@@ -120,10 +121,11 @@ struct mlog
     mlog& operator<<(double d);
     static void set_no_cout();
 
-    template<typename T>
-    typename std::enable_if_t<std::is_integral<T>::value, mlog&> operator<<(T t)
+    template<typename type>
+    requires(std::is_integral<type>::value)
+    mlog& operator<<(type t)
     {
-        check_size(my_cvt::atoi_size<T>::value);
+        check_size(my_cvt::atoi_size<type>::value);
         buf.tail->size += my_cvt::itoa(&buf.tail->buf[buf.tail->size], t);
         return *this;
     }
