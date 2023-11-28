@@ -105,11 +105,7 @@ struct mlog
     requires(std::is_array<array>::value)
     mlog& operator<<(const array& v)
     {
-        static_assert(sizeof(v[0]) == 1, "char array");
-        uint32_t sz = sizeof(v);
-        while(sz && v[sz - 1] == char())
-            --sz;
-        write(&v[0], sz);
+        (*this) << from_array(v);
         return *this;
     }
 

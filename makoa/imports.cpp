@@ -329,7 +329,7 @@ void import_ifile_start(void* c, void* p)
 template<typename type>
 void* importer_init(volatile bool& can_run, const char* params)
 {
-    return (void*)(new type(can_run, mstring(params)));
+    return (void*)(new type(can_run, _mstring(params)));
 }
 
 template<typename type>
@@ -342,7 +342,7 @@ fmap<mstring, hole_importer> _importers;
 
 int register_importer(const char* s, hole_importer hi)
 {
-    mstring name(s);
+    mstring name(_str_holder(s));
     auto it = _importers.find(name);
     if(it != _importers.end())
         throw mexception(es() % "register_importer() double registration for " % name);
@@ -365,7 +365,7 @@ static const int _import_file = register_importer("file",
 
 hole_importer create_importer(const char* s)
 {
-    mstring name(s);
+    mstring name(_str_holder(s));
     auto it = _importers.find(name);
     if(it == _importers.end())
         throw mexception(es() % "import " % name % " not registered");

@@ -70,7 +70,7 @@ mvector<mstring> init_params(int argc, char** argv, bool log_params)
         print_init(argc, argv);
     mvector<mstring> ret(argc);
     for(int i = 0; i != argc; ++i)
-        ret[i] = mstring(argv[i]);
+        ret[i] = _mstring(argv[i]);
     return ret;
 }
 

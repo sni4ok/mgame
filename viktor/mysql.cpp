@@ -132,7 +132,7 @@ struct mysql
     }
     void throw_error()
     {
-        throw mexception(mysql_error(sql.get()));
+        throw mexception(_str_holder(mysql_error(sql.get())));
     }
     void throw_error(buf_stream& bs)
     {
@@ -191,7 +191,7 @@ struct mysql
 
 void* mysql_init(const char* params)
 {
-    return new mysql(mstring(params));
+    return new mysql(_mstring(params));
 }
 
 void mysql_destroy(void* v)

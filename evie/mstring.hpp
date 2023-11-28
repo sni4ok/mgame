@@ -16,7 +16,6 @@ struct mstring : mvector<char>
     typedef char value_type;
 
     mstring();
-    explicit mstring(const char* str);
     mstring(str_holder str);
 	mstring(std::initializer_list<char> r);
     mstring(const char* from, const char* to);
@@ -28,8 +27,9 @@ struct mstring : mvector<char>
     str_holder str() const;
     const char* c_str() const;
     bool operator==(const mstring& r) const;
-    bool operator==(const char* str) const;
+    bool operator==(const str_holder& r) const;
     bool operator!=(const mstring& r) const;
+    bool operator!=(const str_holder& r) const;
     bool operator<(const mstring& r) const;
     mstring& operator+=(const mstring& r);
     mstring& operator+=(str_holder r);
@@ -37,9 +37,12 @@ struct mstring : mvector<char>
     mstring operator+(str_holder r) const;
     mstring& operator+=(char c);
     mstring operator+(char c) const;
-    mstring& operator+=(const char* str);
-    mstring operator+(const char* str) const;
 };
+
+inline mstring _mstring(const char* str)
+{
+    return mstring(_str_holder(str));
+}
 
 template<typename stream>
 stream& operator<<(stream& m, const mstring& s)

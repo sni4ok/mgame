@@ -19,7 +19,7 @@ namespace
         int hfile;
 
     public:
-        ofile(const char* file) : name(file)
+        ofile(const char* file) : name(_str_holder(file))
         {
             hfile = ::open(file, O_WRONLY | O_CREAT | O_APPEND, S_IWRITE | S_IREAD | S_IRGRP | S_IWGRP);
             if(hfile <= 0)
@@ -174,7 +174,7 @@ public:
             stream.reset(new ofile(file_name));
             if(!(params & mlog::no_crit_file))
             {
-                mstring crit_file = mstring(file_name) + "_crit";
+                mstring crit_file = _mstring(file_name) + "_crit";
                 stream_crit.reset(new ofile(crit_file.c_str()));
             }
             if(params & mlog::lock_file)

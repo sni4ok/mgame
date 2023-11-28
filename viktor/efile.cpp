@@ -138,7 +138,7 @@ struct efile
 
 void* efile_init(const char* params)
 {
-    return new efile(mstring(params));
+    return new efile(_mstring(params));
 }
 
 void efile_destroy(void* v)

@@ -161,7 +161,7 @@ bool create_directory(const char* fname)
 
 void create_directories(const char* fname)
 {
-    mstring buf(fname);
+    mstring buf(_str_holder(fname));
     mstring::iterator it = buf.begin(), ie = buf.end();
     while(it != ie)
     {

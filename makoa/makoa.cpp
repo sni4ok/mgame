@@ -19,7 +19,7 @@ int main(int argc, char** argv)
         cout_write("Usage: ./makoa_server [config file]\n");
         return 1;
     }
-    auto log = log_init(argc == 1 ? "makoa_server.log" : get_log_name(mstring(argv[1])).c_str(), mlog::store_tid | mlog::always_cout | mlog::lock_file);
+    auto log = log_init(argc == 1 ? "makoa_server.log" : get_log_name(_mstring(argv[1])).c_str(), mlog::store_tid | mlog::always_cout | mlog::lock_file);
     profilerinfo pff_info;
     init_signals(server_set_close);
     mstring name;

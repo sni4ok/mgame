@@ -182,16 +182,17 @@ struct cg_listener_h
         last_call_time = time(NULL);
     }
     cg_listener_h(cg_conn_h& conn, const char* name, const char* cli_listener, plaza_func func, void* func_state = 0, mstring def_state = mstring())
-        : listener(), conn(conn), closed(true), name(name), cli_listener(cli_listener), func(func), func_state(func_state), def_state(def_state)
+        : listener(), conn(conn), closed(true), name(_str_holder(name)), cli_listener(_str_holder(cli_listener)),
+            func(func), func_state(func_state), def_state(def_state)
     {
         set_call();
     }
     void set_replstate(cg_msg_t* msg)
     {
         if(def_state.empty())
-            rev = mstring("replstate=") + mstring((char*)msg->data);
+            rev = _mstring("replstate=") + _str_holder((char*)msg->data);
         else
-            rev = def_state + ";" + "replstate=" + mstring((char*)msg->data);
+            rev = def_state + ";" + "replstate=" + _str_holder((char*)msg->data);
     }
     void set_closed()
     {

@@ -72,6 +72,11 @@ struct str_holder
     }
 };
 
+inline str_holder _str_holder(char_cit str)
+{
+    return str_holder(str, strlen(str));
+}
+
 template<uint64_t sz>
 str_holder from_array(const char (&str)[sz])
 {

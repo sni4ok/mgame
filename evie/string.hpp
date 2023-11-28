@@ -4,33 +4,30 @@
 
 #pragma once
 
-#include "myitoa.hpp"
 #include "vector.hpp"
 
-#include <cstring>
-
-inline void my_fast_copy(const char* from, uint64_t size, char* out)
+inline void my_fast_copy(char_cit from, uint64_t size, char_it out)
 {
     memcpy(out, from, size);
 }
-inline void my_fast_move(const char* from, uint64_t size, char* out)
+inline void my_fast_move(char_cit from, uint64_t size, char_it out)
 {
     memmove(out, from, size);
 }
-inline void my_fast_copy(const char* from, const char* to, char* out)
+inline void my_fast_copy(char_cit from, char_cit to, char_it out)
 {
     memcpy(out, from, to - from);
 }
-inline void my_fast_move(const char* from, const char* to, char* out)
+inline void my_fast_move(char_cit from, char_cit to, char_it out)
 {
     memmove(out, from, to - from);
 }
 
 struct buf_stream
 {
-    char *from, *cur, *to;
+    char_it from, cur, to;
 
-    buf_stream(char* from, char* to) : from(from), cur(from), to(to)
+    buf_stream(char_it from, char_it to) : from(from), cur(from), to(to)
     {
     }
 
@@ -38,11 +35,11 @@ struct buf_stream
     buf_stream(char (&v)[size]) : from(v), cur(from), to(from + size)
     {
     }
-    const char* begin() const
+    char_cit begin() const
     {
         return from;
     }
-    const char* end() const
+    char_cit end() const
     {
         return cur;
     }
@@ -54,7 +51,7 @@ struct buf_stream
     {
         return str_holder(begin(), size());
     }
-    const char* c_str()
+    char_cit c_str()
     {
         check_size(1);
         *cur = char();
@@ -75,7 +72,7 @@ struct buf_stream
             check_size(new_sz - cur_sz);
         cur = from + new_sz;
     }
-    void write(const char* v, uint64_t s)
+    void write(char_cit v, uint64_t s)
     {
         if(unlikely(cur + s > to))
             throw str_exception("buf_stream::write() overloaded");
@@ -126,11 +123,6 @@ struct buf_stream_fixed : buf_stream
     }
 };
 
-inline str_holder _str_holder(const char* str)
-{
-    return str_holder(str, strlen(str));
-}
-
 typedef buf_stream_fixed<16 * 1024> my_stream;
 
 struct es : my_stream
@@ -158,22 +150,22 @@ class my_basic_string
 
 public:
     typedef char value_type;
-    typedef const char* const_iterator;
-    typedef char* iterator;
+    typedef char_cit const_iterator;
+    typedef char_it iterator;
     typedef char& reference;
     typedef const char& const_reference;
 
     my_basic_string() : sz()
     {
     }
-    my_basic_string(const char* from, uint32_t size)
+    my_basic_string(char_cit from, uint32_t size)
     {
         if(unlikely(size > stack_sz - 1))
             throw mexception(es() % "my_basic_string, impossible construct from c_str, sz: " % size % ", stack_sz: " % stack_sz);
         sz = size;
         my_fast_copy(from, sz, begin());
     }
-    my_basic_string(const char* from, const char* to) : my_basic_string(from, to - from)
+    my_basic_string(char_cit from, char_cit to) : my_basic_string(from, to - from)
     {
     }
     my_basic_string(const str_holder& str) : my_basic_string(str.str, str.size)
@@ -204,7 +196,7 @@ public:
     {
         return !(*this == r);
     }
-    const char* c_str() const
+    char_cit c_str() const
     {
         const_cast<char&>(buf[sz]) = char();
         return &buf[0];

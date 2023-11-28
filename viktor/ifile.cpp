@@ -579,7 +579,7 @@ struct ifile_replay : ifile
 
 void* ifile_create(const char* params, volatile bool& can_run)
 {
-    mvector<mstring> p = split(mstring(params), ' ');
+    mvector<mstring> p = split(_mstring(params), ' ');
     if(p.empty() || p.size() > 5)
         throw str_exception("ifile_create() [history ,replay speed ]file_name[ time_from[ time_to]]");
 

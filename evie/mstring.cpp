@@ -11,11 +11,6 @@ mexception::mexception(str_holder str)
     msg.push_back(char());
 }
 
-mexception::mexception(const char* str)
-    : mexception(str_holder(str, strlen(str)))
-{
-}
-
 const char* mexception::what() const noexcept
 {
     return msg.begin();
@@ -24,10 +19,6 @@ const char* mexception::what() const noexcept
 mstring::mstring()
 {
     __clear();
-}
-
-mstring::mstring(const char* str) : base(str, str + strlen(str))
-{
 }
 
 mstring::mstring(str_holder str) : base(str.str, str.str + str.size)
@@ -87,15 +78,19 @@ bool mstring::operator==(const mstring& r) const
     return false;
 }
 
-bool mstring::operator==(const char* str) const
+bool mstring::operator==(const str_holder& r) const
 {
-    uint64_t sz = strlen(str);
-    if(sz == size())
-        return !memcmp(begin(), str, sz);
+    if(r.size == size())
+        return !memcmp(begin(), r.begin(), size());
     return false;
 }
 
 bool mstring::operator!=(const mstring& r) const
+{
+    return !(*this == r);
+}
+
+bool mstring::operator!=(const str_holder& r) const
 {
     return !(*this == r);
 }
@@ -139,18 +134,6 @@ mstring mstring::operator+(char c) const
 {
     mstring ret(*this);
     return ret += c;
-}
-
-mstring& mstring::operator+=(const char* str)
-{
-    base::insert(str, str + strlen(str));
-    return *this;
-}
-
-mstring mstring::operator+(const char* str) const
-{
-    mstring ret(*this);
-    return ret += str;
 }
 
 mstring operator+(str_holder l, const mstring& r)

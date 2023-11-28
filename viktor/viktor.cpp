@@ -27,7 +27,7 @@ struct viktor
     std::map<uint32_t, snapshot> snapshots;
     mvector<message> s;
 
-    viktor(const char* params) : last_times(), params(params), last_connect()
+    viktor(const char* params) : last_times(), params(_str_holder(params)), last_connect()
     {
     }
     void clear(uint32_t security_id)

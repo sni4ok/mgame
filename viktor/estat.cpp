@@ -168,7 +168,7 @@ namespace {
 
     void* estat_init(const char* params)
     {
-        return new estat(mstring(params));
+        return new estat(_mstring(params));
     }
     void estat_destroy(void* v)
     {

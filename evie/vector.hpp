@@ -468,7 +468,6 @@ struct mexception : std::exception
     mvector<char> msg;
 
     mexception(str_holder str);
-    mexception(const char* str);
     const char* what() const noexcept;
 };
 
