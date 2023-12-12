@@ -112,6 +112,9 @@ struct time_duration
             return seconds < r.seconds;
         return nanos < r.nanos;
     }
+    bool operator!=(const time_duration& r) const {
+        return nanos != r.nanos || seconds != r.seconds || minutes != r.minutes || hours != r.hours;
+    }
     uint32_t total_seconds() const {
         return uint32_t(hours) * 3600 + minutes * 60 + seconds;
     }

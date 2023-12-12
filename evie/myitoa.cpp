@@ -237,7 +237,7 @@ namespace my_cvt
             *buf = 'F';
             return 4;
         }
-        if(m::abs(v) > d_max_d) {
+        if(abs(v) > d_max_d) {
             uint32_t sz = 0;
             uint32_t exp = 0;
             if(v < 0.) {
@@ -258,7 +258,7 @@ namespace my_cvt
             return sz;
         } else {
             double intp = 0.0;
-            double frac = m::modf(v, &intp);
+            double frac = modf(v, &intp);
             int64_t iv = int64_t(intp);
             if(iv < 0)
                 iv = -iv;
@@ -312,7 +312,7 @@ namespace my_cvt
         auto check = [&](const char* s)
         {
             my_unused(s);
-            assert(str_holder(buf, sz) == str_holder(s, strlen(s)));
+            assert(str_holder(buf, sz) == _str_holder(s));
         };
         check("1");
         sz = itoa(buf, uint16_t(1267));

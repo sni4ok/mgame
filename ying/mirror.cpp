@@ -35,7 +35,7 @@ struct security_filter
         if(m.id == msg_clean)
             return m.mc.security_id == security_id;
         if(m.id == msg_instr) {
-            if(!security_id && (security == m.mi.security || security == "$0"))
+            if(!security_id && (security == from_array(m.mi.security) || security == "$0"))
                 security_id = m.mi.security_id;
             return m.mi.security_id == security_id;
         }

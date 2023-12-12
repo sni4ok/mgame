@@ -9,8 +9,6 @@
 #include <initializer_list>
 #include <type_traits>
 
-#include <stdlib.h>
-
 template<typename type>
 class mvector
 {
@@ -220,7 +218,7 @@ public:
     }
     bool operator==(const mvector& r) const {
         if(size_ == r.size_)
-            return !bcmp(buf, r.buf, size_ * sizeof(type));
+            return !memcmp(buf, r.buf, size_ * sizeof(type));
         return false;
     }
     bool operator!=(const mvector& r) const {

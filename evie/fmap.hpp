@@ -10,11 +10,7 @@
 template<typename key, typename value, typename comp = less<key>, template <typename> typename vector = mvector>
 struct fmap
 {
-    struct pair
-    {
-        key first;
-        value second;
-    };
+    typedef ::pair<key, value> pair;
 
     typedef key key_type;
     typedef value mapped_type;
@@ -150,13 +146,23 @@ struct fmap
         data.reserve(new_capacity);
     }
 
-private:
+//protected:
     vector<pair> data;
 };
 
 template<typename key, typename value>
 struct pmap : fmap<key, value, less<key>, pvector>
 {
-    using fmap<key, value, less<key>, pvector>::fmap;
+    typedef fmap<key, value, less<key>, pvector> base;
+    using base::fmap;
+
+    base::iterator insert(base::pair* v) {
+        auto it = base::lower_bound(v->first);
+        if(it == this->data.end() || it->first != v->first)
+            it = this->data.insert(it, v);
+        else
+            delete v;
+        return it;
+    }
 };
 

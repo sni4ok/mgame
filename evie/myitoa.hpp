@@ -9,9 +9,6 @@
 #include <limits>
 #include <exception>
 
-#define unlikely(x)     __builtin_expect(!!(x),0)
-#define likely(x)       __builtin_expect(!!(x),1)
-
 struct str_exception : std::exception
 {
     const char* msg;

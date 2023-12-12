@@ -15,8 +15,9 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <fcntl.h>
-
-#include <cerrno>
+#include <errno.h>
+#include <string.h>
+#include <stdlib.h>
 
 namespace {
 

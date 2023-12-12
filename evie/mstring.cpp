@@ -145,3 +145,10 @@ mstring operator+(str_holder l, const mstring& r)
     return ret;
 }
 
+bool str_holder::operator==(const str_holder& r) const
+{
+    if(size == r.size)
+        return !memcmp(str, r.str, size);
+    return false;
+}
+

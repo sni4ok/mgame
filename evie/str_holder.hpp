@@ -4,8 +4,23 @@
 
 #pragma once
 
-#include <cstring>
-#include <cstdint>
+#include <stdint.h>
+
+#define unlikely(x)     __builtin_expect(!!(x),0)
+#define likely(x)       __builtin_expect(!!(x),1)
+
+extern "C"
+{
+    typedef uint64_t size_t;
+    extern void* memset(void*, int, size_t) __THROW __nonnull ((1));
+    extern void* memcpy(void*, const void*, size_t) __THROW __nonnull ((1, 2));
+    extern void* memmove(void*, const void*, size_t) __THROW __nonnull ((1, 2));
+    extern int memcmp(const void*, const void*, size_t) __THROW __attribute_pure__ __nonnull ((1, 2));
+
+    extern void *realloc(void*, size_t) __THROW __attribute_warn_unused_result__ __attribute_alloc_size__ ((2));
+    extern void free(void*) __THROW;
+    extern char *getenv(const char*) __THROW __nonnull ((1)) __wur;
+}
 
 template<class it1, class it2>
 bool lexicographical_compare(it1 first1, it1 last1, it2 first2, it2 last2)
@@ -42,12 +57,7 @@ struct str_holder
     str_holder(const char (&str)[sz]) : str(str), size(sz - 1)
     {
     }
-    bool operator==(const str_holder& r) const
-    {
-        if(size == r.size)
-            return !memcmp(str, r.str, size);
-        return false;
-    }
+    bool operator==(const str_holder& r) const;
 
     template<uint64_t sz>
     bool operator==(const char (&str)[sz]) const
@@ -72,10 +82,7 @@ struct str_holder
     }
 };
 
-inline str_holder _str_holder(char_cit str)
-{
-    return str_holder(str, strlen(str));
-}
+str_holder _str_holder(char_cit str);
 
 template<uint64_t sz>
 str_holder from_array(const char (&str)[sz])

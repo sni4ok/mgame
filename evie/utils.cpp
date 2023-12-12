@@ -5,10 +5,17 @@
 #include "utils.hpp"
 
 #include <errno.h>
+#include <string.h>
+#include <stdlib.h>
 
 void throw_system_failure(str_holder msg)
 {
     throw mexception(es() % _str_holder((errno ? strerror(errno) : "")) % ", " % msg);
+}
+
+str_holder _str_holder(char_cit str)
+{
+    return str_holder(str, strlen(str));
 }
 
 mstring to_string(double value)

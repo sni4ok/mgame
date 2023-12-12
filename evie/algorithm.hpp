@@ -4,7 +4,8 @@
 
 #pragma once
 
-#include <cstdint>
+#include "pair.hpp"
+#include "str_holder.hpp"
 
 template<typename iterator, typename type>
 iterator find(iterator from, iterator to, const type& value)
@@ -150,5 +151,76 @@ struct greater
 inline bool equal(char_cit b1, char_cit e1, char_cit b2)
 {
     return !(memcmp(b1, b2, e1 - b1));
+}
+
+template<typename iterator, typename type>
+void fill(iterator f, iterator t, const type& v)
+{
+    for(; f != t; ++f)
+        *f = v;
+}
+
+template<typename iterator, typename type>
+type accumulate(iterator f, iterator t, const type& v)
+{
+    type ret = v;
+    for(; f != t; ++f)
+        ret += *f;
+    return ret;
+}
+
+template<typename iterator, typename func>
+void for_each(iterator f, iterator t, const func& fun)
+{
+    for(; f != t; ++f)
+        fun(*f);
+}
+
+template<typename iterator, typename cont>
+void copy_back(iterator f, iterator t, cont& c)
+{
+    for(; f != t; ++f)
+        c.push_back(*f);
+}
+
+template<bool min, typename iterator, typename compare>
+iterator min_element_impl(iterator from, iterator to, compare cmp)
+{
+    if(from == to)
+        return from;
+    iterator it = from;
+    ++from;
+    for(; from != to; ++from)
+    {
+        if(min)
+        {
+            if(cmp(*from, *it))
+                it = from;
+        }
+        else
+        {
+            if(cmp(*it, *from))
+                it = from;
+        }
+    }
+    return it;
+}
+
+template<typename iterator, typename compare>
+iterator min_element(iterator from, iterator to, compare cmp)
+{
+    return min_element_impl<true>(from, to, cmp);
+}
+
+template<typename iterator, typename compare>
+iterator max_element(iterator from, iterator to, compare cmp)
+{
+    return min_element_impl<false>(from, to, cmp);
+}
+
+template<typename iterator, typename compare>
+pair<iterator, iterator> minmax_element(iterator from, iterator to, compare cmp)
+{
+    return {min_element(from, to, cmp), max_element(from, to, cmp)};
 }
 

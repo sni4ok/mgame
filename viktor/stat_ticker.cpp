@@ -8,6 +8,8 @@
 #include "makoa/exports.hpp"
 #include "makoa/types.hpp"
 
+#include "evie/math.hpp"
+
 #include <map>
 #include <set>
 #include <optional>
@@ -109,9 +111,9 @@ namespace
                     auto it = prices.begin(), ie = prices.end();
                     price_t price = *it;
                     ++it;
-                    price_t min_price = price_t(std::abs(price.value - it->value));
+                    price_t min_price = price_t(abs(price.value - it->value));
                     for(; it != ie; ++it) {
-                        min_price = std::min(min_price, price_t(std::abs(price.value - it->value)));
+                        min_price = std::min(min_price, price_t(abs(price.value - it->value)));
                         price = *it;
                     }
                     return min_price;

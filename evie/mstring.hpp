@@ -5,7 +5,6 @@
 #pragma once
 
 #include "vector.hpp"
-#include "str_holder.hpp"
 
 struct mstring : mvector<char>
 {

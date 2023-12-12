@@ -326,9 +326,7 @@ mlog& mlog::operator<<(const ttime_t& p)
 mlog& mlog::operator<<(const std::exception& e)
 {
     buf.extra_param |= critical;
-    *this << "exception: ";
-    const char* s = e.what();
-    write(s, strlen(s));
+    *this << "exception: " << _str_holder(e.what());
     return *this;
 }
 

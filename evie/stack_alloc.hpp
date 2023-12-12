@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <cassert>
+
 template<typename type, uint32_t alloc_size>
 struct st_allocator
 {

@@ -55,7 +55,7 @@ struct server::impl
                         usleep(1000 * 1000);
                 } catch (std::exception& e) {
                     mlog() << "import_thread " << str << " " << e;
-                    for(uint i = 0; can_run && i != 5; ++i)
+                    for(int i = 0; can_run && i != 5; ++i)
                         sleep(1);
                 }
             }

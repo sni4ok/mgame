@@ -5,12 +5,12 @@
 #include "config.hpp"
 #include "mlog.hpp"
 
-bool is_endl(char c)
+inline bool is_endl(char c)
 {
     return c == '\r' || c == '\n';
 }
 
-char_cit found_tag(char_cit it_b, char_cit it_e, str_holder tag_)
+inline char_cit found_tag(char_cit it_b, char_cit it_e, str_holder tag_)
 {
     mstring tag = mstring(tag_) + " = ";
     char_cit it = it_b;
@@ -72,6 +72,20 @@ mvector<mstring> init_params(int argc, char** argv, bool log_params)
     for(int i = 0; i != argc; ++i)
         ret[i] = _mstring(argv[i]);
     return ret;
+}
+
+str_holder get_config_param_str(char_cit it, char_cit it_e, str_holder tag, bool can_empty)
+{
+    it = found_tag(it, it_e, tag);
+    const char* it_to = ::find_if(it, it_e, &is_endl);
+    if(it == it_e) {
+        if(can_empty)
+            return str_holder();
+        throw mexception(es() % "Load config: \"" % tag % "\" not found in config");
+    }
+    while(it_to != it && (*(it_to-1) == ' ' || *(it_to-1) == '\t'))
+        --it_to;
+    return str_holder(it, it_to);
 }
 
 mvector<mstring> get_config_params(const mvector<char>& cfg, str_holder tag)

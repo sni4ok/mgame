@@ -277,8 +277,10 @@ struct ifile
         return st.st_ino;
     }
 
-    ttime_t add_file_impl(const mstring& fname, bool last_file)
+    ttime_t add_file_impl(const mstring& fname)
     {
+        bool last_file = fname == main_file.name;
+
         cur_file.open(fname.c_str());
         if(last_file && !cur_file.zip)
             last_file_ino = file_ino(cur_file.f.hfile);
@@ -353,10 +355,10 @@ struct ifile
         return ttime_t();
     }
 
-    ttime_t add_file(const mstring& fname, bool last_file = false)
+    ttime_t add_file(const mstring& fname)
     {
         try {
-            return add_file_impl(fname, last_file);
+            return add_file_impl(fname);
         }
         catch(std::exception& e) {
             mlog() << "ifile::add_file(" << fname << ") skipped, " << e;

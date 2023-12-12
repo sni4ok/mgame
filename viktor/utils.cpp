@@ -39,10 +39,10 @@ void test_io(type c)
     my_unused(v);
 }
 
-void test_impl(const char* a1, const char* a2)
+void test_impl(str_holder a1, str_holder a2)
 {
-    count_t v1 = read_count(a1, a1 + strlen(a1));
-    count_t v2 = read_count(a2, a2 + strlen(a2));
+    count_t v1 = read_count(a1.begin(), a1.end());
+    count_t v2 = read_count(a2.begin(), a2.end());
     test_io(v1);
     assert(v1.value == v2.value);
     test_io(v1);
@@ -61,8 +61,8 @@ void amount_test()
     test_impl("560", "56E1");
     test_impl("5e-7", "0.5E-6");
 
-    const char* v = "9.79380846343861E-4";
-    count_t c = read_count(v, v + strlen(v));
+    str_holder v = "9.79380846343861E-4";
+    count_t c = read_count(v.begin(), v.end());
     my_unused(c);
 
     test_io(price_t({std::numeric_limits<int64_t>::max()}));
