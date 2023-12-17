@@ -9,8 +9,6 @@
 #include "mstring.hpp"
 #include "algorithm.hpp"
 
-#include <cassert>
-
 struct noncopyable
 {
     noncopyable() {

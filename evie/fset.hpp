@@ -7,8 +7,6 @@
 #include "vector.hpp"
 #include "algorithm.hpp"
 
-#include <cassert>
-
 template<typename type, typename comp = less<type>, template <typename> typename vector = mvector>
 struct fset
 {
@@ -23,6 +21,10 @@ struct fset
     fset(fset&& r) : data(std::move(r.data)) {
     }
     fset(const fset& r) : data(r.data) {
+    }
+	fset(std::initializer_list<value_type> init) {
+        for(const auto& v: init)
+            insert(v);
     }
     fset(const type* from, const type* to): data(from, to) {
     }

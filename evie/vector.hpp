@@ -8,6 +8,7 @@
 
 #include <initializer_list>
 #include <type_traits>
+#include <cassert>
 
 template<typename type>
 class mvector
@@ -35,6 +36,11 @@ protected:
         if constexpr(have_destructor)
             for(; from != to; ++from)
                 from->type::~type();
+    }
+    void __check_iterator(const type* it)
+    {
+        (void)it;
+        assert(it >= buf && it <= buf + size_);
     }
 
 public:
@@ -195,9 +201,11 @@ public:
         free(buf);
     }
     type& operator[](uint64_t elem) {
+        assert(elem < size_);
         return begin()[elem];
     }
     const type& operator[](uint64_t elem) const {
+        assert(elem < size_);
         return begin()[elem];
     }
     type& at(uint64_t elem) {
@@ -227,13 +235,11 @@ public:
     void __insert_impl(iterator& it)
     {
         if(size_ == capacity_) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wuse-after-free"
             uint64_t pos = it - buf;
             reserve(capacity_ ? capacity_ * 2 : 32);
-            it = &buf[pos];
-#pragma GCC diagnostic pop
+            it = buf + pos;
         }
+        __check_iterator(it);
         memmove((void*)(it + 1), it, (end() - it) * sizeof(type));
         if constexpr(have_destructor)
             memset((void*)it, 0, sizeof(type));
@@ -282,12 +288,15 @@ public:
         resize(size_ - 1);
     }
     iterator erase(iterator it) {
+        __check_iterator(it);
         __destroy(it);
         memmove((void*)it, it + 1, ((end() - it) - 1) * sizeof(type));
         --size_;
         return it;
     }
     iterator erase(iterator from, iterator to) {
+        __check_iterator(from);
+        __check_iterator(to);
         __destroy(from, to);
         memmove((void*)from, to, (end() - to) * sizeof(type));
         size_ -= to - from;
