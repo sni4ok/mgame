@@ -144,13 +144,13 @@ public:
         return buf;
     }
     const_iterator end() const {
-        return begin() + size_;
+        return buf + size_;
     }
     const_iterator cend() const {
-        return begin() + size_;
+        return buf + size_;
     }
     iterator end() {
-        return begin() + size_;
+        return buf + size_;
     }
 
     struct reverse_iterator
@@ -188,12 +188,10 @@ public:
         }
     };
 
-    reverse_iterator rbegin() const
-    {
+    reverse_iterator rbegin() const {
         return reverse_iterator({end() - 1});
     }
-    reverse_iterator rend() const
-    {
+    reverse_iterator rend() const {
         return reverse_iterator({begin() - 1});
     }
     ~mvector() {
@@ -232,8 +230,7 @@ public:
     bool operator!=(const mvector& r) const {
         return !(*this == r);
     }
-    void __insert_impl(iterator& it)
-    {
+    void __insert_impl(iterator& it) {
         if(size_ == capacity_) {
             uint64_t pos = it - buf;
             reserve(capacity_ ? capacity_ * 2 : 32);
@@ -266,8 +263,7 @@ public:
         else
             memmove((void*)&buf[size], from, (to - from) * sizeof(type));
     }
-    void __push_back_impl()
-    {
+    void __push_back_impl() {
         if(size_ == capacity_)
             reserve(capacity_ ? capacity_ * 2 : 32);
         if constexpr(have_destructor)
@@ -283,8 +279,7 @@ public:
         buf[size_] = v;
         ++size_;
     }
-    void pop_back()
-    {
+    void pop_back() {
         resize(size_ - 1);
     }
     iterator erase(iterator it) {
@@ -406,13 +401,11 @@ struct pvector : mvector<type*>
     pvector(const pvector&) = delete;
     pvector& operator=(const pvector&) = delete;
 
-    pvector(pvector&& r)
-    {
+    pvector(pvector&& r) {
         base::__clear();
         base::swap(r);
     }
-    pvector& operator=(pvector&& r)
-    {
+    pvector& operator=(pvector&& r) {
         clear();
         static_cast<base&>(*this) = std::move(r);
         return *this;
@@ -420,7 +413,7 @@ struct pvector : mvector<type*>
     type& operator[](uint64_t elem) {
         return *(base::begin()[elem]);
     }
-    const type& operator[](uint64_t elem) const{
+    const type& operator[](uint64_t elem) const {
         return *(base::begin()[elem]);
     }
     iterator insert(iterator it, type* v) {
@@ -428,8 +421,7 @@ struct pvector : mvector<type*>
             v = new type();
         return {base::insert(it.it, v)};
     }
-    void splice(pvector& r)
-    {
+    void splice(pvector& r) {
         base::insert(r.begin().it, r.end().it);
         r.base::resize(0);
     }

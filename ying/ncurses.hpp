@@ -6,8 +6,6 @@
 
 #include "evie/utils.hpp"
 
-#include <memory>
-
 #include <curses.h>
 
 #include <sys/ioctl.h>
@@ -39,7 +37,7 @@ class window : noncopyable
     {
         endwin();
     }
-	std::unique_ptr<WINDOW, decltype(&end_win)> w;
+	unique_ptr<WINDOW, end_win> w;
     ncurses_err e;
 
     long log_par;
@@ -48,7 +46,7 @@ public:
     uint32_t rows, cols;
     mvector<char> blank_row;
 
-    window() : w(initscr(), &end_win)
+    window() : w(initscr())
     {
         log_par = log_params();
         log_params() ^= mlog::always_cout;
@@ -70,7 +68,7 @@ public:
         e = cbreak();
         
         blank_row.resize(cols);
-        std::fill(blank_row.begin(), blank_row.end(), ' ');
+        fill(blank_row.begin(), blank_row.end(), ' ');
     }
     void clear()
     {

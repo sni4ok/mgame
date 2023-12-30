@@ -183,6 +183,13 @@ void copy_back(iterator f, iterator t, cont& c)
         c.push_back(*f);
 }
 
+template<typename ifrom, typename ito>
+void copy(ifrom f, ifrom t, ito out)
+{
+    for(; f != t; ++f, ++out)
+        *out = *f;
+}
+
 template<bool min, typename iterator, typename compare>
 iterator min_element_impl(iterator from, iterator to, compare cmp)
 {

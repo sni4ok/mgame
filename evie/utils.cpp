@@ -28,6 +28,8 @@ mstring to_string(double value)
 template<>
 double lexical_cast<double>(char_cit from, char_cit to)
 {
+    if(from == to)
+        throw str_exception("lexical_cast<double>() from == to");
     char* ep;
     double ret;
     if(*to == char())
