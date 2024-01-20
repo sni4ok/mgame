@@ -106,14 +106,17 @@ struct fset
         iterator it = ::lower_bound(data.begin(), data.end(), k, comp());
         return insert(it, k);
     }
-    void erase(const type& k) {
+    iterator erase(const type& k) {
         iterator it = find(k);
         if(it != data.end())
-            data.erase(it);
+            return data.erase(it);
+        return data.end();
     }
     iterator erase(const_iterator it) {
-        data.erase(const_cast<iterator>(it));
-        return iterator(it);
+        return data.erase(const_cast<iterator>(it));
+    }
+    iterator erase(iterator from, iterator to) {
+        return data.erase(from, to);
     }
     void reserve(uint32_t new_capacity) {
         data.reserve(new_capacity);

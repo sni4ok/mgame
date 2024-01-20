@@ -122,6 +122,8 @@ template<typename type>
 requires(std::is_integral<type>::value)
 type lexical_cast(char_cit from, char_cit to)
 {
+    if(from == to)
+        throw str_exception("lexical_cast<integral>() from == to");
     return my_cvt::atoi<type>(from, to - from);
 }
 

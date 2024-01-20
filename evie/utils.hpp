@@ -95,6 +95,10 @@ struct counting_iterator
     {
         return counting_iterator(value + v);
     }
+    bool operator==(const counting_iterator& r) const
+    {
+        return value == r.value;
+    }
     bool operator!=(const counting_iterator& r) const
     {
         return value != r.value;

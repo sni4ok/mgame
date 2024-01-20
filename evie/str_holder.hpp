@@ -80,6 +80,10 @@ struct str_holder
     {
         return str + size;
     }
+    char operator[](uint32_t idx) const
+    {
+        return *(str + idx);
+    }
 };
 
 str_holder _str_holder(char_cit str);
