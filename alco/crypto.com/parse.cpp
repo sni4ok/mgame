@@ -44,21 +44,19 @@ struct lws_i: sec_id_by_name<lws_impl>
         skip_fixed(it, "{\"id\":");
         iterator ne = it;
         it = find(it, ie, ',');
-        if(skip_if_fixed(it, ",\"code\":0,\"method\":\"subscribe\",\"result\":{\"channel\":"))
+        //if(skip_if_fixed(it, ",\"method\":\"subscribe\",\"code\":0,\"result\":{\"channel\":"))
+        if(skip_if_fixed(it, ",\"method\":\"subscribe\",\"code\":0,\"result\":{\"instrument_name\":\""))
         {
             bool book = false;
-            if(skip_if_fixed(it, "\"book\",\"subscription\":\"book."))
-            {
-                ne = find(it, ie, '.');
-                book = true;
-            }
-            else
-            {
-                skip_fixed(it, "\"trade\",\"subscription\":\"trade.");
-                ne = find(it, ie, '\"');
-            }
-
+            ne = find(it, ie, '\"');
             uint32_t security_id = get_security_id(it, ne, time);
+            it = ne + 1;
+            skip_fixed(it, ",\"subscription\":\"");
+            if(skip_if_fixed(it, "book"))
+                book = true;
+            else
+                skip_fixed(it, "trade");
+
             search_and_skip_fixed(it, ie, "\"data\":[");
             if(book)
             {
@@ -169,7 +167,7 @@ struct lws_i: sec_id_by_name<lws_impl>
                 send_messages();
             }
         }
-        else if(skip_if_fixed(it, ",\"code\":0,\"method\":\"subscribe\",\"channel\""))
+        else if(skip_if_fixed(it, ",\"method\":\"subscribe\",\"code\":0,\"channel\""))
         {
         }
         else if(skip_if_fixed(it, ",\"method\":\"public/heartbeat\",\"code\":0}"))
