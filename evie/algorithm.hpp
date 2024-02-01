@@ -7,6 +7,8 @@
 #include "pair.hpp"
 #include "str_holder.hpp"
 
+#include <utility> //for std::move
+
 template<typename iterator, typename type>
 iterator find(iterator from, iterator to, const type& value)
 {
@@ -29,55 +31,55 @@ iterator find_if(iterator from, iterator to, compare cmp)
     return from;
 }
 
-template<class it1, class it2>
-it1 search(it1 first1, it1 last1, it2 first2, it2 last2)
+template<typename it1, typename it2>
+it1 search(it1 from_1, it1 to_1, it2 from_2, it2 to_2)
 {
     for(;;)
     {
-        it1 i1 = first1;
-        for(it2 i2 = first2; ; ++i1, ++i2)
+        it1 i1 = from_1;
+        for(it2 i2 = from_2; ; ++i1, ++i2)
         {
-            if(i2 == last2)
-                return first1;
-            if(i1 == last1)
-                return last1;
+            if(i2 == to_2)
+                return from_1;
+            if(i1 == to_1)
+                return to_1;
             if(*i1 != *i2)
                 break;
         }
-        ++first1;
+        ++from_1;
     }
 }
 
-template<class It, class T, class Pr>
-It lower_bound(It first, It last, const T& val, Pr pred)
+template<typename iterator, typename type, typename pr>
+iterator lower_bound(iterator from, iterator to, const type& val, pr pred)
 {
-    int64_t count = last - first;
+    int64_t count = to - from;
     while(count > 0)
     {
         int64_t step = count / 2;
-        It mid = first + step;
+        iterator mid = from + step;
         if(pred(*mid, val))
-            first = ++mid, count -= step + 1;
+            from = ++mid, count -= step + 1;
         else
             count = step;
     }
-    return first;
+    return from;
 }
 
-template <class It, class T, class Pr>
-It upper_bound(It first, It last, const T& val, Pr pred)
+template<typename iterator, typename type, typename pr>
+iterator upper_bound(iterator from, iterator to, const type& val, pr pred)
 {
-  int64_t count = last - first;
+  int64_t count = to - from;
   while(count > 0)
   {
     int64_t step = count / 2;
-    It mid = first + step;
+    iterator mid = from + step;
     if(!pred(val, *mid))
-        first = ++mid, count -= step + 1;
+        from = ++mid, count -= step + 1;
     else
         count = step;
   }
-  return first;
+  return from;
 }
 
 template<typename iterator, typename type>
@@ -154,40 +156,40 @@ inline bool equal(char_cit b1, char_cit e1, char_cit b2)
 }
 
 template<typename iterator, typename type>
-void fill(iterator f, iterator t, const type& v)
+void fill(iterator from, iterator to, const type& v)
 {
-    for(; f != t; ++f)
-        *f = v;
+    for(; from != to; ++from)
+        *from = v;
 }
 
 template<typename iterator, typename type>
-type accumulate(iterator f, iterator t, const type& v)
+type accumulate(iterator from, iterator to, const type& v)
 {
     type ret = v;
-    for(; f != t; ++f)
-        ret += *f;
+    for(; from != to; ++from)
+        ret += *from;
     return ret;
 }
 
 template<typename iterator, typename func>
-void for_each(iterator f, iterator t, const func& fun)
+void for_each(iterator from, iterator to, const func& fun)
 {
-    for(; f != t; ++f)
-        fun(*f);
+    for(; from != to; ++from)
+        fun(*from);
 }
 
 template<typename iterator, typename cont>
-void copy_back(iterator f, iterator t, cont& c)
+void copy_back(iterator from, iterator to, cont& c)
 {
-    for(; f != t; ++f)
-        c.push_back(*f);
+    for(; from != to; ++from)
+        c.push_back(*from);
 }
 
 template<typename ifrom, typename ito>
-void copy(ifrom f, ifrom t, ito out)
+void copy(ifrom from, ifrom to, ito out)
 {
-    for(; f != t; ++f, ++out)
-        *out = *f;
+    for(; from != to; ++from, ++out)
+        *out = *from;
 }
 
 template<bool min, typename iterator, typename compare>
@@ -229,5 +231,16 @@ template<typename iterator, typename compare>
 pair<iterator, iterator> minmax_element(iterator from, iterator to, compare cmp)
 {
     return {min_element(from, to, cmp), max_element(from, to, cmp)};
+}
+
+template<typename iterator, typename pr>
+iterator remove_if(iterator from, iterator to, pr p)
+{
+    from = find_if(from, to, p);
+    if(from != to)
+        for(iterator i = from; ++i != to;)
+            if(!p(*i))
+                *from++ = std::move(*i);
+    return from;
 }
 

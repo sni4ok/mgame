@@ -32,7 +32,8 @@ double lexical_cast<double>(char_cit from, char_cit to)
         throw str_exception("lexical_cast<double>() from == to");
     char* ep;
     double ret;
-    if(*to == char())
+    static const bool disable_check = false;
+    if(!disable_check && *to == char())
         ret = strtod(from, &ep);
     else {
         my_basic_string<30> buf(from, to - from);

@@ -44,7 +44,6 @@ struct lws_i: sec_id_by_name<lws_impl>
         skip_fixed(it, "{\"id\":");
         iterator ne = it;
         it = find(it, ie, ',');
-        //if(skip_if_fixed(it, ",\"method\":\"subscribe\",\"code\":0,\"result\":{\"channel\":"))
         if(skip_if_fixed(it, ",\"method\":\"subscribe\",\"code\":0,\"result\":{\"instrument_name\":\""))
         {
             bool book = false;
