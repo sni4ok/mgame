@@ -94,7 +94,7 @@ type* atomic_load(type* ptr)
 }
 
 template<typename type>
-bool atomic_compare_exchange(type*& v, const type* from, const type* to)
+bool atomic_compare_exchange(type*& v, type* from, type* to)
 {
     return __atomic_compare_exchange_n(&v, &from, to, true, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
 }

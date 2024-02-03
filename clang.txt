@@ -1,0 +1,4 @@
+#mkdir build_clang;cd build_clang;cmake -C ../clang.txt ..
+
+set(IS_CLANG ON CACHE BOOL "clang" FORCE)
+

@@ -253,15 +253,26 @@ public:
         ++size_;
         return it;
     }
-    void insert(const type* from, const type* to) {
-        uint64_t size = size_;
-        resize(size_ + (to - from));
+    void __copy_impl(iterator it, const type* from, const type* to) {
         if constexpr(have_destructor) {
-            for(iterator it = begin() + size; from != to; ++from, ++it)
+            for(; from != to; ++from, ++it)
                 *it = *from;
         }
         else
-            memmove((void*)&buf[size], from, (to - from) * sizeof(type));
+            memmove((void*)it, from, (to - from) * sizeof(type));
+    }
+    void insert(const type* from, const type* to) {
+        uint64_t size = size_;
+        resize(size_ + (to - from));
+        __copy_impl(begin() + size, from, to);
+    }
+    void insert(iterator it, const type* from, const type* to) {
+        uint64_t size = size_;
+        uint64_t pos = it - buf;
+        resize(size_ + (to - from));
+        it = buf + pos;
+        __copy_impl(it + (to - from), it, buf + size);
+        __copy_impl(it, from, to);
     }
     void __push_back_impl() {
         if(size_ == capacity_)
@@ -397,7 +408,7 @@ struct pvector : mvector<type*>
         return iterator({base::end()});
     }
 
-    using base::mvector;
+    using base::mvector::mvector;
     pvector(const pvector&) = delete;
     pvector& operator=(const pvector&) = delete;
 
@@ -450,6 +461,12 @@ struct pvector : mvector<type*>
 
 private:
     void resize(uint64_t new_size);
+};
+
+template<typename type>
+struct ppvector : pvector<type>
+{
+    using pvector<type>::pvector;
 };
 
 template<typename type>

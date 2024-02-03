@@ -40,7 +40,7 @@ struct fmap
     void clear() {
         data.clear();
     }
-    uint32_t size() const {
+    uint64_t size() const {
         return data.size();
     }
     bool empty() const {
@@ -142,7 +142,7 @@ struct fmap
     void erase(const_iterator from, const_iterator to) {
         data.erase(iterator(from), iterator(to));
     }
-    void reserve(uint32_t new_capacity) {
+    void reserve(uint64_t new_capacity) {
         data.reserve(new_capacity);
     }
 
@@ -151,10 +151,10 @@ struct fmap
 };
 
 template<typename key, typename value>
-struct pmap : fmap<key, value, less<key>, pvector>
+struct pmap : fmap<key, value, less<key>, ppvector>
 {
-    typedef fmap<key, value, less<key>, pvector> base;
-    using base::fmap;
+    typedef fmap<key, value, less<key>, ppvector> base;
+    using base::fmap::fmap;
 
     base::iterator insert(base::pair* v) {
         auto it = base::lower_bound(v->first);

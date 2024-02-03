@@ -39,7 +39,7 @@ struct fset
     void clear() {
         data.clear();
     }
-    uint32_t size() const {
+    uint64_t size() const {
         return data.size();
     }
     bool empty() const {
@@ -118,7 +118,7 @@ struct fset
     iterator erase(iterator from, iterator to) {
         return data.erase(from, to);
     }
-    void reserve(uint32_t new_capacity) {
+    void reserve(uint64_t new_capacity) {
         data.reserve(new_capacity);
     }
 
@@ -164,10 +164,10 @@ inserter_t<cont> inserter(cont& c)
 }
 
 template<typename type, typename comp = less<type> >
-struct pset : fset<type, comp, pvector>
+struct pset : fset<type, comp, ppvector>
 {
-    typedef fset<type, comp, pvector> base;
-    using base::fset;
+    typedef fset<type, comp, ppvector> base;
+    using base::fset::fset;
 
     base::iterator insert(base::iterator it, type* k)
     {

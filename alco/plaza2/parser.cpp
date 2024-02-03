@@ -114,7 +114,7 @@ struct parser : emessages, stack_singleton<parser>
     }
     void proceed(volatile bool& can_run)
     {
-        for(uint32_t c = 0; can_run; ++c) {
+        while(can_run) {
             if(unlikely(!conn.cli)) {
                 connect(can_run);
                 if(!can_run)

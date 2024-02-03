@@ -47,7 +47,7 @@ public:
             if(p)
             {
                 MPROFILE("follower::run_once() race")
-                delete p;
+                delete[] p;
             }
             return true;
         }

@@ -72,6 +72,8 @@ public:
     explicit array(params ... args) : buf(args...), size_(sizeof...(args)) {
     }
     array(std::initializer_list<value_type> r) {
+       resize(r.size());
+       copy(r.begin(), r.end(), buf);
     }
     array& operator=(const array& r) {
         clear();
@@ -93,7 +95,7 @@ public:
     void resize(uint32_t new_size) {
         if(new_size < size_)
             size_ = new_size;
-        else if(new_size < capacity)
+        else if(new_size < capacity_)
         {
             for(uint32_t i = size_; i != new_size; ++i)
                 buf[size_] = type();

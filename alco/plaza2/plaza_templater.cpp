@@ -10,8 +10,6 @@
 
 #include <map>
 #include <set>
-#include <memory>
-#include <vector>
 #include <iostream>
 
 #include <dirent.h>
@@ -58,6 +56,8 @@ struct context
     virtual bool need_save() {
         return true;
     }
+    virtual ~context() {
+    }
 };
 
 uint32_t cg_decimal_size(uint32_t m, uint32_t e) {
@@ -83,7 +83,7 @@ struct optional
     }
     const t& operator*() const {
         if(!set)
-            throw std::logic_error("optional::operator* value not set");
+            throw str_exception("optional::operator* value not set");
         return val;
     }
 };
@@ -195,7 +195,7 @@ struct skelet
         if(tmp.size() != 2 && tmp.size() != 4)
             throw mexception(es() % "bad add_field: " % data);
         if(tmp.size() == 4 && !tmp[2].empty())
-            std::cout << data << std::endl;
+            std::cout << data << endl;
         std::tuple<mstring, mstring, optional<mstring> > v;
         std::get<0>(v) = tmp[0];
         std::get<1>(v) = convert_type(tmp[1]);
@@ -487,7 +487,11 @@ mvector<mstring> list_folder(const mstring& ini_folder)
 {
     mvector<mstring> files;
 
-    std::unique_ptr<DIR, int(*)(DIR*)> dp(opendir(ini_folder.c_str()), &closedir);
+    auto close_dir = [](DIR* d) {
+        closedir(d);
+    };
+
+    unique_ptr<DIR, close_dir> dp(opendir(ini_folder.c_str()));
     if(!dp)
         throw mexception(es() % "opening directory \'" % ini_folder % "\' error");
     dirent *dirp;
@@ -507,7 +511,7 @@ void parse_all(const mstring& ini_folder, const mstring& out_file)
     context ctx(out_file);
     for(auto&& fname: files) {
         ctx.cur_namespace = namespace_type();
-        std::cout << "file: " << fname << std::endl;
+        std::cout << "file: " << fname << endl;
         ctx.sf << "// file: " << fname << endl;
         parse_file(ctx, read_file((ini_folder + "/" + fname).c_str()), fname);
     }
@@ -527,7 +531,7 @@ void parse_all(const mstring& ini_folder, const mstring& out_file)
         if(v.second != namespace_type())
             ctx.sf << "using " << v.second.first << "::" << v.second.second << "::" << v.first << ";" << endl;
     }
-    std::cout << out_file << " successfully written" << std::endl;
+    std::cout << out_file << " successfully written" << endl;
 }
 
 struct source : context
@@ -537,6 +541,7 @@ struct source : context
     std::set<mstring> tables;
 
     stream_file ini_out;
+    b_stream tail;
 
     source(const mstring& name)
         try : context(name + ".inl"), name(name), ini_out(name + ".ini")
@@ -555,7 +560,6 @@ struct source : context
             ini_out << "table=" << s << "\r\n";
         ini_out << "\r\n";
     }
-    b_stream tail;
     void write_cpp_tail() {
         sf << tail.str();
     }
@@ -578,7 +582,7 @@ struct source : context
 
 void proceed_selected(const mstring& ini_folder, const mstring& scheme, const mstring& out_folder)
 {
-    std::vector<std::unique_ptr<source> > sources;
+    mvector<unique_ptr<source> > sources;
     {
         auto sc = read_file(scheme.c_str());
         auto it = sc.begin(), ie = sc.end();
@@ -595,7 +599,7 @@ void proceed_selected(const mstring& ini_folder, const mstring& scheme, const ms
                     throw mexception(es() % "bad schema source: " % mstring(it, ii));
                 mvector<mstring> tables = split(vs[3], ',');
 
-                std::unique_ptr<source> s(new source(out_folder + "/" + vs[0]));
+                unique_ptr<source> s(new source(out_folder + "/" + vs[0]));
                 s->ns = namespace_type(vs[1], vs[2]);
                 std::copy(tables.begin(), tables.end(), std::inserter(s->tables, s->tables.begin()));
                 s->write_head(vs[0]);
@@ -608,7 +612,7 @@ void proceed_selected(const mstring& ini_folder, const mstring& scheme, const ms
     mvector<mstring> files = list_folder(ini_folder);
     for(const mstring& fname: files) {
         auto data = read_file((ini_folder + "/" + fname).c_str());
-        for(std::unique_ptr<source>& s: sources) {
+        for(unique_ptr<source>& s: sources) {
             s->cur_namespace = namespace_type();
             parse_file(*s, data, fname);
         }
@@ -623,7 +627,7 @@ void proceed_selected(const mstring& ini_folder, const mstring& scheme, const ms
         s.check_fill();
         s.write_cpp_tail();
     }
-    std::cout << "sources " << str.str() << " successfully saved" << std::endl;
+    std::cout << "sources " << str.str() << " successfully saved" << endl;
 }
 
 int main(int argc, char** arg)
@@ -631,9 +635,9 @@ int main(int argc, char** arg)
     try {
         auto argv = init_params(argc, arg, false);
         if(argc != 2 && argc != 4) {
-            std::cout << "Usage:" << std::endl
-                << "    ./plaza_templater scheme_folder" << std::endl
-                << "    ./plaza_templater scheme_folder part_scheme_file output_folder" << std::endl;
+            std::cout << "Usage:" << endl
+                << "    ./plaza_templater scheme_folder" << endl
+                << "    ./plaza_templater scheme_folder part_scheme_file output_folder" << endl;
             return 1;
         }
         if(argc == 2)
@@ -644,7 +648,7 @@ int main(int argc, char** arg)
         return 0;
     }
     catch(std::exception& e) {
-        std::cerr << "exception: " << e.what() << std::endl;
+        std::cerr << "exception: " << e.what() << endl;
     	return 2;
     }
 }

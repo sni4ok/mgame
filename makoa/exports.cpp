@@ -306,7 +306,7 @@ exporter::exporter(const mstring& params)
     if(params.empty())
         throw str_exception("create_exporter() with empty params");
     if(exports.size() == 1)
-        (*this) = std::move(create_impl(exports[0]));
+        (*this) = create_impl(exports[0]);
     else {
         exports_chain *ec = new exports_chain;
         this->p = ec;

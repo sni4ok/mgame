@@ -1,15 +1,40 @@
+cmake_minimum_required(VERSION 3.5)
+
 SET(CMAKE_COLOR_MAKEFILE ON)
-SET(CMAKE_VERBOSE_MAKEFILE ON)
-cmake_minimum_required(VERSION 3.4.3)
+SET(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL "" FORCE)
 
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-IF("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
-	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-ENDIF("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+project(mgame)
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -march=native -std=c++2b")
+set(MAKE_PLAZA OFF CACHE BOOL "plaza")
+
+IF(NOT IS_CLANG)
+    set(IS_CLANG OFF CACHE BOOL "clang" FORCE)
+ENDIF(NOT IS_CLANG)
+
+IF("${IS_CLANG}")
+
+    set(CMAKE_C_COMPILER "/usr/bin/clang" CACHE STRING "clang compiler" FORCE)
+    set(CMAKE_CXX_COMPILER "/usr/bin/clang++" CACHE STRING "clang compiler" FORCE)
+
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -std=c++2b")
+    message("clang mode")
+
+ELSE("${IS_CLANG}")
+
+    set(CMAKE_C_COMPILER "/usr/bin/gcc" CACHE STRING "gcc compiler" FORCE)
+    set(CMAKE_CXX_COMPILER "/usr/bin/g++" CACHE STRING "gcc compiler" FORCE)
+
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -march=native -std=c++2b")
+    message("gcc mode")
+
+ENDIF("${IS_CLANG}")
+
+IF("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+ENDIF("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 
 SUBDIRS(evie makoa ying tyra viktor alco)
 
