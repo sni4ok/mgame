@@ -329,7 +329,7 @@ void socket_stream::read(char* s, uint32_t sz)
 {
     if(all_sz - (readed - beg) < sz)
     {
-        MPROFILE("socket_stream_page_fault");
+        MPROFILE("socket_stream_page_fault")
         for(uint32_t i = 0; i != sz; ++i)
             get(s[i]);
     }

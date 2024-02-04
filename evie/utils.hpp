@@ -115,3 +115,53 @@ bool operator<(const mvector<type>& l, const mvector<type>& r)
     return lexicographical_compare(l.begin(), l.end(), r.begin(), r.end());
 }
 
+template<typename cont>
+pair<typename cont::const_iterator, typename cont::const_iterator> print(const cont& c)
+{
+    return {c.begin(), c.end()};
+}
+
+template<typename iterator, typename func>
+struct transform_iterator
+{
+    iterator it;
+    func f;
+
+    transform_iterator(iterator it, func f) : it(it), f(f)
+    {
+    }
+    bool operator!=(transform_iterator r) const
+    {
+        return it != r.it;
+    }
+    transform_iterator& operator++()
+    {
+        ++it;
+        return *this;
+    }
+    decltype(f(*it)) operator*() const
+    {
+        return f(*it);
+    }
+};
+
+template<typename cont, typename func>
+pair<transform_iterator<typename cont::const_iterator, func>,
+    transform_iterator<typename cont::const_iterator, func> > print(const cont& c, func f)
+{
+    return {{c.begin(), f}, {c.end(), f}};
+}
+
+template<typename stream, typename iterator>
+stream& operator<<(stream& s, const pair<iterator, iterator>& p)
+{
+    auto it = p.first, ie = p.second, ib = it;
+    for(; it != ie; ++it)
+    {
+        if(it != ib)
+            s << ",";
+        s << *it;
+    }
+    return s;
+}
+

@@ -369,7 +369,7 @@ void log_test(size_t thread_count, size_t log_count)
     my_cvt::test_itoa();
     simple_log::instance().params = mlog::always_cout;
     mlog() << "mlog test for " << thread_count << " threads and " << log_count << " loops";
-    MPROFILE("MlogTest");
+    MPROFILE("MlogTest")
     {
         mvector<thread> threads;
         for(size_t i = 0; i != thread_count; ++i)

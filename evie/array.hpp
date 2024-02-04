@@ -61,6 +61,7 @@ public:
     typedef type* iterator;
     typedef const type* const_iterator;
     typedef type value_type;
+    typedef mvector<type>::reverse_iterator reverse_iterator;
 
     array() : size_() {
     }
@@ -103,6 +104,16 @@ public:
         }
         throw mexception(es() % "array resize for " % new_size % ", capacity " % capacity_);
     }
+    void push_back(type&& v) {
+        assert(size_ < capacity_);
+        buf[size_] = std::move(v);
+        ++size_;
+    }
+    void push_back(const type& v) {
+        assert(size_ < capacity_);
+        buf[size_] = v;
+        ++size_;
+    }
     const_iterator begin() const {
         return buf;
     }
@@ -114,6 +125,24 @@ public:
     }
     iterator end() {
         return buf + size_;
+    }
+    reverse_iterator rbegin() const {
+        return reverse_iterator({end() - 1});
+    }
+    reverse_iterator rend() const {
+        return reverse_iterator({begin() - 1});
+    }
+    const type& operator[](uint32_t elem) const {
+        return buf[elem];
+    }
+    type& operator[](uint32_t elem) {
+        return buf[elem];
+    }
+    type& back() {
+        return buf[size_ - 1];
+    }
+    void pop_back() {
+        resize(size_ - 1);
     }
 };
 

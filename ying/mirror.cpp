@@ -8,11 +8,10 @@
 #include "makoa/types.hpp"
 
 #include "evie/thread.hpp"
-
-#include <thread>
-#include <deque>
+#include "evie/queue.hpp"
 
 #include <unistd.h>
+#include <stdlib.h>
 
 ncurses_err e;
 
@@ -82,7 +81,7 @@ struct mirror::impl
     uint32_t refresh_rate;
     
     order_book ob;
-    std::deque<message_trade> trades;
+    queue<message_trade> trades;
     message_instr mi;
     mstring head_msg;
 
@@ -96,7 +95,7 @@ struct mirror::impl
     
     volatile bool can_run;
     my_mutex mutex;
-    std::thread refresh_thrd;
+    thread refresh_thrd;
 
     const char empty[10];
     impl(const mstring& sec, uint32_t refresh_rate_ms) :
@@ -132,8 +131,8 @@ struct mirror::impl
     }
     void print_trades(window& w)
     {
-        while(w.rows <= trades.size())
-            trades.pop_front();
+        if(w.rows <= trades.size())
+            trades.pop_front(trades.size() + 1 - w.rows);
         uint32_t i = 0;
         if(trades_from == 0)
         {
@@ -299,7 +298,7 @@ inline mirror::impl* create_mirror(const mstring& params)
     auto p = split(params, ' ');
     if(p.size() > 2)
         throw mexception(es() % "mirror::mirror() bad params: " % params);
-    uint32_t refresh_rate = p.size() == 2 ? atoi(p[1].c_str()) : 100;
+    uint32_t refresh_rate = p.size() == 2 ? lexical_cast<uint32_t>(p[1]) : 100;
     if(!refresh_rate)
         throw mexception(es() % "mirror::mirror() bad params: " % params % ", refresh_rate should be at least 1");
     return new mirror::impl(p[0], refresh_rate);

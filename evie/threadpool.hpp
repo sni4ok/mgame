@@ -8,13 +8,12 @@
 #include "utils.hpp"
 #include "singleton.hpp"
 #include "thread.hpp"
-
-#include <list>
+#include "queue.hpp"
 
 template<typename worker>
 struct workers_simple
 {
-    void proceed(my_mutex::scoped_lock& lock, std::list<typename worker::Data>& datas)
+    void proceed(my_mutex::scoped_lock& lock, queue<typename worker::Data>& datas)
     {
         typename worker::Data data = *datas.begin();
 
@@ -28,7 +27,7 @@ struct workers_simple
 template<typename worker>
 struct workers_circle
 {
-    void proceed(my_mutex::scoped_lock& lock, std::list<typename worker::Data>& datas)
+    void proceed(my_mutex::scoped_lock& lock, queue<typename worker::Data>& datas)
     {
         typename worker::Data data = *datas.begin();
 
@@ -49,7 +48,7 @@ class Workers : public stack_singleton<Workers<Worker, worker> >
     bool can_not_run_on_exit;
     bool can_exit;
     mvector<thread> threads;
-    std::list<typename Worker::Data> datas;
+    queue<typename Worker::Data> datas;
     my_mutex mutex;
     my_condition condition;
 

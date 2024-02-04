@@ -59,7 +59,7 @@ uint32_t socket_read(int socket, char* buf, uint32_t buf_size)
     int ret = ::recv(socket, buf, buf_size, 0);
     if(unlikely(ret == -1)) {
         if(errno == EAGAIN || errno == EWOULDBLOCK) {
-            MPROFILE("server_EAGAIN");
+            MPROFILE("server_EAGAIN")
             return 0;
         }
         else

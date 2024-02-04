@@ -72,7 +72,7 @@ bool read_file(mvector<char>& buf, const char* fname, bool can_empty)
         mfile f(hfile);
         uint64_t size = f.size();
         buf.resize(buf_size + size);
-        f.read(&buf[buf_size], size);
+        f.read(buf.begin() + buf_size, size);
         ret = true;
     }
     if(!can_empty && buf_size == buf.size())

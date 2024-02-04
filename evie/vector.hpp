@@ -47,6 +47,7 @@ public:
     typedef type* iterator;
     typedef const type* const_iterator;
     typedef type value_type;
+    typedef type& reference;
 
     mvector() {
         __clear();
@@ -289,6 +290,14 @@ public:
         __push_back_impl();
         buf[size_] = v;
         ++size_;
+    }
+    template<class ... params>
+    reference emplace_back(params&&... args)
+    {
+        __push_back_impl();
+        new(&buf[size_])type(args...);
+        ++size_;
+        return buf[size_ - 1];
     }
     void pop_back() {
         resize(size_ - 1);
