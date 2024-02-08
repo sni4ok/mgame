@@ -29,10 +29,11 @@ type lexical_cast(const str_holder& str)
 }
 
 mvector<mstring> split(const mstring& str, char sep = ',');
-mvector<str_holder> split(char_cit it, char_cit ie, char sep = ',');
+mvector<str_holder> split(str_holder str, char sep = ',');
 void split(mvector<str_holder>& ret, char_cit it, char_cit ie, char sep = ',');
-mstring join(mvector<mstring>::const_iterator it, mvector<mstring>::const_iterator ie, char sep = ',');
+
 mstring join(const mvector<mstring>& s, char sep = ',');
+mstring join(const mstring* it, const mstring* ie, char sep = ',');
 
 struct crc32
 {

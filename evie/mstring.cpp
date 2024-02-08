@@ -73,16 +73,12 @@ const char* mstring::c_str() const
 
 bool mstring::operator==(const mstring& r) const
 {
-    if(size() == r.size())
-        return !memcmp(begin(), r.begin(), size());
-    return false;
+    return str() == r.str();
 }
 
 bool mstring::operator==(const str_holder& r) const
 {
-    if(r.size == size())
-        return !memcmp(begin(), r.begin(), size());
-    return false;
+    return str() == r;
 }
 
 bool mstring::operator!=(const mstring& r) const

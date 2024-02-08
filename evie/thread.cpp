@@ -214,9 +214,7 @@ thread& thread::operator=(thread&& r)
 
 void thread::swap(thread& r)
 {
-    uint64_t t = tid;
-    tid = r.tid;
-    r.tid = t;
+    std::swap(tid, r.tid);
 }
 
 bool thread::joinable() const

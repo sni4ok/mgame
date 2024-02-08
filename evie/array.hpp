@@ -20,6 +20,13 @@ struct carray
             throw mexception(es() % "carray(initializer_list) for " % r.size() % " elems but size " % size_);
        copy(r.begin(), r.end(), buf);
     }
+    carray(str_holder str)
+    requires(std::is_same<type, char>::value)
+    {
+        if(str.size > size_)
+            throw mexception(es() % "carray<char, " % size_ % ">(str_holder) max size exceed for: " % str);
+        my_fast_copy(str.begin(), str.end(), buf);
+    }
 
     typedef type* iterator;
     typedef const type* const_iterator;
@@ -48,6 +55,23 @@ struct carray
     }
     type& operator[](uint32_t elem) {
         return buf[elem];
+    }
+    bool operator<(const carray& r) const
+    {
+        return lexicographical_compare(buf, buf + size_, r.buf, r.buf + size_);
+    }
+    bool operator==(const carray& r) const
+    {
+        return equal(buf, buf + size_, r.buf);
+    }
+    bool operator!=(const carray& r) const
+    {
+        return !(*this == r);
+    }
+    str_holder str() const
+    requires(std::is_same<type, char>::value)
+    {
+        return from_array(buf);
     }
 };
 

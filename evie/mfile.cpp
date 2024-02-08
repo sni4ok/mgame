@@ -25,9 +25,7 @@ mfile::mfile(int hfile) : hfile(hfile)
 
 void mfile::swap(mfile& r)
 {
-    int t = r.hfile;
-    r.hfile = hfile;
-    hfile = t;
+    std::swap(hfile, r.hfile);
 }
 
 uint64_t mfile::size() const

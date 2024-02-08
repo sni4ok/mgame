@@ -76,14 +76,14 @@ void split(mvector<str_holder>& ret, char_cit it, char_cit ie, char sep)
     }
 }
 
-mvector<str_holder> split(char_cit it, char_cit ie, char sep)
+mvector<str_holder> split(str_holder str, char sep)
 {
     mvector<str_holder> ret;
-    split(ret, it, ie, sep);
+    split(ret, str.begin(), str.end(), sep);
     return ret;
 }
 
-mstring join(mvector<mstring>::const_iterator it, mvector<mstring>::const_iterator ie, char sep)
+mstring join(const mstring* it, const mstring* ie, char sep)
 {
     if(it == ie)
         return mstring();

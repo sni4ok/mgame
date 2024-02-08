@@ -26,9 +26,7 @@ struct unique_ptr
     }
     void swap(unique_ptr& r)
     {
-        type* p = ptr;
-        ptr = r.ptr;
-        r.ptr = p;
+        std::swap(ptr, r.ptr);
     }
     unique_ptr& operator=(unique_ptr&& r)
     {
