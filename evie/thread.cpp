@@ -10,6 +10,7 @@
 #include <cassert>
 
 #include <pthread.h>
+#include <errno.h>
 
 my_mutex::my_mutex()
 {
@@ -80,12 +81,17 @@ my_condition::my_condition()
 
 my_condition::~my_condition()
 {
-    pthread_cond_destroy(&condition);
+    if(pthread_cond_destroy(&condition))
+    {
+        assert(false && "my_condition::~my_condition()");
+        mlog(mlog::critical) << "my_condition::~my_condition() destroy condition error";
+    }
 }
 
 void my_condition::wait(my_mutex::scoped_lock& lock)
 {
-    pthread_cond_wait(&condition, &lock.mutex.mutex);
+    if(pthread_cond_wait(&condition, &lock.mutex.mutex))
+        throw str_exception("my_condition::wait() error");
 }
 
 void my_condition::timed_wait(my_mutex::scoped_lock& lock, uint32_t sec)
@@ -93,28 +99,36 @@ void my_condition::timed_wait(my_mutex::scoped_lock& lock, uint32_t sec)
     timespec t;
     clock_gettime(CLOCK_REALTIME, &t);
     t.tv_sec += sec;
-    pthread_cond_timedwait(&condition, &lock.mutex.mutex, &t);
+    int r = pthread_cond_timedwait(&condition, &lock.mutex.mutex, &t);
+    if(r && r != ETIMEDOUT)
+        throw str_exception("my_condition::timed_wait() error");
 }
 
 void my_condition::timed_uwait(my_mutex::scoped_lock& lock, uint32_t usec)
 {
     timespec t;
     clock_gettime(CLOCK_REALTIME, &t);
-    uint32_t sec = usec / 1000000;
-    t.tv_sec += sec;
-    long nsec = (usec - sec * 1000000) * 1000;
-    t.tv_nsec += nsec;
-    pthread_cond_timedwait(&condition, &lock.mutex.mutex, &t);
+    t.tv_nsec += usec * 1000;
+    if(t.tv_nsec >= int32_t(ttime_t::frac))
+    {
+        t.tv_sec += t.tv_nsec / ttime_t::frac;
+        t.tv_nsec %= ttime_t::frac;
+    }
+    int r = pthread_cond_timedwait(&condition, &lock.mutex.mutex, &t);
+    if(r && r != ETIMEDOUT)
+        throw str_exception("my_condition::timed_uwait() error");
 }
 
 void my_condition::notify_one()
 {
-    pthread_cond_signal(&condition);
+    if(pthread_cond_signal(&condition))
+        throw str_exception("my_condition::notify_one() error");
 }
 
 void my_condition::notify_all()
 {
-    pthread_cond_broadcast(&condition);
+    if(pthread_cond_broadcast(&condition))
+        throw str_exception("my_condition::notify_all() error");
 }
 
 uint32_t thread_tss_id = 0;

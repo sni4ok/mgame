@@ -7,10 +7,12 @@
 #include "mstring.hpp"
 #include "algorithm.hpp"
 
-#include <sys/stat.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <fcntl.h>
+
+#include <sys/stat.h>
+#include <sys/file.h>
 
 mfile::mfile(const char* file)
 {
@@ -60,11 +62,10 @@ mfile::~mfile()
         ::close(hfile);
 }
 
-bool read_file(mvector<char>& buf, const char* fname, bool can_empty)
+inline bool read_file_impl(int hfile, bool trunc, mvector<char>& buf, const char* fname, bool can_empty)
 {
     bool ret = false;
     uint64_t buf_size = buf.size();
-    int hfile = ::open(fname, O_RDONLY);
     if(hfile > 0)
     {
         mfile f(hfile);
@@ -72,10 +73,29 @@ bool read_file(mvector<char>& buf, const char* fname, bool can_empty)
         buf.resize(buf_size + size);
         f.read(buf.begin() + buf_size, size);
         ret = true;
+        if(trunc && buf_size != buf.size())
+        {
+            if(ftruncate(hfile, 0))
+                throw_system_failure(es() % "ftruncate file " % _str_holder(fname) % " error");
+        }
     }
     if(!can_empty && buf_size == buf.size())
         throw mexception(es() % "read \"" % _str_holder(fname) % "\" error");
     return ret;
+}
+
+bool read_file(mvector<char>& buf, const char* fname, bool can_empty)
+{
+    int hfile = ::open(fname, O_RDONLY);
+    return read_file_impl(hfile, false, buf, fname, can_empty);
+}
+
+bool read_file_and_truncate(mvector<char>& buf, const char* fname, bool can_empty)
+{
+    int hfile = ::open(fname, O_RDWR);
+    if(flock(hfile, LOCK_EX))
+        throw_system_failure(es() % "lock file " % _str_holder(fname) % " error");
+    return read_file_impl(hfile, true, buf, fname, can_empty);
 }
 
 mvector<char> read_file(const char* fname, bool can_empty)
@@ -157,22 +177,24 @@ bool create_directory(const char* fname)
     return !(mkdir(fname, 0777));
 }
 
-void create_directories(const char* fname)
+uint32_t create_directories(const char* fname)
 {
     mstring buf(_str_holder(fname));
     mstring::iterator it = buf.begin(), ie = buf.end();
+    uint32_t ret = 0;
     while(it != ie)
     {
         it = find(it, ie, '/');
         if(it != ie)
         {
             *it = char();
-            create_directory(&buf[0]);
+            ret += create_directory(&buf[0]);
             *it = '/';
             ++it;
         }
     }
-    create_directory(&buf[0]);
+    ret += create_directory(&buf[0]);
+    return ret;
 }
 
 bool is_directory(const char* fname)

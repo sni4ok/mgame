@@ -116,53 +116,58 @@ bool operator<(const mvector<type>& l, const mvector<type>& r)
     return lexicographical_compare(l.begin(), l.end(), r.begin(), r.end());
 }
 
-template<typename cont>
-pair<typename cont::const_iterator, typename cont::const_iterator> print(const cont& c)
+template<typename iterator, typename func, char s, bool no_end_s>
+struct print_impl
 {
-    return {c.begin(), c.end()};
+    static const char sep = s;
+    static const bool no_end_sep = no_end_s;
+
+    iterator from, to;
+    func f;
+};
+
+template<typename stream, typename iterator, typename func, char sep, bool no_end_sep>
+stream& operator<<(stream& s, const print_impl<iterator, func, sep, no_end_sep>& p)
+{
+    iterator it = p.from;
+    for(; it != p.to; ++it)
+    {
+        if constexpr(no_end_sep)
+        {
+            if(it != p.from)
+                s << p.sep;
+        }
+        p.f(s, *it);
+        if constexpr(!no_end_sep)
+            s << p.sep;
+    }
+    return s;
 }
 
-template<typename iterator, typename func>
-struct transform_iterator
+struct print_default
 {
-    iterator it;
-    func f;
-
-    transform_iterator(iterator it, func f) : it(it), f(f)
+    template<typename stream, typename type>
+    void operator()(stream& s, const type& v) const
     {
-    }
-    bool operator!=(transform_iterator r) const
-    {
-        return it != r.it;
-    }
-    transform_iterator& operator++()
-    {
-        ++it;
-        return *this;
-    }
-    decltype(f(*it)) operator*() const
-    {
-        return f(*it);
+        s << v;
     }
 };
 
-template<typename cont, typename func>
-pair<transform_iterator<typename cont::const_iterator, func>,
-    transform_iterator<typename cont::const_iterator, func> > print(const cont& c, func f)
+template<char sep = ',', char no_end_sep = true, typename iterator, typename func = print_default>
+print_impl<iterator, func, sep, no_end_sep> print(iterator from, iterator to, func f = func())
 {
-    return {{c.begin(), f}, {c.end(), f}};
+    return {from, to, f};
 }
 
-template<typename stream, typename iterator>
-stream& operator<<(stream& s, const pair<iterator, iterator>& p)
+template<char sep = ',', typename cont, typename func = print_default>
+auto print(const cont& c, func f = func())
 {
-    auto it = p.first, ie = p.second, ib = it;
-    for(; it != ie; ++it)
-    {
-        if(it != ib)
-            s << ",";
-        s << *it;
-    }
-    return s;
+    return print(c.begin(), c.end(), f);
+}
+
+template<char sep = '\n', typename cont, typename func = print_default>
+auto print_csv(const cont& c, func f = func())
+{
+    return print<sep, false>(c.begin(), c.end(), f);
 }
 

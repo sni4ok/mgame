@@ -130,10 +130,13 @@ struct fmap
             it = data.insert(it, v);
         return it;
     }
-    void erase(const key& k) {
+    bool erase(const key& k) {
         iterator it = find(k);
-        if(it != data.end())
+        if(it != data.end()) {
             data.erase(it);
+            return true;
+        }
+        return false;
     }
     iterator erase(const_iterator it) {
         data.erase(iterator(it));
@@ -163,6 +166,14 @@ struct pmap : fmap<key, value, less<key>, ppvector>
         else
             delete v;
         return it;
+    }
+    value& operator[](const key& k) {
+        auto it = this->lower_bound(k);
+        if(it == this->data.end() || it->first != k) {
+            it = this->data.insert(it, new pair<key, value>({k, value()}));
+            it->first = k;
+        }
+        return it->second;
     }
 };
 

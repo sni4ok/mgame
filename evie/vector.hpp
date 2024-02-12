@@ -437,8 +437,7 @@ struct pvector : mvector<type*>
         return *(base::begin()[elem]);
     }
     iterator insert(iterator it, type* v) {
-        if(!v)
-            v = new type();
+        assert(v);
         return {base::insert(it.it, v)};
     }
     void splice(pvector& r) {

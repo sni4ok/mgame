@@ -6,10 +6,12 @@
 #include "thread.hpp"
 #include "fast_alloc.hpp"
 
-#include <sys/stat.h>
+#include "stdio.h"
+
 #include <fcntl.h>
 
-#include "stdio.h"
+#include <sys/stat.h>
+#include <sys/file.h>
 
 namespace
 {
@@ -27,12 +29,7 @@ namespace
         }
         void lock()
         {
-            struct flock lock_struct;
-            lock_struct.l_type = F_WRLCK | F_RDLCK;
-            lock_struct.l_whence = SEEK_SET;
-            lock_struct.l_start = 0;
-            lock_struct.l_len = 0;
-            if((::fcntl(hfile, F_SETLK, &lock_struct)) < 0)
+            if(flock(hfile, LOCK_EX))
                 throw_system_failure(es() % "lock file " % name % " error");
         }
         void write(const char* buf, uint32_t size)

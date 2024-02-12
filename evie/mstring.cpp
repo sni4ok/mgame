@@ -136,8 +136,8 @@ mstring operator+(str_holder l, const mstring& r)
 {
     mstring ret;
     ret.resize(l.size + r.size());
-    memcpy(&ret[0], l.str, l.size);
-    memcpy(&ret[0] + l.size, &r[0], r.size());
+    memcpy(ret.begin(), l.str, l.size);
+    memcpy(ret.begin() + l.size, r.begin(), r.size());
     return ret;
 }
 

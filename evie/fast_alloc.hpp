@@ -24,7 +24,7 @@ public:
     typedef type value_type;
 
     follower() : num_elems(), ptr() {
-        if(enable_run_once)
+        if constexpr(enable_run_once)
             run_once();
     }
     follower(const follower&) = delete;
@@ -39,7 +39,7 @@ public:
         if(ptr)
             delete[] ptr;
     }
-    bool run_once() {
+    bool run_once() requires(enable_run_once) {
         if(!ptr)
         {
             type* p = new type[block_size];
@@ -60,7 +60,7 @@ public:
 
         if(!end_element) {
             type* p = nullptr;
-            if(enable_run_once)
+            if constexpr(enable_run_once)
                 p = atomic_exchange(&ptr, (type*)nullptr);
             if(p)
             {
@@ -313,7 +313,7 @@ struct fast_alloc
             return new type;
         }
         else {
-            if(enable_run_once)
+            if constexpr(enable_run_once)
                 atomic_add(free_elems, 1);
             return p;
         }
@@ -323,11 +323,12 @@ struct fast_alloc
             MPROFILE("fast_alloc::free() slow")
             delete m;
         }
-        else if(enable_run_once)
-            atomic_sub(free_elems, 1);
+        else {
+            if constexpr(enable_run_once)
+                atomic_sub(free_elems, 1);
+        }
     }
-    bool run_once() {
-        static_assert(enable_run_once);
+    bool run_once() requires(enable_run_once) {
         int32_t c = atomic_load(free_elems);
         bool ret = false;
         for(int32_t i = 0; i < c; ++i) {
