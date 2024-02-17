@@ -6,6 +6,7 @@
 #include "atomic.hpp"
 #include "mlog.hpp"
 #include "smart_ptr.hpp"
+#include "profiler.hpp"
 
 #include <cassert>
 
@@ -29,12 +30,14 @@ my_mutex::~my_mutex()
 
 void my_mutex::lock()
 {
+    //MPROFILE("mutex::lock")
     if(pthread_mutex_lock(&mutex))
         throw str_exception("lock mutex error");
 }
 
 bool my_mutex::try_lock()
 {
+    //MPROFILE("mutex::try_lock")
     if(pthread_mutex_trylock(&mutex))
         return false;
     return true;
@@ -141,16 +144,16 @@ static void make_key()
     pthread_key_create(&key, NULL);
 }
 
-int get_thread_id()
+uint32_t get_thread_id()
 {
     void *ptr;
     pthread_once(&key_once, make_key);
     if((ptr = pthread_getspecific(key)) == NULL)
     {
-        ptr = new int(atomic_add(thread_tss_id, 1));
+        ptr = new uint32_t(atomic_add(thread_tss_id, 1));
         pthread_setspecific(key, ptr);
     }
-    return *((int*)ptr);
+    return *((uint32_t*)ptr);
 }
 
 void set_affinity_thread(uint32_t thrd)

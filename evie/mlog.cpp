@@ -60,12 +60,10 @@ void cerr_write(str_holder str, bool flush)
 
 class simple_log
 {
-    static const uint32_t pool_size = 4 * 1024;
-    static const uint32_t pre_alloc = 1024;
     static const uint32_t log_no_cout_size = 10;
 
-    typedef fast_alloc<mlog::node, pool_size, true> string_pool;
-    typedef lockfree_queue<mlog::data, pool_size> nodes_type;
+    typedef fast_alloc<mlog::node> string_pool;
+    typedef fast_alloc_list<mlog::data> nodes_type;
 
     void write_impl(char* str, uint32_t size, uint32_t extra_param, uint32_t all_sz, uint32_t cur_size)
     {
@@ -93,7 +91,7 @@ class simple_log
         uint32_t writed_sz = 0;
         try
         {
-            mlog::data data;
+            mlog::data* data;
             static const uint32_t cntr_from = 128, cntr_to = 524288;
             uint32_t cntr = 128;
             for(;;)
@@ -101,16 +99,23 @@ class simple_log
                 uint32_t all_sz = atomic_load(all_size) - writed_sz;
                 for(uint32_t cur_i = 0; cur_i != all_sz; ++cur_i)
                 {
-                    nodes.pop_strong(data);
+                    data = nodes.pop();
 
-                    while(data.head)
+                    if(!data)
                     {
-                        mlog::node* next = data.head->next;
-                        write_impl(data.head->buf, data.head->size, data.extra_param, all_sz, cur_i);
-                        pool.free(data.head);
-                        data.head = next;
+                        MPROFILE("mlog::write_thread() race");
+                        usleep(100000);
                     }
 
+                    while(data->head)
+                    {
+                        mlog::node* next = data->head->next;
+                        write_impl(data->head->buf, data->head->size, data->extra_param, all_sz, cur_i);
+                        pool.free(data->head);
+                        data->head = next;
+                    }
+
+                    nodes.free(data);
                     ++writed_sz;
                 }
                 if(all_sz)
@@ -137,18 +142,17 @@ class simple_log
 
     unique_ptr<ofile> stream, stream_crit;
     volatile bool can_run;
-    thread work_thread;
     uint32_t all_size;
     string_pool pool;
+    nodes_type nodes;
+    thread work_thread;
     static simple_log* log;
 
 public:
-    nodes_type nodes;
     volatile bool no_cout;
     uint32_t params;
 
-    simple_log() : can_run(true), work_thread(&simple_log::write_thred, this),
-        all_size(), pool("mlog::pool", pre_alloc), nodes("mlog::nodes"), no_cout()
+    simple_log() : can_run(true), all_size(), nodes("mlog::nodes"), work_thread(&simple_log::write_thred, this), no_cout()
     {
     }
     ~simple_log()
@@ -197,7 +201,7 @@ public:
     }
     void write(const mlog::data& buf)
     {
-        nodes.push(buf);
+        nodes.emplace(buf);
         atomic_add(all_size, 1);
     }
 };

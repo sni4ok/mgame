@@ -34,13 +34,13 @@ struct linked_node : messages
     linked_node* next;
 };
 
-class linked_list : public fast_alloc<linked_node, 4 * 1024>
+class linked_list : public fast_alloc<linked_node, st_tss>
 {
     linked_node root;
     linked_node* tail; //atomic
     
 public:
-    linked_list() : fast_alloc("messages_linked_list", 2 * 1024), tail(&root)
+    linked_list() : tail(&root)
     {
     }
     void push(linked_node* t) //push element in list, always success
@@ -57,7 +57,7 @@ public:
             return root.next;
         return prev->next;
     }
-    void release_node(linked_list::type* node)
+    void release_node(linked_node* node)
     {
         uint32_t consumers_left = atomic_sub(node->cnt, 1);
         if(!consumers_left)
@@ -225,7 +225,7 @@ class engine::impl : public stack_singleton<engine::impl>
         volatile bool& can_run;
         linked_list* ll;
         exporter exp;
-        linked_list::type *prev, *ptmp;
+        linked_node *prev, *ptmp;
 
         imple(volatile bool& can_run, linked_list& ll, const mstring& eparams) : can_run(can_run), ll(&ll), exp(eparams), prev(), ptmp()
         {
@@ -259,7 +259,7 @@ class engine::impl : public stack_singleton<engine::impl>
         }
     };
 
-    lockfree_queue<imple*, 50> ies;
+    fast_alloc_list<imple, mt.malloc()> ies;
 
     void work_thread()
     {
@@ -269,7 +269,7 @@ class engine::impl : public stack_singleton<engine::impl>
             while(can_run)
             {
                 bool res = false;
-                ies.pop_weak(i);
+                i = ies.pop();
 
                 if(i)
                 {
@@ -300,7 +300,7 @@ class engine::impl : public stack_singleton<engine::impl>
 public:
     void loop_one()
     {
-        imple* i = nullptr;
+        /*imple* i = nullptr;
         for(uint32_t c = 0; c != ies.capacity && can_run; ++c)
         {
             bool res = false;
@@ -315,7 +315,7 @@ public:
                 return;
         }
         if(i)
-            ies.push(i);
+            ies.push(i);*/
     }
     impl(volatile bool& can_run) : can_run(can_run), can_exit(false), ies("exporters_queue")
     {
@@ -334,7 +334,7 @@ public:
     {
         consumers = exports.size();
         for(const auto& e: exports)
-            ies.push(new imple(can_run, ll, e));
+            ies.emplace(can_run, ll, e);
 
         for(uint32_t i = 0; i != export_threads; ++i)
             threads.push_back(thread(&impl::work_thread, this));
@@ -410,8 +410,8 @@ public:
         for(auto&& t: threads)
             t.join();
         imple *i = nullptr;
-        while(ies.pop_weak(i))
-            delete i;
+        //while(ies.pop_weak(i))
+        //    delete i;
     }
     void push_clean(const mvector<actives::type>& secs) //when parser disconnected all OrdersBooks cleans
     {

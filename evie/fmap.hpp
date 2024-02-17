@@ -154,6 +154,15 @@ struct fmap
 };
 
 template<typename key, typename value>
+pair<key, value>* make_pair_ptr(const key& k)
+{
+    pair<key, value>* p = (pair<key, value>*)::operator new(sizeof(pair<key, value>));
+    new(&p->second)value();
+    new(&p->first)key(k);
+    return p;
+}
+
+template<typename key, typename value>
 struct pmap : fmap<key, value, less<key>, ppvector>
 {
     typedef fmap<key, value, less<key>, ppvector> base;
@@ -170,7 +179,8 @@ struct pmap : fmap<key, value, less<key>, ppvector>
     value& operator[](const key& k) {
         auto it = this->lower_bound(k);
         if(it == this->data.end() || it->first != k) {
-            it = this->data.insert(it, new pair<key, value>({k, value()}));
+            //it = this->data.insert(it, new pair<key, value>({k, value()}));
+            it = this->data.insert(it, make_pair_ptr<key, value>(k));
             it->first = k;
         }
         return it->second;

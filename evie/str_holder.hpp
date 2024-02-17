@@ -17,6 +17,7 @@ extern "C"
     extern void* memmove(void*, const void*, size_t) __THROW __nonnull ((1, 2));
     extern int memcmp(const void*, const void*, size_t) __THROW __attribute_pure__ __nonnull ((1, 2));
 
+    extern void *malloc (size_t __size) __THROW __attribute_malloc__ __attribute_alloc_size__ ((1)) __wur;
     extern void *realloc(void*, size_t) __THROW __attribute_warn_unused_result__ __attribute_alloc_size__ ((2));
     extern void free(void*) __THROW;
     extern char *getenv(const char*) __THROW __nonnull ((1)) __wur;

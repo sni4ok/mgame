@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cassert>
 
 inline uint64_t atomic_add(uint64_t& v, uint64_t value)
 {
@@ -14,6 +15,16 @@ inline uint64_t atomic_add(uint64_t& v, uint64_t value)
 inline int64_t atomic_add(int64_t& v, int64_t value)
 {
     return __atomic_add_fetch(&v, value, __ATOMIC_RELAXED);
+}
+
+inline uint64_t atomic_sub(uint64_t& v, uint64_t value)
+{
+    return __atomic_add_fetch(&v, value, __ATOMIC_RELAXED);
+}
+
+inline int64_t atomic_sub(int64_t& v, int64_t value)
+{
+    return __atomic_sub_fetch(&v, value, __ATOMIC_RELAXED);
 }
 
 inline uint32_t atomic_add(uint32_t& v, uint32_t value)
@@ -76,6 +87,11 @@ inline bool atomic_compare_exchange(uint64_t& v, uint64_t from, uint64_t to)
     return __atomic_compare_exchange_n(&v, &from, to, true, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
 }
 
+inline bool atomic_compare_exchange(bool& v, bool from, bool to)
+{
+    return __atomic_compare_exchange_n(&v, &from, to, true, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
+}
+
 inline bool atomic_compare_exchange(const char*& v, const char* from, const char* to)
 {
     return __atomic_compare_exchange_n(&v, &from, to, true, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
@@ -98,4 +114,25 @@ bool atomic_compare_exchange(type*& v, type* from, type* to)
 {
     return __atomic_compare_exchange_n(&v, &from, to, true, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
 }
+
+struct critical_section
+{
+    bool flag;
+
+    critical_section() : flag() {
+    }
+    bool try_lock() {
+        return atomic_compare_exchange(flag, 0, 1);
+    }
+    void lock() {
+        for(;;)
+            if(try_lock())
+                return;
+    }
+    void unlock() {
+        bool r = atomic_compare_exchange(flag, 1, 0);
+        assert(r);
+        (void) r;
+    }
+};
 

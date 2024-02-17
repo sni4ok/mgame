@@ -7,6 +7,7 @@
 #include "profiler.hpp"
 #include "string.hpp"
 #include "atomic.hpp"
+#include "list.hpp"
 
 #include <unistd.h>
 
@@ -180,19 +181,17 @@ class lockfree_queue
     static uint64_t get_idx(uint64_t idx) {
         return idx % capacity_size;
     }
-
-    void throw_exception(const char* reason, uint32_t status)
-    {
+    void throw_exception(const char* reason, uint32_t status) {
         throw mexception(es() % name % ": lockfree_queue: " % _str_holder(reason) % ", (" % capacity % "," % uint64_t(pop_cnt) % ","
             % uint64_t(push_cnt) % "," % status % ")");
     }
 
     lockfree_queue(const lockfree_queue&) = delete;
+    static const constexpr uint32_t capacity = capacity_size;
+
 public:
     lockfree_queue(str_holder name) : name(name), push_cnt(), pop_cnt() {
     }
-    static const constexpr uint32_t capacity = capacity_size;
-
     void push(const type& t) {
         push(type(t));
     }
@@ -254,163 +253,209 @@ public:
     }
 };
 
-template<typename type, uint32_t capacity_size>
-struct st_queue
+template<typename type, bool use_mt, bool use_tss, bool delete_on_exit, typename node_type = type>
+struct lqueue
 {
-    type elems[capacity_size];
-    uint64_t push_cnt, pop_cnt;
+    typedef node_type node;
 
-    st_queue(str_holder) : elems() {
+    lockfree_queue<type*, 10000> nodes;
+
+    lqueue() : nodes("lqueue")
+    {
     }
 
-    bool push_weak(type t) {
-        push_cnt = push_cnt % capacity_size;
-        type& v = elems[push_cnt];
-        if(v)
-            return false;
-        ++push_cnt;
-        v = t;
-        return true;
+    static type* to_type(node* n) {
+        return &n->value;
     }
-
-    void push(type t) {
-        if(!push_weak(t))
-        {
-            MPROFILE("st_queue::push() overloaded")
-            delete t;
-        }
+    static node* to_node(type* p) {
+        return (node*)p;
     }
-
-    bool pop_weak(type& t) {
-        pop_cnt = pop_cnt % capacity_size;
-        type& v = elems[pop_cnt];
-        if(!v)
-            return false;
-        ++pop_cnt;
-        t = v;
-        v = nullptr;
-        return true;
+    void push(type* p) {
+        nodes.push(p);
     }
-};
-
-template<typename type_t, uint32_t pool_size = 16 * 1024, bool enable_run_once = true,
-    template<typename, uint32_t> class queue = lockfree_queue>
-struct fast_alloc
-{
-    typedef type_t type;
-    queue<type_t*, pool_size> elems;
-    int32_t free_elems;
-
-    fast_alloc(str_holder name, uint32_t pre_alloc = 32) : elems(name), free_elems() {
-        assert(pre_alloc <= pool_size);
-        for(uint32_t i = 0; i != pre_alloc; ++i)
-            elems.push(new type);
-    }
-    type* alloc() {
+    type* pop() {
         type* p;
-        if(!elems.pop_weak(p)) {
-            MPROFILE("fast_alloc::alloc() slow")
-            return new type;
-        }
-        else {
-            if constexpr(enable_run_once)
-                atomic_add(free_elems, 1);
-            return p;
-        }
-    }
-    void free(type* m) {
-        if(!elems.push_weak(m)) {
-            MPROFILE("fast_alloc::free() slow")
-            delete m;
-        }
-        else {
-            if constexpr(enable_run_once)
-                atomic_sub(free_elems, 1);
-        }
-    }
-    bool run_once() requires(enable_run_once) {
-        int32_t c = atomic_load(free_elems);
-        bool ret = false;
-        for(int32_t i = 0; i < c; ++i) {
-            type* p = new type;
-            if(elems.push_weak(p)) {
-                atomic_sub(free_elems, 1);
-                ret = true;
-            }
-            else {
-                delete p;
-                break;
-            }
-        }
-        return ret;
-    }
-    ~fast_alloc() {
-        type* p;
-        while(elems.pop_weak(p))
-            delete p;
-    }
-};
-
-template<typename alloc>
-class alloc_holder
-{
-    alloc &a;
-    typedef typename alloc::type type;
-    type* p;
-
-public:
-    alloc_holder(alloc& a) : a(a), p(a.alloc()) {
-    }
-    ~alloc_holder() {
-        if(p)
-            a.free(p);
-    }
-    type* operator->() {
+        nodes.pop_strong(p);
         return p;
     }
-    type& operator*() {
-        return *p;
+};
+
+struct fast_alloc_params
+{
+    bool use_mt;
+    bool use_tss;
+
+    uint32_t pre_alloc = 0;
+    uint32_t max_size = 0;
+
+    bool use_malloc = false;
+
+    const constexpr fast_alloc_params operator()(uint32_t pre_alloc, uint32_t max_size = 0) const {
+        return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size, use_malloc);
     }
-    type* release() {
-        type* ret = p;
-        p = nullptr;
+    const constexpr fast_alloc_params alloc_params() const {
+        if(use_mt && use_tss)
+            return fast_alloc_params(false, true, pre_alloc, max_size, use_malloc);
+        else
+            return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size, use_malloc);
+    }
+    const constexpr fast_alloc_params malloc(bool use_malloc = true) const {
+        return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size, use_malloc);
+    }
+};
+
+static constexpr fast_alloc_params st({false, false});
+static constexpr fast_alloc_params mt({true, false});
+static constexpr fast_alloc_params mt_tss({true, true});
+static constexpr fast_alloc_params st_tss({false, true}); //for allocator
+
+//#define ENABLE_ALLOC_FREE_PROFILE
+
+template<typename type, fast_alloc_params params = st_tss,
+    template<typename, bool, bool, bool, typename> typename nodes_type_ = forward_list, typename node_type = forward_list_node<type> >
+struct fast_alloc
+{
+    static const bool use_mt = params.use_mt;
+    static const bool use_tss = params.use_tss;
+    static const uint32_t pre_alloc = use_tss ? 0 : params.pre_alloc;
+    static const uint32_t max_size = use_tss ? 0 : params.max_size;
+
+    typedef nodes_type_<type, use_mt, use_tss, true, node_type> nodes_type;
+    nodes_type nodes;
+    typedef nodes_type::node node;
+    uint32_t size;
+
+    fast_alloc() : size() {
+        for(uint32_t i = 0; i != pre_alloc; ++i)
+            nodes.push(nodes_type::to_type(new node));
+        if constexpr(max_size)
+            size += pre_alloc;
+    }
+    type* alloc() {
+#ifdef ENABLE_ALLOC_FREE_PROFILE
+        MPROFILE("fast_alloc::alloc")
+#endif
+
+        type* p = nodes.pop();
+        if(!p) {
+            MPROFILE("fast_alloc::alloc() slow")
+            return nodes_type::to_type(new node);
+        }
+        else if constexpr(max_size)
+            atomic_sub(size, 1);
+        return p;
+    }
+    void free(type* p) {
+#ifdef ENABLE_ALLOC_FREE_PROFILE
+        MPROFILE("fast_alloc::free")
+#endif
+
+        if constexpr(max_size)
+        {
+            uint32_t size_ = atomic_load(size);
+            if(size_ < max_size) {
+                nodes.push(p);
+                atomic_add(size, 1);
+            }
+            else {
+                MPROFILE("fast_alloc::free() slow")
+                delete nodes_type::to_node(p);
+                return;
+            }
+        }
+        else
+            nodes.push(p);
+    }
+    uint32_t run_once() {
+        if constexpr(max_size == 0)
+            return 0;
+        MPROFILE("fast_alloc::run_once()")
+        uint32_t ret = 0;
+        while(atomic_load(size) > max_size)
+        {
+            MPROFILE("fast_alloc::run_once() pop")
+            type* p = nodes.pop();
+            if(p) {
+                atomic_sub(size, 1);
+                delete nodes_type::to_node(p);
+                ++ret;
+            }
+            else {
+                MPROFILE("fast_alloc::run_once() pop race")
+                return ret;
+            }
+        }
+        while(atomic_load(size) < pre_alloc)
+        {
+            MPROFILE("fast_alloc::run_once() push")
+            node* n = new node;
+            nodes.push(nodes_type::to_type(n));
+            atomic_add(size, 1);
+            ++ret;
+        }
         return ret;
     }
 };
 
-template<typename type>
-struct lockfree_list
+template<typename type, fast_alloc_params params, template<typename, bool, bool, bool, typename> typename nodes_type, typename node_type>
+struct malloc_alloc
 {
-    struct node : type
+    type* alloc() {
+
+#ifdef ENABLE_ALLOC_FREE_PROFILE
+        MPROFILE("malloc_alloc::alloc")
+#endif
+
+        node_type* n = (node_type*)::malloc(sizeof(node_type));
+        if(!n)
+            throw std::bad_alloc();
+        return (type*)n;
+    }
+    void free(type* n) {
+
+#ifdef ENABLE_ALLOC_FREE_PROFILE
+        MPROFILE("malloc_alloc::free")
+#endif
+
+        ::free((node_type*)n);
+    }
+    static constexpr uint32_t run_once() {
+        return 0;
+    }
+};
+
+template<typename type, fast_alloc_params params = mt_tss,
+    template<typename, bool, bool, bool, typename> typename cont = blist,
+    template<typename, bool, bool, bool, typename> typename allocator_cont = forward_list>
+struct fast_alloc_list :
+    std::conditional<params.use_malloc, malloc_alloc<type, params.alloc_params(), allocator_cont, blist_node<type> > ,
+                                        fast_alloc<type, params.alloc_params(), allocator_cont, blist_node<type> > >::type,
+    cont<type, params.use_mt, false, true, blist_node<type> >
+{
+    fast_alloc_list() {
+    }
+    fast_alloc_list(str_holder) {
+    }
+    template<typename ... par>
+    void emplace(par&& ... args)
     {
-        node* next;
-        node() : next(){}
-    };
-
-    lockfree_list() : tail(&root) {
+        type* p = this->alloc();
+        new(p)type(args...);
+        this->push(p);
     }
-    void push(node* t) {
-        for(;;)
-        {
-            node* expected = atomic_load(tail);
-            if(atomic_compare_exchange(tail, expected, t))
-            {
-                expected->next = t;
-                break;
-            }
-        }
+    template<typename ... par>
+    void emplace_front(par&& ... args)
+    {
+        type* p = this->alloc();
+        new(p)type(args...);
+        this->push_front(p);
     }
-    node* begin() {
-        return root.next;
+    template<typename ... par>
+    void emplace_back(par&& ... args)
+    {
+        type* p = this->alloc();
+        new(p)type(args...);
+        this->push_front(p);
     }
-    node* next(node* prev) {
-        if(!prev)
-            return root.next;
-        return prev->next;
-    }
-
-private:
-    node root;
-    node* tail;
 };
 

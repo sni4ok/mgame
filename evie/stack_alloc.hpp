@@ -28,8 +28,8 @@ struct st_allocator
     }
     type* allocate(size_t sz)
     {
-        (void)sz;
-        assert(sz == 1 && size < alloc_size);
+        if(sz != 1 || size >= alloc_size)
+            throw std::bad_alloc();
         return links[size++];
     }
     void deallocate(type* ptr, size_t sz)

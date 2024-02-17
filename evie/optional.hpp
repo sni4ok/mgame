@@ -72,6 +72,30 @@ struct optional
         assert(initialized);
         return &value;
     }
+    bool operator==(const optional& v) const
+    {
+        if(initialized == v.initialized)
+        {
+            if(initialized == true)
+                return value == v.value;
+            return true;
+        }
+        return false;
+    }
+    bool operator!=(const optional& v) const
+    {
+        return !((*this) == v);
+    }
+    bool operator==(const type& v) const
+    {
+        if(!initialized)
+            return false;
+        return value == v;
+    }
+    bool operator!=(const type& v) const
+    {
+        return !((*this) == v);
+    }
     bool operator!() const
     {
         return !initialized;
@@ -81,4 +105,14 @@ struct optional
         return initialized;
     }
 };
+
+template<typename stream, typename type>
+stream& operator<<(stream& s, const optional<type>& v)
+{
+    if(v)
+        s << *v;
+    else
+        s << "none";
+    return s;
+}
 

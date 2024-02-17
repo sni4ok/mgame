@@ -49,7 +49,7 @@ struct my_condition
 
 void set_significant_thread();
 void set_trash_thread();
-int get_thread_id();
+uint32_t get_thread_id();
 
 struct thread_func
 {

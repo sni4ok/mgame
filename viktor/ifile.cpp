@@ -4,14 +4,15 @@
 
 #include "makoa/types.hpp"
 
+#include "alco/huobi/utils.hpp"
+
 #include "evie/fmap.hpp"
 #include "evie/mfile.hpp"
 #include "evie/utils.hpp"
+#include "evie/queue.hpp"
 #include "evie/profiler.hpp"
-#include "alco/huobi/utils.hpp"
 
 #include <map>
-#include <list>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -141,26 +142,27 @@ struct compact_book
     {
     }
 
+    struct orders_t : std::map<int64_t/*level_id*/, message_book>
+    {
+        message_instr mi;
+
+        orders_t() : mi()
+        {
+        }
+    };
+
     void read(zip_file& f, const mstring& fname, uint64_t from, uint64_t to)
     {
         if((to - from) % message_size)
             throw mexception(es() % "compact_book::read() " % fname % " from " % from % " to " % to);
 
-        struct orders_t : std::map<int64_t/*level_id*/, message_book>
-        {
-            message_instr mi;
-
-            orders_t() : mi()
-            {
-            }
-        };
         ttime_t last_time = ttime_t();
         std::map<uint32_t/*security_id*/, orders_t> orders;
 
         //read
         mvector<message> buf((to - from) / message_size);
         f.seekg(from);
-        f.read((char*)&buf[0], to - from);
+        f.read((char*)(buf.begin()), to - from);
         auto it = buf.begin(), ie = buf.end();
 
         for(; it != ie; ++it) {
@@ -216,7 +218,7 @@ struct compact_book
         }
 
         book.resize(buf.size() * message_size);
-        std::copy(&buf[0], &buf[0] + buf.size(), (message*)&book[0]);
+        std::copy(buf.begin(), buf.begin() + buf.size(), (message*)(book.begin()));
         mlog() << "compact_book::read() " << fname << " from " << from << " to " << to;
     }
 };
@@ -242,7 +244,7 @@ struct ifile
     zip_file cur_file;
     compact_book cb;
     const node main_file;
-    std::list<mstring> dir_files;
+    queue<mstring> dir_files;
     node nt;
     message mt;
     bool history;
@@ -379,7 +381,7 @@ struct ifile
             throw_system_failure(es() % "scandir error " % dir);
 
         uint32_t f_size = f.size();
-        uint32_t tfrom = main_file.tf.value / ttime_t::frac, tto = main_file.tt.value / ttime_t::frac;
+        uint64_t tfrom = main_file.tf.value / ttime_t::frac, tto = main_file.tt.value / ttime_t::frac;
         for(int i = 0; i != n; ++i) {
             dirent *e = ee[i];
             str_holder fname(_str_holder(e->d_name));
@@ -410,11 +412,13 @@ struct ifile
 
     bool next_file()
     {
-        auto it = dir_files.begin();
-        while(it != dir_files.end())
+        if(nt.tt > main_file.tt)
+            return false;
+
+        while(!dir_files.empty())
         {
-            ttime_t t = add_file(*it);
-            it = dir_files.erase(it);
+            ttime_t t = add_file(dir_files.front());
+            dir_files.pop_front();
             if(t.value)
                 return true;
         }
@@ -422,7 +426,7 @@ struct ifile
     }
 
     ifile(const mstring& fname, ttime_t tf, ttime_t tt, bool history)
-        : main_file({fname, tf, tt, 0, 0, 0}), history(history), last_file_check_time()
+        : main_file({fname, tf, tt, 0, 0, 0}), nt(), history(history), last_file_check_time()
     {
         read_directory(fname);
         load_cb();
