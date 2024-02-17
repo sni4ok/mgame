@@ -409,9 +409,6 @@ public:
         can_exit = true;
         for(auto&& t: threads)
             t.join();
-        imple *i = nullptr;
-        //while(ies.pop_weak(i))
-        //    delete i;
     }
     void push_clean(const mvector<actives::type>& secs) //when parser disconnected all OrdersBooks cleans
     {
