@@ -101,12 +101,6 @@ class simple_log
                 {
                     data = nodes.pop();
 
-                    if(!data)
-                    {
-                        MPROFILE("mlog::write_thread() race");
-                        usleep(100000);
-                    }
-
                     while(data->head)
                     {
                         mlog::node* next = data->head->next;

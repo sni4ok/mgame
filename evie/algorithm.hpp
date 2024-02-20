@@ -117,7 +117,7 @@ any_of is_any_of(const char (&str)[size])
 }
 
 template<typename type>
-type min(type l, type r)
+constexpr type min(type l, type r)
 {
     if(l < r)
         return l;
@@ -125,7 +125,7 @@ type min(type l, type r)
 }
 
 template<typename type>
-type max(type l, type r)
+constexpr type max(type l, type r)
 {
     if(l > r)
         return l;

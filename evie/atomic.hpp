@@ -82,6 +82,11 @@ inline bool atomic_compare_exchange_r(uint32_t& v, uint32_t& from, uint32_t to)
     return __atomic_compare_exchange_n(&v, &from, to, false, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
 }
 
+inline bool atomic_compare_exchange(uint16_t& v, uint16_t from, uint16_t to)
+{
+    return __atomic_compare_exchange_n(&v, &from, to, true, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
+}
+
 inline bool atomic_compare_exchange(uint64_t& v, uint64_t from, uint64_t to)
 {
     return __atomic_compare_exchange_n(&v, &from, to, true, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
@@ -115,6 +120,11 @@ bool atomic_compare_exchange(type*& v, type* from, type* to)
     return __atomic_compare_exchange_n(&v, &from, to, true, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
 }
 
+inline uint16_t atomic_exchange(uint16_t& v, uint16_t to)
+{
+    return __atomic_exchange_n(&v, to, __ATOMIC_RELAXED);
+}
+
 struct critical_section
 {
     bool flag;
@@ -134,5 +144,17 @@ struct critical_section
         assert(r);
         (void) r;
     }
+
+    struct scoped_lock
+    {
+        critical_section& cs;
+
+        scoped_lock(critical_section& cs) : cs(cs) {
+            cs.lock();
+        }
+        ~scoped_lock() {
+            cs.unlock();
+        }
+    };
 };
 

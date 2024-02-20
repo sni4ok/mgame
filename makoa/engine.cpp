@@ -259,7 +259,7 @@ class engine::impl : public stack_singleton<engine::impl>
         }
     };
 
-    fast_alloc_list<imple, mt.malloc()> ies;
+    cas_array<imple, 50> ies;
 
     void work_thread()
     {
