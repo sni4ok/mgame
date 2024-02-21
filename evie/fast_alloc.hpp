@@ -213,6 +213,8 @@ struct cas_array : emplace_decl<type, cas_array<type, max_size, blist> >
 
     node nodes[max_size + 1];
 
+    static const uint64_t push_lock = -1, pop_lock = -2, locks_from = -2;
+
     cas_array() : nodes() {
         static_assert(max_size && max_size < std::numeric_limits<uint16_t>::max());
         static_assert(sizeof(node) == 8 + sizeof(type) + ((sizeof(type) % 8) ? (8 - sizeof(type) % 8) : 0));
@@ -243,62 +245,69 @@ struct cas_array : emplace_decl<type, cas_array<type, max_size, blist> >
                 break;
         }
     }
-    void push_front(type* p) {
+    void push_front(type* p) requires(!blist){
         node* n = to_node(p);
         for(;;) {
             uint64_t from = atomic_load(nodes->id);
             id_type to = {from};
-            uint16_t next = to.next;
+            //uint16_t next = to.next;
             to.next = n - nodes;
 
-            if constexpr(blist) {
-                if(!next)
-                    to.prev = to.next;
-            }
+            //if constexpr(blist) {
+            //    if(!next)
+            //        to.prev = to.next;
+            //}
             n->id = from;
-            if constexpr(blist)
-                n->prev = 0;
+            //if constexpr(blist)
+            //    n->prev = 0;
             ++to.salt;
             if(atomic_compare_exchange(nodes->id, from, to.id))
             {
-                if constexpr(blist) {
+                /*if constexpr(blist) {
                     if(next) {
                         if(!atomic_compare_exchange((nodes + next)->prev, uint16_t(), to.next)) {
                             //assert(false);
                             MPROFILE("cas_array::push_front() race");
                         }
                     }
-                }
+                }*/
                 break;
             }
         }
     }
+
     void push_back(type* p) requires(blist) {
         node* n = to_node(p);
         for(;;) {
             uint64_t from = atomic_load(nodes->id);
             id_type to = {from};
             uint16_t prev = to.prev;
-            to.prev = n - nodes;
+
+            id_type prev_to;
+            if(prev) {
+                prev_to.id = atomic_load((nodes + prev)->id);
+                if(prev_to.next || prev_to.id >= locks_from)
+                    continue;
+                if(!atomic_compare_exchange((nodes + prev)->id, prev_to.id, push_lock))
+                    continue;
+            }
             {
                 id_type f = {from};
                 f.next = 0;
                 atomic_store(n->id, f.id);
             }
+            to.prev = n - nodes;
             if(to.next == 0)
                 to.next = to.prev;
             ++to.salt;
-
-            if(atomic_compare_exchange(nodes->id, from, to.id)) {
-                if(prev)
-                {
-                    if(!atomic_compare_exchange((nodes + prev)->next, uint16_t(), to.prev)) {
-                        //assert(false);
-                        MPROFILE("cas_array::push_back() race");
-                    }
-                }
-                break;
+            bool succ = (atomic_compare_exchange(nodes->id, from, to.id));
+            if(prev) {
+                if(succ)
+                    prev_to.next = to.prev;
+                atomic_store((nodes + prev)->id, prev_to.id);
             }
+            if(succ)
+                break;
         }
     }
     type* alloc() {
@@ -324,25 +333,34 @@ struct cas_array : emplace_decl<type, cas_array<type, max_size, blist> >
                 return nullptr;
             uint16_t nn = to.next;
             uint64_t next = atomic_load((nodes + nn)->id);
+            if constexpr(blist)
+                if(next >= locks_from)
+                    continue;
             id_type n = {next};
-            to.next = n.next;
+            id_type next_next_to;
             if constexpr(blist) {
-                if(!to.next)
+                if(!n.next)
                     to.prev = 0;
-            }
-            ++to.salt;
-            if(atomic_compare_exchange(nodes->id, from, to.id)) {
-                if constexpr(blist) {
-                    if(to.next) {
-                        if(!atomic_compare_exchange((nodes + to.next)->prev, nn, uint16_t())) {
-                            //assert(false);
-                            MPROFILE("cas_array::pop_front() race");
-                        }
-                    }
+                else {
+                    next_next_to.id = atomic_load((nodes + n.next)->id);
+                    if(next_next_to.prev != nn || next_next_to.id >= locks_from)
+                        continue;
+                    if(!atomic_compare_exchange((nodes + n.next)->id, next_next_to.id, pop_lock))
+                        continue;
                 }
-                //atomic_store((nodes + nn)->id, uint64_t());
-                return to_type(nodes + nn);
             }
+            to.next = n.next;
+            ++to.salt;
+            bool succ = (atomic_compare_exchange(nodes->id, from, to.id));
+            if constexpr(blist) {
+                if(to.next) {
+                    if(succ)
+                        next_next_to.prev = uint16_t();
+                    atomic_store((nodes + n.next)->id, next_next_to.id);
+                }
+            }
+            if(succ)
+                return to_type(nodes + nn);
         }
     }
     void push(type* p) {
