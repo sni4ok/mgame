@@ -223,6 +223,10 @@ struct cas_array : emplace_decl<type, cas_array<type, max_size, blist> >
     }
     cas_array(str_holder) : cas_array() {
     }
+    ~cas_array() {
+        for(type& t: (*this))
+            t.~type();
+    }
     type* to_type(node* n) {
         assert(n > nodes && n < nodes + max_size + 1);
         return (type*)n->value_buf;
