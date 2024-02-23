@@ -493,9 +493,18 @@ struct fast_alloc
     typedef nodes_type::node node;
     uint32_t size;
 
+    static type* alloc_impl() {
+        return nodes_type::to_type(fast_alloc_alloc<node>());
+    }
+
     fast_alloc() : size() {
-        for(uint32_t i = 0; i != pre_alloc; ++i)
-            nodes.push(nodes_type::to_type(new node));
+        if constexpr(pre_alloc) {
+            for(uint32_t i = 0; i != pre_alloc; ++i) {
+                type* p = alloc_impl();
+                new(p)type();
+                nodes.push(p);
+            }
+        }
         if constexpr(max_size)
             size += pre_alloc;
     }
@@ -511,7 +520,7 @@ struct fast_alloc
         }
         if(!p) {
             MPROFILE("fast_alloc::alloc() slow")
-            return nodes_type::to_type(new node);
+            return alloc_impl();
         }
         else if constexpr(max_size)
             atomic_sub(size, 1);
@@ -531,7 +540,7 @@ struct fast_alloc
             }
             else {
                 MPROFILE("fast_alloc::free() slow")
-                delete nodes_type::to_node(p);
+                fast_alloc_free(nodes_type::to_node(p));
                 return;
             }
         }
@@ -549,7 +558,7 @@ struct fast_alloc
             type* p = nodes.pop();
             if(p) {
                 atomic_sub(size, 1);
-                delete nodes_type::to_node(p);
+                fast_alloc_delete(nodes_type::to_node(p));
                 ++ret;
             }
             else {
@@ -560,8 +569,7 @@ struct fast_alloc
         while(atomic_load(size) < pre_alloc)
         {
             MPROFILE("fast_alloc::run_once() push")
-            node* n = new node;
-            nodes.push(nodes_type::to_type(n));
+            nodes.push(alloc_impl());
             atomic_add(size, 1);
             ++ret;
         }
@@ -578,10 +586,7 @@ struct malloc_alloc
         MPROFILE("malloc_alloc::alloc")
 #endif
 
-        node_type* n = (node_type*)::malloc(sizeof(node_type));
-        if(!n)
-            throw std::bad_alloc();
-        return (type*)n;
+        return (type*)fast_alloc_alloc<node_type>();
     }
     void free(type* n) {
 
@@ -589,7 +594,7 @@ struct malloc_alloc
         MPROFILE("malloc_alloc::free")
 #endif
 
-        ::free((node_type*)n);
+        fast_alloc_free((node_type*)n);
     }
     static constexpr uint32_t run_once() {
         return 0;

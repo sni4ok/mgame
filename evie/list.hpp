@@ -69,6 +69,28 @@ struct list_iterator
 
 #include "mlog.hpp"
 
+template<typename node>
+node* fast_alloc_alloc()
+{
+    node* n = (node*)malloc(sizeof(node));
+    if(!n)
+        throw std::bad_alloc();
+    return n;
+}
+
+template<typename node>
+void fast_alloc_free(node* n)
+{
+    ::free(n);
+}
+
+template<typename node>
+void fast_alloc_delete(node* n)
+{
+    n->~node();
+    ::free(n);
+}
+
 template<typename type, bool use_mt, bool use_tss, bool delete_on_exit, typename node_type, bool blist = false>
 struct list_base : data_tss<node_type*, use_tss>
 {
@@ -79,7 +101,7 @@ struct list_base : data_tss<node_type*, use_tss>
     list_base() {
         static_assert(int(use_mt) + int(use_tss) <= 1);
         auto m = []() {
-            node* n = (node*)::malloc(sizeof(node));
+            node* n = fast_alloc_alloc<node>();
             memset((void*)n, 0, sizeof(node));
             return n;
         };
@@ -97,7 +119,10 @@ struct list_base : data_tss<node_type*, use_tss>
     }
     template<typename ... params>
     static type* alloc_node(params&& ... args) {
-        return to_type(new node({args...}, {nullptr}));
+        node* n = fast_alloc_alloc<node>();
+        type* p = to_type(n);
+        new(p)type(args...);
+        return p;
     }
 
     typedef list_iterator<const node, blist> const_iterator;
@@ -121,10 +146,10 @@ struct list_base : data_tss<node_type*, use_tss>
                 iterator i(ptr->next), t = i, e = iterator(ptr, true);
                 while(i != e) {
                     ++t;
-                    delete to_node(&(*i));
+                    fast_alloc_delete(to_node(&(*i)));
                     i = t;
                 }
-                ::free(ptr);
+                fast_alloc_free(ptr);
             };
             if constexpr(use_tss)
                 for(auto& v : this->nodes)
@@ -328,7 +353,7 @@ struct tss_pvector : data_tss<mvector<type*>, use_tss>
         if constexpr(delete_on_exit) {
             auto del_func = [&](mvector<type*>& data) {
                 for(type* p: data)
-                    delete p;
+                    fast_alloc_delete(to_node(p));
             };
             if constexpr(use_tss)
                 for(auto& v : this->nodes)

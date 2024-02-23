@@ -210,7 +210,7 @@ extern "C"
 {
     void create_hole(hole_exporter* m, exporter_params params)
     {
-        log_set(params.sl);
+        init_exporter_params(params);
         m->init = &mysql_init;
         m->destroy = &mysql_destroy;
         m->proceed = &mysql_proceed;

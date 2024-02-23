@@ -15,7 +15,7 @@ extern "C"
 {
     void create_hole(hole_exporter* m, exporter_params params)
     {
-        log_set(params.sl);
+        init_exporter_params(params);
         m->init = &ying_init;
         m->destroy = &ying_destroy;
         m->proceed = &ying_proceed;

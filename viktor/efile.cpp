@@ -158,7 +158,7 @@ extern "C"
 {
     void create_hole(hole_exporter* m, exporter_params params)
     {
-        log_set(params.sl);
+        init_exporter_params(params);
         m->init = &efile_init;
         m->destroy = &efile_destroy;
         m->proceed = &efile_proceed;
