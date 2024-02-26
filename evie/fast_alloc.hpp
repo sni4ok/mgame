@@ -452,12 +452,6 @@ namespace alloc_params
         const constexpr fast_alloc_params operator()(uint32_t pre_alloc, uint32_t max_size = 0) const {
             return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size, use_malloc, cont_type, allocator_cont);
         }
-        const constexpr fast_alloc_params alloc_params() const {
-            if(use_mt && use_tss)
-                return fast_alloc_params(false, true, pre_alloc, max_size, use_malloc, cont_type, allocator_cont);
-            else
-                return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size, use_malloc, cont_type, allocator_cont);
-        }
         const constexpr fast_alloc_params malloc(bool use_malloc = true) const {
             return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size, use_malloc, cont_type, allocator_cont);
         }
@@ -472,15 +466,14 @@ namespace alloc_params
     static constexpr fast_alloc_params st({false, false});
     static constexpr fast_alloc_params mt({true, false});
     static constexpr fast_alloc_params mt_tss({true, true});
-    static constexpr fast_alloc_params st_tss({false, true}); //for allocator
 }
 
 using namespace alloc_params;
 
 //#define ENABLE_ALLOC_FREE_PROFILE
 
-template<typename type, fast_alloc_params params = st_tss,
-    template<typename, bool, bool, bool, typename> typename nodes_type_ = forward_list, typename node_type = forward_list_node<type> >
+template<typename type, fast_alloc_params params = mt_tss,
+    template<typename, bool, bool, bool, typename> typename nodes_type_ = forward_list, typename node_type = forward_list_node<type, params.use_tss> >
 struct fast_alloc
 {
     static const bool use_mt = params.use_mt;
@@ -493,10 +486,12 @@ struct fast_alloc
     typedef nodes_type::node node;
     uint32_t size;
 
-    static type* alloc_impl() {
-        return nodes_type::to_type(fast_alloc_alloc<node>());
+    type* alloc_impl() {
+        node* n = fast_alloc_alloc<node>();
+        if constexpr(use_tss)
+            nodes.set_tss_ptr(n);
+        return nodes_type::to_type(n);
     }
-
     fast_alloc() : size() {
         if constexpr(pre_alloc) {
             for(uint32_t i = 0; i != pre_alloc; ++i) {
@@ -625,10 +620,10 @@ struct conditional_multi : conditional_multi_f<index, 0, param, params...>
 template<int index, typename param, typename ... params>
 using conditional_multi_t = typename conditional_multi<index, param, params...>::type;
 
-template<typename type, int t>
+template<typename type, bool use_tss, int t>
 struct node_type
 {
-    typedef conditional_multi_t<t, type, forward_list_node<type>, blist_node<type> > node;
+    typedef conditional_multi_t<t, type, forward_list_node<type, use_tss>, blist_node<type, use_tss> > node;
 };
 
 template<typename type_, typename node, fast_alloc_params params>
@@ -646,13 +641,13 @@ struct allocator_type
     typedef
     std::conditional_t<params.use_malloc, malloc_alloc<type_, node> ,
         conditional_multi_t<params.allocator_cont,
-            fast_alloc<type_, params.alloc_params(), tss_pvector, node>,
-            fast_alloc<type_, params.alloc_params(), forward_list, node>,
-            fast_alloc<type_, params.alloc_params(), blist, node>
+            fast_alloc<type_, params, tss_pvector, node>,
+            fast_alloc<type_, params, forward_list, node>,
+            fast_alloc<type_, params, blist, node>
     > > type;
 };
 
-template<typename type, fast_alloc_params params = mt_tss, typename node = node_type<type, params.node_type()>::node>
+template<typename type, fast_alloc_params params = mt_tss, typename node = node_type<type, params.use_tss, params.node_type()>::node>
 struct fast_alloc_list :
     allocator_type<type, node, params>::type,
     container_type<type, node, params>::type,
