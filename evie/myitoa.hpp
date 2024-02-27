@@ -133,6 +133,12 @@ type lexical_cast(char_cit from, char_cit to);
 
 template<> double lexical_cast<double>(char_cit from, char_cit to);
 
+template<typename type>
+type lexical_cast(const str_holder& str)
+{
+    return lexical_cast<type>(str.begin(), str.end());
+}
+
 template<typename ... args>
 inline void my_unused(args& ...) {
 }

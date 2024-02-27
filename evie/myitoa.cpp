@@ -216,6 +216,7 @@ namespace my_cvt
     }
 
     const double d_max_d = static_cast<double>(uint64_t(1) << 62);
+
     uint32_t dtoa(char* buf, double v) 
     {
         if(v != v) {
@@ -304,15 +305,18 @@ namespace my_cvt
     void test_itoa()
     {
         char buf[1024];
+
         for(uint32_t i = 0; i <= 65535; ++i) {
             uint32_t sz = itoa(buf, uint16_t(i));
             my_unused(sz);
         }
         uint32_t sz = itoa(buf, true);
-        auto check = [&](const char* s)
+        my_unused(sz);
+
+        auto check = [&](str_holder s)
         {
             my_unused(s);
-            assert(str_holder(buf, sz) == _str_holder(s));
+            assert(str_holder(buf, sz) == s);
         };
         check("1");
         sz = itoa(buf, uint16_t(1267));
@@ -341,23 +345,86 @@ namespace my_cvt
         sz = itoa(buf, uint64_t(9475934712395012ULL));
         check("9475934712395012");
         assert(atoi<uint64_t>(buf, sz) == 9475934712395012);
-        sz = dtoa(buf, 3.03);
-        check("3.03");
-        sz = dtoa(buf, -155.6999);
-        check("-155.6999");
-        sz = dtoa(buf, 155.6999);
-        check("155.6999");
-        sz = dtoa(buf, -155.0000001);
-        check("-155.0000001");
-        sz = dtoa(buf, std::numeric_limits<double>::quiet_NaN());
-        check("NAN");
+
+        auto check_double = [&buf, &sz](double v, str_holder s) {
+            my_unused(v, s);
+            sz = dtoa(buf, v);
+            assert(str_holder(buf, sz) == s);
+            double d = lexical_cast<double>(buf, buf + sz);
+            my_unused(d);
+            if(v == v) {
+                assert(d == v);
+            }
+            else {
+                assert(!memcmp(&v, &d, sizeof(double)));
+            }
+        };
+
+        check_double(3.03, "3.03");
+        check_double(-155.6999, "-155.6999");
+        check_double(155.6999, "155.6999");
+        check_double(-155.0000001, "-155.0000001");
+        check_double(std::numeric_limits<double>::quiet_NaN(), "NAN");
         sz = dtoa(buf, std::numeric_limits<double>::signaling_NaN());
         check("NAN");
-        sz = dtoa(buf, std::numeric_limits<double>::infinity());
-        check("INF");
-        sz = dtoa(buf, -std::numeric_limits<double>::infinity());
-        check("-INF");
-        my_unused(sz);
+        check_double(std::numeric_limits<double>::infinity(), "INF");
+        check_double(-std::numeric_limits<double>::infinity(), "-INF");
+        double v = lexical_cast<double>("1e10");
+        my_unused(v);
+        assert(v == 10000000000.);
     }
+}
+
+template<>
+double lexical_cast<double>(char_cit from, char_cit to)
+{
+    uint32_t size = to - from;
+    if(!size)
+        throw str_exception("lexical_cast<double>() from == to");
+
+    bool p = false, e = false;
+    char_cit d = to;
+
+    for(char_cit it = from; it != to; ++it) {
+        if(*it == '.') {
+            p = true;
+            d = it;
+            break;
+        }
+        if(*it == 'e') {
+            e = true;
+            d = it;
+            break;
+        }
+    }
+    bool m = *from == '-';
+    if(p) {
+        int64_t v = my_cvt::atoi<int64_t>(from, d - from);
+        uint32_t frac_sz = to - (d + 1);
+        if(frac_sz > 19)
+            throw str_exception("lexical_cast<double>() frac_sz overflow");
+        uint64_t frac = my_cvt::atoi<uint64_t>(d + 1, frac_sz);
+        double f = double(frac);
+        if(m)
+            f = -f;
+        return double(v) + f / my_cvt::decimal_pow[frac_sz];
+    }
+    if(e) {
+        int64_t mantissa = my_cvt::atoi<int64_t>(from, d - from);
+        uint64_t exponent = my_cvt::atoi<uint64_t>(d + 1, to - (d + 1));
+        return double(mantissa) * exp10(double(exponent));
+    }
+
+    if(size == 3) {
+        if(*from == 'N' && *(from + 1) == 'A' && *(from + 2) == 'N')
+            return std::numeric_limits<double>::quiet_NaN();
+        else if(*from == 'I' && *(from + 1) == 'N' && *(from + 2) == 'F')
+            return std::numeric_limits<double>::infinity();
+    }
+    if(size == 4 && m && *(from + 1) == 'I' && *(from + 2) == 'N' && *(from + 3) == 'F')
+        return -std::numeric_limits<double>::infinity();
+
+    int64_t v = my_cvt::atoi<int64_t>(from, size);
+    return double(v);
 }
 

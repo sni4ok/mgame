@@ -20,28 +20,9 @@ str_holder _str_holder(char_cit str)
 
 mstring to_string(double value)
 {
-    char buf[32];
-    uint32_t size = my_cvt::dtoa(buf, value);
-    return mstring(buf, buf + size);
-}
-
-template<>
-double lexical_cast<double>(char_cit from, char_cit to)
-{
-    if(from == to)
-        throw str_exception("lexical_cast<double>() from == to");
-    char* ep;
-    double ret;
-    static const bool disable_check = false;
-    if(!disable_check && *to == char())
-        ret = strtod(from, &ep);
-    else {
-        my_basic_string<30> buf(from, to - from);
-        ret = strtod(buf.c_str(), &ep);
-        ep = (char*)(from + (ep - buf.begin()));
-    }
-    if(ep != to)
-        throw mexception(es() % "bad lexical_cast to double from " % str_holder(from, to - from));
+    mstring ret;
+    ret.resize(32);
+    ret.resize(my_cvt::dtoa(ret.begin(), value));
     return ret;
 }
 

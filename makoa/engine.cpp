@@ -15,10 +15,6 @@ bool pooling_mode = false;
 
 struct messages
 {
-    messages() : cnt()
-    {
-    }
-
     message _;
     message m[255];
     uint32_t count;
@@ -34,8 +30,10 @@ struct linked_node : messages
     linked_node* next;
 };
 
-class linked_list : public fast_alloc<linked_node, st_tss>
+class linked_list : fast_alloc<linked_node>
 {
+    typedef fast_alloc<linked_node> base;
+
     linked_node root;
     linked_node* tail; //atomic
     
@@ -57,14 +55,24 @@ public:
             return root.next;
         return prev->next;
     }
-    void release_node(linked_node* node)
+    void release_node(linked_node* n)
     {
-        uint32_t consumers_left = atomic_sub(node->cnt, 1);
-        if(!consumers_left)
-        {
-            node->next = nullptr;
-            this->free(node);
+        uint32_t consumers_left = atomic_sub(n->cnt, 1);
+        if(!consumers_left) {
+            n->next = nullptr;
+            this->free(n);
         }
+    }
+    linked_node* alloc()
+    {
+        linked_node* n = base::alloc();
+        n->cnt = 0;
+        n->next = nullptr;
+        return n;
+    }
+    void free(linked_node* n)
+    {
+        base::free(n);
     }
 };
 
@@ -79,7 +87,7 @@ struct node_free
     void release()
     {
         ll.release_node(n);
-        n = 0;
+        n = nullptr;
     }
     ~node_free()
     {
@@ -275,7 +283,7 @@ class engine::impl : public stack_singleton<engine::impl>
                 {
                     res = i->proceed();
                     ies.push(i);
-                    i = 0;
+                    i = nullptr;
                 }
                 if(!res) {
                     if(can_exit)

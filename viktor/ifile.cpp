@@ -398,9 +398,11 @@ struct ifile
                 if(t && t > tto)
                     break;
             }
-            free(e);
         }
         dir_files.push_back(fname);
+
+        for(int i = 0; i != n; ++i)
+            free(ee[i]);
         free(ee);
     }
 

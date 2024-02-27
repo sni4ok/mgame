@@ -12,6 +12,7 @@
 
 #include <pthread.h>
 #include <errno.h>
+#include <cstdlib>
 
 my_mutex::my_mutex()
 {
@@ -141,20 +142,31 @@ static pthread_once_t key_once = PTHREAD_ONCE_INIT;
 
 static void make_key()
 {
-    pthread_key_create(&key, NULL);
+    pthread_key_create(&key, nullptr);
 }
 
 uint32_t get_thread_id()
 {
-    void *ptr;
     pthread_once(&key_once, make_key);
-    if((ptr = pthread_getspecific(key)) == NULL)
-    {
+    void *ptr = pthread_getspecific(key);
+    if(!ptr) {
         ptr = new uint32_t(atomic_add(thread_tss_id, 1));
         pthread_setspecific(key, ptr);
     }
     return *((uint32_t*)ptr);
 }
+
+void delete_thread_id_ptr()
+{
+    pthread_once(&key_once, make_key);
+    void *ptr = pthread_getspecific(key);
+    if(ptr) {
+        delete (uint32_t*)ptr;
+        pthread_setspecific(key, nullptr);
+    }
+}
+
+static const int thrd_id_delete = atexit(&delete_thread_id_ptr);
 
 void set_affinity_thread(uint32_t thrd)
 {
@@ -194,6 +206,7 @@ void* thread_f(void *p)
 {
     unique_ptr<thread_func> f(reinterpret_cast<thread_func*>(p));
     f->run();
+    delete_thread_id_ptr();
     return nullptr;
 }
 

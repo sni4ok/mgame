@@ -11,6 +11,7 @@ extern "C"
     double sqrt(double x) noexcept;
     double modf(double x, double *iptr) noexcept;
     double pow(double x, double y) noexcept;
+    double exp10(double x) noexcept;
     double log(double x) noexcept;
 }
 

@@ -22,12 +22,6 @@ template<> inline str_holder lexical_cast<str_holder>(char_cit from, char_cit to
     return str_holder(from, to - from);
 }
 
-template<typename type>
-type lexical_cast(const str_holder& str)
-{
-    return lexical_cast<type>(str.begin(), str.end());
-}
-
 mvector<mstring> split(const mstring& str, char sep = ',');
 mvector<str_holder> split(str_holder str, char sep = ',');
 void split(mvector<str_holder>& ret, char_cit it, char_cit ie, char sep = ',');

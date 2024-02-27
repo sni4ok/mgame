@@ -34,7 +34,7 @@ struct server::impl
         try
         {
             mstring params = str;
-            char* f = params.begin();
+            char* f = (char*)params.c_str();
             char* c = find(f, params.end(), ' ');
             *c = char();
             hole_importer hi = create_importer(f);
