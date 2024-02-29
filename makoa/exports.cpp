@@ -145,7 +145,7 @@ namespace
         mstring lib = "./lib" + module + ".so";
         exporter ret;
         ret.he.destroy = &shared_destroy;
-        ret.p = dlopen(lib.c_str(), RTLD_LAZY);
+        ret.p = dlopen(lib.c_str(), RTLD_NOW);
         if(!ret.p)
             throw_system_failure(es() % "load library '" % lib % "' error");
         typedef void (create_hole)(hole_exporter* m, exporter_params params);

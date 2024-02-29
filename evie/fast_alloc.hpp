@@ -473,7 +473,7 @@ using namespace alloc_params;
 //#define ENABLE_ALLOC_FREE_PROFILE
 
 template<typename type, fast_alloc_params params = mt_tss,
-    template<typename, bool, bool, bool, typename> typename nodes_type_ = forward_list, typename node_type = forward_list_node<type, params.use_tss> >
+    template<typename, bool, bool, bool, typename> typename nodes_type_ = forward_list, typename node = forward_list_node<type, params.use_tss> >
 struct fast_alloc
 {
     static const bool use_mt = params.use_mt;
@@ -481,9 +481,8 @@ struct fast_alloc
     static const uint32_t pre_alloc = use_tss ? 0 : params.pre_alloc;
     static const uint32_t max_size = use_tss ? 0 : params.max_size;
 
-    typedef nodes_type_<type, use_mt, use_tss, true, node_type> nodes_type;
+    typedef nodes_type_<type, use_mt, use_tss, true, node> nodes_type;
     nodes_type nodes;
-    typedef nodes_type::node node;
     uint32_t size;
 
     type* alloc_impl() {

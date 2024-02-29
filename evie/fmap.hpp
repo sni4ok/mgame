@@ -17,7 +17,7 @@ struct fmap
     typedef vector<pair>::value_type value_type;
     typedef vector<pair>::iterator iterator;
     typedef vector<pair>::const_iterator const_iterator;
-    typedef vector<pair>::reverse_iterator reverse_iterator;
+    typedef vector<pair>::const_reverse_iterator const_reverse_iterator;
 
     fmap() {
     }
@@ -104,11 +104,11 @@ struct fmap
     iterator end() {
         return data.end();
     }
-    reverse_iterator rbegin() const
+    const_reverse_iterator rbegin() const
     {
         return data.rbegin();
     }
-    reverse_iterator rend() const
+    const_reverse_iterator rend() const
     {
         return data.rend();
     }

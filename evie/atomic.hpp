@@ -77,9 +77,9 @@ inline uint32_t atomic_load(int32_t& v)
     return __atomic_load_n(&v, __ATOMIC_RELAXED);
 }
 
-inline bool atomic_compare_exchange_r(uint32_t& v, uint32_t& from, uint32_t to)
+inline bool atomic_compare_exchange(uint32_t& v, uint32_t from, uint32_t to)
 {
-    return __atomic_compare_exchange_n(&v, &from, to, false, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
+    return __atomic_compare_exchange_n(&v, &from, to, true, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
 }
 
 inline bool atomic_compare_exchange(uint16_t& v, uint16_t from, uint16_t to)
@@ -132,6 +132,7 @@ struct critical_section
     critical_section() : flag() {
     }
     bool try_lock() {
+        //return __atomic_test_and_set(&flag, __ATOMIC_RELAXED);
         return atomic_compare_exchange(flag, 0, 1);
     }
     void lock() {
@@ -140,6 +141,7 @@ struct critical_section
                 return;
     }
     void unlock() {
+        //__atomic_clear(&flag, __ATOMIC_RELAXED);
         bool r = atomic_compare_exchange(flag, 1, 0);
         assert(r);
         (void) r;

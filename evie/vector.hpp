@@ -154,46 +154,56 @@ public:
         return buf + size_;
     }
 
-    struct reverse_iterator
+    template<typename t>
+    struct reverse_iter
     {
-        const type* ptr;
+        t* ptr;
 
-        reverse_iterator& operator++()
+        reverse_iter& operator++()
         {
             --ptr;
             return *this;
         }
-        reverse_iterator operator+(int64_t c) const
+        reverse_iter operator+(int64_t c) const
         {
-            return reverse_iterator({ptr - c});
+            return reverse_iter({ptr - c});
         }
-        reverse_iterator operator-(int64_t c) const
+        reverse_iter operator-(int64_t c) const
         {
-            return reverse_iterator({ptr + c});
+            return reverse_iter({ptr + c});
         }
-        int64_t operator-(const reverse_iterator& r) const
+        int64_t operator-(const reverse_iter& r) const
         {
             return r.ptr - ptr;
         }
-        const type& operator*()
+        t& operator*()
         {
             return *ptr;
         }
-        const type* operator->()
+        t* operator->()
         {
             return ptr;
         }
-        bool operator!=(const reverse_iterator& r) const
+        bool operator!=(const reverse_iter& r) const
         {
             return ptr != r.ptr;
         }
     };
 
-    reverse_iterator rbegin() const {
+    typedef reverse_iter<const type> const_reverse_iterator;
+    typedef reverse_iter<type> reverse_iterator;
+
+    reverse_iterator rbegin() {
         return reverse_iterator({end() - 1});
     }
-    reverse_iterator rend() const {
+    reverse_iterator rend() {
         return reverse_iterator({begin() - 1});
+    }
+    const_reverse_iterator rbegin() const {
+        return const_reverse_iterator({end() - 1});
+    }
+    const_reverse_iterator rend() const {
+        return const_reverse_iterator({begin() - 1});
     }
     ~mvector() {
         __destroy(begin(), end());

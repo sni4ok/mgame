@@ -96,6 +96,8 @@ struct list_base : data_tss<node_type*, use_tss>
 {
     typedef node_type node;
 
+    static const bool use_blist = blist;
+
     critical_section cs;
 
     list_base() {
@@ -132,6 +134,42 @@ struct list_base : data_tss<node_type*, use_tss>
         type* p = to_type(n);
         new(p)type(args...);
         return p;
+    }
+    bool erase(type* p) { //liniar complexity
+        node* n = to_node(p);
+        node* prev = nullptr;
+
+        if constexpr(use_mt)
+            this->cs.lock();
+
+        node* ne = this->get_data()->next;
+
+        while(ne) {
+            if(ne == n) {
+                if(prev)
+                    prev->next = n->next;
+
+                if constexpr(blist)
+                    if(n->next)
+                        n->next->prev = prev;
+
+                if constexpr(use_mt)
+                    this->cs.unlock();
+
+                if constexpr(delete_on_exit)
+                    fast_alloc_delete(n);
+
+                return true;
+            }
+
+            prev = ne;
+            ne = ne->next;
+        }
+
+        if constexpr(use_mt)
+            this->cs.unlock();
+
+        return false;
     }
 
     typedef list_iterator<const node, blist> const_iterator;
