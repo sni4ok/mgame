@@ -132,8 +132,7 @@ struct critical_section
     critical_section() : flag() {
     }
     bool try_lock() {
-        //return __atomic_test_and_set(&flag, __ATOMIC_RELAXED);
-        return atomic_compare_exchange(flag, 0, 1);
+        return !__atomic_test_and_set(&flag, __ATOMIC_RELAXED);
     }
     void lock() {
         for(;;)
@@ -141,10 +140,7 @@ struct critical_section
                 return;
     }
     void unlock() {
-        //__atomic_clear(&flag, __ATOMIC_RELAXED);
-        bool r = atomic_compare_exchange(flag, 1, 0);
-        assert(r);
-        (void) r;
+        __atomic_clear(&flag, __ATOMIC_RELAXED);
     }
 
     struct scoped_lock

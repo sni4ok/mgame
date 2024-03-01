@@ -13,6 +13,7 @@
 #include "evie/profiler.hpp"
 
 #include <map>
+#include <unordered_map>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -133,6 +134,33 @@ struct zip_file
     }
 };
 
+template<typename map>
+class last_used_c : public map
+{
+    typedef typename map::key_type key_type;
+    typedef typename map::mapped_type value_type;
+
+    key_type last;
+    value_type* v;
+
+public:
+
+    last_used_c() : last(), v() {
+    }
+    value_type& operator[](const key_type& key) {
+        if(key == last)
+            return *v;
+        map* m = this;
+        v = &(*m)[key];
+        last = key;
+        return *v;
+    }
+    void erase(const key_type& key) {
+        last = key_type();
+        ((map*)this)->erase(key);
+    }
+};
+
 struct compact_book
 {
     mvector<char> book;
@@ -142,7 +170,7 @@ struct compact_book
     {
     }
 
-    struct orders_t : std::map<int64_t/*level_id*/, message_book>
+    struct orders_t : std::unordered_map<int64_t/*level_id*/, message_book>
     {
         message_instr mi;
 
@@ -157,7 +185,7 @@ struct compact_book
             throw mexception(es() % "compact_book::read() " % fname % " from " % from % " to " % to);
 
         ttime_t last_time = ttime_t();
-        std::map<uint32_t/*security_id*/, orders_t> orders;
+        last_used_c<std::map<uint32_t, orders_t> > orders;
 
         //read
         mvector<message> buf((to - from) / message_size);
@@ -167,6 +195,7 @@ struct compact_book
 
         for(; it != ie; ++it) {
             if(it->id == msg_book) {
+                MPROFILE("compact_book::read::msg_book")
                 const message_book& m = it->mb;
                 orders_t& o = orders[m.security_id];
                 if(o.mi.security_id) {
@@ -319,7 +348,7 @@ struct ifile
                 static const uint64_t buf_size = message_size * 1024 * 1024;
                 read_buf.resize(buf_size / message_size);
                 nt.off = message_size * lower_bound_int(0, sz / message_size, main_file.tf, pred);
-                fmap<uint32_t/*security_id*/, uint64_t /*off*/> tickers;
+                last_used_c<fmap<uint32_t/*security_id*/, uint64_t /*off*/> > tickers;
                 uint64_t off = nt.off;
 
                 while(!nt.from && off) {

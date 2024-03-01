@@ -137,12 +137,17 @@ struct list_base : data_tss<node_type*, use_tss>
     }
     bool erase(type* p) { //liniar complexity
         node* n = to_node(p);
-        node* prev = nullptr;
 
         if constexpr(use_mt)
             this->cs.lock();
 
-        node* ne = this->get_data()->next;
+        node* prev = this->get_data();
+
+        if constexpr(blist)
+            if(prev->prev == n)
+                prev->prev = prev->prev->prev;
+
+        node* ne = prev->next;
 
         while(ne) {
             if(ne == n) {
