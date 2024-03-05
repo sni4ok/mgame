@@ -10,7 +10,10 @@
 #include <type_traits>
 #include <cassert>
 
-template<typename type>
+void* tss_realloc(void* ptr, uint64_t old_size, uint64_t new_size);
+void tss_free(void* ptr, uint64_t size);
+
+template<typename type, bool tss_allocator = false>
 class mvector
 {
 protected:
@@ -90,13 +93,16 @@ public:
             __destroy(begin() + new_size, begin() + size_);
             size_ = new_size;
         }
-        if(new_size <= capacity_)
-        {
+        if(new_size <= capacity_) {
             memset((void*)(buf + size_), 0, (new_size - size_) * sizeof(type));
             size_ = new_size;
         }
         else {
-            void *new_ptr = realloc((void*)buf, new_size * sizeof(type));
+            void *new_ptr;
+            if constexpr(tss_allocator)
+                new_ptr = tss_realloc((void*)buf, capacity_ * sizeof(type), new_size * sizeof(type));
+            else
+               new_ptr = realloc((void*)buf, new_size * sizeof(type));
             if(!new_ptr)
                 throw std::bad_alloc();
             buf = (type*)new_ptr;
@@ -106,7 +112,10 @@ public:
         }
     }
     void compact() {
-        buf = (type*)realloc((void*)buf, size_ * sizeof(type));
+        if constexpr(tss_allocator)
+            buf = (type*)tss_realloc((void*)buf, capacity_ * sizeof(type), size_ * sizeof(type));
+        else
+            buf = (type*)realloc((void*)buf, size_ * sizeof(type));
         capacity_ = size_;
     }
     void swap(mvector& r) {
@@ -117,7 +126,11 @@ public:
     void reserve(uint64_t new_capacity) {
         if(new_capacity <= capacity_)
             return;
-        void *new_ptr = realloc((void*)buf, new_capacity * sizeof(type));
+        void *new_ptr;
+        if constexpr(tss_allocator)
+            new_ptr = tss_realloc((void*)buf, capacity_ * sizeof(type), new_capacity * sizeof(type));
+        else
+            new_ptr = realloc((void*)buf, new_capacity * sizeof(type));
         if(!new_ptr)
             throw std::bad_alloc();
         buf = (type*)new_ptr;
@@ -207,7 +220,10 @@ public:
     }
     ~mvector() {
         __destroy(begin(), end());
-        free(buf);
+        if constexpr(tss_allocator)
+            tss_free(buf, capacity_ * sizeof(type));
+        else
+            free(buf);
     }
     type& operator[](uint64_t elem) {
         assert(elem < size_);
@@ -328,6 +344,12 @@ public:
         return from;
     }
 };
+
+template<typename type>
+using mvector_tss = mvector<type, true>;
+
+template<typename type>
+using fvector = mvector<type, false>;
 
 template<typename type>
 void pvector_free(type* ptr)
@@ -482,10 +504,7 @@ private:
 };
 
 template<typename type>
-struct ppvector : pvector<type>
-{
-    using pvector<type>::pvector;
-};
+using ppvector = pvector<type>;
 
 template<typename type>
 struct pavector : pvector<type, pvector_free_array>

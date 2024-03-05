@@ -195,7 +195,6 @@ struct compact_book
 
         for(; it != ie; ++it) {
             if(it->id == msg_book) {
-                MPROFILE("compact_book::read::msg_book")
                 const message_book& m = it->mb;
                 orders_t& o = orders[m.security_id];
                 if(o.mi.security_id) {

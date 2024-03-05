@@ -7,7 +7,7 @@
 #include "vector.hpp"
 #include "algorithm.hpp"
 
-template<typename type, typename comp = less<type>, template <typename> typename vector = mvector>
+template<typename type, typename comp = less<type>, template <typename> typename vector = fvector>
 struct fset
 {
     typedef type key_type;

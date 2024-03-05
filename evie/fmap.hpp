@@ -7,7 +7,7 @@
 #include "vector.hpp"
 #include "algorithm.hpp"
 
-template<typename key, typename value, typename comp = less<key>, template <typename> typename vector = mvector>
+template<typename key, typename value, typename comp = less<key>, template <typename> typename vector = fvector>
 struct fmap
 {
     typedef ::pair<key, value> pair;

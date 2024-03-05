@@ -98,7 +98,7 @@ void* mmap_create(const char* params, bool create)
 
     void* p = mmap(NULL, mmap_alloc_size, PROT_READ | PROT_WRITE, MAP_SHARED, h, 0);
     ::close(h);
-    if(!p)
+    if(p == (void*)-1)
         throw_system_failure(es() % "mmap error for " % _str_holder(params));
 
     if(create)

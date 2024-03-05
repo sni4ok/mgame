@@ -588,7 +588,7 @@ struct malloc_alloc
         MPROFILE("malloc_alloc::free")
 #endif
 
-        fast_alloc_free((node_type*)n);
+        fast_alloc_delete((node_type*)n);
     }
     static constexpr uint32_t run_once() {
         return 0;
