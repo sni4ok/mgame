@@ -3,12 +3,12 @@
 */
 
 #include "viktor.hpp"
-#include "makoa/types.hpp"
-#include "makoa/exports.hpp"
+#include "../makoa/types.hpp"
+#include "../makoa/exports.hpp"
 
-#include "evie/fmap.hpp"
-#include "evie/vector.hpp"
-#include "evie/smart_ptr.hpp"
+#include "../evie/fmap.hpp"
+#include "../evie/vector.hpp"
+#include "../evie/smart_ptr.hpp"
 
 #include <deque>
 #include <map>

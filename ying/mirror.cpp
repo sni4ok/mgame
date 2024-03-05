@@ -5,10 +5,10 @@
 #include "mirror.hpp"
 #include "ncurses.hpp"
 
-#include "makoa/types.hpp"
+#include "../makoa/types.hpp"
 
-#include "evie/thread.hpp"
-#include "evie/queue.hpp"
+#include "../evie/thread.hpp"
+#include "../evie/queue.hpp"
 
 #include <unistd.h>
 #include <stdlib.h>

@@ -4,6 +4,9 @@
 
 #pragma once
 
+#ifndef EVIE_MLOG_HPP
+#define EVIE_MLOG_HPP
+
 #include "myitoa.hpp"
 #include "mtime.hpp"
 #include "smart_ptr.hpp"
@@ -126,7 +129,7 @@ struct mlog
         return *this;
     }
 
-    static const uint32_t buf_size = 1000;
+    static const uint32_t buf_size = 200;
 
     struct node
     {
@@ -160,4 +163,5 @@ void log_test(size_t thread_count, size_t log_count);
 void cout_write(str_holder str, bool flush = true);
 void cerr_write(str_holder str, bool flush = true);
 
+#endif
 

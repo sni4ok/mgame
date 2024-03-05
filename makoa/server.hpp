@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "evie/mstring.hpp"
+#include "../evie/mstring.hpp"
 
 struct server
 {

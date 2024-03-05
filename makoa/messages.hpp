@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include <cstdint>
+#include "messages_t.hpp"
 
 static const uint8_t 
                           msg_ping  = 69
@@ -22,16 +22,6 @@ static const uint8_t
 ;
 
 static const uint32_t message_size = 48, message_bsize = message_size - 17;
-
-#ifndef TTIME_T_DEFINED
-struct ttime_t
-{
-    //value equals (unix_time * 10^9 + nanoseconds)
-    static const uint64_t frac = 1000000000;
-    uint64_t value;
-};
-#define TTIME_T_DEFINED
-#endif
 
 struct message_times
 {
@@ -67,20 +57,6 @@ struct message_hello : message_times
     static const uint32_t msg_id = msg_hello;
 };
 static_assert(sizeof(message_hello) == message_size, "protocol agreement");
-
-struct price_t
-{
-    static const int64_t exponent = -5;
-    static const int64_t frac = 100000;
-    int64_t value;
-};
-
-struct count_t
-{
-    static const int64_t exponent = -8;
-    static const int64_t frac = 100000000;
-    int64_t value;
-};
 
 struct message_trade : message_times
 {

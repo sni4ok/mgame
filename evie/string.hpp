@@ -4,6 +4,9 @@
 
 #pragma once
 
+#ifndef EVIE_STRING_HPP
+#define EVIE_STRING_HPP
+
 #include "vector.hpp"
 
 inline void my_fast_copy(char_cit from, uint64_t size, char_it out)
@@ -311,4 +314,6 @@ stream& operator<<(stream& str, const my_basic_string<stack_sz>& v)
 }
 
 typedef my_basic_string<> my_string;
+
+#endif
 

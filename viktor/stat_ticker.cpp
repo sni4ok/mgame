@@ -4,15 +4,15 @@
     export = stat_ticker
 */
 
-#include "makoa/order_book.hpp"
-#include "makoa/exports.hpp"
-#include "makoa/types.hpp"
+#include "../makoa/order_book.hpp"
+#include "../makoa/exports.hpp"
+#include "../makoa/types.hpp"
 
-#include "evie/math.hpp"
+#include "../evie/math.hpp"
+#include "../evie/optional.hpp"
 
 #include <map>
 #include <set>
-#include <optional>
 
 namespace
 {
@@ -20,12 +20,12 @@ namespace
     {
         struct info
         {
-            std::optional<price_t> min_trade, max_trade, min_ask, max_ask, min_bid, max_bid;
+            optional<price_t> min_trade, max_trade, min_ask, max_ask, min_bid, max_bid;
             uint64_t asks, bids;
             std::set<price_t> trades_p, asks_p, bids_p;
             std::multiset<count_t> trades;
 
-            order_book_ba<> ob;
+            order_book_ba ob;
             ttime_t first_ob_time, last_ob_time;
             std::multiset<price_t> spreads;
 
@@ -33,7 +33,7 @@ namespace
             {
             }
         };
-        std::map<uint32_t, std::pair<message_instr, info> > data;
+        std::map<uint32_t, pair<message_instr, info> > data;
 
         void proceed(const message* m)
         {
@@ -42,15 +42,15 @@ namespace
                 info& v = (data.at(m->mb.security_id)).second;
                 if(m->mb.count.value < 0)
                 {
-                    v.min_ask = v.min_ask ? std::min(*v.min_ask, p) : p;
-                    v.max_ask = v.max_ask ? std::max(*v.max_ask, p) : p;
+                    v.min_ask = v.min_ask ? min(*v.min_ask, p) : p;
+                    v.max_ask = v.max_ask ? max(*v.max_ask, p) : p;
                     ++v.asks;
                     v.asks_p.insert(p);
                 }
                 else if(m->mb.count.value > 0)
                 {
-                    v.min_bid = v.min_bid ? std::min(*v.min_bid, p) : p;
-                    v.max_bid = v.max_bid ? std::max(*v.max_bid, p) : p;
+                    v.min_bid = v.min_bid ? min(*v.min_bid, p) : p;
+                    v.max_bid = v.max_bid ? max(*v.max_bid, p) : p;
                     ++v.bids;
                     v.bids_p.insert(p);
                 }
@@ -66,14 +66,14 @@ namespace
             else if(m->id == msg_trade) {
                 const price_t& p = m->mt.price;
                 info& v = (data.at(m->mt.security_id)).second;
-                v.min_trade = v.min_trade ? std::min(*v.min_trade, p) : p;
-                v.max_trade = v.max_trade ? std::max(*v.max_trade, p) : p;
+                v.min_trade = v.min_trade ? min(*v.min_trade, p) : p;
+                v.max_trade = v.max_trade ? max(*v.max_trade, p) : p;
                 v.trades_p.insert(p);
                 if(m->mt.count.value)
                     v.trades.insert(m->mt.count);
             }
             else if(m->id == msg_instr) {
-                std::pair<message_instr, info>& v = data[m->mi.security_id];
+                pair<message_instr, info>& v = data[m->mi.security_id];
                 v.first = m->mi;
                 v.second.ob.proceed(*m);
             }
@@ -113,7 +113,7 @@ namespace
                     ++it;
                     price_t min_price = price_t(abs(price.value - it->value));
                     for(; it != ie; ++it) {
-                        min_price = std::min(min_price, price_t(abs(price.value - it->value)));
+                        min_price = min(min_price, price_t(abs(price.value - it->value)));
                         price = *it;
                     }
                     return min_price;

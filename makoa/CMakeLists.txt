@@ -1,5 +1,3 @@
-INCLUDE_DIRECTORIES(../)
-
 ADD_LIBRARY(exports STATIC exports.cpp mmap.cpp)
 TARGET_LINK_LIBRARIES(exports evie tyra dl)
 

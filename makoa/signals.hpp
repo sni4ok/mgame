@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "evie/mlog.hpp"
-#include "evie/profiler.hpp"
+#include "../evie/mlog.hpp"
+#include "../evie/profiler.hpp"
 
 #include <csignal>
 

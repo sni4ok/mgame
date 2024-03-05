@@ -6,10 +6,12 @@
 
 #include "messages.hpp"
 
-#include "evie/utils.hpp"
-#include "evie/fmap.hpp"
+#include "../evie/utils.hpp"
+#include "../evie/fmap.hpp"
+#include "../evie/profiler.hpp"
 
 #include <map>
+#include <unordered_map>
 
 struct order_book
 {
@@ -69,7 +71,6 @@ struct order_book
     typedef std::map<price_t, message_book>::const_iterator price_iterator;
 };
 
-template<typename allocator = std::allocator<std::pair<const int64_t, message_book> > >
 struct order_book_ba
 {
     struct book
@@ -138,7 +139,7 @@ struct order_book_ba
     }
     void set(const message_book& mb)
     {
-        //MPROFILE("order_book::set")
+        MPROFILE("order_book::set")
         message_book& m = orders_l[mb.level_id];
         if(!m.security_id)
         {
@@ -183,10 +184,9 @@ struct order_book_ba
     }
     ~order_book_ba()
     {
-        //mlog() << "~order_book_ba: ol_sz: " << orders_l.size() << ", asz: " << asks.size() << ", bsz: " << bids.size();
     }
 
-    std::map<int64_t, message_book, std::less<int64_t>, allocator> orders_l;
+    std::unordered_map<int64_t, message_book, std::hash<int64_t>, std::equal_to<int64_t> > orders_l;
     fmap<price_t, book, std::less<price_t> > asks;
     fmap<price_t, book, std::greater<price_t> > bids;
 };

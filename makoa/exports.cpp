@@ -7,11 +7,11 @@
 #include "types.hpp"
 #include "mmap.hpp"
 
-#include "tyra/tyra.hpp"
+#include "../tyra/tyra.hpp"
 
-#include "evie/profiler.hpp"
-#include "evie/smart_ptr.hpp"
-#include "evie/fmap.hpp"
+#include "../evie/profiler.hpp"
+#include "../evie/smart_ptr.hpp"
+#include "../evie/fmap.hpp"
 
 #include <sys/stat.h>
 #include <unistd.h>

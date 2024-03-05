@@ -4,8 +4,8 @@
 
 #include "mmap.hpp"
 
-#include "evie/utils.hpp"
-#include "evie/mfile.hpp"
+#include "../evie/utils.hpp"
+#include "../evie/mfile.hpp"
 
 #include <sys/stat.h>
 

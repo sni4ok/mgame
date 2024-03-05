@@ -1,5 +1,3 @@
-INCLUDE_DIRECTORIES(../)
-
 SET(LIBWEBSOCKET_PATH ~/develop/libwebsockets/build/lib)
 INCLUDE_DIRECTORIES(~/develop/libwebsockets/build/include)
 

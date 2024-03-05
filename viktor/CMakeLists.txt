@@ -1,4 +1,3 @@
-INCLUDE_DIRECTORIES(../)
 PROJECT(viktor)
 ADD_LIBRARY(viktor SHARED viktor.cpp)
 ADD_LIBRARY(mysql SHARED mysql.cpp)

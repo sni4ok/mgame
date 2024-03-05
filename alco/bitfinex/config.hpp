@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "evie/mstring.hpp"
-#include "evie/singleton.hpp"
+#include "../../evie/mstring.hpp"
+#include "../../evie/singleton.hpp"
 
 struct config : stack_singleton<config>
 {

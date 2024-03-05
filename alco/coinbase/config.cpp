@@ -4,9 +4,9 @@
 
 #include "config.hpp"
 
-#include "evie/mfile.hpp"
-#include "evie/config.hpp"
-#include "evie/utils.hpp"
+#include "../../evie/mfile.hpp"
+#include "../../evie/config.hpp"
+#include "../../evie/utils.hpp"
 
 config::config(const char* fname)
 {

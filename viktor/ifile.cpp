@@ -2,15 +2,15 @@
    author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
-#include "makoa/types.hpp"
+#include "../makoa/types.hpp"
 
-#include "alco/huobi/utils.hpp"
+#include "../alco/huobi/utils.hpp"
 
-#include "evie/fmap.hpp"
-#include "evie/mfile.hpp"
-#include "evie/utils.hpp"
-#include "evie/queue.hpp"
-#include "evie/profiler.hpp"
+#include "../evie/fmap.hpp"
+#include "../evie/mfile.hpp"
+#include "../evie/utils.hpp"
+#include "../evie/queue.hpp"
+#include "../evie/profiler.hpp"
 
 #include <map>
 #include <unordered_map>
@@ -613,47 +613,50 @@ struct ifile_replay : ifile
     }
 };
 
-void* ifile_create(const char* params, volatile bool& can_run)
+extern "C"
 {
-    mvector<mstring> p = split(_mstring(params), ' ');
-    if(p.empty() || p.size() > 5)
-        throw str_exception("ifile_create() [history ,replay speed ]file_name[ time_from[ time_to]]");
+    void* ifile_create(const char* params, volatile bool& can_run)
+    {
+        mvector<mstring> p = split(_mstring(params), ' ');
+        if(p.empty() || p.size() > 5)
+            throw str_exception("ifile_create() [history ,replay speed ]file_name[ time_from[ time_to]]");
 
-    bool history = (p[0] == "history");
-    if(history)
-        p.erase(p.begin());
+        bool history = (p[0] == "history");
+        if(history)
+            p.erase(p.begin());
 
-    bool replay = (p[0] == "replay");
-    double speed = 1.;
-    if(replay) {
-        speed = lexical_cast<double>(p[1]);
-        p.erase(p.begin(), p.begin() + 2);
+        bool replay = (p[0] == "replay");
+        double speed = 1.;
+        if(replay) {
+            speed = lexical_cast<double>(p[1]);
+            p.erase(p.begin(), p.begin() + 2);
+        }
+
+        ttime_t tf = ttime_t(), tt = ttime_t();
+        if(p.size() >= 2)
+            tf = parse_time(p[1]);
+        else if(!history && !replay)
+            tf = cur_ttime();
+
+        if(p.size() == 3)
+            tt = parse_time(p[2]);
+        else
+            tt.value = std::numeric_limits<uint64_t>::max();
+
+        if(replay)
+            return new ifile_replay(can_run, p[0], tf, tt, speed);
+        else
+            return new ifile(p[0], tf, tt, history);
     }
 
-    ttime_t tf = ttime_t(), tt = ttime_t();
-    if(p.size() >= 2)
-        tf = parse_time(p[1]);
-    else if(!history && !replay)
-        tf = cur_ttime();
+    void ifile_destroy(void *v)
+    {
+        delete ((ifile*)v);
+    }
 
-    if(p.size() == 3)
-        tt = parse_time(p[2]);
-    else
-        tt.value = std::numeric_limits<uint64_t>::max();
-
-    if(replay)
-        return new ifile_replay(can_run, p[0], tf, tt, speed);
-    else
-        return new ifile(p[0], tf, tt, history);
-}
-
-void ifile_destroy(void *v)
-{
-    delete ((ifile*)v);
-}
-
-uint32_t ifile_read(void *v, char* buf, uint32_t buf_size)
-{
-    return ((ifile*)v)->read(buf, buf_size);
+    uint32_t ifile_read(void *v, char* buf, uint32_t buf_size)
+    {
+        return ((ifile*)v)->read(buf, buf_size);
+    }
 }
 

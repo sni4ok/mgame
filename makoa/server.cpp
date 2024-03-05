@@ -5,9 +5,9 @@
 #include "server.hpp"
 #include "imports.hpp"
 
-#include "evie/thread.hpp"
-#include "evie/utils.hpp"
-#include "evie/fmap.hpp"
+#include "../evie/thread.hpp"
+#include "../evie/utils.hpp"
+#include "../evie/fmap.hpp"
 
 #include <unistd.h>
 

@@ -1,4 +1,3 @@
-INCLUDE_DIRECTORIES(../../)
 ADD_EXECUTABLE(plaza_templater plaza_templater.cpp)
 ADD_EXECUTABLE(plaza plaza.cpp config.cpp parser.cpp ../alco.cpp)
 

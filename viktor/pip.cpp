@@ -2,13 +2,13 @@
    author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
-#include "makoa/engine.hpp"
-#include "makoa/server.hpp"
+#include "../makoa/engine.hpp"
+#include "../makoa/server.hpp"
 
-#include "evie/mfile.hpp"
-#include "evie/config.hpp"
-#include "evie/singleton.hpp"
-#include "evie/mlog.hpp"
+#include "../evie/mfile.hpp"
+#include "../evie/config.hpp"
+#include "../evie/singleton.hpp"
+#include "../evie/mlog.hpp"
 
 struct config : stack_singleton<config>
 {
@@ -24,7 +24,7 @@ struct config : stack_singleton<config>
     }
 };
 
-#include "alco/main.hpp"
+#include "../alco/main.hpp"
 
 void proceed_pip(volatile bool& can_run)
 {

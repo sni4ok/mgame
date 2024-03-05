@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "makoa/signals.hpp"
+#include "../makoa/signals.hpp"
 
-#include "evie/config.hpp"
+#include "../evie/config.hpp"
 
 int parser_main(int argc, char** argv, str_holder parser, void (*proceed)(volatile bool&))
 {

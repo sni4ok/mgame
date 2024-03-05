@@ -4,6 +4,9 @@
 
 #pragma once
 
+#ifndef EVIE_PROFILER_HPP
+#define EVIE_PROFILER_HPP
+
 #include "time.hpp"
 #include "singleton.hpp"
 
@@ -54,4 +57,6 @@ struct mprofiler
     mprofiler(const mprofiler&) = delete;
     ~mprofiler();
 };
+
+#endif
 

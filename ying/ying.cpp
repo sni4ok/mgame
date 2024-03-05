@@ -3,9 +3,9 @@
    author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
-#include "evie/mlog.hpp"
+#include "../evie/mlog.hpp"
 
-#include "makoa/exports.hpp"
+#include "../makoa/exports.hpp"
 
 void* ying_init(const char* params);
 void ying_destroy(void* w);

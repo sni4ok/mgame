@@ -5,23 +5,24 @@
     export = stat name
 */
 
-#include "makoa/exports.hpp"
-#include "makoa/types.hpp"
+#include "../makoa/exports.hpp"
+#include "../makoa/types.hpp"
 
-#include <math.h>
+#include "../evie/math.hpp"
 
 namespace {
 
     struct print_t
     {
         int64_t value;
+
         print_t(int64_t value) :  value(value)
         {
         }
     };
     mlog& operator<<(mlog& m, print_t t)
     {
-        uint64_t ta = std::abs(t.value);
+        uint64_t ta = abs(t.value);
         if(ta > 31536000 * my_cvt::p10<9>())
             m << (t.value / my_cvt::p10<9>() / 31536000) << " years";
         else if(ta > my_cvt::p10<10>())
@@ -38,7 +39,6 @@ namespace {
     {
         bool brief;
         mstring name;
-
         uint32_t count;
 
         struct stat
@@ -56,11 +56,11 @@ namespace {
                     return;
 
                 int64_t delta = t.value - f.value;
-                min = std::min(min, delta);
-                max = std::max(max, delta);
+                min = ::min(min, delta);
+                max = ::max(max, delta);
                 sum += delta;
 
-                if(std::abs(delta) > 1000000) {
+                if(abs(delta) > 1000000) {
                     delta /= 1000;
                     d2 += (delta * delta);
                 }
@@ -74,7 +74,7 @@ namespace {
                     int64_t mean = sum / count;
                     double dm = double(mean) / 1000.;
                     double var = double(d2 / count) - dm * dm;
-                    int64_t stddev = int64_t(sqrt(std::abs(var)) * 1000);
+                    int64_t stddev = int64_t(sqrt(abs(var)) * 1000);
                     ml << "\n    " << name << " count:" << count << ", mean: "
                         << print_t(mean) << ", std: " << print_t(stddev) <<
                         ", min: " << print_t(min) << ", max: " << print_t(max);

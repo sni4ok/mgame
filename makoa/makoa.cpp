@@ -11,7 +11,7 @@
 #include "config.hpp"
 #include "signals.hpp"
 
-#include "evie/config.hpp"
+#include "../evie/config.hpp"
 
 int main(int argc, char** argv)
 {

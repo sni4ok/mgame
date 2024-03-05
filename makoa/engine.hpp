@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "evie/mstring.hpp"
+#include "../evie/mstring.hpp"
 
 struct engine // wrapper for control lifetime of consumers
               // used modules: logger

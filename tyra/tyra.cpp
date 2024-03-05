@@ -4,11 +4,11 @@
 
 #include "tyra.hpp"
 
-#include "evie/socket.hpp"
-#include "evie/time.hpp"
-#include "evie/mlog.hpp"
-#include "evie/string.hpp"
-#include "evie/algorithm.hpp"
+#include "../evie/socket.hpp"
+#include "../evie/time.hpp"
+#include "../evie/mlog.hpp"
+#include "../evie/string.hpp"
+#include "../evie/algorithm.hpp"
 
 #include <unistd.h>
 

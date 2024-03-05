@@ -5,12 +5,11 @@
 #include "imports.hpp"
 #include "mmap.hpp"
 
-#include "evie/socket.hpp"
-#include "evie/fmap.hpp"
-#include "evie/utils.hpp"
-#include "evie/thread.hpp"
-#include "evie/profiler.hpp"
-#include "evie/smart_ptr.hpp"
+#include "../evie/socket.hpp"
+#include "../evie/fmap.hpp"
+#include "../evie/utils.hpp"
+#include "../evie/thread.hpp"
+#include "../evie/profiler.hpp"
 
 #include <sys/stat.h>
 #include <unistd.h>
@@ -295,10 +294,6 @@ void import_tcp_start(void* c, void* p)
         thrd.detach();
     }
 }
-
-void* ifile_create(const char* params, volatile bool& can_run);
-void ifile_destroy(void *v);
-uint32_t ifile_read(void *v, char* buf, uint32_t buf_size);
 
 struct import_ifile
 {

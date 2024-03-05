@@ -1,3 +1,8 @@
+/*
+   author: Ilya Andronov <sni4ok@yandex.ru>
+*/
+
+#pragma once
 
 #include <zlib.h>
 

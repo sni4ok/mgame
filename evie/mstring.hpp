@@ -4,6 +4,9 @@
 
 #pragma once
 
+#ifndef EVIE_MSTRING_HPP
+#define EVIE_MSTRING_HPP
+
 #include "vector.hpp"
 
 struct mstring : mvector<char>
@@ -69,4 +72,6 @@ type lexical_cast(const mstring& str)
 }
 
 mstring operator+(str_holder l, const mstring& r);
+
+#endif
 

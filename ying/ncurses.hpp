@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "evie/utils.hpp"
+#include "../evie/utils.hpp"
 
 #include <curses.h>
 

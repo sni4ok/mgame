@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "makoa/messages.hpp"
+#include "../../makoa/messages.hpp"
 
-#include "evie/mlog.hpp"
-#include "evie/string.hpp"
-#include "evie/utils.hpp"
+#include "../../evie/mlog.hpp"
+#include "../../evie/string.hpp"
+#include "../../evie/utils.hpp"
 
 #include "cgate.h"
 

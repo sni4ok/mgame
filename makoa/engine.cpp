@@ -7,9 +7,9 @@
 #include "exports.hpp"
 #include "types.hpp"
 
-#include "evie/thread.hpp"
-#include "evie/smart_ptr.hpp"
-#include "evie/fast_alloc.hpp"
+#include "../evie/thread.hpp"
+#include "../evie/smart_ptr.hpp"
+#include "../evie/fast_alloc.hpp"
 
 bool pooling_mode = false;
 

@@ -4,9 +4,9 @@
     author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
-#include "evie/utils.hpp"
-#include "evie/mfile.hpp"
-#include "evie/config.hpp"
+#include "../../evie/utils.hpp"
+#include "../../evie/mfile.hpp"
+#include "../../evie/config.hpp"
 
 #include <map>
 #include <set>

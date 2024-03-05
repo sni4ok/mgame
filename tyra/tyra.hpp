@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "makoa/messages.hpp"
+#include "../makoa/messages.hpp"
 
 class tyra
 {

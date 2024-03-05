@@ -6,22 +6,8 @@
 
 #include "messages.hpp"
 
-#include "evie/time.hpp"
-#include "evie/utils.hpp"
-
-template<typename stream>
-stream& operator<<(stream& s, const price_t& p)
-{
-    write_decimal(s, p);
-    return s;
-}
-
-template<typename stream>
-stream& operator<<(stream& s, const count_t& c)
-{
-    write_decimal(s, c);
-    return s;
-}
+#include "../evie/time.hpp"
+#include "../evie/utils.hpp"
 
 struct brief_time : ttime_t
 {
@@ -91,56 +77,6 @@ stream& operator<<(stream& s, const message_hello& h)
     s << "ping|" << h.name
         << "|" << h.etime << "|" << h.time << "|";
     return s;
-}
-
-inline bool operator<(price_t l, price_t r)
-{
-    return l.value < r.value;
-}
-
-inline bool operator>(price_t l, price_t r)
-{
-    return l.value > r.value;
-}
-
-inline bool operator!=(price_t l, price_t r)
-{
-    return l.value != r.value;
-}
-
-inline bool operator==(price_t l, price_t r)
-{
-    return l.value == r.value;
-}
-
-inline bool operator<(count_t l, count_t r)
-{
-    return l.value < r.value;
-}
-
-inline bool operator<=(count_t l, count_t r)
-{
-    return l.value <= r.value;
-}
-
-inline bool operator>(count_t l, count_t r)
-{
-    return l.value > r.value;
-}
-
-inline bool operator>=(count_t l, count_t r)
-{
-    return l.value >= r.value;
-}
-
-inline bool operator!=(count_t l, count_t r)
-{
-    return l.value != r.value;
-}
-
-inline bool operator==(count_t l, count_t r)
-{
-    return l.value == r.value;
 }
 
 inline price_t read_price(const char* it, const char* ie)

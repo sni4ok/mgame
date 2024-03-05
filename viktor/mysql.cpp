@@ -7,12 +7,12 @@
     mysql create or recreate tables: instruments, orders, trades
 */
 
-#include "makoa/exports.hpp"
-#include "makoa/types.hpp"
+#include "../makoa/exports.hpp"
+#include "../makoa/types.hpp"
 
-#include "evie/mlog.hpp"
-#include "evie/mstring.hpp"
-#include "evie/smart_ptr.hpp"
+#include "../evie/mlog.hpp"
+#include "../evie/mstring.hpp"
+#include "../evie/smart_ptr.hpp"
 
 #include <mysql/mysql.h>
 
