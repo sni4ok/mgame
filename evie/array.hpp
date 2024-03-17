@@ -32,10 +32,10 @@ struct carray
     typedef const type* const_iterator;
     typedef type value_type;
 
-    constexpr uint32_t size() const {
+    constexpr static uint32_t size() {
         return size_;
     }
-    constexpr bool empty() const {
+    constexpr static bool empty() {
         return !size_;
     }
     const_iterator begin() const {

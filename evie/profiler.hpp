@@ -40,11 +40,10 @@ public:
 
     bool log_on_exit;
 
-    profilerinfo();
+    profilerinfo(bool log_on_exit = true);
     uint64_t register_counter(const char* id);
     void add_info(uint64_t counter_id, uint64_t time);
     void print();
-    void set_print_on_exit(bool print_on_exit);
     ~profilerinfo();
 };
 

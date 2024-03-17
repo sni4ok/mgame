@@ -30,52 +30,52 @@ struct count_t
     int64_t value;
 };
 
-inline bool operator<(price_t l, price_t r)
+constexpr inline bool operator<(price_t l, price_t r)
 {
     return l.value < r.value;
 }
 
-inline bool operator>(price_t l, price_t r)
+constexpr inline bool operator>(price_t l, price_t r)
 {
     return l.value > r.value;
 }
 
-inline bool operator!=(price_t l, price_t r)
+constexpr inline bool operator!=(price_t l, price_t r)
 {
     return l.value != r.value;
 }
 
-inline bool operator==(price_t l, price_t r)
+constexpr inline bool operator==(price_t l, price_t r)
 {
     return l.value == r.value;
 }
 
-inline bool operator<(count_t l, count_t r)
+constexpr inline bool operator<(count_t l, count_t r)
 {
     return l.value < r.value;
 }
 
-inline bool operator<=(count_t l, count_t r)
+constexpr inline bool operator<=(count_t l, count_t r)
 {
     return l.value <= r.value;
 }
 
-inline bool operator>(count_t l, count_t r)
+constexpr inline bool operator>(count_t l, count_t r)
 {
     return l.value > r.value;
 }
 
-inline bool operator>=(count_t l, count_t r)
+constexpr inline bool operator>=(count_t l, count_t r)
 {
     return l.value >= r.value;
 }
 
-inline bool operator!=(count_t l, count_t r)
+constexpr inline bool operator!=(count_t l, count_t r)
 {
     return l.value != r.value;
 }
 
-inline bool operator==(count_t l, count_t r)
+constexpr inline bool operator==(count_t l, count_t r)
 {
     return l.value == r.value;
 }

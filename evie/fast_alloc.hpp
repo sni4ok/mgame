@@ -219,7 +219,7 @@ struct cas_array : emplace_decl<type, cas_array<type, max_size, blist> >
         static_assert(max_size && max_size < std::numeric_limits<uint16_t>::max());
         static_assert(sizeof(node) == 8 + sizeof(type) + ((sizeof(type) % 8) ? (8 - sizeof(type) % 8) : 0));
         for(uint32_t i = 1; i != max_size + 1; ++i)
-            free(to_type(nodes + i));
+            free_impl(to_type(nodes + i));
     }
     cas_array(str_holder) : cas_array() {
     }
@@ -237,7 +237,7 @@ struct cas_array : emplace_decl<type, cas_array<type, max_size, blist> >
         assert(n > nodes && n < nodes + max_size + 1);
         return n;
     }
-    void free(type* p) {
+    void free_impl(type* p) {
         node* n = to_node(p);
         for(;;) {
             uint64_t from = atomic_load(nodes->id);
@@ -248,6 +248,10 @@ struct cas_array : emplace_decl<type, cas_array<type, max_size, blist> >
             if(atomic_compare_exchange(nodes->id, from, to.id))
                 break;
         }
+    }
+    void free(type* p) {
+        free_impl(p);
+        p->~type();
     }
     void push_front(type* p) requires(!blist){
         node* n = to_node(p);

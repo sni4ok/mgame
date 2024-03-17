@@ -249,7 +249,7 @@ ttime_t pack_time(const time_parsed& p)
 
 date& date::operator+=(date_duration d)
 {
-    time_parsed tp;
+    time_parsed tp = time_parsed();
     tp.date() = *this;
     ttime_t t = pack_time(tp);
     t.value += int64_t(d.days) * 24 * 3600 * ttime_t::frac;
@@ -260,7 +260,7 @@ date& date::operator+=(date_duration d)
 
 date_duration date::operator-(const date& r) const
 {
-    time_parsed t;
+    time_parsed t = time_parsed();
     t.date() = *this;
     ttime_t tl = pack_time(t);
     t.date() = r;
@@ -271,7 +271,7 @@ date_duration date::operator-(const date& r) const
 
 ttime_t time_from_date(const date& t)
 {
-    time_parsed p;
+    time_parsed p = time_parsed();
     p.date() = t;
     return pack_time(p);
 }

@@ -4,6 +4,9 @@
 
 #pragma once
 
+#ifndef EVIE_FMAP_HPP
+#define EVIE_FMAP_HPP
+
 #include "vector.hpp"
 #include "algorithm.hpp"
 
@@ -186,4 +189,6 @@ struct pmap : fmap<key, value, less<key>, ppvector>
         return it->second;
     }
 };
+
+#endif
 

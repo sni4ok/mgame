@@ -4,6 +4,9 @@
 
 #pragma once
 
+#ifndef EVIE_UTILS_HPP
+#define EVIE_UTILS_HPP
+
 #include "mlog.hpp"
 #include "string.hpp"
 #include "mstring.hpp"
@@ -156,12 +159,20 @@ print_impl<iterator, func, sep, no_end_sep> print(iterator from, iterator to, fu
 template<char sep = ',', typename cont, typename func = print_default>
 auto print(const cont& c, func f = func())
 {
-    return print(c.begin(), c.end(), f);
+    if constexpr(std::is_array<cont>::value)
+        return print(std::begin(c), std::end(c), f);
+    else
+        return print(c.begin(), c.end(), f);
 }
 
 template<char sep = '\n', typename cont, typename func = print_default>
 auto print_csv(const cont& c, func f = func())
 {
-    return print<sep, false>(c.begin(), c.end(), f);
+    if constexpr(std::is_array<cont>::value)
+        return print<sep, false>(std::begin(c), std::end(c), f);
+    else
+        return print<sep, false>(c.begin(), c.end(), f);
 }
+
+#endif
 

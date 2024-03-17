@@ -100,16 +100,12 @@ struct optional
     {
         return !initialized;
     }
-    operator bool() const
-    {
-        return initialized;
-    }
 };
 
 template<typename stream, typename type>
 stream& operator<<(stream& s, const optional<type>& v)
 {
-    if(v)
+    if(!!v)
         s << *v;
     else
         s << "none";

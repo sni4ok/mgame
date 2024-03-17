@@ -9,10 +9,10 @@
 #include "../makoa/types.hpp"
 
 #include "../evie/math.hpp"
-#include "../evie/optional.hpp"
 
 #include <map>
 #include <set>
+#include <optional>
 
 namespace
 {
@@ -20,7 +20,7 @@ namespace
     {
         struct info
         {
-            optional<price_t> min_trade, max_trade, min_ask, max_ask, min_bid, max_bid;
+            std::optional<price_t> min_trade, max_trade, min_ask, max_ask, min_bid, max_bid;
             uint64_t asks, bids;
             std::set<price_t> trades_p, asks_p, bids_p;
             std::multiset<count_t> trades;
