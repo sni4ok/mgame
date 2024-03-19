@@ -54,6 +54,16 @@ struct zip_file
         else
             return !!f.hfile;
     }
+    uint32_t zlib_file_sz(const mvector<char>& f, str_holder fn)
+    {
+        if(f.size() < 4)
+            throw mexception(es() % "zlib bad file " % fn);
+        uint32_t sz = 0;
+        memcpy(&sz, f.end() - 4, 4);
+        if((f.size() < sz / 20) || (f.size() > 1024 && f.size() > sz / 2))
+            throw mexception(es() % "zlib probably bad file " % fn);
+        return sz;
+    }
     void open(const char* fname)
     {
         mlog() << "zip_file::open " << _str_holder(fname);
@@ -62,11 +72,10 @@ struct zip_file
         if(fn.size > 3 && str_holder(fn.end() - 3, fn.end()) == ".gz")
         {
             mvector<char> f = read_file(fname);
-            uint64_t alloc = max<uint64_t>(10 * f.size(), 1024);
+            uint32_t data_sz = zlib_file_sz(f, fn);
             if(!zip)
                 zip.reset(new zlibe);
-            zip->buf.resize(4 * alloc);
-            zip->dest.resize(alloc);
+            zip->dest.resize(data_sz);
             data = zip->decompress(f.begin(), f.size());
             data_it = data.begin();
         }
@@ -269,6 +278,7 @@ struct ifile
         }
     };
 
+    volatile bool& can_run;
     zip_file cur_file;
     compact_book cb;
     const node main_file;
@@ -399,7 +409,7 @@ struct ifile
     void read_directory(const mstring& fname)
     {
         MPROFILE("ifile::read_directory")
-        mstring::const_iterator it = find_last(fname, '/') + 1;
+        char_cit it = find_last(fname, '/') + 1;
         mstring dir(fname.begin(), it);
         mstring f(it, fname.end());
 
@@ -445,7 +455,7 @@ struct ifile
         if(nt.tt > main_file.tt)
             return false;
 
-        while(!dir_files.empty())
+        while(can_run && !dir_files.empty())
         {
             ttime_t t = add_file(dir_files.front());
             dir_files.pop_front();
@@ -455,8 +465,8 @@ struct ifile
         return false;
     }
 
-    ifile(const mstring& fname, ttime_t tf, ttime_t tt, bool history)
-        : main_file({fname, tf, tt, 0, 0, 0}), nt(), history(history), last_file_check_time()
+    ifile(volatile bool& can_run, const mstring& fname, ttime_t tf, ttime_t tt, bool history)
+        : can_run(can_run), main_file({fname, tf, tt, 0, 0, 0}), nt(), history(history), last_file_check_time()
     {
         read_directory(fname);
         load_cb();
@@ -562,7 +572,7 @@ struct ifile_replay : ifile
     mvector<char> b, b2;
 
     ifile_replay(volatile bool& can_run, const mstring& fname, ttime_t tf, ttime_t tt, double speed)
-        : ifile(fname, tf, tt, true), can_run(can_run), speed(speed), file_time()
+        : ifile(can_run, fname, tf, tt, true), can_run(can_run), speed(speed), file_time()
     {
         start_time = cur_ttime();
     }
@@ -646,7 +656,7 @@ extern "C"
         if(replay)
             return new ifile_replay(can_run, p[0], tf, tt, speed);
         else
-            return new ifile(p[0], tf, tt, history);
+            return new ifile(can_run, p[0], tf, tt, history);
     }
 
     void ifile_destroy(void *v)

@@ -18,16 +18,43 @@ namespace
 {
     struct stat
     {
+        template<typename key>
+        uint64_t sum(const std::map<key, uint64_t>& map)
+        {
+            uint64_t ret = 0;
+            for(auto& v: map)
+                ret += v.second;
+            return ret;
+        }
+        template<typename key>
+        void advance_impl(std::map<key, uint64_t>::iterator& it, std::map<key, uint64_t>::iterator ie, uint64_t count)
+        {
+            while(it != ie)
+            {
+                if(it->second <= count)
+                {
+                    count -= it->second;
+                    it->second = 0;
+                    ++it;
+                }
+                else
+                {
+                    it->second -= count;
+                    break;
+                }
+            }
+        }
+
         struct info
         {
             std::optional<price_t> min_trade, max_trade, min_ask, max_ask, min_bid, max_bid;
             uint64_t asks, bids;
             std::set<price_t> trades_p, asks_p, bids_p;
-            std::multiset<count_t> trades;
+            std::map<count_t, uint64_t> trades;
 
             order_book_ba ob;
             ttime_t first_ob_time, last_ob_time;
-            std::multiset<price_t> spreads;
+            std::map<price_t, uint64_t> spreads;
 
             info() : asks(), bids(), first_ob_time(), last_ob_time()
             {
@@ -59,7 +86,7 @@ namespace
                     v.first_ob_time = m->mb.time;
                 if(v.last_ob_time != m->mb.time && !v.ob.asks.empty() && !v.ob.bids.empty())
                 {
-                    v.spreads.insert({v.ob.asks.begin()->first.value - v.ob.bids.begin()->first.value});
+                    ++v.spreads[{v.ob.asks.begin()->first.value - v.ob.bids.begin()->first.value}];
                     v.last_ob_time = m->mb.time;
                 }
             }
@@ -70,7 +97,7 @@ namespace
                 v.max_trade = v.max_trade ? max(*v.max_trade, p) : p;
                 v.trades_p.insert(p);
                 if(m->mt.count.value)
-                    v.trades.insert(m->mt.count);
+                    ++v.trades[m->mt.count];
             }
             else if(m->id == msg_instr) {
                 pair<message_instr, info>& v = data[m->mi.security_id];
@@ -88,7 +115,7 @@ namespace
             mlog ml;
             for(auto&& v: data)
             {
-                const info& i = v.second.second;
+                info& i = v.second.second;
                 ml << "exchange: " << v.second.first.exchange_id << ", feed: " << v.second.first.feed_id
                     << ", security: " << v.second.first.security << ", security_id: " << v.second.first.security_id << "\n"
                     << "  from " << i.first_ob_time << " to " << i.last_ob_time << "\n";
@@ -118,38 +145,36 @@ namespace
                     }
                     return min_price;
                 };
-                uint64_t trades = i.trades.size();
+                uint64_t trades = sum(i.trades);
                 ml << "\n  trades: " << trades << "(min price step " << get_pips(i.trades_p)  << ") bids: "
                     << i.bids << "(min price step " << get_pips(i.bids_p) << ") asks: " << i.asks << "(min price step " << get_pips(i.asks_p) << ")";
                 if(!i.trades.empty()) {
-                    auto it = i.trades.begin();
-                    ml << "\n  min_trade_count: " << *it;
-                    std::advance(it, trades / 10);
-                    ml << " 10%_trades_count: " << *it;
-                    std::advance(it, 4 * trades / 10);
-                    ml << " 50%_trades_count: " << *it;
-                    std::advance(it, 4 * trades / 10);
-                    ml << " 90%_trades_count: " << *it
-                       << " max_trade_count: " << *i.trades.rbegin();
+                    auto it = i.trades.begin(), ie = i.trades.end();
+                    ml << "\n  min_trade_count: " << it->first;
+                    advance_impl<count_t>(it, ie, trades / 10);
+                    ml << " 10%_trades_count: " << it->first;
+                    advance_impl<count_t>(it, ie, 4 * trades / 10);
+                    ml << " 50%_trades_count: " << it->first;
+                    advance_impl<count_t>(it, ie, 4 * trades / 10);
+                    ml << " 90%_trades_count: " << it->first
+                       << " max_trade_count: " << i.trades.rbegin()->first;
                 }
-                uint64_t spreads = i.spreads.size();
+                uint64_t spreads = sum(i.spreads);
                 ml << "\n  spreads: " << spreads;
                 if(!i.spreads.empty()) {
-                    auto it = i.spreads.begin();
-                    ml << " min_spread: " << *it;
-                    std::advance(it, spreads / 100);
-                    ml << " 1%_spreads: " << *it;
-                    it = i.spreads.begin();
-                    std::advance(it, spreads / 10);
-                    ml << " 10%_spreads: " << *it;
-                    std::advance(it, 4 * spreads / 10);
-                    ml << " 50%_spreads: " << *it;
-                    std::advance(it, 4 * spreads / 10);
-                    ml << " 90%_spreads: " << *it;
-                    auto ie = i.spreads.rbegin();
-                    std::advance(ie, spreads / 100);
-                    ml << " 99%_spreads: " << *ie
-                       << " max_spread: " << *i.spreads.rbegin();
+                    auto it = i.spreads.begin(), ie = i.spreads.end();
+                    ml << " min_spread: " << it->first;
+                    advance_impl<price_t>(it, ie, spreads / 100);
+                    ml << " 1%_spreads: " << it->first;
+                    advance_impl<price_t>(it, ie, 9 * spreads / 100);
+                    ml << " 10%_spreads: " << it->first;
+                    advance_impl<price_t>(it, ie, 4 * spreads / 10);
+                    ml << " 50%_spreads: " << it->first;
+                    advance_impl<price_t>(it, ie, 4 * spreads / 10);
+                    ml << " 90%_spreads: " << it->first;
+                    advance_impl<price_t>(it, ie, 9 * spreads / 100);
+                    ml << " 99%_spreads: " << it->first
+                       << " max_spread: " << i.spreads.rbegin()->first;
                 }
                 ml << "\n";
             }

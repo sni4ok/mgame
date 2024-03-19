@@ -6,22 +6,23 @@
 
 #include <zlib.h>
 
-voidpf zlib_alloc_func(voidpf opaque, uInt items, uInt size);
+template<typename alloc>
+voidpf zlib_alloc_func(voidpf ze, uInt items, uInt size)
+{
+    return ((alloc*)(ze))->alloc(items, size);
+}
+
 void zlib_free_func(voidpf, voidpf)
 {
 }
 
-struct zlibe
+struct zlib_alloc
 {
-    mvector<char> buf, dest;
+    mvector<char> buf;
     uint32_t allocated;
-    z_stream strm;
 
-    zlibe() : buf(4 * 1024 * 1024), dest(1024 * 1024), allocated()
+    zlib_alloc() : buf(4 * 1024 * 1024), allocated()
     {
-        strm.zalloc = zlib_alloc_func;
-        strm.zfree = zlib_free_func;
-        strm.opaque = this;
     }
     void* alloc(uInt items, uInt size)
     {
@@ -32,10 +33,36 @@ struct zlibe
         allocated += req;
         return (void*)ret;
     }
-    str_holder decompress(const char* p, uint32_t size)
+    void decompress_pre()
     {
         allocated = 0;
-        
+    }
+};
+
+struct zlib_alloc_base
+{
+};
+
+template<bool z_alloc>
+struct zlib_impl : std::conditional_t<z_alloc, zlib_alloc, zlib_alloc_base>
+{
+    mvector<char> dest;
+    z_stream strm;
+
+    zlib_impl() : dest(1024 * 1024), strm()
+    {
+        if constexpr(z_alloc)
+        {
+            strm.zalloc = zlib_alloc_func<zlib_alloc>;
+            strm.zfree = zlib_free_func;
+        }
+        strm.opaque = this;
+    }
+    str_holder decompress(const char* p, uint32_t size)
+    {
+        if constexpr(z_alloc)
+            this->decompress_pre();
+
         strm.next_in = (Bytef*)p;
         strm.avail_in = size;
 
@@ -54,8 +81,5 @@ struct zlibe
     }
 };
 
-voidpf zlib_alloc_func(voidpf ze, uInt items, uInt size)
-{
-    return ((zlibe*)(ze))->alloc(items, size);
-}
+typedef zlib_impl<true> zlibe;
 

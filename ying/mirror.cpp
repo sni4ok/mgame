@@ -83,9 +83,10 @@ struct mirror::impl
     order_book ob;
     queue<message_trade> trades;
     message_instr mi;
-    mstring head_msg;
+    mstring head_msg, head_msg_auto_scroll;
 
-    price_t top_order_p;
+    bool auto_scroll;
+    price_t top_order_p, auto_scroll_p;
     uint32_t trades_from, trades_width_limit;
 
     char buf[512];
@@ -100,7 +101,7 @@ struct mirror::impl
     const char empty[10];
     impl(const mstring& sec, uint32_t refresh_rate_ms) :
         sec(sec), refresh_rate(refresh_rate_ms * 1000),
-        top_order_p(), trades_from(), trades_width_limit(), bs(buf, buf + sizeof(buf) - 1),
+        auto_scroll(true), top_order_p(), auto_scroll_p(), trades_from(), trades_width_limit(), bs(buf, buf + sizeof(buf) - 1),
         dE(), dP(), can_run(true), refresh_thrd(&impl::refresh_thread, this),
         empty("         ")
     {
@@ -110,13 +111,36 @@ struct mirror::impl
         can_run = false;
         refresh_thrd.join();
     }
+    void set_auto_scroll()
+    {
+        head_msg_auto_scroll = head_msg + (auto_scroll ? str_holder("     auto_scroll on ") : str_holder("     auto_scroll off"));
+    }
     void set_instrument(const message_instr& i)
     {
         mi = i;
         head_msg = mstring(from_array(mi.exchange_id)) + "/" + from_array(mi.feed_id) + "/" + from_array(mi.security);
+        set_auto_scroll();
     }
-    order_book::price_iterator get_top_order()
+    order_book::price_iterator get_top_order(window& w)
     {
+        if(auto_scroll)
+        {
+            order_book::price_iterator ib = ob.orders_p.begin(), ie = ob.orders_p.end(), it;
+            it = auto_scroll_p.value ? ob.orders_p.lower_bound(auto_scroll_p) : ib;
+            while(it != ie && it->second.count.value >= 0)
+                ++it;
+            uint32_t count = 0;
+            while(it != ib)
+            {
+                --it;
+                if(it->second.count.value > 0)
+                    ++count;
+                if(count == w.rows / 2)
+                    return it;
+            }
+            return ib;
+        }
+
         if(!top_order_p.value)
             return ob.orders_p.begin();
 
@@ -153,7 +177,7 @@ struct mirror::impl
     {
         if(!sec.security_id)
             return;
-        order_book::price_iterator it = get_top_order(), ie = ob.orders_p.end();
+        order_book::price_iterator it = get_top_order(w), ie = ob.orders_p.end();
         e = attron(A_BOLD);
         for(uint32_t i = 0; i != w.rows - 1; ++i, ++it)
         {
@@ -177,8 +201,7 @@ struct mirror::impl
     }
     void print_head(window& w)
     {
-        e = mvwaddnstr(w, w.rows - 1, 0, &w.blank_row[0], w.blank_row.size() - 1);
-        e = mvwaddstr(w, w.rows - 1, 0, head_msg.c_str());
+        e = mvwaddstr(w, w.rows - 1, 0, head_msg_auto_scroll.c_str());
         bs << "dE: " << print_dt(dE) << ", dP: " << print_dt(dP) << '\0';
         e = mvwaddstr(w, w.rows - 1, w.cols - bs.size(), bs.begin());
         bs.clear();
@@ -206,11 +229,16 @@ struct mirror::impl
             else
             {
                 //mlog() << "key: " << key;
-                if(key == 259 || key == 339) // arrow up and page up
+                if(key == 97) // 'a'
+                {
+                    auto_scroll = !auto_scroll;
+                    set_auto_scroll();
+                }
+                else if(key == 259 || key == 339) // arrow up and page up
                 {
                     uint32_t r = (key == 259 ? 1 : w.rows);
                     my_mutex::scoped_lock lock(mutex);
-                    order_book::price_iterator it = get_top_order(), ib = ob.orders_p.begin();
+                    order_book::price_iterator it = get_top_order(w), ib = ob.orders_p.begin();
 
                     for(uint32_t i = 0; i != r; ++i) {
                         if(it != ib) {
@@ -223,12 +251,13 @@ struct mirror::impl
                 }
                 else if(key == 258 || key == 338) //arrow down or page down
                 {
+                    uint32_t r = (key == 258 ? 0 : w.rows - 1);
                     my_mutex::scoped_lock lock(mutex);
                     order_book::price_iterator it = ob.orders_p.upper_bound(top_order_p), ie = ob.orders_p.end();
+
                     auto ib = it;
                     while(it != ie && !it->second.count.value)
                         ++it;
-                    uint32_t r = (key == 258 ? 0 : w.rows - 1);
                     for(uint32_t i = 0; i != r; ++i) {
                         if(it != ie) {
                             ++it;
@@ -245,7 +274,6 @@ struct mirror::impl
                 break;
             }
         }
-
     }
     void refresh_thread()
     {
