@@ -3,10 +3,13 @@
 */
 
 #include "utils.hpp"
+#include "rational.hpp"
 
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+
+#include <numeric>
 
 void throw_system_failure(str_holder msg)
 {
@@ -327,5 +330,38 @@ int64_t read_decimal_impl(char_cit it, char_cit ie, int exponent)
     if(minus)
         ret = -ret;
     return ret;
+}
+
+r& r::operator+=(const r& v)
+{
+    uint32_t lcm = std::lcm(den, v.den);
+    num = num * (lcm / den) + v.num * (lcm / v.den);
+    den = lcm;
+    return *this;
+}
+
+r r::operator*(const r& v) const
+{
+    int64_t n = num * v.num;
+    uint64_t d = den * v.den;
+    int64_t gcd = int64_t(std::gcd(d, abs(n)));
+    return r(int32_t(n / gcd), uint32_t(d / gcd));
+}
+
+mstring to_string(r value)
+{
+    buf_stream_fixed<24> str;
+    str << value;
+    return str.str();
+}
+
+template<> r lexical_cast<r>(char_cit from, char_cit to)
+{
+    char_cit i = find(from, to, '/');
+    int32_t cur_n = lexical_cast<int32_t>(from, i);
+    int32_t cur_d = 1;
+    if(i != to)
+        cur_d = lexical_cast<int32_t>(i + 1, to);
+    return r(cur_n, cur_d);
 }
 

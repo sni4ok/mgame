@@ -136,37 +136,18 @@ void my_condition::notify_all()
 }
 
 uint32_t thread_tss_id = 0;
+thread_local uint32_t cur_tid = 0;
 
-static pthread_key_t key;
-static pthread_once_t key_once = PTHREAD_ONCE_INIT;
-
-static void make_key()
+void set_thread_id()
 {
-    pthread_key_create(&key, nullptr);
+    if(!cur_tid)
+        cur_tid = atomic_add(thread_tss_id, 1);
 }
 
 uint32_t get_thread_id()
 {
-    pthread_once(&key_once, make_key);
-    void *ptr = pthread_getspecific(key);
-    if(!ptr) {
-        ptr = new uint32_t(atomic_add(thread_tss_id, 1));
-        pthread_setspecific(key, ptr);
-    }
-    return *((uint32_t*)ptr);
+    return cur_tid;
 }
-
-void delete_thread_id_ptr()
-{
-    pthread_once(&key_once, make_key);
-    void *ptr = pthread_getspecific(key);
-    if(ptr) {
-        delete (uint32_t*)ptr;
-        pthread_setspecific(key, nullptr);
-    }
-}
-
-static const int thrd_id_delete = atexit(&delete_thread_id_ptr);
 
 void set_affinity_thread(uint32_t thrd)
 {
@@ -204,9 +185,9 @@ void set_significant_thread()
 
 void* thread_f(void *p)
 {
+    set_thread_id();
     unique_ptr<thread_func> f(reinterpret_cast<thread_func*>(p));
     f->run();
-    delete_thread_id_ptr();
     return nullptr;
 }
 

@@ -50,6 +50,7 @@ struct my_condition
 void set_significant_thread();
 void set_trash_thread();
 uint32_t get_thread_id();
+void set_thread_id();
 
 struct thread_func
 {

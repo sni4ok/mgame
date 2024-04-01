@@ -24,7 +24,7 @@ extern "C"
 }
 
 template<class it1, class it2>
-bool lexicographical_compare(it1 first1, it1 last1, it2 first2, it2 last2)
+constexpr bool lexicographical_compare(it1 first1, it1 last1, it2 first2, it2 last2)
 {
     for (; (first1 != last1) && (first2 != last2); ++first1, ++first2)
     {
@@ -44,18 +44,18 @@ struct str_holder
     char_cit str;
     uint64_t size;
 
-    str_holder() : str(), size()
+    constexpr str_holder() : str(), size()
     {
     }
-    str_holder(char_cit str, uint64_t size) : str(str), size(size)
+    constexpr str_holder(char_cit str, uint64_t size) : str(str), size(size)
     {
     }
-    str_holder(char_cit from, char_cit to) : str(from), size(to - from)
+    constexpr str_holder(char_cit from, char_cit to) : str(from), size(to - from)
     {
     }
 
     template<uint64_t sz>
-    str_holder(const char (&str)[sz]) : str(str), size(sz - 1)
+    constexpr str_holder(const char (&str)[sz]) : str(str), size(sz - 1)
     {
     }
     bool operator==(const str_holder& r) const;
@@ -69,19 +69,19 @@ struct str_holder
     {
         return !(*this == r);
     }
-    bool operator<(const str_holder& r) const
+    constexpr bool operator<(const str_holder& r) const
     {
         return lexicographical_compare(str, str + size, r.str, r.str + r.size);
     }
-    char_cit begin() const
+    constexpr char_cit begin() const
     {
         return str;
     }
-    char_cit end() const
+    constexpr char_cit end() const
     {
         return str + size;
     }
-    char operator[](uint32_t idx) const
+    constexpr char operator[](uint32_t idx) const
     {
         return *(str + idx);
     }
@@ -90,7 +90,7 @@ struct str_holder
 str_holder _str_holder(char_cit str);
 
 template<uint64_t sz>
-str_holder from_array(const char (&str)[sz])
+constexpr str_holder from_array(const char (&str)[sz])
 {
     uint64_t size = sz;
     while(size && str[size - 1] == char())

@@ -13,14 +13,14 @@ struct carray
     type buf[size_];
 
     template<typename ... params>
-    explicit carray(params ... args) : buf(args...) {
+    constexpr explicit carray(params ... args) : buf(args...) {
     }
-	carray(std::initializer_list<type> r) {
+	constexpr carray(std::initializer_list<type> r) {
         if(r.size() > size_)
             throw mexception(es() % "carray(initializer_list) for " % r.size() % " elems but size " % size_);
        copy(r.begin(), r.end(), buf);
     }
-    carray(str_holder str)
+    constexpr carray(str_holder str)
     requires(std::is_same<type, char>::value)
     {
         if(str.size > size_)
@@ -38,40 +38,68 @@ struct carray
     constexpr static bool empty() {
         return !size_;
     }
-    const_iterator begin() const {
+    constexpr const_iterator begin() const {
         return buf;
     }
-    iterator begin() {
+    constexpr iterator begin() {
         return buf;
     }
-    const_iterator end() const {
+    constexpr const_iterator end() const {
         return buf + size_;
     }
-    iterator end() {
+    constexpr iterator end() {
         return buf + size_;
     }
-    const type& operator[](uint32_t elem) const {
+    constexpr const type& operator[](uint32_t elem) const {
+        assert(elem < size_);
         return buf[elem];
     }
-    type& operator[](uint32_t elem) {
+    constexpr type& operator[](uint32_t elem) {
+        assert(elem < size_);
         return buf[elem];
     }
-    bool operator<(const carray& r) const
+    constexpr bool operator<(const carray& r) const
     {
         return lexicographical_compare(buf, buf + size_, r.buf, r.buf + size_);
     }
-    bool operator==(const carray& r) const
+    constexpr bool operator==(const carray& r) const
     {
         return equal(buf, buf + size_, r.buf);
     }
-    bool operator!=(const carray& r) const
+    constexpr bool operator!=(const carray& r) const
     {
         return !(*this == r);
     }
-    str_holder str() const
+    constexpr str_holder str() const
     requires(std::is_same<type, char>::value)
     {
         return from_array(buf);
+    }
+    constexpr carray& operator+=(const carray& r)
+    {
+        for(uint32_t i = 0; i != size_; ++i)
+            buf[i] += r.buf[i];
+        return *this;
+    }
+    constexpr carray operator+(const carray& r) const
+    {
+        carray ret;
+        for(uint32_t i = 0; i != size_; ++i)
+            ret.buf[i] = buf[i] + r.buf[i];
+        return ret;
+    }
+    constexpr carray& operator-=(const carray& r)
+    {
+        for(uint32_t i = 0; i != size_; ++i)
+            buf[i] -= r.buf[i];
+        return *this;
+    }
+    constexpr carray operator-(const carray& r) const
+    {
+        carray ret;
+        for(uint32_t i = 0; i != size_; ++i)
+            ret.buf[i] = buf[i] - r.buf[i];
+        return ret;
     }
 };
 
@@ -157,9 +185,11 @@ public:
         return reverse_iterator({begin() - 1});
     }
     const type& operator[](uint32_t elem) const {
+        assert(elem < size_);
         return buf[elem];
     }
     type& operator[](uint32_t elem) {
+        assert(elem < size_);
         return buf[elem];
     }
     type& back() {

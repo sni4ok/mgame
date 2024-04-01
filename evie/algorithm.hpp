@@ -4,6 +4,9 @@
 
 #pragma once
 
+#ifndef EVIE_ALGORITHM_HPP
+#define EVIE_ALGORITHM_HPP
+
 #include "pair.hpp"
 #include "str_holder.hpp"
 
@@ -243,4 +246,6 @@ iterator remove_if(iterator from, iterator to, pr p)
                 *from++ = std::move(*i);
     return from;
 }
+
+#endif
 

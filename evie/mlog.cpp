@@ -29,7 +29,7 @@ namespace
         }
         void lock()
         {
-            if(flock(hfile, LOCK_EX))
+            if(flock(hfile, LOCK_EX | LOCK_NB))
                 throw_system_failure(es() % "lock file " % name % " error");
         }
         void write(const char* buf, uint32_t size)
@@ -212,6 +212,7 @@ void simple_log_free(simple_log* ptr)
 
 unique_ptr<simple_log, simple_log_free> log_init(const char* file_name, uint32_t params, bool set_instance)
 {
+    set_thread_id();
     unique_ptr<simple_log, simple_log_free> log(new simple_log());
     log->init(file_name, params);
     if(set_instance)

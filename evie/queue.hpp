@@ -83,5 +83,8 @@ public:
     uint64_t size() const {
         return data.size() - from;
     }
+    iterator erase(iterator it) {
+        return data.erase(it);
+    }
 };
 

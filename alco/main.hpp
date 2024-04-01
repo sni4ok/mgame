@@ -15,7 +15,8 @@ int parser_main(int argc, char** argv, str_holder parser, void (*proceed)(volati
         cout_write(es() % "Usage: ./" % parser_name % " [config file]" % endl);
         return 1;
     }
-    auto log = log_init(argc == 1 ? (parser_name + ".log").c_str() : get_log_name(_mstring(argv[1])).c_str(), mlog::always_cout | mlog::info);
+    auto log = log_init(argc == 1 ? (parser_name + ".log").c_str() : get_log_name(_mstring(argv[1])).c_str(),
+        mlog::always_cout | mlog::info | mlog::lock_file);
     profilerinfo pff_info;
     init_signals();
     try {
