@@ -167,7 +167,7 @@ void set_trash_thread()
     CPU_SET(trash_t1, &cpuset);
     CPU_SET(trash_t2, &cpuset);
     if(pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset))
-        mlog(mlog::critical) << "pthread_setaffinity_np() error";
+        cerr_write("pthread_setaffinity_np() error\n");
 }
 
 void set_significant_thread()
@@ -193,7 +193,7 @@ void* thread_f(void *p)
 
 uint64_t thread_create(thread_func* p)
 {
-    uint64_t tid = 0;
+    pthread_t tid = 0;
     int ret = pthread_create(&tid, nullptr, &thread_f, p);
     if(ret)
         throw str_exception("pthread_create error");

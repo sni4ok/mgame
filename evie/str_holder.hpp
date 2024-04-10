@@ -5,13 +5,13 @@
 #pragma once
 
 #include <stdint.h>
+#include <stddef.h>
 
 #define unlikely(x)     __builtin_expect(!!(x),0)
 #define likely(x)       __builtin_expect(!!(x),1)
 
 extern "C"
 {
-    typedef uint64_t size_t;
     extern void* memset(void*, int, size_t) __THROW __nonnull ((1));
     extern void* memcpy(void*, const void*, size_t) __THROW __nonnull ((1, 2));
     extern void* memmove(void*, const void*, size_t) __THROW __nonnull ((1, 2));

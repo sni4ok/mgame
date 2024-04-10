@@ -47,10 +47,11 @@ struct my_condition
     void notify_all();
 };
 
-void set_significant_thread();
-void set_trash_thread();
-uint32_t get_thread_id();
 void set_thread_id();
+uint32_t get_thread_id();
+void set_affinity_thread(uint32_t thrd);
+void set_trash_thread();
+void set_significant_thread();
 
 struct thread_func
 {

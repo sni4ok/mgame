@@ -91,7 +91,7 @@ void proceed_lws_parser(volatile bool& can_run)
                 {
                     i = 0;
                     if(ls.data_time + 10 < time(NULL))
-                        throw mexception(es() % " no data from " % ls.data_time);
+                        throw mexception(es() % " no data from " % uint64_t(ls.data_time));
                 }
                 n = ls.service();
             }

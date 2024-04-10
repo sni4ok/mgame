@@ -92,7 +92,7 @@ void* mmap_create(const char* params, bool create)
             if(res)
                 throw_system_failure(es() % "fstat() error for " % _str_holder(params));
             else
-                throw mexception(es() % "mmap_create error for " % _str_holder(params) % ", file_sz: " % st.st_size);
+                throw mexception(es() % "mmap_create error for " % _str_holder(params) % ", file_sz: " % int64_t(st.st_size));
         }
     }
 

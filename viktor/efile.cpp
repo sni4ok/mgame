@@ -58,7 +58,7 @@ struct efile
                 close(hfile);
             }
             if(fsz) {
-                mstring backup = fname + "_" + to_string(time(NULL));
+                mstring backup = fname + "_" + to_string(uint64_t(time(NULL)));
                 int r = rename(fname.c_str(), backup.c_str());
                 if(r)
                     mlog(mlog::critical) << "rename file from " << fname << ", to " << backup

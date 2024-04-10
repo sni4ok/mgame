@@ -71,7 +71,7 @@ struct mysql
         }
         if(rename_new)
         {
-            time_t tt = time(NULL);
+            uint64_t tt = time(NULL);
             mlog() << "rename tables instruments, orders, trades to "
                 << "instruments_" << tt << ", orders_" << tt << ", trades_" << tt;
             bsi << "rename table instruments to instruments_" << tt;
