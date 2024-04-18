@@ -11,6 +11,7 @@
 #include "string.hpp"
 #include "mstring.hpp"
 #include "algorithm.hpp"
+#include "array.hpp"
 
 struct noncopyable
 {
@@ -43,7 +44,7 @@ struct crc32
 
 struct read_time_impl
 {
-    my_basic_string<11> cur_date;
+    carray<char, 10> cur_date;
     uint64_t cur_date_time;
 
     template<uint32_t frac_size>

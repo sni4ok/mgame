@@ -203,7 +203,7 @@ class engine::impl : public stack_singleton<engine::impl>
     volatile bool can_exit;
     my_mutex mutex;
     my_condition cond;
-    mvector<thread> threads;
+    mvector<jthread> threads;
     linked_list ll;
     uint32_t consumers;
 
@@ -415,8 +415,6 @@ public:
     ~impl()
     {
         can_exit = true;
-        for(auto&& t: threads)
-            t.join();
     }
     void push_clean(const mvector<actives::type>& secs) //when parser disconnected all OrdersBooks cleans
     {
@@ -429,7 +427,7 @@ public:
             n->count = cur_c;
             n->cnt = consumers;
             for(uint32_t i = 0; i != cur_c; ++i, ++ci)
-                n->m[i].mc = message_clean{secs[ci].time, ttime_t(), msg_clean, "", secs[ci].security_id, 1/*source*/};
+                n->m[i].mc = message_clean{{secs[ci].time, ttime_t()}, msg_clean, "", secs[ci].security_id, 1/*source*/};
             ll.push(n);
             notify();
         }

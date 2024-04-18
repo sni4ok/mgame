@@ -19,7 +19,7 @@ struct server::impl
 {
     volatile bool& can_run;
     bool quit_on_exit;
-    mvector<thread> threads;
+    mvector<jthread> threads;
     fmap<int, pair<hole_importer, void*> > imports;
     my_mutex mutex;
     my_condition cond;
@@ -100,8 +100,6 @@ struct server::impl
     }
     ~impl()
     {
-        for(auto&& t: threads)
-            t.join();
         server_impl = nullptr;
     }
 };

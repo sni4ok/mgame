@@ -226,7 +226,7 @@ int my_accept_async(uint32_t port, bool local, bool sync, mstring* client_ip_ptr
             throw_system_failure("set O_NONBLOCK for client socket error");
     }
 
-    mstring client_ip(str);
+    mstring client_ip = _mstring(str);
     mlog() << "socket_sender connection accepted from " << client_ip << ":" << port;
     if(client_ip_ptr)
         *client_ip_ptr = std::move(client_ip);

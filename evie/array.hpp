@@ -12,8 +12,10 @@ struct carray
 {
     type buf[size_];
 
-    template<typename ... params>
-    constexpr explicit carray(params ... args) : buf(args...) {
+    carray() : buf() {
+    }
+    void init(const type* from) {
+       copy(from, from + size_, buf);
     }
 	constexpr carray(std::initializer_list<type> r) {
         if(r.size() > size_)
@@ -21,11 +23,10 @@ struct carray
        copy(r.begin(), r.end(), buf);
     }
     constexpr carray(str_holder str)
-    requires(std::is_same<type, char>::value)
-    {
+    requires(std::is_same<type, char>::value) {
         if(str.size > size_)
             throw mexception(es() % "carray<char, " % size_ % ">(str_holder) max size exceed for: " % str);
-        my_fast_copy(str.begin(), str.end(), buf);
+        copy(str.begin(), str.end(), buf);
     }
 
     typedef type* iterator;
@@ -58,44 +59,39 @@ struct carray
         assert(elem < size_);
         return buf[elem];
     }
-    constexpr bool operator<(const carray& r) const
-    {
+    constexpr bool equal(const type* f) const {
+        return ::equal(f, f + size_, buf);
+    }
+    constexpr bool operator<(const carray& r) const {
         return lexicographical_compare(buf, buf + size_, r.buf, r.buf + size_);
     }
-    constexpr bool operator==(const carray& r) const
-    {
-        return equal(buf, buf + size_, r.buf);
+    constexpr bool operator==(const carray& r) const {
+        return ::equal(buf, buf + size_, r.buf);
     }
-    constexpr bool operator!=(const carray& r) const
-    {
+    constexpr bool operator!=(const carray& r) const {
         return !(*this == r);
     }
     constexpr str_holder str() const
-    requires(std::is_same<type, char>::value)
-    {
+    requires(std::is_same<type, char>::value) {
         return from_array(buf);
     }
-    constexpr carray& operator+=(const carray& r)
-    {
+    constexpr carray& operator+=(const carray& r) {
         for(uint32_t i = 0; i != size_; ++i)
             buf[i] += r.buf[i];
         return *this;
     }
-    constexpr carray operator+(const carray& r) const
-    {
+    constexpr carray operator+(const carray& r) const {
         carray ret;
         for(uint32_t i = 0; i != size_; ++i)
             ret.buf[i] = buf[i] + r.buf[i];
         return ret;
     }
-    constexpr carray& operator-=(const carray& r)
-    {
+    constexpr carray& operator-=(const carray& r) {
         for(uint32_t i = 0; i != size_; ++i)
             buf[i] -= r.buf[i];
         return *this;
     }
-    constexpr carray operator-(const carray& r) const
-    {
+    constexpr carray operator-(const carray& r) const {
         carray ret;
         for(uint32_t i = 0; i != size_; ++i)
             ret.buf[i] = buf[i] - r.buf[i];
@@ -117,20 +113,30 @@ public:
 
     array() : size_() {
     }
-    array(const array& r) {
-        clear();
-        insert(r.begin(), r.end());
+    array(const array& r) : size_(r.size_) {
+        copy(r.begin(), r.end(), buf);
     }
-    template<typename ... params>
-    explicit array(params ... args) : buf(args...), size_(sizeof...(args)) {
+    array(str_holder str)
+    requires(std::is_same<type, char>::value) : size_(str.size) {
+        assert(size_ <= capacity_);
+        copy(str.begin(), str.end(), buf);
     }
-    array(std::initializer_list<value_type> r) {
-       resize(r.size());
+    array(const type* f, const type* t) : size_(t - f) {
+        assert(size_ <= capacity_);
+        copy(f, t, buf);
+    }
+    template<uint64_t sz>
+    array(const type (&str)[sz]) : size_(sz - 1)
+    {
+        static_assert(sz - 1 <= capacity_);
+        copy(str, str + size_, buf);
+    }
+    array(std::initializer_list<value_type> r) : size_(r.size()) {
        copy(r.begin(), r.end(), buf);
     }
     array& operator=(const array& r) {
-        clear();
-        insert(r.begin(), r.end());
+        size_ = r.size_;
+        copy(r.begin(), r.end(), buf);
         return *this;
     }
     uint32_t size() const {
@@ -148,13 +154,13 @@ public:
     void resize(uint32_t new_size) {
         if(new_size < size_)
             size_ = new_size;
-        else if(new_size < capacity_)
-        {
+        else if(new_size <= capacity_) {
             for(uint32_t i = size_; i != new_size; ++i)
                 buf[size_] = type();
             size_ = new_size;
         }
-        throw mexception(es() % "array resize for " % new_size % ", capacity " % capacity_);
+        else
+            throw mexception(es() % "array resize for " % new_size % ", capacity " % capacity_);
     }
     void push_back(type&& v) {
         assert(size_ < capacity_);
@@ -195,21 +201,60 @@ public:
     type& back() {
         return buf[size_ - 1];
     }
+    const type& back() const {
+        return buf[size_ - 1];
+    }
     void pop_back() {
-        resize(size_ - 1);
+        assert(size_);
+        --size;
+    }
+    bool equal(const type* f, const type* t) const {
+        if(size_ == t - f)
+            return ::equal(f, t, buf);
+        return false;
+    }
+    template<uint64_t sz>
+    bool operator==(const type (&str)[sz]) const {
+        return equal(str, str + sz - 1);
+    }
+    bool operator==(const array& r) const {
+        return equal(r.begin(), r.end());
+    }
+    bool operator!=(const array& r) const {
+        return !(*this == r);
+    }
+    str_holder str() const
+    requires(std::is_same<type, char>::value) {
+        return str_holder(begin(), end());
+    }
+    bool operator<(const array& r) const {
+        return lexicographical_compare(buf, buf + size_, r.buf, r.buf + size_);
+    }
+    void insert(iterator it, const type* from, const type* to) {
+        uint64_t size = size_;
+        uint64_t pos = it - buf;
+        resize(size_ + (to - from));
+        it = buf + pos;
+        copy(it, buf + size, it + (to - from));
+        copy(from, to, it);
+    }
+    iterator erase(iterator from, iterator to) {
+        copy(to, end(), from);
+        size_ -= to - from;
+        return from;
     }
 };
 
-template<typename type, typename ... params>
-constexpr auto make_array(type v, params ... args)
-{
-    return array<type, sizeof...(args) + 1>(v, args...);
-}
+template<uint32_t stack_sz = 252>
+using my_basic_string = array<char, stack_sz>;
 
-template<typename type, typename ... params>
-constexpr auto make_carray(type v, params ... args)
+typedef my_basic_string<> my_string;
+
+template<typename stream, uint32_t stack_sz>
+stream& operator<<(stream& str, const my_basic_string<stack_sz>& v)
 {
-    return carray<type, sizeof...(args) + 1>(v, args...);
+    str.write(v.begin(), v.size());
+    return str;
 }
 
 template<typename type, uint32_t size>
@@ -218,5 +263,11 @@ constexpr auto fill_carray(type v = type())
     carray<type, size> ret;
     fill(ret.begin(), ret.end(), v);
     return ret;
+}
+
+template<uint64_t sz>
+constexpr auto make_carray(const char (&str)[sz])
+{
+    return carray<char, sz - 1>(str_holder(str));
 }
 

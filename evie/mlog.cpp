@@ -139,7 +139,7 @@ class simple_log
     uint32_t all_size;
     string_pool pool;
     nodes_type nodes;
-    thread work_thread;
+    jthread work_thread;
     static simple_log* log;
 
 public:
@@ -152,7 +152,6 @@ public:
     ~simple_log()
     {
         can_run = false;
-        work_thread.join();
     }
     mlog::node* alloc()
     {
@@ -212,7 +211,6 @@ void simple_log_free(simple_log* ptr)
 
 unique_ptr<simple_log, simple_log_free> log_init(const char* file_name, uint32_t params, bool set_instance)
 {
-    set_thread_id();
     unique_ptr<simple_log, simple_log_free> log(new simple_log());
     log->init(file_name, params);
     if(set_instance)
@@ -367,11 +365,9 @@ void log_test(size_t thread_count, size_t log_count)
     mlog() << "mlog test for " << thread_count << " threads and " << log_count << " loops";
     MPROFILE("MlogTest")
     {
-        mvector<thread> threads;
+        mvector<jthread> threads;
         for(size_t i = 0; i != thread_count; ++i)
             threads.push_back(thread(&MlogTestThread, i, log_count));
-		for(auto&& t: threads)
-            t.join();
     }
     mlog() << "mlog test successfully ended";
 }

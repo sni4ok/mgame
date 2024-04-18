@@ -5,8 +5,7 @@
 #pragma once
 
 #include "array.hpp"
-
-uint32_t get_thread_id();
+#include "thread.hpp"
 
 template<typename node, bool use_tss>
 struct data_tss;
@@ -14,9 +13,7 @@ struct data_tss;
 template<typename node>
 struct data_tss<node, true>
 {
-    static const uint32_t tss_max_threads = 100;
-
-    mutable carray<node, tss_max_threads> nodes;
+    mutable carray<node, max_threads_count> nodes;
 
     node& get_data() const {
         return nodes[get_thread_id()];
@@ -66,8 +63,6 @@ struct list_iterator
         return !(*this == r);
     }
 };
-
-#include "mlog.hpp"
 
 template<typename node>
 node* fast_alloc_alloc()

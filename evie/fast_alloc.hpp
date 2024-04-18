@@ -250,8 +250,8 @@ struct cas_array : emplace_decl<type, cas_array<type, max_size, blist> >
         }
     }
     void free(type* p) {
-        free_impl(p);
         p->~type();
+        free_impl(p);
     }
     void push_front(type* p) requires(!blist){
         node* n = to_node(p);
@@ -283,7 +283,6 @@ struct cas_array : emplace_decl<type, cas_array<type, max_size, blist> >
             }
         }
     }
-
     void push_back(type* p) requires(blist) {
         node* n = to_node(p);
         for(;;) {
@@ -332,6 +331,11 @@ struct cas_array : emplace_decl<type, cas_array<type, max_size, blist> >
             if(atomic_compare_exchange(nodes->id, from, to.id))
                 return to_type(nodes + nn);
         }
+    }
+    type* alloc_new() {
+        type* p = alloc();
+        new (p)type();
+        return p;
     }
     type* pop_front() {
         for(;;) {
@@ -474,7 +478,10 @@ namespace alloc_params
 
 using namespace alloc_params;
 
-//#define ENABLE_ALLOC_FREE_PROFILE
+static inline void count_slow()
+{
+    MPROFILE("fast_alloc::alloc() slow")
+}
 
 template<typename type, fast_alloc_params params = mt_tss,
     template<typename, bool, bool, bool, typename> typename nodes_type_ = forward_list, typename node = forward_list_node<type, params.use_tss> >
@@ -506,29 +513,33 @@ struct fast_alloc
         if constexpr(max_size)
             size += pre_alloc;
     }
-    type* alloc() {
-#ifdef ENABLE_ALLOC_FREE_PROFILE
-        MPROFILE("fast_alloc::alloc")
-#endif
-
+    type* alloc_new() {
         type* p = nodes.pop();
-        if(p)
-        {
-            //MPROFILE("fast_alloc::alloc() success")
+        if(p) {
+            if constexpr(max_size)
+                atomic_sub(size, 1);
         }
-        if(!p) {
-            MPROFILE("fast_alloc::alloc() slow")
-            return alloc_impl();
+        else {
+            count_slow();
+            p = alloc_impl();
+            new (p)type;
         }
-        else if constexpr(max_size)
-            atomic_sub(size, 1);
+        return p;
+    }
+    type* alloc() {
+        type* p = nodes.pop();
+        if(p) {
+            p->~type();
+            if constexpr(max_size)
+                atomic_sub(size, 1);
+        }
+        else {
+            count_slow();
+            p = alloc_impl();
+        }
         return p;
     }
     void free(type* p) {
-#ifdef ENABLE_ALLOC_FREE_PROFILE
-        MPROFILE("fast_alloc::free")
-#endif
-
         if constexpr(max_size)
         {
             uint32_t size_ = atomic_load(size);
@@ -538,7 +549,7 @@ struct fast_alloc
             }
             else {
                 MPROFILE("fast_alloc::free() slow")
-                fast_alloc_free(nodes_type::to_node(p));
+                fast_alloc_delete(nodes_type::to_node(p));
                 return;
             }
         }
@@ -578,20 +589,15 @@ struct fast_alloc
 template<typename type, typename node_type>
 struct malloc_alloc
 {
+    type* alloc_new() {
+        type* p = (type*)fast_alloc_alloc<node_type>();
+        new (p)type;
+        return p;
+    }
     type* alloc() {
-
-#ifdef ENABLE_ALLOC_FREE_PROFILE
-        MPROFILE("malloc_alloc::alloc")
-#endif
-
         return (type*)fast_alloc_alloc<node_type>();
     }
     void free(type* n) {
-
-#ifdef ENABLE_ALLOC_FREE_PROFILE
-        MPROFILE("malloc_alloc::free")
-#endif
-
         fast_alloc_delete((node_type*)n);
     }
     static constexpr uint32_t run_once() {

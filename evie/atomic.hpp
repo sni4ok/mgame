@@ -19,7 +19,7 @@ inline int64_t atomic_add(int64_t& v, int64_t value)
 
 inline uint64_t atomic_sub(uint64_t& v, uint64_t value)
 {
-    return __atomic_add_fetch(&v, value, __ATOMIC_RELAXED);
+    return __atomic_sub_fetch(&v, value, __ATOMIC_RELAXED);
 }
 
 inline int64_t atomic_sub(int64_t& v, int64_t value)

@@ -47,6 +47,8 @@ struct my_condition
     void notify_all();
 };
 
+static const uint32_t max_threads_count = 100;
+
 void set_thread_id();
 uint32_t get_thread_id();
 void set_affinity_thread(uint32_t thrd);
@@ -102,6 +104,8 @@ struct thread
         tid = thread_create(p);
     }
 };
+
+typedef thread jthread;
 
 template<typename type>
 struct ref

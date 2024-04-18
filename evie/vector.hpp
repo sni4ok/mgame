@@ -29,12 +29,12 @@ protected:
 
     static const bool have_destructor = !std::is_trivially_destructible<type>::value;
 
-    void __destroy(type* v)
+    static void __destroy(type* v)
     {
         if constexpr(have_destructor)
             v->type::~type();
     }
-    void __destroy(type* from, type* to)
+    static void __destroy(type* from, type* to)
     {
         if constexpr(have_destructor)
             for(; from != to; ++from)
@@ -44,6 +44,14 @@ protected:
     {
         (void)it;
         assert(it >= buf && it <= buf + size_);
+    }
+    static void __copy_impl(type* it, const type* from, const type* to) {
+        if constexpr(have_destructor) {
+            for(; from != to; ++from, ++it)
+                *it = *from;
+        }
+        else
+            memmove((void*)it, from, (to - from) * sizeof(type));
     }
 
 public:
@@ -227,27 +235,27 @@ public:
     }
     type& operator[](uint64_t elem) {
         assert(elem < size_);
-        return begin()[elem];
+        return buf[elem];
     }
     const type& operator[](uint64_t elem) const {
         assert(elem < size_);
-        return begin()[elem];
+        return buf[elem];
     }
     type& at(uint64_t elem) {
         if(elem >= size_)
             throw str_exception("mvector<>::at()");
-        return begin()[elem];
+        return buf[elem];
     }
     const type& at(uint64_t elem) const{
         if(elem >= size_)
             throw str_exception("mvector<>::at()");
-        return begin()[elem];
+        return buf[elem];
     }
     type& back() {
-        return begin()[size_ - 1];
+        return buf[size_ - 1];
     }
     const type& back() const {
-        return begin()[size_ - 1];
+        return buf[size_ - 1];
     }
     bool operator==(const mvector& r) const {
         if(size_ == r.size_)
@@ -280,18 +288,10 @@ public:
         ++size_;
         return it;
     }
-    void __copy_impl(iterator it, const type* from, const type* to) {
-        if constexpr(have_destructor) {
-            for(; from != to; ++from, ++it)
-                *it = *from;
-        }
-        else
-            memmove((void*)it, from, (to - from) * sizeof(type));
-    }
     void insert(const type* from, const type* to) {
         uint64_t size = size_;
         resize(size_ + (to - from));
-        __copy_impl(begin() + size, from, to);
+        __copy_impl(buf + size, from, to);
     }
     void insert(iterator it, const type* from, const type* to) {
         uint64_t size = size_;

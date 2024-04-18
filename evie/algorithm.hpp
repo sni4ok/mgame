@@ -189,7 +189,7 @@ void copy_back(iterator from, iterator to, cont& c)
 }
 
 template<typename ifrom, typename ito>
-void copy(ifrom from, ifrom to, ito out)
+constexpr void copy(ifrom from, ifrom to, ito out)
 {
     for(; from != to; ++from, ++out)
         *out = *from;

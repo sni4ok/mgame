@@ -7,6 +7,7 @@
 #include "mlog.hpp"
 #include "smart_ptr.hpp"
 #include "profiler.hpp"
+#include "queue.hpp"
 
 #include <cassert>
 
@@ -135,13 +136,33 @@ void my_condition::notify_all()
         throw str_exception("my_condition::notify_all() error");
 }
 
-uint32_t thread_tss_id = 0;
+queue<uint32_t> free_threads_ids;
+my_mutex free_threads_mutex;
 thread_local uint32_t cur_tid = 0;
+
+int init_free_threads()
+{
+    for(uint32_t i = 1; i != max_threads_count; ++i)
+        free_threads_ids.push_back(i);
+    return free_threads_ids.size();
+}
+static const int free_threads_init = init_free_threads();
 
 void set_thread_id()
 {
-    if(!cur_tid)
-        cur_tid = atomic_add(thread_tss_id, 1);
+    if(!cur_tid) {
+        my_mutex::scoped_lock lock(free_threads_mutex);
+        if(free_threads_ids.empty())
+            throw str_exception("set_thread_id() max_threads_count limit exceed");
+        cur_tid = free_threads_ids.front();
+        free_threads_ids.pop_front();
+    }
+}
+
+void free_thread_id()
+{
+    my_mutex::scoped_lock lock(free_threads_mutex);
+    free_threads_ids.push_back(cur_tid);
 }
 
 uint32_t get_thread_id()
@@ -188,6 +209,7 @@ void* thread_f(void *p)
     set_thread_id();
     unique_ptr<thread_func> f(reinterpret_cast<thread_func*>(p));
     f->run();
+    free_thread_id();
     return nullptr;
 }
 
@@ -206,6 +228,7 @@ thread::thread() : tid()
 
 thread::~thread()
 {
+    join();
 }
 
 thread::thread(thread&& r)
@@ -248,5 +271,6 @@ void thread::join()
 void thread::detach()
 {
     pthread_detach(tid);
+    tid = 0;
 }
 

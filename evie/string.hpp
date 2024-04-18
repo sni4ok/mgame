@@ -107,7 +107,6 @@ struct buf_stream
         cur += my_cvt::itoa(cur, t);
         return *this;
     }
-
     buf_stream& operator<<(double d)
     {
         check_size(30);
@@ -131,189 +130,18 @@ typedef buf_stream_fixed<16 * 1024> my_stream;
 struct es : my_stream
 {
     template<typename type>
-    es& operator % (const type& t)
+    es& operator%(const type& t)
     {
         (*this) << t;
         return *this;
     }
-
-    operator str_holder()
+    operator str_holder() const
     {
         return str();
     }
 };
 
 void throw_system_failure(str_holder msg);
-
-template<uint32_t stack_sz = 252>
-class my_basic_string
-{
-    char buf[stack_sz];
-    uint32_t sz;
-
-public:
-    typedef char value_type;
-    typedef char_cit const_iterator;
-    typedef char_it iterator;
-    typedef char& reference;
-    typedef const char& const_reference;
-
-    my_basic_string() : sz()
-    {
-    }
-    my_basic_string(char_cit from, uint32_t size)
-    {
-        if(unlikely(size > stack_sz - 1))
-            throw mexception(es() % "my_basic_string, impossible construct from c_str, sz: " % size % ", stack_sz: " % stack_sz);
-        sz = size;
-        my_fast_copy(from, sz, begin());
-    }
-    my_basic_string(char_cit from, char_cit to) : my_basic_string(from, to - from)
-    {
-    }
-    my_basic_string(const str_holder& str) : my_basic_string(str.str, str.size)
-    {
-    }
-
-    template<uint32_t sz>
-    my_basic_string(const my_basic_string<sz>& r) : my_basic_string(r.begin(), r.size())
-    {
-    }
-
-    template<uint32_t sz>
-    my_basic_string(const char (&str)[sz]) : my_basic_string(str, sz - 1)
-    {
-    }
-
-    bool operator==(str_holder s)
-    {
-        return str() == s;
-    }
-    bool operator==(const my_basic_string& r) const
-    {
-        if(sz == r.sz)
-            return !memcmp(buf, r.buf, sz);
-        return false;
-    }
-    bool operator!=(const my_basic_string& r) const
-    {
-        return !(*this == r);
-    }
-    char_cit c_str() const
-    {
-        const_cast<char&>(buf[sz]) = char();
-        return &buf[0];
-    }
-    uint32_t size() const
-    {
-        return sz; 
-    }
-    static uint32_t capacity()
-    {
-        return stack_sz - 1; 
-    }
-    bool empty() const
-    {
-        return !sz;
-    }
-    void resize(uint32_t new_sz)
-    {
-        if(unlikely(new_sz > stack_sz - 1))
-            throw mexception(es() % "my_basic_string, impossible resize, new_sz: " % new_sz % ", stack_sz: " % stack_sz);
-        sz = new_sz;
-    }
-    void push_back(char c)
-    {
-        if(unlikely(sz > stack_sz - 2))
-            throw mexception(es() % "my_basic_string, impossible push_back, sz: " % sz % ", stack_sz: " % stack_sz);
-        buf[sz] = c;
-        ++sz;
-    }
-    void clear()
-    {
-        sz = 0;
-    }
-    iterator begin()
-    {
-        return &buf[0];
-    }
-    const_iterator begin() const
-    {
-        return &buf[0];
-    }
-    iterator end(){
-        return &buf[sz];
-    }
-    const_iterator end() const
-    {
-        return &buf[sz];
-    }
-    void erase(iterator from, iterator to)
-    {
-        uint32_t delta = to - from;
-        my_fast_move(to, end(), from);
-        sz -= delta;
-    }
-    iterator insert(iterator it, char c)
-    {
-        if(unlikely(sz > stack_sz - 2))
-            throw mexception(es() % "my_basic_string, impossible insert_1, sz: " % sz % ", stack_sz: " % stack_sz);
-        my_fast_move(it, end(), it + 1);
-        *it = c;
-        ++sz;
-        return it;
-    }
-    void insert(iterator it, char_cit from, char_cit to)
-    {
-        uint32_t delta_sz = to - from;
-        if(unlikely(sz + delta_sz > stack_sz - 1))
-            throw mexception(es() % "my_basic_string, impossible insert_2, sz: " % sz % ", delta_sz: " % delta_sz % ", stack_sz: " % stack_sz);
-        my_fast_move(it, end(), it + delta_sz);
-        my_fast_copy(from, to, it);
-        sz += delta_sz;
-    }
-    const char& operator[](uint32_t i) const
-    {
-        return buf[i];
-    }
-    char& operator[](uint32_t i)
-    {
-        return buf[i];
-    }
-    const char& front() const
-    {
-        if(unlikely(!sz))
-            throw str_exception("my_basic_string try to call front() for empty string");
-        return buf[0];
-    }
-    const char& back() const
-    {
-        if(unlikely(!sz))
-            throw str_exception("my_basic_string try to call back() for empty string");
-        return buf[sz - 1];
-    }
-    bool operator<(const my_basic_string& r) const
-    {
-        return lexicographical_compare(begin(), end(), r.begin(), r.end());
-    }
-    bool operator<(const str_holder& s) const
-    {
-        return lexicographical_compare(begin(), end(), s.str,  s.str + s.size);
-    }
-    str_holder str() const
-    {
-        return str_holder(buf, sz);
-    }
-};
-
-template<typename stream, uint32_t stack_sz>
-stream& operator<<(stream& str, const my_basic_string<stack_sz>& v)
-{
-    str.write(v.begin(), v.size());
-    return str;
-}
-
-typedef my_basic_string<> my_string;
 
 #endif
 
