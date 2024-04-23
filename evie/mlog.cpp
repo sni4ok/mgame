@@ -142,27 +142,22 @@ class simple_log
     jthread work_thread;
     static simple_log* log;
 
+    void* free_threads;
+    profilerinfo* profiler;
+
 public:
     volatile bool no_cout;
     uint32_t params;
 
-    simple_log() : can_run(true), all_size(), nodes("mlog::nodes"), work_thread(&simple_log::write_thred, this), no_cout()
+    simple_log(const char* file_name, uint32_t params, bool set_instance)
+        : can_run(true), all_size(), nodes("mlog::nodes"), free_threads(), profiler(), no_cout(), params(params)
     {
-    }
-    ~simple_log()
-    {
-        can_run = false;
-    }
-    mlog::node* alloc()
-    {
-        mlog::node* node = pool.alloc();
-        node->next = nullptr;
-        node->size = 0;
-        return node;
-    }
-    void init(const char* file_name, uint32_t params)
-    {
-        this->params = params;
+        if(set_instance)
+        {
+            log = this;
+            free_threads = init_free_threads();
+            profiler = new profilerinfo;
+        }
         if(file_name)
         {
             stream.reset(new ofile(file_name));
@@ -178,15 +173,27 @@ public:
                     stream_crit->lock();
             }
         }
-        else
-        {
-            stream.reset();
-            stream_crit.reset();
-        }
+        work_thread = jthread(&simple_log::write_thred, this);
+    }
+    ~simple_log()
+    {
+        can_run = false;
+        delete profiler;
+        work_thread.join();
+        delete_free_threads(free_threads);
+    }
+    mlog::node* alloc()
+    {
+        mlog::node* node = pool.alloc();
+        node->next = nullptr;
+        node->size = 0;
+        return node;
     }
     static void set_instance(simple_log* l)
     {
         log = l;
+        set_free_threads(l->free_threads);
+        profilerinfo::set_instance(l->profiler);
     };
     static simple_log& instance()
     {
@@ -211,11 +218,7 @@ void simple_log_free(simple_log* ptr)
 
 unique_ptr<simple_log, simple_log_free> log_init(const char* file_name, uint32_t params, bool set_instance)
 {
-    unique_ptr<simple_log, simple_log_free> log(new simple_log());
-    log->init(file_name, params);
-    if(set_instance)
-        log->set_instance(log.get());
-    return log;
+    return new simple_log(file_name, params, set_instance);
 }
 
 void log_set(simple_log* log)

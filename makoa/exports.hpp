@@ -48,12 +48,10 @@ inline ttime_t get_export_mtime(const message* m)
 void set_export_mtime(message* m);
 
 class simple_log;
-class profilerinfo;
 
 struct exporter_params
 {
     simple_log* sl;
-    profilerinfo* pf;
     volatile bool* can_run;
 };
 

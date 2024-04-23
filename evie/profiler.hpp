@@ -35,12 +35,12 @@ class profilerinfo : public stack_singleton<profilerinfo>
     uint64_t cur_counters;
 
     void print_impl(const long param);
+    profilerinfo();
 
+    friend class simple_log;
 public:
-
     bool log_on_exit;
 
-    profilerinfo(bool log_on_exit = true);
     uint64_t register_counter(const char* id);
     void add_info(uint64_t counter_id, uint64_t time);
     void print();

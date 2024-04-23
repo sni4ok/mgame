@@ -65,8 +65,14 @@ public:
         data.swap(r.data);
         std::swap(from, r.from);
     }
+    const_iterator begin() const {
+        return data.begin() + from;
+    }
     iterator begin() {
         return data.begin() + from;
+    }
+    const_iterator end() const {
+        return data.end();
     }
     iterator end() {
         return data.end();

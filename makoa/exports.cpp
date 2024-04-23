@@ -28,7 +28,6 @@ void set_can_run(volatile bool* can_run)
 void init_exporter_params(exporter_params params)
 {
     log_set(params.sl);
-    profilerinfo::set_instance(params.pf);
     set_can_run(params.can_run);
 }
 
@@ -156,7 +155,7 @@ namespace
         efactory.dyn_exporters.push_back(std::move(ret));
         exporter e;
         assert(can_run_impl);
-        hole(&e.he, {log_get(), &profilerinfo::instance(), can_run_impl});
+        hole(&e.he, {log_get(), can_run_impl});
         return e;
     }
     exporter create_impl(const mstring& m)

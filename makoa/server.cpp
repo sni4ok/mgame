@@ -19,10 +19,10 @@ struct server::impl
 {
     volatile bool& can_run;
     bool quit_on_exit;
-    mvector<jthread> threads;
     fmap<int, pair<hole_importer, void*> > imports;
     my_mutex mutex;
     my_condition cond;
+    mvector<jthread> threads;
 
     impl(volatile bool& can_run, bool quit_on_exit) : can_run(can_run), quit_on_exit(quit_on_exit)
     {

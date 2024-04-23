@@ -49,6 +49,9 @@ struct my_condition
 
 static const uint32_t max_threads_count = 100;
 
+void* init_free_threads();
+void delete_free_threads(void* ptr);
+void set_free_threads(void* ptr);
 void set_thread_id();
 uint32_t get_thread_id();
 void set_affinity_thread(uint32_t thrd);

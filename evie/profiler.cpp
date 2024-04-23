@@ -66,10 +66,8 @@ profilerinfo::info::info() : time(), time_max(), time_min(std::numeric_limits<ui
 {
 }
 
-profilerinfo::profilerinfo(bool log_on_exit) : cur_counters(), log_on_exit(log_on_exit)
+profilerinfo::profilerinfo() : cur_counters(), log_on_exit(true)
 {
-    if(log_on_exit && !log_get())
-        throw str_exception("profilerinfo() with log_on_exit should be initialized after mlog");
 }
 
 uint64_t profilerinfo::register_counter(const char* id)

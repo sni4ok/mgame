@@ -136,33 +136,56 @@ void my_condition::notify_all()
         throw str_exception("my_condition::notify_all() error");
 }
 
-queue<uint32_t> free_threads_ids;
-my_mutex free_threads_mutex;
 thread_local uint32_t cur_tid = 0;
 
-int init_free_threads()
+struct free_threads
 {
-    for(uint32_t i = 1; i != max_threads_count; ++i)
-        free_threads_ids.push_back(i);
-    return free_threads_ids.size();
+    queue<uint32_t> ids;
+    my_mutex mutex;
+
+    free_threads()
+    {
+        for(uint32_t i = 1; i != max_threads_count; ++i)
+            ids.push_back(i);
+    }
+    void set() {
+        if(cur_tid)
+            return;
+        my_mutex::scoped_lock lock(mutex);
+        if(ids.empty())
+            throw str_exception("set_thread_id() max_threads_count limit exceed");
+        cur_tid = ids.front();
+        ids.pop_front();
+    }
+    void free() {
+        my_mutex::scoped_lock lock(mutex);
+        assert(cur_tid);
+        ids.push_back(cur_tid);
+    }
+};
+
+free_threads* free_threads_ptr = nullptr;
+
+void* init_free_threads()
+{
+    assert(!free_threads_ptr);
+    free_threads_ptr = new free_threads;
+    return free_threads_ptr;
 }
-static const int free_threads_init = init_free_threads();
+
+void delete_free_threads(void* ptr)
+{
+    delete (free_threads*)ptr;
+}
+
+void set_free_threads(void* ptr)
+{
+    free_threads_ptr = (free_threads*)ptr;
+}
 
 void set_thread_id()
 {
-    if(!cur_tid) {
-        my_mutex::scoped_lock lock(free_threads_mutex);
-        if(free_threads_ids.empty())
-            throw str_exception("set_thread_id() max_threads_count limit exceed");
-        cur_tid = free_threads_ids.front();
-        free_threads_ids.pop_front();
-    }
-}
-
-void free_thread_id()
-{
-    my_mutex::scoped_lock lock(free_threads_mutex);
-    free_threads_ids.push_back(cur_tid);
+    free_threads_ptr->set();
 }
 
 uint32_t get_thread_id()
@@ -209,7 +232,7 @@ void* thread_f(void *p)
     set_thread_id();
     unique_ptr<thread_func> f(reinterpret_cast<thread_func*>(p));
     f->run();
-    free_thread_id();
+    free_threads_ptr->free();
     return nullptr;
 }
 
