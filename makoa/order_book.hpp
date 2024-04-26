@@ -21,7 +21,7 @@ struct order_book
         if(!m.security_id) {
             m.security_id = mb.security_id;
             m.price = mb.price;
-        } else if(unlikely(m.security_id != mb.security_id))
+        } else if(m.security_id != mb.security_id) [[unlikely]]
             throw mexception(es() % "order_book cross securities detected, old: " % m.security_id % ", new: " % mb.security_id);
 
         assert(m.price.value);
@@ -146,7 +146,7 @@ struct order_book_ba
             m.security_id = mb.security_id;
             m.price = mb.price;
         }
-        else if(unlikely(m.security_id != mb.security_id))
+        else if(m.security_id != mb.security_id) [[unlikely]]
             throw mexception(es() % "order_book_ba cross securities detected, old: " % m.security_id % ", new: " % mb.security_id);
         const price_t& price = mb.price.value ? mb.price : m.price;
 

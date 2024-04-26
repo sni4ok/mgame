@@ -217,19 +217,19 @@ struct lws_i : sec_id_by_name<lws_impl>
         if(config::instance().log_lws)
             mlog() << "lws proceed: " << str;
         iterator it = str.str, ie = str.str + str.size;
-        if(unlikely(*it != '{' || *(it + 1) != '\"'))
+        if(*it != '{' || *(it + 1) != '\"') [[unlikely]]
             throw mexception(es() % "bad message: " % str);
         it = it + 2;
 
-        if(likely(equal(ch, ch + sizeof(ch) - 1, it)))
+        if(equal(ch, ch + sizeof(ch) - 1, it)) [[likely]]
         {
             it = it + sizeof(ch) - 1;
             iterator ne = find(it, ie, '\"');
             str_holder symbol(it, ne - it);
             auto i = parsers.find(symbol);
-            if(unlikely(i == parsers.end()))
+            if(i == parsers.end()) [[unlikely]]
                 throw mexception(es() % "unknown symbol in market message: " % str);
-            if(unlikely(!i->second.security_id))
+            if(!i->second.security_id) [[unlikely]]
                 i->second.security_id = get_security_id(i->second.security.begin(), i->second.security.end(), time);
             ++ne;
             skip_fixed(ne, ts);
@@ -243,7 +243,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         else if(equal(ping, ping + sizeof(ping) - 1, it))
         {
             it = it + sizeof(ping) - 1;
-            if(unlikely(*(it + 13) != '}' || it + 14 != ie))
+            if(*(it + 13) != '}' || it + 14 != ie) [[unlikely]]
                 throw mexception(es() % "bad ping message: " % str);
 
             bs << "{\"pong\":";
@@ -251,7 +251,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             bs << "}";
             send(wsi);
         }
-        else if(unlikely(equal(error, error + sizeof(error) - 1, it)))
+        else if(equal(error, error + sizeof(error) - 1, it)) [[unlikely]]
             throw mexception(es() % "error message: " % str);
         else {
             mlog(mlog::critical) << "unsupported message: " << str;

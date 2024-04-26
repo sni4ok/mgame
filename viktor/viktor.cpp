@@ -119,10 +119,10 @@ struct viktor
     {
         try
         {
-            if(!unlikely(e))
+            if(!e) [[unlikely]]
                 reconnect();
             last_times = (m + count - 1)->mt;
-            if(likely(e))
+            if(e) [[likely]]
                 e->proceed(m, count);
         }
         catch(std::exception& exc)

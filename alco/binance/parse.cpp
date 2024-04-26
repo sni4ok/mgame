@@ -64,7 +64,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             it = ne + 1;
             skip_fixed(it, "}");
             
-            if(unlikely(it != ie))
+            if(it != ie) [[unlikely]]
                 throw mexception(es() % "parsing message error: " % str_holder(in, ie - in));
             
             add_order(security_id, 2, ap, ac, ttime_t(), time);

@@ -27,7 +27,7 @@ struct zlib_alloc
     void* alloc(uInt items, uInt size)
     {
         uint32_t req = items * size;
-        if(unlikely(allocated + req > buf.size()))
+        if(allocated + req > buf.size()) [[unlikely]]
             throw str_exception("zlibe::alloc() bad alloc");
         char* ret = &buf[allocated];
         allocated += req;
@@ -70,11 +70,11 @@ struct zlib_impl : std::conditional_t<z_alloc, zlib_alloc, zlib_alloc_base>
         strm.avail_out = dest.size();
 
         int err = inflateInit2(&strm, MAX_WBITS + 16);
-        if(unlikely(err != Z_OK))
+        if(err != Z_OK) [[unlikely]]
             throw str_exception("inflateInit2 error");
         
         err = inflate(&strm, Z_FINISH);
-        if(likely(err == Z_STREAM_END)){
+        if(err == Z_STREAM_END) [[likely]] {
             return str_holder(&dest[0], strm.total_out);
         }
         throw mexception(es() % "zlib::inflate error for size: " % size);

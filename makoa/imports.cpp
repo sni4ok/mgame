@@ -36,7 +36,7 @@ struct reader : noncopyable
     bool proceed()
     {
         uint32_t readed = read(socket, const_cast<char*>(ctx.second.str), ctx.second.size);
-        if(unlikely(!readed))
+        if(!readed) [[unlikely]]
             return false;
         ctx.second.size = readed;
         bool ret = import_proceed_data(ctx.second, ctx.first);
@@ -56,25 +56,27 @@ struct reader : noncopyable
 uint32_t socket_read(int socket, char* buf, uint32_t buf_size)
 {
     int ret = ::recv(socket, buf, buf_size, 0);
-    if(unlikely(ret == -1)) {
-        if(errno == EAGAIN || errno == EWOULDBLOCK) {
-            MPROFILE("server_EAGAIN")
-            return 0;
+    if(ret <= 0) [[unlikely]] {
+        if(ret == -1) {
+            if(errno == EAGAIN || errno == EWOULDBLOCK) {
+                MPROFILE("server_EAGAIN")
+                return 0;
+            }
+            else
+                throw_system_failure("recv() error");
         }
+        else if(ret == 0)
+            throw_system_failure("socket closed");
         else
-            throw_system_failure("recv() error");
+            throw_system_failure("socket error");
     }
-    else if(unlikely(ret == 0))
-        throw_system_failure("socket closed");
-    else if(unlikely(ret < 0))
-        throw_system_failure("socket error");
     return ret;
 }
 
 uint32_t pipe_read(int hfile, char* buf, uint32_t buf_size)
 {
     uint32_t read_bytes = ::read(hfile, buf, buf_size);
-    if(!unlikely(read_bytes))
+    if(!read_bytes) [[unlikely]]
         throw_system_failure("read() from pipe error");
     return read_bytes;
 }
@@ -84,7 +86,7 @@ uint32_t mmap_cp_read(void *v, char* buf, uint32_t buf_size)
     uint8_t* f = (uint8_t*)v, *e = f + message_size, *i = f;
     uint8_t w = mmap_load(f);
     uint8_t r = mmap_load(f + 1);
-    if(unlikely(w < 2 || w >= message_size || r < 2 || r >= message_size))
+    if(w < 2 || w >= message_size || r < 2 || r >= message_size) [[unlikely]]
         throw mexception(es() % "mmap_cp_read() internal error, wp: " % uint32_t(w) % ", rp: " % uint32_t(r));
 
     i += r;
@@ -92,7 +94,7 @@ uint32_t mmap_cp_read(void *v, char* buf, uint32_t buf_size)
     uint8_t cur_count = mmap_load(i);
     if(cur_count)
     {
-        if(unlikely(buf_size < cur_count))
+        if(buf_size < cur_count) [[unlikely]]
             throw mexception(es() % "mmap_cp_read() buf_size too small, wp: " % uint32_t(w) %
                 ", rp: " % uint32_t(r) % ", buf_size: " % buf_size % ", cur_count: " % cur_count);
         memcpy(buf, p, uint32_t(cur_count) * message_size);
@@ -316,7 +318,7 @@ void import_ifile_start(void* c, void* p)
     reader<void*> r(p, f.ptr, &ifile_read);
     while(f.can_run) {
         bool ret = r.proceed();
-        if(unlikely(!ret))
+        if(!ret) [[unlikely]]
             return;
     }
 }

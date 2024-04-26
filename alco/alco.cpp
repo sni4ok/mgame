@@ -104,7 +104,7 @@ void emessages::ping(ttime_t etime, ttime_t time)
 
 void emessages::add_clean(uint32_t security_id, ttime_t etime, ttime_t time)
 {
-    if(unlikely(m_s == pre_alloc))
+    if(m_s == pre_alloc) [[unlikely]]
         send_messages();
 
     message_clean& c = ms[m_s++].mc;
@@ -117,7 +117,7 @@ void emessages::add_clean(uint32_t security_id, ttime_t etime, ttime_t time)
 
 void emessages::add_order(uint32_t security_id, int64_t level_id, price_t price, count_t count, ttime_t etime, ttime_t time)
 {
-    if(unlikely(m_s == pre_alloc))
+    if(m_s == pre_alloc) [[unlikely]]
         send_messages();
 
     message_book& m = ms[m_s++].mb;
@@ -132,7 +132,7 @@ void emessages::add_order(uint32_t security_id, int64_t level_id, price_t price,
 
 void emessages::add_trade(uint32_t security_id, price_t price, count_t count, uint32_t direction, ttime_t etime, ttime_t time)
 {
-    if(unlikely(m_s == pre_alloc))
+    if(m_s == pre_alloc) [[unlikely]]
         send_messages();
 
     message_trade& m = ms[m_s++].mt;

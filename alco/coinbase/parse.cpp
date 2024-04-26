@@ -17,7 +17,7 @@ struct lws_i : lws_impl, read_time_impl
     {
         ticker symbol(i, ie);
         auto it = securities.find(symbol);
-        if(unlikely(it == securities.end())) {
+        if(it == securities.end()) [[unlikely]] {
             security& s = securities[symbol];
             s.init(cfg.exchange_id, cfg.feed_id, mstring(i, ie));
             s.proceed_instr(e, time);
@@ -79,7 +79,7 @@ struct lws_i : lws_impl, read_time_impl
             ttime_t etime = read_time<6>(it);
             my_unused(etime);
             skip_fixed(it, "Z\"}");
-            if(unlikely(it != ie))
+            if(it != ie) [[unlikely]]
                 throw mexception(es() % "parsing message error: " % str_holder(in, ie - in));
         }
         else if(skip_if_fixed(it, "match\",\"trade_id\":"))
@@ -114,7 +114,7 @@ struct lws_i : lws_impl, read_time_impl
             skip_fixed(it, "\"time\":\"");
             ttime_t etime = read_time<6>(it);
             skip_fixed(it, "Z\"}");
-            if(unlikely(it != ie))
+            if(it != ie) [[unlikely]]
                 throw mexception(es() % "parsing message error: " % str_holder(in, ie - in));
         
             s.proceed_trade(e, direction, p, c, etime, time);

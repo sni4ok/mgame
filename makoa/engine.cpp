@@ -127,7 +127,7 @@ public:
     {
         tmp = {security_id, ttime_t(), false};
         auto it = lower_bound(data.begin(), data.end(), tmp, less<type>());
-        if(unlikely(it != data.end() && it->security_id == security_id)) {
+        if(it != data.end() && it->security_id == security_id) [[unlikely]]{
             //if(!it->disconnected)
             //    throw mexception(es() % "activites, security_id " % security_id % " already in active list");
             //else {
@@ -147,7 +147,7 @@ public:
 
         tmp.security_id = security_id;
         auto it = lower_bound(data.begin(), data.end(), tmp, less<type>());
-        if(unlikely(it == data.end() || it->security_id != security_id))
+        if(it == data.end() || it->security_id != security_id) [[unlikely]]
             throw mexception(es() % "activites, security_id " % security_id % " not found in active list");
 
         last_value = &(*it);
@@ -172,7 +172,7 @@ struct context
     actives::type& check(uint32_t security_id, ttime_t time)
     {
         auto& m = acs.get(security_id);
-        if(unlikely(m.time > time))
+        if(m.time > time) [[unlikely]]
             throw mexception(es() % "context::check() m.time: " % m.time.value % " > time: " % time.value);
         m.time = time;
         return m;

@@ -74,11 +74,11 @@ struct parser : emessages, stack_singleton<parser>
         while(!tickers_initialized && can_run) {
             instruments.reopen();
             int r = cg_conn_process(conn.cli, 1, 0);
-            if(unlikely(r != CG_ERR_TIMEOUT && r != CG_ERR_OK)){
+            if(r != CG_ERR_TIMEOUT && r != CG_ERR_OK) [[unlikely]] {
                 mlog() << "parser failed to process connection: " << r;
                 instruments.destroy();
             }
-            if(unlikely(r == CG_ERR_TIMEOUT)){
+            if(r == CG_ERR_TIMEOUT) [[unlikely]] {
                 instruments.reopen_unactive();
             }
         }
@@ -115,7 +115,7 @@ struct parser : emessages, stack_singleton<parser>
     void proceed(volatile bool& can_run)
     {
         while(can_run) {
-            if(unlikely(!conn.cli)) {
+            if(!conn.cli) [[unlikely]] {
                 connect(can_run);
                 if(!can_run)
                     break;
@@ -123,12 +123,12 @@ struct parser : emessages, stack_singleton<parser>
             orders.reopen();
             trades.reopen();
             int r = cg_conn_process(conn.cli, 1, 0);
-            if(unlikely(r != CG_ERR_TIMEOUT && r != CG_ERR_OK)) {
+            if(r != CG_ERR_TIMEOUT && r != CG_ERR_OK) [[unlikely]] {
                 mlog() << "parser failed to process connection: " << r;
                 disconnect();
                 connect(can_run);
             }
-            if(unlikely(r == CG_ERR_TIMEOUT)){
+            if(r == CG_ERR_TIMEOUT) [[unlikely]] {
                 orders.reopen_unactive();
                 trades.reopen_unactive();
             }
@@ -231,7 +231,7 @@ CG_RESULT orders_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
     {
     case CG_MSG_STREAM_DATA: 
         {
-            if(unlikely(msg->data_size != sizeof(orders_aggr)))
+            if(msg->data_size != sizeof(orders_aggr)) [[unlikely]]
                 throw mexception(es() % "orders_callback() not orders_aggr received, msg_size: " % msg->data_size);
             orders_aggr* o = (orders_aggr*)msg->data;
             parser::tickers_type& tickers = *((parser::tickers_type*)p);
@@ -244,10 +244,10 @@ CG_RESULT orders_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
             ttime_t etime = {o->moment_ns};
             if(o->dir == 2)
                 count.value = -count.value;
-            else if(likely(o->dir == 1))
+            else if(o->dir == 1)
             {
             }
-            else {
+            else [[unlikely]] {
                 o->print_brief();
                 throw str_exception("orders_aggr bad dir");
             }
@@ -329,7 +329,7 @@ CG_RESULT trades_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
     {
     case CG_MSG_STREAM_DATA: 
         {
-            if(likely(deals_online)) {
+            if(deals_online) [[likely]] {
                 if(msg->data_size == sizeof(deal)) {
                     deal* d = (deal*)msg->data;
                     parser::tickers_type& tickers = *((parser::tickers_type*)p);

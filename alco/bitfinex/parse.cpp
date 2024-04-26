@@ -82,7 +82,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         ne = find(it, ie, ']');
         price_t price = read_price(it, ne);
         
-        if(likely(*ne == ']' && *(ne + 1) == ']'))
+        if(*ne == ']' && *(ne + 1) == ']')
             it = ne + 2;
         
         if(id > i.high)
@@ -160,7 +160,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             mlog() << "lws proceed: " << str_holder(in, len);
         iterator it = in, ie = it + len;
 
-        if(likely(*it == '['))
+        if(*it == '[') [[likely]]
         {
             ++it;
             iterator ne = find(it, ie, ',');
@@ -168,7 +168,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             skip_fixed(ne, ",");
             ne = find(ne, ie, '[');
 
-            if(likely(ne != ie)) {
+            if(ne != ie) [[likely]] {
                 impl& i = parsers.at(channel);
                 ((this)->*(i.f))(i, time, ne, ie);
                 if(ne != ie)

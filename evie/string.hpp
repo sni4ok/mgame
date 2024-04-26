@@ -77,7 +77,7 @@ struct buf_stream
     }
     void write(char_cit v, uint64_t s)
     {
-        if(unlikely(cur + s > to))
+        if(cur + s > to) [[unlikely]]
             throw str_exception("buf_stream::write() overloaded");
         my_fast_copy(v, s, cur);
         cur += s;
@@ -95,7 +95,7 @@ struct buf_stream
     }
     void check_size(uint64_t delta) const
     {
-        if(unlikely(cur + delta > to))
+        if(cur + delta > to) [[unlikely]]
             throw str_exception("buf_stream::check_size() overloaded");
     }
 

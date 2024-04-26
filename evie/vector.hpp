@@ -28,6 +28,7 @@ protected:
     }
 
     static const bool have_destructor = !std::is_trivially_destructible<type>::value;
+    static_assert(!std::is_polymorphic_v<type>);
 
     static void __destroy(type* v)
     {

@@ -497,7 +497,7 @@ struct ifile
 
     virtual uint32_t read(char* buf, uint32_t buf_size)
     {
-        if(unlikely(buf_size % message_size))
+        if(buf_size % message_size) [[unlikely]]
             throw mexception(es() % "ifile::read(): inapropriate size: " % buf_size);
         else {
             if(!cb.book.empty())

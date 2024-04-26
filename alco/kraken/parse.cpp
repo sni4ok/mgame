@@ -213,7 +213,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         else if(skip_if_fixed(it, "{\"event\":\"heartbeat\"}"))
         {
         }
-        if(unlikely(it != ie))
+        if(it != ie) [[unlikely]]
         {
             mlog(mlog::critical) << "unsupported message: " << str_holder(in, len);
         }

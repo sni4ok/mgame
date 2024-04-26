@@ -35,7 +35,7 @@ void tyra::send(const message& m)
     char_cit ptr = (char_cit)(&m);
     const uint32_t sz = message_size;
     if(c != e) {
-        if(unlikely(bt - e > sz))
+        if(bt - e > sz) [[unlikely]]
             throw str_exception("tyra::send() message buffer overloaded");
         my_fast_copy(ptr, ptr + sz, e);
         e += sz;
@@ -63,7 +63,7 @@ void tyra::send(const message* m, uint32_t count)
     const char* ptr = (const char*)(m);
     const uint32_t sz = count * message_size;
     if(c != e) {
-        if(unlikely(bt - e > sz))
+        if(bt - e > sz) [[unlikely]]
             throw str_exception("tyra::send() messages buffer overloaded");
         my_fast_copy(ptr, ptr + sz, e);
         e += sz;

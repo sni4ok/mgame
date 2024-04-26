@@ -191,7 +191,7 @@ namespace
     {
         uint32_t wsize = sizeof(message) * count;
         ssize_t ret = ::write(int((int64_t)p), (const void*)m, wsize);
-        if(unlikely(ret != wsize))
+        if(ret != wsize) [[unlikely]]
             throw_system_failure(es() % "pipe::write, wsize: " % wsize  % ", ret: " % ret);
     }
     void* mmap_init(const char* params)
@@ -242,7 +242,7 @@ namespace
 
         uint8_t w = *f;
         uint8_t r = *(f + 1);
-        if(unlikely(w < 2 || w >= message_size || !r || r >= message_size))
+        if(w < 2 || w >= message_size || !r || r >= message_size) [[unlikely]]
             throw mexception(es() % "mmap_proceed() internal error, wp: " % uint32_t(w) % ", rp: " % uint32_t(r));
 
         i += w;

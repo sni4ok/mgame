@@ -103,7 +103,7 @@ void lws_impl::init(lws* wsi)
 
 void lws_impl::send(lws* wsi)
 {
-    if(likely(lws_not_fake) && bs.size() != LWS_PRE)
+    if(lws_not_fake && bs.size() != LWS_PRE) [[likely]]
     {
         int sz = bs.size() - LWS_PRE;
         char* ptr = bs.from + LWS_PRE;
@@ -111,7 +111,7 @@ void lws_impl::send(lws* wsi)
             mlog() << "lws_write " << str_holder(ptr, sz);
         int n = lws_write(wsi, (unsigned char*)ptr, sz, LWS_WRITE_TEXT);
 
-        if(unlikely(sz != n))
+        if(sz != n) [[unlikely]]
             throw mexception(es() % "lws_write ret: " % n % ", sz: " % sz);
     }
     bs.resize(LWS_PRE);
@@ -140,9 +140,9 @@ int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user, void* i
         case LWS_CALLBACK_CLIENT_RECEIVE:
         {
             lws_impl* w = (lws_impl*)user;
-            if(unlikely(w->lws_dump_en))
+            if(w->lws_dump_en) [[unlikely]]
                 w->dump((char_cit)in, len);
-            if(unlikely(w->log_lws))
+            if(w->log_lws) [[unlikely]]
                 mlog() << "lws receive len: " << len;
             w->proceed(wsi, (char_cit)in, len);
             w->data_time = time(NULL);
@@ -162,7 +162,7 @@ int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user, void* i
         }
         default:
         {
-            if(unlikely(user && ((lws_impl*)user)->log_lws))
+            if(user && ((lws_impl*)user)->log_lws) [[unlikely]]
                 mlog() << "lws callback: " << int(reason) << ", len: " << len;
             break;
         }

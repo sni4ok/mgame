@@ -105,7 +105,7 @@ inline mlog& operator<<(mlog& ml, const cg_time_t& t)
 
 inline void check_plaza_fail(uint32_t res, str_holder msg)
 {
-    if(unlikely(res != CG_ERR_OK)) {
+    if(res != CG_ERR_OK) [[unlikely]] {
         mlog(mlog::critical) << "Client gate error (" << msg << "): " << res;
         throw mexception(es() % "Client gate error (" % msg % "): " % res);
     }
@@ -113,7 +113,7 @@ inline void check_plaza_fail(uint32_t res, str_holder msg)
 
 inline void warn_plaza_fail(uint32_t res, const char* msg)
 {
-    if(unlikely(res != CG_ERR_OK))
+    if(res != CG_ERR_OK) [[unlikely]]
         mlog(mlog::critical) << "Client gate warning (" << _str_holder(msg) << "): " << res;
 }
 
@@ -241,13 +241,13 @@ struct cg_listener_h
     }
     void reopen()
     {
-        if(likely(!closed))
+        if(!closed) [[likely]]
             return;
         open();
     }
     void reopen_unactive()
     {
-        if(unlikely(!listener))
+        if(!listener) [[unlikely]]
             open();
         else{
             time_t t = time(NULL);

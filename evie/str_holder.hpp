@@ -7,9 +7,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define unlikely(x)     __builtin_expect(!!(x),0)
-#define likely(x)       __builtin_expect(!!(x),1)
-
 extern "C"
 {
     extern void* memset(void*, int, size_t) __THROW __nonnull ((1));

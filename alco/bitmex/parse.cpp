@@ -146,7 +146,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                                     etime = ttime_t();
                                 }
                                 send_messages();
-                                if(unlikely(it != ie))
+                                if(it != ie) [[unlikely]]
                                     throw mexception(es() % "parsing message error: " % str_holder(in, len));
                                 return;
                             }
@@ -154,7 +154,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                     }
                 }
                 send_messages();
-                if(unlikely(it != ie))
+                if(it != ie) [[unlikely]]
                     throw mexception(es() % "parsing message error: " % str_holder(in, len));
             }
             else if(table == trades_table)
@@ -196,11 +196,11 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                 skip_fixed(it, "]}");
                 send_messages();
             }
-            else
+            else [[unlikely]]
             {
                 throw mexception(es() % "unknown table name: " % str_holder(in, len));
             }
-            if(unlikely(it != ie))
+            if(it != ie) [[unlikely]]
                 throw mexception(es() % "parsing message error: " % str_holder(in, len));
         }
         else if(skip_if_fixed(it, "success\""))

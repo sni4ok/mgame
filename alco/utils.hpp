@@ -19,7 +19,7 @@ struct sec_id_by_name : base
     {
         ticker symbol(i, ie);
         auto it = securities.find(symbol);
-        if(unlikely(it == securities.end())) {
+        if(it == securities.end()) [[unlikely]] {
             tmp.init(config::instance().exchange_id, config::instance().feed_id, mstring(i, ie));
             securities[symbol] = tmp.mi.security_id;
             tmp.proceed_instr(this->e, time);
@@ -48,7 +48,7 @@ inline void skip_fixed(char_cit& it, const str& v)
     //bool eq = std::equal(it, it + sizeof(v) - 1, v);
     //bool eq = !(strncmp(it, v, sizeof(v) - 1));
     bool eq = !(memcmp(it, v, sizeof(v) - 1));
-    if(unlikely(!eq))
+    if(!eq) [[unlikely]]
         throw mexception(es() % "skip_fixed error, expect: |" % str_holder(v) % "| in |" % str_holder(it, strnlen(it, 100)) % "|");
     it += sizeof(v) - 1;
 }
@@ -58,7 +58,7 @@ inline void search_and_skip_fixed(char_cit& it, char_cit ie, const str& v)
 {
     static_assert(std::is_array<str>::value);
     char_cit i = search(it, ie, v, v + (sizeof(v) - 1));
-    if(unlikely(i == ie))
+    if(i == ie) [[unlikely]]
         throw mexception(es() % "search_and_skip_fixed error, expect: |" % str_holder(v) % "| in |" % str_holder(it, ie - it) % "|");
     it  = i + (sizeof(v) - 1);
 }

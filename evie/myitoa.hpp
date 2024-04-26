@@ -53,10 +53,10 @@ namespace my_cvt
         type ret = 0;
         static const type mm = (std::numeric_limits<type>::max()) / 10;
         for(uint32_t i = 0; i != size; ++i) {
-            if(unlikely(ret > mm))
+            if(ret > mm) [[unlikely]]
                 throw exception(str_holder("atoi() max possible size exceed for: "), {buf, size});
             char ch = buf[i];
-            if(unlikely(ch < '0' || ch > '9'))
+            if(ch < '0' || ch > '9') [[unlikely]]
                 throw exception(str_holder("atoi() bad integral number: "), {buf, size});
             ret *= 10;
             ret += (ch - '0');
@@ -79,7 +79,7 @@ namespace my_cvt
 
     template<>
     inline bool atoi<bool>(const char* buf, uint32_t size) {
-        if(unlikely(size != 1 || (buf[0] != '0' && buf[0] != '1')))
+        if(size != 1 || (buf[0] != '0' && buf[0] != '1')) [[unlikely]]
             throw exception(str_holder("atoi() bad bool number: "), {buf, size});
         return(buf[0] == '1');
     }

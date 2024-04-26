@@ -51,7 +51,7 @@ struct fmap
     }
     const value& at(const key& k) const {
         auto it = lower_bound(k);
-        if(unlikely(it == data.end() || it->first != k))
+        if(it == data.end() || it->first != k) [[unlikely]]
             throw mexception("fmap::at() error");
         return it->second;
     }
