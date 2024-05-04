@@ -206,7 +206,7 @@ public:
     }
     void pop_back() {
         assert(size_);
-        --size;
+        --size_;
     }
     bool equal(const type* f, const type* t) const {
         if(size_ == t - f)

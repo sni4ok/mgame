@@ -15,6 +15,19 @@
 
 ncurses_err e;
 
+uint32_t get_security_id(const message& m)
+{
+    if(m.id == msg_book)
+        return m.mb.security_id;
+    if(m.id == msg_trade)
+        return m.mt.security_id;
+    if(m.id == msg_clean)
+        return m.mc.security_id;
+    if(m.id == msg_instr)
+        return m.mi.security_id;
+    throw str_exception("get_security_id unsupported type");
+}
+
 struct security_filter
 {
     mstring security;
@@ -26,19 +39,15 @@ struct security_filter
         if(sec == s)
             security_id = sid;
     }
-    bool equal(const message& m) {
-        if(m.id == msg_book)
-            return m.mb.security_id == security_id;
-        if(m.id == msg_trade)
-            return m.mt.security_id == security_id;
-        if(m.id == msg_clean)
-            return m.mc.security_id == security_id;
+    bool equal(const message& m, uint32_t sec_id) {
+        if(security_id == sec_id)
+            return true;
         if(m.id == msg_instr) {
             if(!security_id && (security == from_array(m.mi.security) || security == "$0"))
                 security_id = m.mi.security_id;
             return m.mi.security_id == security_id;
         }
-        throw str_exception("security_filter() unsupported msg type");
+        return false;
     }
 };
 
@@ -56,6 +65,7 @@ char get_direction(uint32_t direction)
 struct print_dt
 {
     int64_t value;
+
     explicit print_dt(int64_t value) :  value(value)
     {
     }
@@ -77,31 +87,53 @@ stream& operator<<(stream& s, print_dt v)
 
 struct mirror::impl
 {
+    fmap<uint32_t, message_instr> all_securities;
+    std::unordered_map<uint32_t, pair<order_book_ba, queue<message_trade> > > all_books;
+
     security_filter sec;
     uint32_t refresh_rate;
     
-    order_book ob;
-    queue<message_trade> trades;
+    order_book_ba* ob;
+
+    struct book
+    {
+        count_t count;
+        ttime_t time;
+        price_t price;
+
+        bool operator==(const book& b) const {
+            return count.value == b.count.value && time.value == b.time.value && price.value == b.price.value;
+        }
+        bool operator!=(const book& b) const {
+            return !(*this == b);
+        }
+    };
+    mvector<book> books_printed;
+
+    queue<message_trade>* trades;
     message_instr mi;
     mstring head_msg, head_msg_auto_scroll;
+    bool head_msg_auto_scroll_printed = false;
 
     bool auto_scroll;
-    price_t top_order_p, auto_scroll_p;
-    uint32_t trades_from, trades_width_limit;
+    price_t top_order_p;
+    uint32_t trades_from = 48, trades_width = 0;
+    book last_printed_trade;
 
-    char buf[512];
-    buf_stream bs;
+    my_stream bs;
  
     int64_t dE, dP;
+    bool dEdP_printed = false;
     
     volatile bool can_run;
     my_mutex mutex;
-    thread refresh_thrd;
+    jthread refresh_thrd;
 
     const char empty[10];
+
     impl(const mstring& sec, uint32_t refresh_rate_ms) :
-        sec(sec), refresh_rate(refresh_rate_ms * 1000),
-        auto_scroll(true), top_order_p(), auto_scroll_p(), trades_from(), trades_width_limit(), bs(buf, buf + sizeof(buf) - 1),
+        sec(sec), refresh_rate(refresh_rate_ms * 1000), ob(),
+        auto_scroll(true), top_order_p(), trades_from(),
         dE(), dP(), can_run(true), refresh_thrd(&impl::refresh_thread, this),
         empty("         ")
     {
@@ -109,11 +141,11 @@ struct mirror::impl
     ~impl()
     {
         can_run = false;
-        refresh_thrd.join();
     }
     void set_auto_scroll()
     {
         head_msg_auto_scroll = head_msg + (auto_scroll ? str_holder("     auto_scroll on ") : str_holder("     auto_scroll off"));
+        head_msg_auto_scroll_printed = false;
     }
     void set_instrument(const message_instr& i)
     {
@@ -121,95 +153,116 @@ struct mirror::impl
         head_msg = mstring(from_array(mi.exchange_id)) + "/" + from_array(mi.feed_id) + "/" + from_array(mi.security);
         set_auto_scroll();
     }
-    order_book::price_iterator get_top_order(window& w)
+    int32_t get_top_order(window& w)
     {
-        if(auto_scroll)
+        if(auto_scroll || !top_order_p.value)
+            return -min<int32_t>(ob->bids.size(), w.rows / 2);
         {
-            order_book::price_iterator ib = ob.orders_p.begin(), ie = ob.orders_p.end(), it;
-            it = auto_scroll_p.value ? ob.orders_p.lower_bound(auto_scroll_p) : ib;
-            while(it != ie && it->second.count.value >= 0)
-                ++it;
-            uint32_t count = 0;
-            while(it != ib)
+            if(!ob->bids.empty() && top_order_p.value <= ob->bids.begin()->first.value)
             {
-                --it;
-                if(it->second.count.value > 0)
-                    ++count;
-                if(count == w.rows / 2)
-                    return it;
+                auto it = ob->bids.lower_bound(top_order_p);
+                return - int32_t((it - ob->bids.begin()));
             }
-            return ib;
         }
-
-        if(!top_order_p.value)
-            return ob.orders_p.begin();
-
-        auto it = ob.orders_p.lower_bound(top_order_p);
-        auto ib = ob.orders_p.begin(), ie = ob.orders_p.end();
-        while(it != ie && it != ib && !it->second.count.value)
-            --it;
-        if(it != ie)
-            top_order_p = it->first;
-        
-        return it;
+        {
+            auto it = ob->asks.lower_bound(top_order_p);
+            return it - ob->asks.begin();
+        }
     }
     void print_trades(window& w)
     {
-        if(w.rows <= trades.size())
-            trades.pop_front(trades.size() + 1 - w.rows);
+        if(trades->empty())
+            return;
+        if(w.rows <= trades->size())
+            trades->pop_front(trades->size() + 1 - w.rows);
+
+        auto& v = *trades->rbegin();
+        book tr{v.count, v.time, v.price};
+
+        if(tr == last_printed_trade)
+            return;
+
         uint32_t i = 0;
-        if(trades_from == 0)
+        uint32_t trades_width_limit = w.cols - trades_from;
+        for(auto&& v : *trades)
         {
-            trades_from = 48;
-            trades_width_limit = w.cols - trades_from;
-        }
-        for(auto&& v : trades)
-        {
-            bs << brief_time(v.etime) << " " << brief_time(v.time) << " " << v.price << " " << v.count << " " << get_direction(v.direction);
-            if(bs.size() > trades_width_limit)
+            bs << "     " << brief_time(v.etime) << " " << brief_time(v.time) << " " << v.price << " " << v.count << " "
+                << get_direction(v.direction);
+            if(bs.size() < trades_width)
+                bs.write(w.blank_row.begin(), trades_width - bs.size());
+            else if(bs.size() > trades_width_limit)
                 bs.resize(trades_width_limit);
-            bs << '\0';
-            e = mvwaddstr(w, i++, trades_from, bs.begin());
+            else
+                trades_width = max<uint32_t>(trades_width, bs.size());
+            e = mvwaddnstr(w, i++, trades_from, bs.begin(), bs.size());
             bs.clear();
         }
+        for(; i != w.rows - 1; ++i)
+            e = mvwaddnstr(w, i, trades_from, w.blank_row.begin(), w.cols - trades_from);
+        last_printed_trade = std::move(tr);
+    }
+    void print_book(bool bids, price_t price, const order_book_ba::book& b, window& w, uint32_t& row)
+    {
+        count_t c(bids ? b.count.value : - b.count.value);
+        book bo{c, b.time, price};
+        if(books_printed[row] != bo)
+        {
+            e = attron(COLOR_PAIR(bids ? 2 : 3));
+            bs << brief_time(b.time) << " " << price << " " << c;
+            if(trades_from > bs.size())
+                bs.write(empty, trades_from - bs.size());
+            e = mvwaddnstr(w, row, 0, bs.begin(), bs.size());
+            if(bs.size() > trades_from)
+            {
+                last_printed_trade = book();
+                trades_from = bs.size();
+            }
+            bs.clear();
+            books_printed[row] = bo;
+        }
+        ++row;
     }
     void print_order_book(window& w)
     {
-        if(!sec.security_id)
-            return;
-        order_book::price_iterator it = get_top_order(w), ie = ob.orders_p.end();
+        int32_t it = get_top_order(w);
         e = attron(A_BOLD);
-        for(uint32_t i = 0; i != w.rows - 1; ++i, ++it)
+        uint32_t row = 0;
+        if(it < 0)
         {
-            while((it != ie) && !it->second.count.value)
-                ++it;
-            if(it == ie)
-                break;
-
-            e = attron(COLOR_PAIR(it->second.count.value < 0 ? 3 : 2));
-            bs << brief_time(it->second.time) << " " << it->first << " " << it->second.count;
-            if(trades_from > bs.size() + 5)
-                bs.write(empty, trades_from - bs.size() - 5);
-            bs << '\0';
-            e = mvwaddstr(w, i, 0, bs.begin());
-            trades_from = std::max<uint32_t>(trades_from, bs.size() + 4);
-            trades_width_limit = w.cols - trades_from;
-            bs.clear();
+            auto b = ob->bids.begin() - it, i = ob->bids.begin();
+            for(; row != w.rows - 1 && b >= i; --b)
+                print_book(true, b->first, b->second, w, row);
+        }
+        {
+            auto b = ob->asks.begin(), i = ob->asks.end();
+            for(; row != w.rows - 1 && b != i; ++b)
+                print_book(false, b->first, b->second, w, row);
         }
         e = attroff(A_BOLD);
         e = attron(COLOR_PAIR(1));
     }
     void print_head(window& w)
     {
-        e = mvwaddstr(w, w.rows - 1, 0, head_msg_auto_scroll.c_str());
-        bs << "dE: " << print_dt(dE) << ", dP: " << print_dt(dP) << '\0';
-        e = mvwaddstr(w, w.rows - 1, w.cols - bs.size(), bs.begin());
-        bs.clear();
+        if(!head_msg_auto_scroll_printed)
+        {
+            e = mvwaddnstr(w, w.rows - 1, 0, head_msg_auto_scroll.begin(), head_msg_auto_scroll.size());
+            head_msg_auto_scroll_printed = true;
+        }
+        if(!dEdP_printed)
+        {
+            bs << "dE: " << print_dt(dE) << ", dP: " << print_dt(dP) << '\0';
+            //e = mvwaddstr(w, w.rows - 1, head_msg_auto_scroll.size(), w.blank_row.begin() + head_msg_auto_scroll.size() + bs.size());
+            e = mvwaddnstr(w, w.rows - 1, w.cols - bs.size(), bs.begin(), bs.size());
+            bs.clear();
+            dEdP_printed = true;
+        }
     }
     void refresh(window& w)
     {
+        books_printed.resize(w.rows);
         my_mutex::scoped_lock lock(mutex);
-        w.clear();
+        if(!sec.security_id)
+            return;
         print_order_book(w);
         print_trades(w);
         print_head(w);
@@ -228,48 +281,71 @@ struct mirror::impl
                 usleep(20000);
             else
             {
+                my_mutex::scoped_lock lock(mutex);
                 //mlog() << "key: " << key;
                 if(key == 97) // 'a'
                 {
                     auto_scroll = !auto_scroll;
                     set_auto_scroll();
                 }
-                else if(key == 259 || key == 339) // arrow up and page up
+                else if(key == 260 || key == 261) //arrow left || arrow right
                 {
-                    uint32_t r = (key == 259 ? 1 : w.rows);
-                    my_mutex::scoped_lock lock(mutex);
-                    order_book::price_iterator it = get_top_order(w), ib = ob.orders_p.begin();
-
-                    for(uint32_t i = 0; i != r; ++i) {
-                        if(it != ib) {
-                            --it;
-                            while(it != ib && !it->second.count.value)
-                                --it;
+                    if(!all_securities.empty() && sec.security_id) {
+                        auto i = all_securities.find(sec.security_id);
+                        if(i != all_securities.end()) {
+                            if(key == 260)
+                            {
+                                if(i == all_securities.begin())
+                                    i = all_securities.end() - 1;
+                                else
+                                    --i;
+                            }
+                            else
+                            {
+                                ++i;
+                                if(i == all_securities.end())
+                                    i = all_securities.begin();
+                            }
+                            auto& v = all_books[i->first];
+                            ob = &v.first;
+                            trades = &v.second;
+                            sec.security_id = i->first;
+                            top_order_p = price_t();
+                            set_instrument(i->second);
                         }
                     }
-                    top_order_p = it->first;
                 }
-                else if(key == 258 || key == 338) //arrow down or page down
+                else if(key == 259 || key == 339 || key == 258 || key == 338) // arrow up or page up or arrow down or page down
                 {
-                    uint32_t r = (key == 258 ? 0 : w.rows - 1);
-                    my_mutex::scoped_lock lock(mutex);
-                    order_book::price_iterator it = ob.orders_p.upper_bound(top_order_p), ie = ob.orders_p.end();
-
-                    auto ib = it;
-                    while(it != ie && !it->second.count.value)
+                    int32_t it = get_top_order(w);
+                    if(key == 259)
+                        --it;
+                    else if(key == 339)
+                        it -= w.rows - 1;
+                    else if(key == 258)
                         ++it;
-                    for(uint32_t i = 0; i != r; ++i) {
-                        if(it != ie) {
-                            ++it;
-                            while(it != ie && !it->second.count.value)
-                                ++it;
+                    else
+                        it += w.rows - 1;
+                    if(it <= 0) {
+                        if(ob->bids.empty())
+                            top_order_p = price_t();
+                        else {
+                            if(uint32_t(-it) >= ob->bids.size())
+                                top_order_p = ob->bids.rbegin()->first;
+                            else
+                                top_order_p = (ob->bids.begin() - it)->first;
                         }
                     }
-                    if(it == ie && ib != ie)
-                        --it;
-
-                    if(it != ie)
-                        top_order_p = it->first;
+                    else {
+                        if(ob->asks.empty())
+                            top_order_p = price_t();
+                        else {
+                            if(uint32_t(it) >= ob->asks.size())
+                                top_order_p = ob->asks.rbegin()->first;
+                            else
+                                top_order_p = (ob->asks.begin() + it)->first;
+                        }
+                    }
                 }
                 break;
             }
@@ -297,20 +373,34 @@ struct mirror::impl
     {
         if(m.id == msg_ping)
             return;
-        if(sec.equal(m)) {
-            my_mutex::scoped_lock lock(mutex);
+        uint32_t security_id = get_security_id(m);
+        my_mutex::scoped_lock lock(mutex);
+        if(m.id == msg_instr)
+            all_securities[security_id] = m.mi;
+        if(m.id != msg_trade)
+            all_books[security_id].first.proceed(m);
+        else
+            all_books[security_id].second.push_back(m.mt);
+
+        if(sec.equal(m, security_id)) {
+            if(!ob) {
+                auto& v = all_books[security_id];
+                ob = &v.first;
+                trades = &v.second;
+            }
             if(m.id == msg_instr)
                 set_instrument(m.mi);
             if(m.id == msg_trade) {
-                trades.push_back(m.mt);
                 ttime_t ct = cur_ttime();
                 dE = ct - m.mt.etime;
                 dP = ct - m.mt.time;
+                dEdP_printed = false;
             }
             else {
-                ob.proceed(m);
-                if(m.id == msg_book)
+                if(m.id == msg_book) {
                     dP = cur_ttime() - m.mb.time;
+                    dEdP_printed = false;
+                }
             }
         }
     }
