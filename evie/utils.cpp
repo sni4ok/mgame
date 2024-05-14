@@ -282,7 +282,7 @@ ttime_t time_from_date(const date& t)
 inline uint64_t get_decimal_pow(uint32_t e)
 {
     if(e > 19)
-        return std::numeric_limits<uint64_t>::max();
+        return limits<uint64_t>::max;
     else
         return my_cvt::decimal_pow[e];
 }

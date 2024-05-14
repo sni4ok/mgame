@@ -37,7 +37,7 @@ mstring::mstring(const mstring& r) : base(static_cast<const base&>(r))
 {
 }
 
-mstring::mstring(mstring&& r) : base(std::move(static_cast<base&&>(r)))
+mstring::mstring(mstring&& r) : base(move(static_cast<base&&>(r)))
 {
 }
 

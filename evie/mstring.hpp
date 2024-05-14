@@ -54,7 +54,7 @@ stream& operator<<(stream& m, const mstring& s)
 }
 
 template<typename type>
-requires(std::is_integral<type>::value)
+requires(is_integral<type>::value)
 mstring to_string(type value)
 {
     char buf[24];

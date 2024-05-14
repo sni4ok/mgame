@@ -62,7 +62,7 @@ void profilerinfo::print_impl(const long param)
     }
 }
 
-profilerinfo::info::info() : time(), time_max(), time_min(std::numeric_limits<uint64_t>::max()), count(), name()
+profilerinfo::info::info() : time(), time_max(), time_min(limits<uint64_t>::max), count(), name()
 {
 }
 

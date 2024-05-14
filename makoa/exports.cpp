@@ -91,7 +91,7 @@ namespace
         {
             if(size == max_size)
                 throw str_exception("exports_chain max_size exceed");
-            exporters[size++] = std::move(e);
+            exporters[size++] = move(e);
         }
     };
     void chain_destroy(void* ptr)
@@ -152,7 +152,7 @@ namespace
         if(!hole)
             throw_system_failure(es() % "not found create_hole() in '" % lib % "'");
 
-        efactory.dyn_exporters.push_back(std::move(ret));
+        efactory.dyn_exporters.push_back(move(ret));
         exporter e;
         assert(can_run_impl);
         hole(&e.he, {log_get(), can_run_impl});

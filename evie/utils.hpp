@@ -160,7 +160,7 @@ print_impl<iterator, func, sep, no_end_sep> print(iterator from, iterator to, fu
 template<char sep = ',', typename cont, typename func = print_default>
 auto print(const cont& c, func f = func())
 {
-    if constexpr(std::is_array<cont>::value)
+    if constexpr(is_array_v<cont>)
         return print(std::begin(c), std::end(c), f);
     else
         return print(c.begin(), c.end(), f);
@@ -169,7 +169,7 @@ auto print(const cont& c, func f = func())
 template<char sep = '\n', typename cont, typename func = print_default>
 auto print_csv(const cont& c, func f = func())
 {
-    if constexpr(std::is_array<cont>::value)
+    if constexpr(is_array_v<cont>)
         return print<sep, false>(std::begin(c), std::end(c), f);
     else
         return print<sep, false>(c.begin(), c.end(), f);

@@ -21,8 +21,8 @@ extern "C"
     extern void qsort_r (void *, size_t, size_t, __compar_d_fn_t, void *) __nonnull ((1, 4));
 }
 
-template<typename type, typename comp>
-void sort(type* from, type* to, comp cmp)
+template<typename type, typename comp = less<type> >
+void sort(type* from, type* to, comp cmp = comp())
 {
     qsort_r(from, to - from, sizeof(type), qsort_cmp<type, comp>, &cmp);
 }

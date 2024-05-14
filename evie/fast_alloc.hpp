@@ -75,7 +75,7 @@ public:
             }
         }
 
-        (bulks[end_bulk])[end_element] = std::move(value);
+        (bulks[end_bulk])[end_element] = move(value);
         atomic_add(num_elems, 1);
     }
     void push_back(const type& value) {
@@ -216,7 +216,7 @@ struct cas_array : emplace_decl<type, cas_array<type, max_size, blist> >
     static const uint64_t push_lock = -1, pop_lock = -2, locks_from = -2;
 
     cas_array() : nodes() {
-        static_assert(max_size && max_size < std::numeric_limits<uint16_t>::max());
+        static_assert(max_size && max_size < limits<uint16_t>::max);
         static_assert(sizeof(node) == 8 + sizeof(type) + ((sizeof(type) % 8) ? (8 - sizeof(type) % 8) : 0));
         for(uint32_t i = 1; i != max_size + 1; ++i)
             free_impl(to_type(nodes + i));
@@ -611,13 +611,13 @@ struct conditional_multi_f;
 template<int index, int index_from, typename param>
 struct conditional_multi_f<index, index_from, param>
 {
-    typedef std::conditional_t<index == index_from, param, void> type;
+    typedef conditional_t<index == index_from, param, void> type;
 };
 
 template<int index, int index_from, typename param, typename ... params>
 struct conditional_multi_f<index, index_from, param, params...>
 {
-    typedef std::conditional_t<index == index_from, param,
+    typedef conditional_t<index == index_from, param,
         typename conditional_multi_f<index, index_from + 1, params...>::type> type;
 };
 
@@ -648,7 +648,7 @@ template<typename type_, typename node, fast_alloc_params params>
 struct allocator_type
 {
     typedef
-    std::conditional_t<params.use_malloc, malloc_alloc<type_, node> ,
+    conditional_t<params.use_malloc, malloc_alloc<type_, node> ,
         conditional_multi_t<params.allocator_cont,
             fast_alloc<type_, params, tss_pvector, node>,
             fast_alloc<type_, params, forward_list, node>,

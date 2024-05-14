@@ -18,7 +18,7 @@ struct fset
 
     fset() {
     }
-    fset(fset&& r) : data(std::move(r.data)) {
+    fset(fset&& r) : data(move(r.data)) {
     }
     fset(const fset& r) : data(r.data) {
     }
@@ -29,7 +29,7 @@ struct fset
     fset(const type* from, const type* to): data(from, to) {
     }
     fset& operator=(fset&& r) {
-        data = std::move(r.data);
+        data = move(r.data);
         return *this;
     }
     fset& operator=(const fset& r) {

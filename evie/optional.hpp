@@ -33,7 +33,7 @@ struct optional
     optional(optional&& v) : initialized(v.initialized)
     {
         if(initialized)
-            value = std::move(v.value);
+            value = move(v.value);
     }
     optional& operator=(const optional& v)
     {
@@ -46,7 +46,7 @@ struct optional
     {
         initialized = v.initialized;
         if(initialized)
-            value = std::move(v.value);
+            value = move(v.value);
         return *this;
     }
     optional(none_type) : initialized(false)

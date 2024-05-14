@@ -100,7 +100,7 @@ struct buf_stream
     }
 
     template<typename type>
-    requires(std::is_integral<type>::value)
+    requires(is_integral<type>::value)
     buf_stream& operator<<(type t)
     {
         check_size(my_cvt::atoi_size<type>::value);

@@ -5,13 +5,27 @@
 #pragma once
 
 #include "myitoa.hpp"
+#include "type_traits.hpp"
 
 #include <initializer_list>
-#include <type_traits>
 #include <cassert>
 
 void* tss_realloc(void* ptr, uint64_t old_size, uint64_t new_size);
 void tss_free(void* ptr, uint64_t size);
+
+template<typename type>
+[[nodiscard]] constexpr remove_reference_t<type>&& move(type&& t) noexcept
+{
+    return static_cast<remove_reference_t<type>&&>(t);
+}
+
+template<typename type>
+void simple_swap(type& a, type& b)
+{
+    type tmp = a;
+    a = b;
+    b = tmp;
+}
 
 template<typename type, bool tss_allocator = false>
 class mvector
@@ -27,8 +41,8 @@ protected:
         capacity_ = 0;
     }
 
-    static const bool have_destructor = !std::is_trivially_destructible<type>::value;
-    static_assert(!std::is_polymorphic_v<type>);
+    static const bool have_destructor = !is_trivially_destructible_v<type>;
+    static_assert(!is_polymorphic_v<type>);
 
     static void __destroy(type* v)
     {
@@ -128,9 +142,9 @@ public:
         capacity_ = size_;
     }
     void swap(mvector& r) {
-        std::swap(buf, r.buf);
-        std::swap(size_, r.size_);
-        std::swap(capacity_, r.capacity_);
+        simple_swap(buf, r.buf);
+        simple_swap(size_, r.size_);
+        simple_swap(capacity_, r.capacity_);
     }
     void reserve(uint64_t new_capacity) {
         if(new_capacity <= capacity_)
@@ -279,7 +293,7 @@ public:
     }
     iterator insert(iterator it, type&& v) {
         __insert_impl(it);
-        *it = std::move(v);
+        *it = ::move(v);
         ++size_;
         return it;
     }
@@ -310,7 +324,7 @@ public:
     }
     void push_back(type&& v) {
         __push_back_impl();
-        buf[size_] = std::move(v);
+        buf[size_] = ::move(v);
         ++size_;
     }
     void push_back(const type& v) {
@@ -460,7 +474,7 @@ struct pvector : mvector<type*>
     }
     pvector& operator=(pvector&& r) {
         clear();
-        static_cast<base&>(*this) = std::move(r);
+        static_cast<base&>(*this) = move(r);
         return *this;
     }
     type& operator[](uint64_t elem) {

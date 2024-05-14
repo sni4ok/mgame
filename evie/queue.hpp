@@ -52,7 +52,7 @@ public:
         data.pop_back();
     }
     void push_back(type&& v) {
-        data.emplace_back(std::move(v));
+        data.emplace_back(move(v));
     }
     void push_back(const type& v) {
         data.push_back(v);
@@ -63,7 +63,7 @@ public:
     }
     void swap(queue& r) {
         data.swap(r.data);
-        std::swap(from, r.from);
+        simple_swap(from, r.from);
     }
     const_iterator begin() const {
         return data.begin() + from;

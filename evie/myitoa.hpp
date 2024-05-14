@@ -5,9 +5,10 @@
 #pragma once
 
 #include "str_holder.hpp"
+#include "type_traits.hpp"
+#include "limits.hpp"
 
-#include <limits>
-#include <exception>
+#include <new>
 
 struct str_exception : std::exception
 {
@@ -49,9 +50,9 @@ namespace my_cvt
 
     template<typename type>
     type atoi_u(const char* buf, uint32_t size) {
-        static_assert(std::is_unsigned<type>::value);
+        static_assert(is_unsigned_v<type>);
         type ret = 0;
-        static const type mm = (std::numeric_limits<type>::max()) / 10;
+        static const type mm = limits<type>::max / 10;
         for(uint32_t i = 0; i != size; ++i) {
             if(ret > mm) [[unlikely]]
                 throw exception(str_holder("atoi() max possible size exceed for: "), {buf, size});
@@ -66,9 +67,9 @@ namespace my_cvt
 
     template<typename type>
     type atoi(const char* buf, uint32_t size) {
-        static_assert(std::is_integral<type>::value);
-        typedef typename std::make_unsigned<type>::type type_u;
-        if(std::is_unsigned<type>::value)
+        static_assert(is_integral_v<type>);
+        typedef make_unsigned_t<type> type_u;
+        if constexpr(is_unsigned_v<type>)
             return atoi_u<type_u>(buf, size);
         else {
             if(size && buf[0] == '-')
@@ -114,12 +115,12 @@ namespace my_cvt
     template<typename type>
     struct atoi_size
     {
-        static const uint32_t value = (std::is_unsigned<type>::value ? atoi_u_ps : atoi_s_ps)[sizeof(type) / 2];
+        static const uint32_t value = (is_unsigned_v<type> ? atoi_u_ps : atoi_s_ps)[sizeof(type) / 2];
     };
 }
 
 template<typename type>
-requires(std::is_integral<type>::value)
+requires(is_integral_v<type>)
 type lexical_cast(char_cit from, char_cit to)
 {
     if(from == to)
@@ -128,7 +129,7 @@ type lexical_cast(char_cit from, char_cit to)
 }
 
 template<typename type>
-requires(!(std::is_integral<type>::value))
+requires(!(is_integral_v<type>))
 type lexical_cast(char_cit from, char_cit to);
 
 template<> double lexical_cast<double>(char_cit from, char_cit to);

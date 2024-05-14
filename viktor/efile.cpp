@@ -38,7 +38,7 @@ struct efile
             bin = true;
         else if(p[0] != "csv")
             throw mexception(es() % "efile() bad file_type: " % params);
-        fname = std::move(p[2]);
+        fname = move(p[2]);
 
         int fp = O_WRONLY | O_CREAT | O_APPEND;
         if(p[1] == "truncate")

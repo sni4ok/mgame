@@ -229,7 +229,7 @@ int my_accept_async(uint32_t port, bool local, bool sync, mstring* client_ip_ptr
     mstring client_ip = _mstring(str);
     mlog() << "socket_sender connection accepted from " << client_ip << ":" << port;
     if(client_ip_ptr)
-        *client_ip_ptr = std::move(client_ip);
+        *client_ip_ptr = move(client_ip);
     return sc.release();
 }
 
@@ -245,7 +245,7 @@ int my_accept_async(uint32_t port, const mstring& possible_client_ip, bool sync,
         throw mexception(es() % "socket_sender connected client with ip: " % client_ip % ", possible_ip: " % possible_client_ip);
     }
     if(client_ip_ptr)
-        *client_ip_ptr = std::move(client_ip);
+        *client_ip_ptr = move(client_ip);
     return s;
 }
 

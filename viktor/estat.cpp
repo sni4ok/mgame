@@ -46,7 +46,7 @@ namespace {
             int64_t min, max, sum;
             uint64_t d2, count;
 
-            stat() : min(std::numeric_limits<int64_t>::max()), max(std::numeric_limits<int64_t>::min()), sum(), d2(), count()
+            stat() : min(limits<int64_t>::max), max(limits<int64_t>::min), sum(), d2(), count()
             {
             }
 

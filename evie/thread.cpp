@@ -271,7 +271,7 @@ thread& thread::operator=(thread&& r)
 
 void thread::swap(thread& r)
 {
-    std::swap(tid, r.tid);
+    simple_swap(tid, r.tid);
 }
 
 bool thread::joinable() const

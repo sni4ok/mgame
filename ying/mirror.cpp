@@ -171,8 +171,6 @@ struct mirror::impl
     }
     void print_trades(window& w)
     {
-        if(trades->empty())
-            return;
         if(w.rows <= trades->size())
             trades->pop_front(trades->size() + 1 - w.rows);
 

@@ -105,7 +105,7 @@ struct mlog
     mlog& operator<<(char s);
 
     template<typename array>
-    requires(std::is_array<array>::value)
+    requires(is_array_v<array>)
     mlog& operator<<(const array& v)
     {
         (*this) << from_array(v);
@@ -121,7 +121,7 @@ struct mlog
     static void set_no_cout();
 
     template<typename type>
-    requires(std::is_integral<type>::value)
+    requires(is_integral<type>::value)
     mlog& operator<<(type t)
     {
         check_size(my_cvt::atoi_size<type>::value);

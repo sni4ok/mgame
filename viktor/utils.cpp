@@ -65,11 +65,11 @@ void amount_test()
     count_t c = read_count(v.begin(), v.end());
     my_unused(c);
 
-    test_io(price_t({std::numeric_limits<int64_t>::max()}));
-    test_io(price_t({std::numeric_limits<int64_t>::min()}));
+    test_io(price_t({limits<int64_t>::max}));
+    test_io(price_t({limits<int64_t>::min}));
 
-    test_io(count_t({std::numeric_limits<int64_t>::max()}));
-    test_io(count_t({std::numeric_limits<int64_t>::min()}));
+    test_io(count_t({limits<int64_t>::max}));
+    test_io(count_t({limits<int64_t>::min}));
 }
 
 int main(int argc, char** argv)

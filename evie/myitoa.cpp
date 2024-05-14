@@ -148,7 +148,7 @@ namespace my_cvt
 
     uint32_t itoa(char* buf, uint32_t i)
     {
-        if(i <= std::numeric_limits<uint16_t>::max())
+        if(i <= limits<uint16_t>::max)
             return itoa(buf, uint16_t(i));
 
         //i >= 65536 here
@@ -164,7 +164,7 @@ namespace my_cvt
 
     uint32_t itoa(char* buf, uint64_t i)
     {
-        if(i <= std::numeric_limits<uint32_t>::max())
+        if(i <= limits<uint32_t>::max)
             return itoa(buf, uint32_t(i));
 
         //i >= 4294967296 here :D
@@ -225,13 +225,13 @@ namespace my_cvt
             *buf = 'N';
             return 3;
         }
-        if(v == std::numeric_limits<double>::infinity()) {
+        if(v == limits<double>::infinity) {
             *buf++ = 'I';
             *buf++ = 'N';
             *buf = 'F';
             return 3;
         }
-        if(v == -std::numeric_limits<double>::infinity()) {
+        if(v == -limits<double>::infinity) {
             *buf++ = '-';
             *buf++ = 'I';
             *buf++ = 'N';
@@ -264,7 +264,7 @@ namespace my_cvt
             if(iv < 0)
                 iv = -iv;
             uint32_t sz = 0;
-            if(v < -std::numeric_limits<double>::epsilon()) {
+            if(v < -limits<double>::epsilon) {
                 *buf++ = '-';
                 ++sz;
             }
@@ -274,7 +274,7 @@ namespace my_cvt
 
             if(frac < 0)
                 frac = -frac;
-            if(frac >= std::numeric_limits<double>::epsilon())
+            if(frac >= limits<double>::epsilon)
             {
                 *buf++ = '.';
                 ++sz;
@@ -364,11 +364,11 @@ namespace my_cvt
         check_double(-155.6999, "-155.6999");
         check_double(155.6999, "155.6999");
         check_double(-155.0000001, "-155.0000001");
-        check_double(std::numeric_limits<double>::quiet_NaN(), "NAN");
-        sz = dtoa(buf, std::numeric_limits<double>::signaling_NaN());
+        check_double(limits<double>::quiet_NaN, "NAN");
+        sz = dtoa(buf, limits<double>::signaling_NaN);
         check("NAN");
-        check_double(std::numeric_limits<double>::infinity(), "INF");
-        check_double(-std::numeric_limits<double>::infinity(), "-INF");
+        check_double(limits<double>::infinity, "INF");
+        check_double(-limits<double>::infinity, "-INF");
         double v = lexical_cast<double>("1e10");
         my_unused(v);
         assert(v == 10000000000.);
@@ -417,12 +417,12 @@ double lexical_cast<double>(char_cit from, char_cit to)
 
     if(size == 3) {
         if(*from == 'N' && *(from + 1) == 'A' && *(from + 2) == 'N')
-            return std::numeric_limits<double>::quiet_NaN();
+            return limits<double>::quiet_NaN;
         else if(*from == 'I' && *(from + 1) == 'N' && *(from + 2) == 'F')
-            return std::numeric_limits<double>::infinity();
+            return limits<double>::infinity;
     }
     if(size == 4 && m && *(from + 1) == 'I' && *(from + 2) == 'N' && *(from + 3) == 'F')
-        return -std::numeric_limits<double>::infinity();
+        return -limits<double>::infinity;
 
     int64_t v = my_cvt::atoi<int64_t>(from, size);
     return double(v);

@@ -23,7 +23,7 @@ struct carray
        copy(r.begin(), r.end(), buf);
     }
     constexpr carray(str_holder str)
-    requires(std::is_same<type, char>::value) {
+    requires(is_same_v<type, char>) {
         if(str.size > size_)
             throw mexception(es() % "carray<char, " % size_ % ">(str_holder) max size exceed for: " % str);
         copy(str.begin(), str.end(), buf);
@@ -72,7 +72,7 @@ struct carray
         return !(*this == r);
     }
     constexpr str_holder str() const
-    requires(std::is_same<type, char>::value) {
+    requires(is_same_v<type, char>) {
         return from_array(buf);
     }
     constexpr carray& operator+=(const carray& r) {
@@ -117,7 +117,7 @@ public:
         copy(r.begin(), r.end(), buf);
     }
     array(str_holder str)
-    requires(std::is_same<type, char>::value) : size_(str.size) {
+    requires(is_same_v<type, char>) : size_(str.size) {
         assert(size_ <= capacity_);
         copy(str.begin(), str.end(), buf);
     }
@@ -164,7 +164,7 @@ public:
     }
     void push_back(type&& v) {
         assert(size_ < capacity_);
-        buf[size_] = std::move(v);
+        buf[size_] = move(v);
         ++size_;
     }
     void push_back(const type& v) {
@@ -224,7 +224,7 @@ public:
         return !(*this == r);
     }
     str_holder str() const
-    requires(std::is_same<type, char>::value) {
+    requires(is_same_v<type, char>) {
         return str_holder(begin(), end());
     }
     bool operator<(const array& r) const {

@@ -651,7 +651,7 @@ extern "C"
         if(p.size() == 3)
             tt = parse_time(p[2]);
         else
-            tt.value = std::numeric_limits<uint64_t>::max();
+            tt.value = limits<uint64_t>::max;
 
         if(replay)
             return new ifile_replay(can_run, p[0], tf, tt, speed);

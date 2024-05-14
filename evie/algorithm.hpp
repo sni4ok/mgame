@@ -10,8 +10,6 @@
 #include "pair.hpp"
 #include "str_holder.hpp"
 
-#include <utility> //for std::move
-
 template<typename iterator, typename type>
 iterator find(iterator from, iterator to, const type& value)
 {
@@ -53,15 +51,33 @@ it1 search(it1 from_1, it1 to_1, it2 from_2, it2 to_2)
     }
 }
 
-template<typename iterator, typename type, typename pr>
-iterator lower_bound(iterator from, iterator to, const type& val, pr pred)
+template<typename type>
+struct less
+{
+    constexpr bool operator()(const type& l, const type& r) const
+    {
+        return l < r;
+    }
+};
+
+template<typename type>
+struct greater
+{
+    constexpr bool operator()(const type& l, const type& r) const
+    {
+        return l > r;
+    }
+};
+
+template<typename iterator, typename type, typename compare = less<type> >
+iterator lower_bound(iterator from, iterator to, const type& val, compare cmp = compare())
 {
     int64_t count = to - from;
     while(count > 0)
     {
         int64_t step = count / 2;
         iterator mid = from + step;
-        if(pred(*mid, val))
+        if(cmp(*mid, val))
             from = ++mid, count -= step + 1;
         else
             count = step;
@@ -69,15 +85,15 @@ iterator lower_bound(iterator from, iterator to, const type& val, pr pred)
     return from;
 }
 
-template<typename iterator, typename type, typename pr>
-iterator upper_bound(iterator from, iterator to, const type& val, pr pred)
+template<typename iterator, typename type, typename compare = less<type> >
+iterator upper_bound(iterator from, iterator to, const type& val, compare cmp = compare())
 {
   int64_t count = to - from;
   while(count > 0)
   {
     int64_t step = count / 2;
     iterator mid = from + step;
-    if(!pred(val, *mid))
+    if(!cmp(val, *mid))
         from = ++mid, count -= step + 1;
     else
         count = step;
@@ -134,24 +150,6 @@ constexpr type max(type l, type r)
         return l;
     return r;
 }
-
-template<typename type>
-struct less
-{
-    constexpr bool operator()(const type& l, const type& r) const
-    {
-        return l < r;
-    }
-};
-
-template<typename type>
-struct greater
-{
-    constexpr bool operator()(const type& l, const type& r) const
-    {
-        return l > r;
-    }
-};
 
 inline bool equal(char_cit b1, char_cit e1, char_cit b2)
 {
@@ -218,20 +216,20 @@ iterator min_element_impl(iterator from, iterator to, compare cmp)
     return it;
 }
 
-template<typename iterator, typename compare>
-iterator min_element(iterator from, iterator to, compare cmp)
+template<typename iterator, typename compare = less<remove_pointer_t<iterator> > >
+iterator min_element(iterator from, iterator to, compare cmp = compare())
 {
     return min_element_impl<true>(from, to, cmp);
 }
 
-template<typename iterator, typename compare>
-iterator max_element(iterator from, iterator to, compare cmp)
+template<typename iterator, typename compare = less<remove_pointer_t<iterator> > >
+iterator max_element(iterator from, iterator to, compare cmp = compare())
 {
     return min_element_impl<false>(from, to, cmp);
 }
 
-template<typename iterator, typename compare>
-pair<iterator, iterator> minmax_element(iterator from, iterator to, compare cmp)
+template<typename iterator, typename compare = less<remove_pointer_t<iterator> > >
+pair<iterator, iterator> minmax_element(iterator from, iterator to, compare cmp = compare())
 {
     return {min_element(from, to, cmp), max_element(from, to, cmp)};
 }
@@ -243,7 +241,7 @@ iterator remove_if(iterator from, iterator to, pr p)
     if(from != to)
         for(iterator i = from; ++i != to;)
             if(!p(*i))
-                *from++ = std::move(*i);
+                *from++ = move(*i);
     return from;
 }
 

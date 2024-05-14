@@ -126,7 +126,7 @@ public:
     type& insert(uint32_t security_id)
     {
         tmp = {security_id, ttime_t(), false};
-        auto it = lower_bound(data.begin(), data.end(), tmp, less<type>());
+        auto it = lower_bound(data.begin(), data.end(), tmp);
         if(it != data.end() && it->security_id == security_id) [[unlikely]]{
             //if(!it->disconnected)
             //    throw mexception(es() % "activites, security_id " % security_id % " already in active list");
@@ -146,7 +146,7 @@ public:
             return *last_value;
 
         tmp.security_id = security_id;
-        auto it = lower_bound(data.begin(), data.end(), tmp, less<type>());
+        auto it = lower_bound(data.begin(), data.end(), tmp);
         if(it == data.end() || it->security_id != security_id) [[unlikely]]
             throw mexception(es() % "activites, security_id " % security_id % " not found in active list");
 

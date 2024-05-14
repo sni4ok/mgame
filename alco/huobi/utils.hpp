@@ -44,7 +44,7 @@ struct zlib_alloc_base
 };
 
 template<bool z_alloc>
-struct zlib_impl : std::conditional_t<z_alloc, zlib_alloc, zlib_alloc_base>
+struct zlib_impl : conditional_t<z_alloc, zlib_alloc, zlib_alloc_base>
 {
     mvector<char> dest;
     z_stream strm;

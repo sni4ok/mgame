@@ -33,7 +33,7 @@ struct cg_string
     template<typename array>
     cg_string(const array& v)
     {
-        static_assert(sizeof(v[0]) == 1 && std::is_array<array>::value && sizeof(v) <= sizeof(buf));
+        static_assert(sizeof(v[0]) == 1 && is_array_v<array> && sizeof(v) <= sizeof(buf));
         my_fast_copy(&v[0], sizeof(v), &buf[0]);
         memset(&buf[sizeof(v)], 0, sizeof(buf) - sizeof(v));
     }

@@ -44,7 +44,7 @@ extern "C"
 template<typename str>
 inline void skip_fixed(char_cit& it, const str& v)
 {
-    static_assert(std::is_array<str>::value);
+    static_assert(is_array_v<str>);
     //bool eq = std::equal(it, it + sizeof(v) - 1, v);
     //bool eq = !(strncmp(it, v, sizeof(v) - 1));
     bool eq = !(memcmp(it, v, sizeof(v) - 1));
@@ -56,7 +56,7 @@ inline void skip_fixed(char_cit& it, const str& v)
 template<typename str>
 inline void search_and_skip_fixed(char_cit& it, char_cit ie, const str& v)
 {
-    static_assert(std::is_array<str>::value);
+    static_assert(is_array_v<str>);
     char_cit i = search(it, ie, v, v + (sizeof(v) - 1));
     if(i == ie) [[unlikely]]
         throw mexception(es() % "search_and_skip_fixed error, expect: |" % str_holder(v) % "| in |" % str_holder(it, ie - it) % "|");
@@ -66,7 +66,7 @@ inline void search_and_skip_fixed(char_cit& it, char_cit ie, const str& v)
 template<typename str>
 inline bool skip_if_fixed(char_cit& it, const str& v)
 {
-    static_assert(std::is_array<str>::value);
+    static_assert(is_array_v<str>);
     //bool eq = std::equal(it, it + sizeof(v) - 1, v);
     //bool eq = !(strncmp(it, v, sizeof(v) - 1));
     bool eq = !(memcmp(it, v, sizeof(v) - 1));
@@ -94,7 +94,7 @@ inline str_holder read_str(char_cit it, char_cit ie)
 template<typename func, typename array>
 auto read_named_value(const array& v, char_cit& it, char_cit ie, char last, func f)
 {
-    static_assert(std::is_array<array>::value);
+    static_assert(is_array_v<array>);
     skip_fixed(it, v);
     char_cit ne = find(it, ie, last);
     auto ret = f(it, ne);
