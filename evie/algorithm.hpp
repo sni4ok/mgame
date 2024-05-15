@@ -9,6 +9,7 @@
 
 #include "pair.hpp"
 #include "str_holder.hpp"
+#include "type_traits.hpp"
 
 template<typename iterator, typename type>
 iterator find(iterator from, iterator to, const type& value)

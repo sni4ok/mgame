@@ -13,11 +13,11 @@
 
 class simple_log;
 
-static const str_holder mlog_fixed_str[] =
+static constexpr str_holder mlog_fixed_str[] =
 {
-   str_holder(""), str_holder("0"), str_holder("00"),
-   str_holder("000"), str_holder("0000"), str_holder("00000"),
-   str_holder("000000"), str_holder("0000000"), str_holder("00000000")
+   "", "0", "00",
+   "000", "0000", "00000",
+   "000000", "0000000", "00000000"
 };
 
 template<uint32_t sz>
@@ -27,7 +27,7 @@ struct mlog_fixed
    {
       static_assert(sz <= 9, "out of range");
    }
-   const str_holder& str() const
+   const constexpr str_holder& str() const
    {
       uint32_t v = value;
       uint32_t idx = sz - 1;
@@ -77,8 +77,6 @@ stream& operator<<(stream& log, const print_binary& v)
     }
     return log;
 }
-
-static const char endl = '\n';
 
 struct mlog
 {

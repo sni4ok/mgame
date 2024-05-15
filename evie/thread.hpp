@@ -4,10 +4,11 @@
 
 #pragma once
 
-#include <tuple>
+#include "tuple.hpp"
+
 #include <cstdint>
 
-#include "bits/pthreadtypes.h"
+#include <bits/pthreadtypes.h>
 
 struct my_mutex
 {
@@ -79,7 +80,7 @@ struct t_func : thread_func
 
     void run()
     {
-        std::apply(f, p);
+        apply(f, p);
     }
 };
 
@@ -102,7 +103,7 @@ struct thread
     template<typename func, typename ... params>
     thread(func f, params ... args)
     {
-        auto v = std::make_tuple(args...);
+        auto v = make_tuple(args...);
         thread_func* p = new t_func<func, decltype(v)>(f, v);
         tid = thread_create(p);
     }

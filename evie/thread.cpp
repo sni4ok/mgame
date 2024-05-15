@@ -13,7 +13,6 @@
 
 #include <pthread.h>
 #include <errno.h>
-#include <cstdlib>
 
 my_mutex::my_mutex()
 {

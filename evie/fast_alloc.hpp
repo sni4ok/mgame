@@ -9,8 +9,6 @@
 #include "atomic.hpp"
 #include "list.hpp"
 
-#include <unistd.h>
-
 //with follower can work one writer and many readers without synchronization
 template<typename type, uint32_t block_size = 65536, uint32_t num_blocks = 16384, bool enable_run_once = true>
 class follower

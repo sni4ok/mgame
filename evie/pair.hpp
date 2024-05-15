@@ -47,3 +47,14 @@ stream& operator<<(stream& str, const pair<f, s>& p)
     return str;
 }
 
+template<unsigned i, typename f, typename s>
+const auto& get(const ::pair<f, s>& p)
+{
+    if constexpr(i == 0)
+        return p.first;
+    else if constexpr(i == 1)
+        return p.second;
+    else
+        static_assert(false);
+}
+

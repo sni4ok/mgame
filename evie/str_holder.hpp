@@ -18,7 +18,11 @@ extern "C"
     extern void *realloc(void*, size_t) __THROW __attribute_warn_unused_result__ __attribute_alloc_size__ ((2));
     extern void free(void*) __THROW;
     extern char *getenv(const char*) __THROW __nonnull ((1)) __wur;
+    extern int usleep(__useconds_t __useconds);
+    extern int close(int __fd);
 }
+
+static const char endl = '\n';
 
 template<class it1, class it2>
 constexpr bool lexicographical_compare(it1 first1, it1 last1, it2 first2, it2 last2)

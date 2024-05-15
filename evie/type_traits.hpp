@@ -16,11 +16,18 @@ struct is_unsigned
     static constexpr bool value = !is_signed<t>::value;
 };
 
-template<typename type>
-struct is_integral
+struct false_type
 {
     static constexpr bool value = false;
 };
+
+struct true_type
+{
+    static constexpr bool value = true;
+};
+
+template<typename type>
+struct is_integral : false_type {};
 
 #define SET_INTEGRAL(t) \
 template<> \
@@ -183,5 +190,28 @@ struct conditional<false, t, p>
 template<bool cond, typename t, typename p>
 using conditional_t = typename conditional<cond, t, p>::type;
 
+template<typename>
+struct is_function : false_type {};
 
+template<class ret, class... args>
+struct is_function<ret(args...)> : true_type {};
+
+template<class ret, class... args>
+struct is_function<ret(args...) const> : true_type {};
+
+template<typename t>
+struct is_member_function_pointer_helper : false_type {};
+
+template<typename t, typename p>
+struct is_member_function_pointer_helper<t p::*> : is_function<t>
+{
+};
+
+template<typename t>
+struct is_member_function_pointer : is_member_function_pointer_helper<typename remove_cv<t>::type>
+{
+};
+
+template<typename type>
+inline constexpr bool is_member_function_pointer_v = is_member_function_pointer<type>::value;
 
