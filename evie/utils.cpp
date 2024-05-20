@@ -4,10 +4,10 @@
 
 #include "utils.hpp"
 #include "rational.hpp"
+#include "math.h"
 
 #include <errno.h>
 #include <string.h>
-#include <stdlib.h>
 
 #include <numeric>
 

@@ -111,17 +111,3 @@ struct thread
 
 typedef thread jthread;
 
-template<typename type>
-struct ref
-{
-    type* t;
-
-    ref(type& t) : t(&t)
-    {
-    }
-    operator type&()
-    {
-        return *t;
-    }
-};
-

@@ -14,13 +14,13 @@ template<typename key, typename value, typename comp = less<key>, template <type
 struct fmap
 {
     typedef ::pair<key, value> pair;
-
     typedef key key_type;
     typedef value mapped_type;
     typedef vector<pair>::value_type value_type;
     typedef vector<pair>::iterator iterator;
     typedef vector<pair>::const_iterator const_iterator;
-    typedef vector<pair>::const_reverse_iterator const_reverse_iterator;
+
+    vector<pair> data;
 
     fmap() {
     }
@@ -49,9 +49,12 @@ struct fmap
     bool empty() const {
         return data.empty();
     }
+    static bool not_equal(const key& l, const key& r) {
+        return comp()(l, r) || comp()(r, l);
+    }
     const value& at(const key& k) const {
         auto it = lower_bound(k);
-        if(it == data.end() || it->first != k) [[unlikely]]
+        if(it == data.end() || not_equal(it->first, k)) [[unlikely]]
             throw mexception("fmap::at() error");
         return it->second;
     }
@@ -60,7 +63,7 @@ struct fmap
     }
     value& operator[](const key_type& k) {
         auto it = lower_bound(k);
-        if(it == data.end() || it->first != k) {
+        if(it == data.end() || not_equal(it->first, k)) {
             it = data.insert(it, value_type());
             it->first = k;
         }
@@ -88,9 +91,9 @@ struct fmap
     }
     const_iterator find(const key& k) const {
         auto it = lower_bound(k);
-        if(it != data.end() && it->first == k)
-            return it;
-        return data.end();
+        if(it == data.end() || not_equal(it->first, k))
+            return data.end();
+        return it;
     }
     iterator find(const key& k) {
         return iterator(const_cast<const fmap*>(this)->find(k));
@@ -107,30 +110,25 @@ struct fmap
     iterator end() {
         return data.end();
     }
-    const_reverse_iterator rbegin() const
-    {
+    auto rbegin() const {
         return data.rbegin();
     }
-    const_reverse_iterator rend() const
-    {
+    auto rend() const {
         return data.rend();
     }
     void swap(fmap& r) {
         data.swap(r.data);
     }
-    void swap(vector<pair>& r) {
-        data.swap(r);
-    }
     iterator insert(const pair& v) {
         auto it = lower_bound(v.first);
-        if(it == data.end() || it->first != v.first)
+        if(it == data.end() || not_equal(it->first, v.first))
             it = data.insert(it, v);
         return it;
     }
-    iterator insert(const key& k, const value_type& v) {
-        auto it = lower_bound(k);
-        if(it == data.end() || it->first != k)
-            it = data.insert(it, v);
+    iterator insert(pair&& v) {
+        auto it = lower_bound(v.first);
+        if(it == data.end() || not_equal(it->first, v.first))
+            it = data.insert(it, move(v));
         return it;
     }
     bool erase(const key& k) {
@@ -151,9 +149,6 @@ struct fmap
     void reserve(uint64_t new_capacity) {
         data.reserve(new_capacity);
     }
-
-//protected:
-    vector<pair> data;
 };
 
 template<typename key, typename value>
@@ -173,7 +168,7 @@ struct pmap : fmap<key, value, less<key>, ppvector>
 
     base::iterator insert(base::pair* v) {
         auto it = base::lower_bound(v->first);
-        if(it == this->data.end() || it->first != v->first)
+        if(it == this->data.end() || this->not_equal(it->first, v->first))
             it = this->data.insert(it, v);
         else
             delete v;
@@ -181,7 +176,7 @@ struct pmap : fmap<key, value, less<key>, ppvector>
     }
     value& operator[](const key& k) {
         auto it = this->lower_bound(k);
-        if(it == this->data.end() || it->first != k) {
+        if(it == this->data.end() || this->not_equal(it->first, k)) {
             //it = this->data.insert(it, new pair<key, value>({k, value()}));
             it = this->data.insert(it, make_pair_ptr<key, value>(k));
             it->first = k;

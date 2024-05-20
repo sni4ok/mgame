@@ -94,11 +94,6 @@ public:
         const_iterator(const bulks_type& bulks, uint32_t element) : bulks(&bulks), element(element){
         }
     public:
-        using iterator_category = std::random_access_iterator_tag;
-        using value_type = type;
-        using difference_type = int32_t;
-        using pointer = type*;
-        using reference = type&;
 
         const_iterator(){}
         bool operator==(const const_iterator& r) const {

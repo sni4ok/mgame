@@ -193,10 +193,10 @@ using conditional_t = typename conditional<cond, t, p>::type;
 template<typename>
 struct is_function : false_type {};
 
-template<class ret, class... args>
+template<typename ret, typename... args>
 struct is_function<ret(args...)> : true_type {};
 
-template<class ret, class... args>
+template<typename ret, typename... args>
 struct is_function<ret(args...) const> : true_type {};
 
 template<typename t>
@@ -214,4 +214,22 @@ struct is_member_function_pointer : is_member_function_pointer_helper<typename r
 
 template<typename type>
 inline constexpr bool is_member_function_pointer_v = is_member_function_pointer<type>::value;
+
+template<typename>
+struct is_pointer : false_type
+{
+};
+
+template<typename t>
+struct is_pointer<t*> : true_type
+{
+};
+
+template<typename t>
+struct is_pointer<const t*> : true_type
+{
+};
+
+template<typename type>
+inline constexpr bool is_pointer_v = is_pointer<type>::value;
 

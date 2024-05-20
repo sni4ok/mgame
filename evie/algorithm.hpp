@@ -174,7 +174,7 @@ type accumulate(iterator from, iterator to, const type& v)
 }
 
 template<typename iterator, typename func>
-void for_each(iterator from, iterator to, const func& fun)
+void for_each(iterator from, iterator to, func fun)
 {
     for(; from != to; ++from)
         fun(*from);
@@ -244,6 +244,45 @@ iterator remove_if(iterator from, iterator to, pr p)
             if(!p(*i))
                 *from++ = move(*i);
     return from;
+}
+
+template<typename type>
+struct ref
+{
+    type* t;
+
+    ref(type& t) : t(&t)
+    {
+    }
+    operator type&()
+    {
+        return *t;
+    }
+    template<typename ... types>
+    auto operator()(types ... args)
+    {
+        return (*t)(args...);
+    }
+};
+
+struct forward_iterator_tag
+{
+};
+
+template<typename iterator>
+requires requires { is_same_v<typename iterator::iterator_category, forward_iterator_tag>; }
+iterator advance(iterator it, uint64_t size)
+{
+    for(uint32_t i = 0; i != size; ++i, ++it)
+        ;
+    return it;
+}
+
+template<typename iterator>
+iterator advance(iterator it, uint64_t size)
+{
+    it += size;
+    return it;
 }
 
 #endif

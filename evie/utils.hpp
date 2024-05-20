@@ -157,22 +157,34 @@ print_impl<iterator, func, sep, no_end_sep> print(iterator from, iterator to, fu
     return {from, to, f};
 }
 
+template<typename cont>
+auto begin(const cont& c)
+{
+    if constexpr(is_array_v<cont>)
+        return &c[0];
+    else
+        return c.begin();
+}
+
+template<typename cont>
+auto end(const cont& c)
+{
+    if constexpr(is_array_v<cont>)
+        return &c[sizeof(c) / sizeof(c[0])];
+    else
+        return c.end();
+}
+
 template<char sep = ',', typename cont, typename func = print_default>
 auto print(const cont& c, func f = func())
 {
-    if constexpr(is_array_v<cont>)
-        return print(std::begin(c), std::end(c), f);
-    else
-        return print(c.begin(), c.end(), f);
+    return print(::begin(c), ::end(c), f);
 }
 
 template<char sep = '\n', typename cont, typename func = print_default>
 auto print_csv(const cont& c, func f = func())
 {
-    if constexpr(is_array_v<cont>)
-        return print<sep, false>(std::begin(c), std::end(c), f);
-    else
-        return print<sep, false>(c.begin(), c.end(), f);
+    return print<sep, false>(::begin(c), ::end(c), f);
 }
 
 #endif

@@ -202,11 +202,11 @@ public:
         }
         reverse_iter operator+(int64_t c) const
         {
-            return reverse_iter({ptr - c});
+            return {ptr - c};
         }
         reverse_iter operator-(int64_t c) const
         {
-            return reverse_iter({ptr + c});
+            return {ptr + c};
         }
         int64_t operator-(const reverse_iter& r) const
         {
@@ -230,16 +230,16 @@ public:
     typedef reverse_iter<type> reverse_iterator;
 
     reverse_iterator rbegin() {
-        return reverse_iterator({end() - 1});
+        return {end() - 1};
     }
     reverse_iterator rend() {
-        return reverse_iterator({begin() - 1});
+        return {begin() - 1};
     }
     const_reverse_iterator rbegin() const {
-        return const_reverse_iterator({end() - 1});
+        return {end() - 1};
     }
     const_reverse_iterator rend() const {
-        return const_reverse_iterator({begin() - 1});
+        return {begin() - 1};
     }
     ~mvector() {
         __destroy(begin(), end());
@@ -378,22 +378,11 @@ void pvector_free_array(type* ptr)
     delete[] ptr;
 }
 
-namespace std
-{
-    struct random_access_iterator_tag;
-};
-
 template<typename type, void (*free)(type*) = pvector_free<type> >
 struct pvector : mvector<type*>
 {
     struct iterator
     {
-        typedef int64_t difference_type;
-        typedef type value_type;
-        typedef type* pointer;
-        typedef type& reference;
-        typedef std::random_access_iterator_tag iterator_category;
-
         type** it;
 
         iterator() : it()
@@ -452,16 +441,16 @@ struct pvector : mvector<type*>
     typedef iterator const_iterator;
 
     const_iterator begin() const {
-        return const_iterator({base::begin()});
+        return {base::begin()};
     }
     iterator begin() {
-        return iterator({base::begin()});
+        return {base::begin()};
     }
     const_iterator end() const {
-        return const_iterator({base::end()});
+        return {base::end()};
     }
     iterator end() {
-        return iterator({base::end()});
+        return {base::end()};
     }
 
     using base::mvector::mvector;

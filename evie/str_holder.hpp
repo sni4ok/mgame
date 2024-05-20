@@ -20,6 +20,7 @@ extern "C"
     extern char *getenv(const char*) __THROW __nonnull ((1)) __wur;
     extern int usleep(__useconds_t __useconds);
     extern int close(int __fd);
+    extern int system (const char *__command);
 }
 
 static const char endl = '\n';

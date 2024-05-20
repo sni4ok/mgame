@@ -33,6 +33,8 @@ struct data_tss<node, false>
 template<typename node, bool blist>
 struct list_iterator
 {
+    typedef forward_iterator_tag iterator_category;
+
     node* n;
     bool e;
 
