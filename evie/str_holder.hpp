@@ -101,7 +101,7 @@ constexpr str_holder from_array(const char (&str)[sz])
 }
 
 template<typename stream>
-stream& operator<<(stream& s, const str_holder& str)
+stream& operator<<(stream& s, str_holder str)
 {
     s.write(str.str, str.size);
     return s;

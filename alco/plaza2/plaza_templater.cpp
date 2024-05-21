@@ -7,6 +7,7 @@
 #include "../../evie/utils.hpp"
 #include "../../evie/mfile.hpp"
 #include "../../evie/config.hpp"
+#include "../../evie/tuple.hpp"
 
 #include <map>
 #include <set>
@@ -16,7 +17,7 @@
 
 typedef buf_stream_fixed<1024 * 1024> b_stream;
 
-typedef std::pair<mstring, mstring> namespace_type;
+typedef pair<mstring, mstring> namespace_type;
 
 struct stream_file : b_stream
 {
@@ -93,12 +94,12 @@ struct skelet
     optional<uint32_t> msgid;
     optional<bool> request, reply;
     mvector<uint32_t> replies;
-    mvector<std::tuple<mstring, mstring, optional<mstring> > > types;
+    mvector<tuple<mstring, mstring, optional<mstring> > > types;
     uint32_t structure_size;
     bool have_alignment;
     mstring nullable; //WTF IS THIS ?????
     void add_size(uint32_t sz, uint32_t granularity) {
-        granularity = std::min(uint32_t(4), granularity);
+        granularity = min(uint32_t(4), granularity);
         uint32_t st_from = structure_size % granularity;
         if(st_from)
             structure_size += (granularity - st_from);
@@ -195,12 +196,12 @@ struct skelet
         if(tmp.size() != 2 && tmp.size() != 4)
             throw mexception(es() % "bad add_field: " % data);
         if(tmp.size() == 4 && !tmp[2].empty())
-            std::cout << data << endl;
-        std::tuple<mstring, mstring, optional<mstring> > v;
-        std::get<0>(v) = tmp[0];
-        std::get<1>(v) = convert_type(tmp[1]);
+            cout() << data << endl;
+        tuple<mstring, mstring, optional<mstring> > v;
+        get<0>(v) = tmp[0];
+        get<1>(v) = convert_type(tmp[1]);
         if(tmp.size() == 4)
-            std::get<2>(v) = tmp[3];
+            get<2>(v) = tmp[3];
         types.push_back(v);
     }
     void set_replies(const mstring& data) {
@@ -270,12 +271,12 @@ struct skelet
         if(!nullable.empty())
             write_body_value(str, "//nullable =", nullable);
         for(const auto& v: types) {
-            write_body_value(str, std::get<1>(v).str(), std::get<0>(v));
+            write_body_value(str, get<1>(v).str(), get<0>(v));
         }
         if(reply) {
             str << "        void print(mlog& ml) {" << endl <<  "            ml << \"" << ctx.table_name << "\"";
             for(const auto& v: types) {
-                str << " << \", " <<  std::get<0>(v) << ": \" << " << std::get<0>(v);
+                str << " << \", " <<  get<0>(v) << ": \" << " << get<0>(v);
             }
             str << ";" << endl << "        }" << endl;
         }
@@ -287,7 +288,7 @@ struct skelet
                 if(cur_i && !(cur_i % 5)) {
                     str << endl << "              ";
                 }
-                str << " << " << std::get<0>(v) << " << \"|\"";
+                str << " << " << get<0>(v) << " << \"|\"";
                 ++cur_i;
             }
             str << ";" << endl << "        }" << endl;
@@ -295,7 +296,7 @@ struct skelet
         {
             bool have_init = false;
             for(const auto& v: types) {
-                if(std::get<2>(v)) {
+                if(get<2>(v)) {
                     have_init = true;
                     break;
                 }
@@ -305,14 +306,14 @@ struct skelet
                 str << "        " << ctx.table_name << "() :";
                 uint32_t cur_i = 0;
                 for(const auto& v: types) {
-                    if(std::get<2>(v)) {
+                    if(get<2>(v)) {
                         if(cur_i)
                             str << ", ";
                         if(!(cur_i % 5)) {
                             str << endl << "          ";
                         }
-                        str << std::get<0>(v) << "(";
-                        str << *std::get<2>(v);
+                        str << get<0>(v) << "(";
+                        str << *get<2>(v);
                         str <<  ")";
                         ++cur_i;
                     }
@@ -478,7 +479,7 @@ void parse_file(context& ctx, const mvector<char>& data, const mstring& fname)
     try {
         parse_file(ctx, data);
     }
-    catch(std::exception& e) {
+    catch(exception& e) {
         throw mexception(es() % fname % ": " % _str_holder(e.what()));
     }
 }
@@ -511,7 +512,7 @@ void parse_all(const mstring& ini_folder, const mstring& out_file)
     context ctx(out_file);
     for(auto&& fname: files) {
         ctx.cur_namespace = namespace_type();
-        std::cout << "file: " << fname << endl;
+        cout() << "file: " << fname << endl;
         ctx.sf << "// file: " << fname << endl;
         parse_file(ctx, read_file((ini_folder + "/" + fname).c_str()), fname);
     }
@@ -531,7 +532,7 @@ void parse_all(const mstring& ini_folder, const mstring& out_file)
         if(v.second != namespace_type())
             ctx.sf << "using " << v.second.first << "::" << v.second.second << "::" << v.first << ";" << endl;
     }
-    std::cout << out_file << " successfully written" << endl;
+    cout() << out_file << " successfully written" << endl;
 }
 
 struct source : context
@@ -548,7 +549,7 @@ struct source : context
     {
         fi = &ini_out;
     }
-    catch(std::exception& e) {
+    catch(exception& e) {
         throw_system_failure(es() % "open " % name % ": " % _str_holder(e.what()));
     }
     void write_head(const mstring& fname) {
@@ -627,7 +628,7 @@ void proceed_selected(const mstring& ini_folder, const mstring& scheme, const ms
         s.check_fill();
         s.write_cpp_tail();
     }
-    std::cout << "sources " << str.str() << " successfully saved" << endl;
+    cout() << "sources " << str.str() << " successfully saved" << endl;
 }
 
 int main(int argc, char** arg)
@@ -635,7 +636,7 @@ int main(int argc, char** arg)
     try {
         auto argv = init_params(argc, arg, false);
         if(argc != 2 && argc != 4) {
-            std::cout << "Usage:" << endl
+            cout() << "Usage:" << endl
                 << "    ./plaza_templater scheme_folder" << endl
                 << "    ./plaza_templater scheme_folder part_scheme_file output_folder" << endl;
             return 1;
@@ -647,7 +648,7 @@ int main(int argc, char** arg)
 
         return 0;
     }
-    catch(std::exception& e) {
+    catch(exception& e) {
         std::cerr << "exception: " << e.what() << endl;
     	return 2;
     }

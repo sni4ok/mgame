@@ -89,10 +89,6 @@ struct buf_stream
         ++cur;
         return *this;
     }
-    void put(char c)
-    {
-        (*this) << c;
-    }
     void check_size(uint64_t delta) const
     {
         if(cur + delta > to) [[unlikely]]
@@ -127,21 +123,49 @@ struct buf_stream_fixed : buf_stream
 
 typedef buf_stream_fixed<16 * 1024> my_stream;
 
-struct es : my_stream
+struct es
 {
+    my_stream s;
+
     template<typename type>
     es& operator%(const type& t)
     {
-        (*this) << t;
+        s << t;
         return *this;
     }
     operator str_holder() const
     {
-        return str();
+        return s.str();
     }
 };
 
 void throw_system_failure(str_holder msg);
+void cout_write(str_holder str, bool flush = true);
+void cerr_write(str_holder str, bool flush = true);
+
+template<void (*func)(str_holder, bool)>
+struct ostream
+{
+    my_stream s;
+
+    template<typename type>
+    ostream& operator<<(const type& t)
+    {
+        s << t;
+        return *this;
+    }
+    void write(char_cit v, uint32_t size)
+    {
+        s.write(v, size);
+    }
+    ~ostream()
+    {
+        func(s.str(), true);
+    }
+};
+
+typedef ostream<cout_write> cout;
+typedef ostream<cerr_write> cerr;
 
 #endif
 

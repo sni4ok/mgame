@@ -67,7 +67,7 @@ struct efile
                     mlog(mlog::critical) << "file renamed from " << fname << ", to " << backup;
                 mstring gzip = "gzip " + backup;
                 r = system(gzip.c_str());
-                mlog(mlog::critical) << "" << gzip << (r ? _str_holder(" fail") : _str_holder(" success"));
+                mlog(mlog::critical) << gzip << (r ? _str_holder(" fail") : _str_holder(" success"));
             }
             if(fsz || !hfile)
                 fp |= O_EXCL;

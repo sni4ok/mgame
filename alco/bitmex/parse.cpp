@@ -205,11 +205,11 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
         }
         else if(skip_if_fixed(it, "success\""))
         {
-            mlog(mlog::info) << "" << str_holder(in, len);
+            mlog(mlog::info) << str_holder(in, len);
         }
         else if(skip_if_fixed(it, "info\""))
         {
-            mlog(mlog::info) << "" << str_holder(in, len);
+            mlog(mlog::info) << str_holder(in, len);
         }
         else
         {

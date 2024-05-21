@@ -155,8 +155,8 @@ public:
         if(new_size < size_)
             size_ = new_size;
         else if(new_size <= capacity_) {
-            for(uint32_t i = size_; i != new_size; ++i)
-                buf[size_] = type();
+            //for(uint32_t i = size_; i != new_size; ++i)
+            //    buf[i] = type();
             size_ = new_size;
         }
         else

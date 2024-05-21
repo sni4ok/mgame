@@ -9,10 +9,10 @@
 #include "../makoa/types.hpp"
 
 #include "../evie/math.hpp"
+#include "../evie/optional.hpp"
 
 #include <map>
 #include <set>
-#include <optional>
 
 namespace
 {
@@ -47,7 +47,7 @@ namespace
 
         struct info
         {
-            std::optional<price_t> min_trade, max_trade, min_ask, max_ask, min_bid, max_bid;
+            optional<price_t> min_trade, max_trade, min_ask, max_ask, min_bid, max_bid;
             uint64_t asks, bids;
             std::set<price_t> trades_p, asks_p, bids_p;
             std::map<count_t, uint64_t> trades;
@@ -69,15 +69,15 @@ namespace
                 info& v = (data.at(m->mb.security_id)).second;
                 if(m->mb.count.value < 0)
                 {
-                    v.min_ask = v.min_ask ? min(*v.min_ask, p) : p;
-                    v.max_ask = v.max_ask ? max(*v.max_ask, p) : p;
+                    v.min_ask = !!v.min_ask ? min(*v.min_ask, p) : p;
+                    v.max_ask = !!v.max_ask ? max(*v.max_ask, p) : p;
                     ++v.asks;
                     v.asks_p.insert(p);
                 }
                 else if(m->mb.count.value > 0)
                 {
-                    v.min_bid = v.min_bid ? min(*v.min_bid, p) : p;
-                    v.max_bid = v.max_bid ? max(*v.max_bid, p) : p;
+                    v.min_bid = !!v.min_bid ? min(*v.min_bid, p) : p;
+                    v.max_bid = !!v.max_bid ? max(*v.max_bid, p) : p;
                     ++v.bids;
                     v.bids_p.insert(p);
                 }
@@ -93,8 +93,8 @@ namespace
             else if(m->id == msg_trade) {
                 const price_t& p = m->mt.price;
                 info& v = (data.at(m->mt.security_id)).second;
-                v.min_trade = v.min_trade ? min(*v.min_trade, p) : p;
-                v.max_trade = v.max_trade ? max(*v.max_trade, p) : p;
+                v.min_trade = !!v.min_trade ? min(*v.min_trade, p) : p;
+                v.max_trade = !!v.max_trade ? max(*v.max_trade, p) : p;
                 v.trades_p.insert(p);
                 if(m->mt.count.value)
                     ++v.trades[m->mt.count];
@@ -119,17 +119,17 @@ namespace
                 ml << "exchange: " << v.second.first.exchange_id << ", feed: " << v.second.first.feed_id
                     << ", security: " << v.second.first.security << ", security_id: " << v.second.first.security_id << "\n"
                     << "  from " << i.first_ob_time << " to " << i.last_ob_time << "\n";
-                if(i.min_trade)
+                if(!!i.min_trade)
                     ml << "  min_trade: " << *i.min_trade;
-                if(i.max_trade)
+                if(!!i.max_trade)
                     ml << " max_trade: " << *i.max_trade;
-                if(i.min_bid)
+                if(!!i.min_bid)
                     ml << " min_bid: " << *i.min_bid;
-                if(i.max_bid)
+                if(!!i.max_bid)
                     ml << " max_bid: " << *i.max_bid;
-                if(i.min_ask)
+                if(!!i.min_ask)
                     ml << " min_ask: " << *i.min_ask;
-                if(i.max_ask)
+                if(!!i.max_ask)
                     ml << " max_ask: " << *i.max_ask;
                 auto get_pips = [](const std::set<price_t>& prices)
                 {

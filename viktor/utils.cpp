@@ -11,7 +11,7 @@
 
 void fix_zero_tail(const char* fname)
 {
-    cout_write(es() % "fix_zero_tail(" % _str_holder(fname) % "):" % endl);
+    cout() << "fix_zero_tail(" << _str_holder(fname) << "):" << endl;
     mfile f(fname);
     uint64_t fsz = f.size();
     mvector<char> m(message_size), mc(message_size);
@@ -23,7 +23,7 @@ void fix_zero_tail(const char* fname)
             break;
         nsz -= message_size;
     }
-    cout_write(es() % "  orig_file_size: " % fsz % ", new_file_size: " % nsz % endl);
+    cout() << "  orig_file_size: " << fsz << ", new_file_size: " << nsz % endl;
     if(truncate(fname, nsz))
         throw str_exception("truncate file error");
 }
@@ -83,9 +83,9 @@ int main(int argc, char** argv)
         else
             throw str_exception("unsupported params");
     }
-    catch(std::exception& e)
+    catch(exception& e)
     {
-        cerr_write(es() % "main() exception: " % _str_holder(e.what()) % endl);
+        cerr() << "main() exception: " << _str_holder(e.what()) << endl;
         return 1;
     }
     return 0;

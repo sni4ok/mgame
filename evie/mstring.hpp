@@ -19,7 +19,7 @@ struct mstring : mvector<char>
 
     mstring();
     mstring(str_holder str);
-	mstring(std::initializer_list<char> r);
+    mstring(std::initializer_list<char> r);
     mstring(const char* from, const char* to);
     mstring(const mstring& r);
     mstring(mstring&& r);
@@ -47,10 +47,10 @@ inline mstring _mstring(const char* str)
 }
 
 template<typename stream>
-stream& operator<<(stream& m, const mstring& s)
+stream& operator<<(stream& s, const mstring& str)
 {
-    m << s.str();
-    return m;
+    s.write(str.begin(), str.size());
+    return s;
 }
 
 template<typename type>

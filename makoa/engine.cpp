@@ -95,7 +95,7 @@ struct node_free
             if(n)
                 ll.release_node(n);
         }
-        catch(std::exception& e) {
+        catch(exception& e) {
             mlog() << "~node_free() " << e;
         }
     }
@@ -190,7 +190,7 @@ struct context
         {
             acs.on_disconnect();
         }
-        catch(std::exception& e)
+        catch(exception& e)
         {
             mlog() << "~context() " << e;
         }
@@ -261,7 +261,7 @@ class engine::impl : public stack_singleton<engine::impl>
                 if(prev)
                     ll->release_node(prev);
             }
-            catch(std::exception& e) {
+            catch(exception& e) {
                 mlog() << "~imple() " << e;
             }
         }
@@ -294,7 +294,7 @@ class engine::impl : public stack_singleton<engine::impl>
             if(i)
                 ies.push(i);
         }
-        catch(std::exception& e)
+        catch(exception& e)
         {
             mlog(mlog::error) << "exports: " << " " << e;
         }

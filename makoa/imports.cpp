@@ -269,7 +269,7 @@ void import_tcp_thread(import_tcp* it, int socket, mstring client, volatile bool
         mlog() << "server() thread for " << client << " started";
         reader<int> r(p, socket, socket_read);
         work_thread_reader(r, it->can_run, timeout);
-    } catch(std::exception& e) {
+    } catch(exception& e) {
         mlog(mlog::error) << "server(" << it->params << ") client " << client << " " << e;
     }
     my_mutex::scoped_lock lock(it->mutex);

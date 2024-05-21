@@ -53,7 +53,7 @@ struct server::impl
                         break;
                     else
                         usleep(1000 * 1000);
-                } catch (std::exception& e) {
+                } catch (exception& e) {
                     mlog() << "import_thread " << str << " " << e;
                     for(int i = 0; can_run && i != 5; ++i)
                         sleep(1);
@@ -61,7 +61,7 @@ struct server::impl
             }
             hi.destroy(i);
         }
-        catch(std::exception& e)
+        catch(exception& e)
         {
             can_run = false;
             mlog() << "import_thread ended, " << str << " " << e;

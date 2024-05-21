@@ -80,6 +80,32 @@ stream& operator<<(stream& log, const print_binary& v)
 
 struct mlog
 {
+    static const uint32_t buf_size = 200;
+
+    struct node
+    {
+        node* next;
+        uint32_t size;
+        char buf[buf_size];
+    };
+
+    struct data
+    {
+        node* head;
+        node* tail;
+        uint32_t extra_param;
+    };
+
+private:
+    simple_log& log;
+    data buf;
+
+    void check_size(uint32_t delta);
+    void init();
+    mlog(const mlog&) = delete;
+
+public:
+
     enum
     {
         store_pid = 1,
@@ -98,58 +124,40 @@ struct mlog
     mlog(simple_log* log, uint32_t extra_param = info);
     mlog(uint32_t extra_param = info);
     ~mlog();
-    mlog(const mlog&) = delete;
-    void write(const char* v, uint32_t s);
+    void write(char_cit v, uint32_t s);
+    static void set_no_cout();
+
     mlog& operator<<(char s);
-
-    template<typename array>
-    requires(is_array_v<array>)
-    mlog& operator<<(const array& v)
-    {
-        (*this) << from_array(v);
-        return *this;
-    }
-
-    mlog& operator<<(const std::exception& e);
     mlog& operator<<(const date& d);
     mlog& operator<<(const time_duration& t);
     mlog& operator<<(const time_parsed& p);
     mlog& operator<<(const ttime_t& p);
     mlog& operator<<(double d);
-    static void set_no_cout();
 
-    template<typename type>
-    requires(is_integral<type>::value)
-    mlog& operator<<(type t)
+    template<typename array>
+    requires(is_array_v<array>)
+    mlog& operator<<(const array& v)
     {
-        check_size(my_cvt::atoi_size<type>::value);
-        buf.tail->size += my_cvt::itoa(&buf.tail->buf[buf.tail->size], t);
+        *this << from_array(v);
         return *this;
     }
 
-    static const uint32_t buf_size = 200;
-
-    struct node
+    template<typename type>
+    requires(is_integral_v<type>)
+    mlog& operator<<(type v)
     {
-        node* next;
-        uint32_t size;
-        char buf[buf_size];
-    };
+        check_size(my_cvt::atoi_size<type>::value);
+        buf.tail->size += my_cvt::itoa(&buf.tail->buf[buf.tail->size], v);
+        return *this;
+    }
 
-    struct data
+    template<typename type>
+    requires(!is_array_v<type> && !is_integral_v<type>)
+    mlog& operator<<(const type& v)
     {
-        node* head;
-        node* tail;
-        uint32_t extra_param;
-    };
-
-private:
-    void write_string(const char* from, uint32_t size);
-    void check_size(uint32_t delta);
-    void init();
-
-    simple_log& log;
-    data buf;
+        ::operator<<(*this, v);
+        return *this;
+    }
 };
 
 void simple_log_free(simple_log* ptr);
@@ -158,8 +166,6 @@ simple_log* log_get();
 void log_set(simple_log* sl);
 uint32_t& log_params();
 void log_test(size_t thread_count, size_t log_count);
-void cout_write(str_holder str, bool flush = true);
-void cerr_write(str_holder str, bool flush = true);
 
 #endif
 

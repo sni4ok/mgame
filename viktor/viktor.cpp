@@ -125,7 +125,7 @@ struct viktor
             if(e) [[likely]]
                 e->proceed(m, count);
         }
-        catch(std::exception& exc)
+        catch(exception& exc)
         {
             mlog() << "viktor::proceed() " << exc;
             e.reset();

@@ -31,7 +31,7 @@ int main(int argc, char** argv)
         engine en(can_run, cfg.pooling, cfg.exports, cfg.export_threads);
         server sv(can_run);
         sv.run(cfg.imports);
-    } catch(std::exception& e) {
+    } catch(exception& e) {
         mlog(mlog::error | mlog::always_cout) << "makoa(" << name << ") ended with " << e;
         return 1;
     }

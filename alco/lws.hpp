@@ -95,7 +95,7 @@ void proceed_lws_parser(volatile bool& can_run)
                 }
                 n = ls.service();
             }
-        } catch(std::exception& e) {
+        } catch(exception& e) {
             mlog() << "proceed_lws_parser " << e;
             if(can_run)
                 usleep(5000 * 1000);

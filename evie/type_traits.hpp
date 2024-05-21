@@ -45,11 +45,21 @@ struct make_unsigned
 {
 };
 
+template<typename t>
+struct make_signed
+{
+};
+
 #define SET_UNSIGNED(t, ft) \
 template<> \
 struct make_unsigned<t> \
 { \
     typedef unsigned ft type; \
+}; \
+template<> \
+struct make_signed<t> \
+{ \
+    typedef signed ft type; \
 };
 
 #define SET_UNSIGNEDE(t) \
@@ -154,6 +164,9 @@ template<typename type>
 using make_unsigned_t = typename make_unsigned<type>::type;
 
 template<typename type>
+using make_signed_t = typename make_signed<type>::type;
+
+template<typename type>
 inline constexpr bool is_array_v = false;
 template<typename type>
 inline constexpr bool is_array_v<type[]> = true;
@@ -232,4 +245,44 @@ struct is_pointer<const t*> : true_type
 
 template<typename type>
 inline constexpr bool is_pointer_v = is_pointer<type>::value;
+
+template<typename>
+struct is_const : false_type
+{
+};
+
+template<typename t>
+struct is_const<const t> : true_type
+{
+};
+
+template<typename t>
+struct add_const
+{
+    typedef const t type;
+};
+
+template<typename t>
+struct add_const<const t>
+{
+    typedef const t type;
+};
+
+template<typename type>
+using add_const_t = add_const<type>::type;
+
+template<typename t>
+struct remove_const
+{
+    typedef t type;
+};
+
+template<typename t>
+struct remove_const<const t>
+{
+    typedef t type;
+};
+
+template<typename type>
+using remove_const_t = remove_const<type>::type;
 

@@ -7,11 +7,11 @@
 #ifndef EVIE_UTILS_HPP
 #define EVIE_UTILS_HPP
 
-#include "mlog.hpp"
 #include "string.hpp"
 #include "mstring.hpp"
 #include "algorithm.hpp"
 #include "array.hpp"
+#include "mlog.hpp"
 
 struct noncopyable
 {

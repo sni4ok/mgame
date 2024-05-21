@@ -146,7 +146,7 @@ struct cg_conn_h
             check_plaza_fail(cg_conn_open(cli, 0), "conn_open");
             wait_active(can_run);
         }
-        catch(std::exception& e) {
+        catch(exception& e) {
             disconnect();
             throw;
         }

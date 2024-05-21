@@ -255,7 +255,7 @@ struct compact_book
         }
 
         book.resize(buf.size() * message_size);
-        std::copy(buf.begin(), buf.begin() + buf.size(), (message*)(book.begin()));
+        copy(buf.begin(), buf.begin() + buf.size(), (message*)(book.begin()));
         mlog() << "compact_book::read() " << fname << " from " << from << " to " << to;
     }
 };
@@ -338,7 +338,7 @@ struct ifile
         cur_file.seekg(sz - message_size);
         cur_file.read((char*)&mt, message_size);
         nt.tt = mt.t.time;
-        mlog() << "" << fname << " tf: " << nt.tf.value << ", tt: " << nt.tt.value;
+        mlog() << fname << " tf: " << nt.tf.value << ", tt: " << nt.tt.value;
         if(!nt.tt.value || nt.tt.value < nt.tf.value)
             throw mexception(es() % "time_to error for " % fname);
 
@@ -400,7 +400,7 @@ struct ifile
         try {
             return add_file_impl(fname);
         }
-        catch(std::exception& e) {
+        catch(exception& e) {
             mlog() << "ifile::add_file(" << fname << ") skipped, " << e;
         }
         return ttime_t();
@@ -423,7 +423,7 @@ struct ifile
         for(int i = 0; i != n; ++i) {
             dirent *e = ee[i];
             str_holder fname(_str_holder(e->d_name));
-            if(fname.size > f_size + 10 && std::equal(fname.str, fname.str + f_size, f.begin())) {
+            if(fname.size > f_size + 10 && equal(fname.str, fname.str + f_size, f.begin())) {
                 uint32_t t = 0;
                 if(fname.size > f_size) {
                     if(fname.str[f_size] != '_')
@@ -486,7 +486,7 @@ struct ifile
         ::close(f);
         if(c != last_file_ino && sz >= message_size)
         {
-            mlog() << "" << main_file.name << " probably moved";
+            mlog() << main_file.name << " probably moved";
             last_file_ino = c;
             cur_file.open(main_file.name.c_str());
             nt.off = 0;

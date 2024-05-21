@@ -363,7 +363,7 @@ struct mirror::impl
                 wait_input(w);
             }
         }
-        catch(std::exception& e) {
+        catch(exception& e) {
             mlog() << "mirror::refresh_thread() " << e;
         }
     }

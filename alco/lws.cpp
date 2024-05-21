@@ -122,7 +122,7 @@ lws_impl::~lws_impl()
     try {
         if(lws_not_fake)
             lws_context_destroy(context);
-    } catch (std::exception& e) {
+    } catch (exception& e) {
         mlog() << "~lws_impl() " << e;
     }
 }

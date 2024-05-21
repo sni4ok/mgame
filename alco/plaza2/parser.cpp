@@ -436,7 +436,7 @@ void proceed_plaza(volatile bool& can_run)
             p.init_tickers(can_run, tickers);
             p.proceed(can_run);
         }
-        catch(std::exception& e) {
+        catch(exception& e) {
             mlog() << "proceed_plaza " << e;
             if(can_run)
                 usleep(5000 * 1000);

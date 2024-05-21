@@ -14,37 +14,6 @@
 #include <sys/stat.h>
 #include <sys/file.h>
 
-namespace
-{
-    class ofile
-    {
-        mstring name;
-        int hfile;
-
-    public:
-        ofile(const char* file) : name(_str_holder(file))
-        {
-            hfile = ::open(file, O_WRONLY | O_CREAT | O_APPEND, S_IWRITE | S_IREAD | S_IRGRP | S_IWGRP);
-            if(hfile <= 0)
-                throw_system_failure(es() % "open file " % name % " error");
-        }
-        void lock()
-        {
-            if(flock(hfile, LOCK_EX | LOCK_NB))
-                throw_system_failure(es() % "lock file " % name % " error");
-        }
-        void write(const char* buf, uint32_t size)
-        {
-            if(::write(hfile, buf, size) != size)
-                throw_system_failure(es() % "file " % name % " writing error");
-        }
-        ~ofile()
-        {
-            ::close(hfile);
-        }
-    };
-}
-
 void cout_write(str_holder str, bool flush)
 {
     fwrite(str.str, 1, str.size, stdout);
@@ -61,6 +30,34 @@ void cerr_write(str_holder str, bool flush)
 
 class simple_log
 {
+    class ofile
+    {
+        mstring name;
+        int hfile;
+
+    public:
+        ofile(char_cit file) : name(_str_holder(file))
+        {
+            hfile = ::open(file, O_WRONLY | O_CREAT | O_APPEND, S_IWRITE | S_IREAD | S_IRGRP | S_IWGRP);
+            if(hfile <= 0)
+                throw_system_failure(es() % "open file " % name % " error");
+        }
+        void lock()
+        {
+            if(flock(hfile, LOCK_EX | LOCK_NB))
+                throw_system_failure(es() % "lock file " % name % " error");
+        }
+        void write(char_cit buf, uint32_t size)
+        {
+            if(::write(hfile, buf, size) != size)
+                throw_system_failure(es() % "file " % name % " writing error");
+        }
+        ~ofile()
+        {
+            ::close(hfile);
+        }
+    };
+
     static const uint32_t log_no_cout_size = 10;
 
     typedef fast_alloc<mlog::node> string_pool;
@@ -129,7 +126,7 @@ class simple_log
                 }
             }
         }
-        catch(std::exception& e)
+        catch(exception& e)
         {
             cout_write(es() % "simple_log::write_thread error: " % _str_holder(e.what()) % endl);
         }
@@ -150,7 +147,7 @@ public:
     volatile bool no_cout;
     uint32_t params;
 
-    simple_log(const char* file_name, uint32_t params, bool set_instance)
+    simple_log(char_cit file_name, uint32_t params, bool set_instance)
         : can_run(true), all_size(), nodes("mlog::nodes"), free_threads(), profiler(), no_cout(), params(params)
     {
         if(set_instance)
@@ -217,7 +214,7 @@ void simple_log_free(simple_log* ptr)
     delete ptr;
 }
 
-unique_ptr<simple_log, simple_log_free> log_init(const char* file_name, uint32_t params, bool set_instance)
+unique_ptr<simple_log, simple_log_free> log_init(char_cit file_name, uint32_t params, bool set_instance)
 {
     return new simple_log(file_name, params, set_instance);
 }
@@ -279,7 +276,7 @@ mlog& mlog::operator<<(char s)
     return *this;
 }
 
-void mlog::write_string(const char* it, uint32_t size)
+void mlog::write(char_cit it, uint32_t size)
 {
     while(size)
     {
@@ -295,11 +292,6 @@ void mlog::write_string(const char* it, uint32_t size)
             tail->next = buf.tail;
         }
     }
-}
-
-void mlog::write(const char* it, uint32_t size)
-{
-    write_string(it, size);
 }
 
 mlog& mlog::operator<<(const time_duration& t)
@@ -321,19 +313,12 @@ mlog& mlog::operator<<(const ttime_t& p)
     return *this;
 }
 
-mlog& mlog::operator<<(const std::exception& e)
-{
-    buf.extra_param |= critical;
-    *this << "exception: " << _str_holder(e.what());
-    return *this;
-}
-
 void mlog::check_size(uint32_t delta)
 {
     if(buf.tail->size + delta > buf_size)
     {
-        if(delta > buf_size)
-            throw mexception("mlog() max size exceed");
+        if(delta > buf_size) [[unlikely]]
+            throw str_exception("mlog() max size exceed");
         node* tail = buf.tail;
         buf.tail = log.alloc();
         tail->next = buf.tail;

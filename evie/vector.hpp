@@ -520,7 +520,7 @@ struct pavector : pvector<type, pvector_free_array>
     }
 };
 
-struct mexception : std::exception
+struct mexception : exception
 {
     mvector<char> msg;
 

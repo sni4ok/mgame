@@ -10,7 +10,9 @@
 
 #include <new>
 
-struct str_exception : std::exception
+typedef std::exception exception;
+
+struct str_exception : exception
 {
     const char* msg;
 
@@ -22,6 +24,13 @@ struct str_exception : std::exception
         return msg;
     }
 };
+
+template<typename stream>
+stream& operator<<(stream& s, const exception& e)
+{
+    s << "exception: " << _str_holder(e.what());
+    return s;
+}
 
 namespace my_cvt
 {
@@ -40,7 +49,7 @@ namespace my_cvt
         return 1;
     }
 
-    struct exception : std::exception
+    struct exception : ::exception
     {
         char buf[64];
 
