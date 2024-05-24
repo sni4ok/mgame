@@ -157,6 +157,24 @@ inline bool equal(char_cit b1, char_cit e1, char_cit b2)
     return !(memcmp(b1, b2, e1 - b1));
 }
 
+template<typename type>
+bool equal(const type* b1, const type* e1, const type* b2)
+{
+    for(; b1 != e1; ++b1, ++b2)
+        if(*b1 != *b2)
+            return false;
+    return true;
+}
+
+template<typename type>
+bool equal(const type* b1, const type* e1, const type* b2, const type* e2)
+{
+    if(e1 - b1 == e2 - b2)
+        return equal(b1, e1, b2);
+    else
+        return false;
+}
+
 template<typename iterator, typename type>
 void fill(iterator from, iterator to, const type& v)
 {

@@ -301,7 +301,7 @@ uint32_t register_exporter(str_holder module, hole_exporter he)
 
 exporter::exporter(const mstring& params)
 {
-    mvector<mstring> exports = split(params, ';');
+    mvector<str_holder> exports = split(params.str(), ';');
     if(params.empty())
         throw str_exception("create_exporter() with empty params");
     if(exports.size() == 1)

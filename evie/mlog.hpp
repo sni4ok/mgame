@@ -78,7 +78,7 @@ stream& operator<<(stream& log, const print_binary& v)
     return log;
 }
 
-struct mlog
+struct mlog : ios_base
 {
     static const uint32_t buf_size = 200;
 
@@ -127,36 +127,16 @@ public:
     void write(char_cit v, uint32_t s);
     static void set_no_cout();
 
-    mlog& operator<<(char s);
     mlog& operator<<(const date& d);
     mlog& operator<<(const time_duration& t);
     mlog& operator<<(const time_parsed& p);
     mlog& operator<<(const ttime_t& p);
-    mlog& operator<<(double d);
-
-    template<typename array>
-    requires(is_array_v<array>)
-    mlog& operator<<(const array& v)
-    {
-        *this << from_array(v);
-        return *this;
-    }
 
     template<typename type>
-    requires(is_integral_v<type>)
-    mlog& operator<<(type v)
+    void write_numeric(type v)
     {
         check_size(my_cvt::atoi_size<type>::value);
         buf.tail->size += my_cvt::itoa(&buf.tail->buf[buf.tail->size], v);
-        return *this;
-    }
-
-    template<typename type>
-    requires(!is_array_v<type> && !is_integral_v<type>)
-    mlog& operator<<(const type& v)
-    {
-        ::operator<<(*this, v);
-        return *this;
     }
 };
 

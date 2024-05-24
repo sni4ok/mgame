@@ -188,6 +188,15 @@ using remove_pointer_t = typename remove_pointer<type>::type;
 template<typename t, typename p>
 inline constexpr bool is_same_v = is_same<t, p>::value;
 
+template<typename type>
+struct is_numeric
+{
+    static constexpr bool value = is_integral_v<type> || is_same_v<type, double>;
+};
+
+template<typename type>
+inline constexpr bool is_numeric_v = is_numeric<type>::value;
+
 template<bool const, typename t, typename p>
 struct conditional
 {
@@ -285,4 +294,21 @@ struct remove_const<const t>
 
 template<typename type>
 using remove_const_t = remove_const<type>::type;
+
+template <typename type>
+inline constexpr bool is_class_v = __is_class(type);
+
+template<typename type>
+[[nodiscard]] constexpr remove_reference_t<type>&& move(type&& t) noexcept
+{
+    return static_cast<remove_reference_t<type>&&>(t);
+}
+
+template<typename type>
+void simple_swap(type& a, type& b)
+{
+    type tmp = a;
+    a = b;
+    b = tmp;
+}
 

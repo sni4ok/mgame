@@ -34,6 +34,8 @@ stream& operator<<(stream& s, const exception& e)
 
 namespace my_cvt
 {
+    uint32_t itoa(char* buf, bool t);
+    uint32_t itoa(char *buf, char v);
     uint32_t itoa(char *buf, int8_t v);
     uint32_t itoa(char *buf, uint8_t v);
     uint32_t itoa(char *buf, uint16_t v);
@@ -42,12 +44,7 @@ namespace my_cvt
     uint32_t itoa(char *buf, int32_t v);
     uint32_t itoa(char *buf, uint64_t v);
     uint32_t itoa(char *buf, int64_t v);
-    uint32_t dtoa(char *buf, double v);
-
-    inline uint32_t itoa(char* buf, bool t) {
-        buf[0] = (t ? '1' : '0');
-        return 1;
-    }
+    uint32_t itoa(char *buf, double v);
 
     struct exception : ::exception
     {
@@ -85,6 +82,13 @@ namespace my_cvt
                 return -type(atoi_u<type_u>(buf + 1, size - 1));
             return type(atoi<type_u>(buf, size));
         }
+    }
+
+    template<>
+    inline char atoi<char>(const char* buf, uint32_t size) {
+        if(size != 1) [[unlikely]]
+            throw exception(str_holder("atoi() bad char size: "), {buf, size});
+        return *buf;
     }
 
     template<>
@@ -126,6 +130,15 @@ namespace my_cvt
     {
         static const uint32_t value = (is_unsigned_v<type> ? atoi_u_ps : atoi_s_ps)[sizeof(type) / 2];
     };
+
+    template<>
+    struct atoi_size<double>
+    {
+        static const uint32_t value = 30;
+    };
+
+    template<typename type>
+    inline constexpr uint32_t atoi_size_v = atoi_size<type>::value;
 }
 
 template<typename type>
@@ -137,8 +150,9 @@ type lexical_cast(char_cit from, char_cit to)
     return my_cvt::atoi<type>(from, to - from);
 }
 
+struct mstring;
 template<typename type>
-requires(!(is_integral_v<type>))
+requires(!(is_integral_v<type> || is_same_v<type, mstring>))
 type lexical_cast(char_cit from, char_cit to);
 
 template<> double lexical_cast<double>(char_cit from, char_cit to);
@@ -149,9 +163,51 @@ type lexical_cast(const str_holder& str)
     return lexical_cast<type>(str.begin(), str.end());
 }
 
+template<> inline str_holder lexical_cast<str_holder>(char_cit from, char_cit to)
+{
+    return str_holder(from, to - from);
+}
+
 template<typename ... args>
 inline void my_unused(args& ...) {
 }
 
 #define MY_UNUSED(name)
+
+struct ios_base
+{
+};
+
+template<typename type>
+concept __derived_from_ios_base = is_class_v<type> && (!is_same_v<type, ios_base>) && requires(type* t, ios_base* b)
+{
+    b = t;
+};
+
+template<typename stream, typename type>
+requires __derived_from_ios_base<stream> && requires(stream& s, const type& t) { s << t; }
+using __rvalue_stream_insertion_t = stream&&;
+
+template<typename stream, typename type>
+inline __rvalue_stream_insertion_t<stream, type> operator<<(stream&& s, const type& t)
+{
+  s << t;
+  return move(s);
+}
+
+template<typename stream, typename type>
+requires(__derived_from_ios_base<stream> && is_numeric_v<type>)
+stream& operator<<(stream& s, type v)
+{
+    s.write_numeric(v);
+    return s;
+}
+
+template<typename stream, typename array>
+requires(__derived_from_ios_base<stream> && is_array_v<array>)
+stream& operator<<(stream& s, const array& v)
+{
+    s << from_array(v);
+    return s;
+}
 

@@ -21,43 +21,23 @@ str_holder _str_holder(char_cit str)
     return str_holder(str, strlen(str));
 }
 
-mstring to_string(double value)
-{
-    mstring ret;
-    ret.resize(32);
-    ret.resize(my_cvt::dtoa(ret.begin(), value));
-    return ret;
-}
-
-template<>
-mstring lexical_cast<mstring>(char_cit from, char_cit to)
-{
-    return mstring(from, to);
-}
-
-mvector<mstring> split(const mstring& str, char sep)
-{
-    mvector<mstring> ret;
-    auto it = str.begin(), ie = str.end(), i = it;
-    while(it != ie) {
-        i = find(it, ie, sep);
-        ret.push_back(mstring(it, i));
-        if(i != ie)
-            ++i;
-        it = i;
-    }
-    return ret;
-}
-
-void split(mvector<str_holder>& ret, char_cit it, char_cit ie, char sep)
+template<typename type>
+void split(mvector<type>& ret, char_cit it, char_cit ie, char sep)
 {
     while(it != ie) {
         char_cit i = find(it, ie, sep);
-        ret.push_back(str_holder(it, i - it));
+        ret.push_back(type(it, i));
         if(i != ie)
             ++i;
         it = i;
     }
+}
+
+mvector<mstring> split_s(str_holder str, char sep)
+{
+    mvector<mstring> ret;
+    split(ret, str.begin(), str.end(), sep);
+    return ret;
 }
 
 mvector<str_holder> split(str_holder str, char sep)
@@ -97,6 +77,7 @@ mstring join(const mvector<mstring>& s, char sep)
 class crc32_table : noncopyable
 {
     uint32_t crc_table[256];
+
     crc32_table() {
         for(uint32_t i = 0; i != 256; ++i) {
             uint32_t crc = i;

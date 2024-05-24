@@ -116,7 +116,7 @@ struct import_mmap_cp
 
     import_mmap_cp(volatile bool& can_run, const mstring& params) : can_run(can_run)
     {
-        this->params = split(params, ' ');
+        this->params = split_s(params.str(), ' ');
         if(this->params.size() != 2)
             throw mexception(es() % " import_mmap_cp() required 2 params (fname,pooling_mode): " % params);
         pooling_mode = lexical_cast<bool>(this->params[1]);

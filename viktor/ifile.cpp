@@ -627,7 +627,7 @@ extern "C"
 {
     void* ifile_create(const char* params, volatile bool& can_run)
     {
-        mvector<mstring> p = split(_mstring(params), ' ');
+        mvector<str_holder> p = split(_str_holder(params), ' ');
         if(p.empty() || p.size() > 5)
             throw str_exception("ifile_create() [history ,replay speed ]file_name[ time_from[ time_to]]");
 

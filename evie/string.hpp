@@ -26,7 +26,7 @@ inline void my_fast_move(char_cit from, char_cit to, char_it out)
     memmove(out, from, to - from);
 }
 
-struct buf_stream
+struct buf_stream : ios_base
 {
     char_it from, cur, to;
 
@@ -82,32 +82,16 @@ struct buf_stream
         my_fast_copy(v, s, cur);
         cur += s;
     }
-    buf_stream& operator<<(char c)
-    {
-        check_size(1);
-        *cur = c;
-        ++cur;
-        return *this;
-    }
     void check_size(uint64_t delta) const
     {
         if(cur + delta > to) [[unlikely]]
             throw str_exception("buf_stream::check_size() overloaded");
     }
-
     template<typename type>
-    requires(is_integral<type>::value)
-    buf_stream& operator<<(type t)
+    void write_numeric(type t)
     {
         check_size(my_cvt::atoi_size<type>::value);
         cur += my_cvt::itoa(cur, t);
-        return *this;
-    }
-    buf_stream& operator<<(double d)
-    {
-        check_size(30);
-        cur += my_cvt::dtoa(cur, d);
-        return *this;
     }
 };
 
@@ -144,23 +128,11 @@ void cout_write(str_holder str, bool flush = true);
 void cerr_write(str_holder str, bool flush = true);
 
 template<void (*func)(str_holder, bool)>
-struct ostream
+struct ostream : my_stream
 {
-    my_stream s;
-
-    template<typename type>
-    ostream& operator<<(const type& t)
-    {
-        s << t;
-        return *this;
-    }
-    void write(char_cit v, uint32_t size)
-    {
-        s.write(v, size);
-    }
     ~ostream()
     {
-        func(s.str(), true);
+        func(str(), true);
     }
 };
 

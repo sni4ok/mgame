@@ -269,13 +269,6 @@ mlog::~mlog()
     log.write(buf);
 }
 
-mlog& mlog::operator<<(char s)
-{
-    check_size(1);
-    buf.tail->buf[(buf.tail->size)++] = s;
-    return *this;
-}
-
 void mlog::write(char_cit it, uint32_t size)
 {
     while(size)
@@ -296,21 +289,18 @@ void mlog::write(char_cit it, uint32_t size)
 
 mlog& mlog::operator<<(const time_duration& t)
 {
-    *this << print2chars(t.hours) << ':' << print2chars(t.minutes) << ':' << print2chars(t.seconds)
+    return *this << print2chars(t.hours) << ':' << print2chars(t.minutes) << ':' << print2chars(t.seconds)
         << "." << mlog_fixed<6>(t.nanos / 1000);
-    return *this;
 }
 
 mlog& mlog::operator<<(const time_parsed& p)
 {
-    *this << p.date() << ' ' << p.duration();
-    return *this;
+    return *this << p.date() << ' ' << p.duration();
 }
 
 mlog& mlog::operator<<(const ttime_t& p)
 {
-    *this << parse_time(p);
-    return *this;
+    return *this << parse_time(p);
 }
 
 void mlog::check_size(uint32_t delta)
@@ -323,13 +313,6 @@ void mlog::check_size(uint32_t delta)
         buf.tail = log.alloc();
         tail->next = buf.tail;
     }
-}
-
-mlog& mlog::operator<<(double d)
-{
-    check_size(30);
-    buf.tail->size += my_cvt::dtoa(&buf.tail->buf[buf.tail->size], d);
-    return *this;
 }
 
 void MlogTestThread(size_t thread_id, size_t log_count)

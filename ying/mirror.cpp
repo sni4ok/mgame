@@ -411,7 +411,7 @@ struct mirror::impl
 
 inline mirror::impl* create_mirror(const mstring& params)
 {
-    auto p = split(params, ' ');
+    auto p = split(params.str(), ' ');
     if(p.size() > 2)
         throw mexception(es() % "mirror::mirror() bad params: " % params);
     uint32_t refresh_rate = p.size() == 2 ? lexical_cast<uint32_t>(p[1]) : 100;

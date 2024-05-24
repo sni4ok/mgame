@@ -17,8 +17,8 @@ struct config : stack_singleton<config>
     config(const char* fname)
     {
         auto cs = read_file(fname);
-        push = get_config_param<mstring>(cs, "push");
-        import = get_config_param<mstring>(cs, "import");
+        push = get_config_param<str_holder>(cs, "push");
+        import = get_config_param<str_holder>(cs, "import");
 
         mlog() << "config() import: " << import << ", push: " << push;
     }

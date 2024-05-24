@@ -125,6 +125,18 @@ namespace my_cvt
         }
     }
 
+    uint32_t itoa(char* buf, bool t)
+    {
+        buf[0] = (t ? '1' : '0');
+        return 1;
+    }
+
+    uint32_t itoa(char *buf, char v)
+    {
+        *buf = v;
+        return 1;
+    }
+
     uint32_t itoa(char* buf, uint8_t i)
     {
         return
@@ -217,7 +229,7 @@ namespace my_cvt
 
     const double d_max_d = static_cast<double>(uint64_t(1) << 62);
 
-    uint32_t dtoa(char* buf, double v) 
+    uint32_t itoa(char* buf, double v) 
     {
         if(v != v) {
             *buf++ = 'N';
@@ -250,7 +262,7 @@ namespace my_cvt
                 v /= 10;
                 ++exp;
             }
-            uint32_t cur_sz = dtoa(buf, v);
+            uint32_t cur_sz = itoa(buf, v);
             buf += cur_sz;
             sz += cur_sz;
             *buf++ = 'e';
@@ -348,7 +360,7 @@ namespace my_cvt
 
         auto check_double = [&buf, &sz](double v, str_holder s) {
             my_unused(v, s);
-            sz = dtoa(buf, v);
+            sz = itoa(buf, v);
             assert(str_holder(buf, sz) == s);
             double d = lexical_cast<double>(buf, buf + sz);
             my_unused(d);
@@ -365,7 +377,7 @@ namespace my_cvt
         check_double(155.6999, "155.6999");
         check_double(-155.0000001, "-155.0000001");
         check_double(limits<double>::quiet_NaN, "NAN");
-        sz = dtoa(buf, limits<double>::signaling_NaN);
+        sz = itoa(buf, limits<double>::signaling_NaN);
         check("NAN");
         check_double(limits<double>::infinity, "INF");
         check_double(-limits<double>::infinity, "-INF");

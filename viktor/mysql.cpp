@@ -32,7 +32,7 @@ struct mysql
     {
         if(!sql)
             throw str_exception("mysql() mysql_init error");
-        mvector<mstring> p = split(params, ' ');
+        mvector<mstring> p = split_s(params.str(), ' ');
         if(p.size() != 6)
             throw mexception(es() % "mysql() \"mysql (truncate,append,rename_new) host port dbname user password\", params: " % params);
 

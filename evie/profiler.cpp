@@ -11,12 +11,13 @@ struct write_time
 {
     uint64_t time;
 
-    write_time(uint64_t time) : time(time)
+    explicit write_time(uint64_t time) : time(time)
     {
     }
 };
 
-static mlog& operator<<(mlog &log,  const write_time& t)
+template<typename stream>
+static stream& operator<<(stream &log,  const write_time& t)
 {
     uint64_t sec = t.time / ttime_t::frac;
     if(sec)

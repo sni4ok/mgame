@@ -12,7 +12,7 @@
 config::config(const char* fname)
 {
     auto cs = read_file(fname);
-    name = get_config_param<mstring>(cs, "name");
+    name = get_config_param<str_holder>(cs, "name");
 
     imports = get_config_params(cs, "import");
     exports = get_config_params(cs, "export");

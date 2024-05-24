@@ -31,7 +31,7 @@ struct efile
 
     efile(const mstring& params) : buf(), bs(buf), bin()
     {
-        mvector<mstring> p = split(params, ' ');
+        mvector<str_holder> p = split(params.str(), ' ');
         if(p.size() != 3)
             throw mexception(es() % "efile() \"file (bin,csv) (truncate,append,rename_new) file_name\", params: " % params);
         if(p[0] == "bin")

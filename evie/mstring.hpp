@@ -54,21 +54,26 @@ stream& operator<<(stream& s, const mstring& str)
 }
 
 template<typename type>
-requires(is_integral<type>::value)
+requires(is_numeric_v<type>)
 mstring to_string(type value)
 {
-    char buf[24];
+    char buf[my_cvt::atoi_size_v<type>];
     uint32_t size = my_cvt::itoa(buf, value);
     return mstring(buf, buf + size);
 }
 
-mstring to_string(double value);
-template<> mstring lexical_cast<mstring>(char_cit from, char_cit to);
-
 template<typename type>
+requires(!is_same_v<type, mstring>)
 type lexical_cast(const mstring& str)
 {
     return lexical_cast<type>(str.begin(), str.end());
+}
+
+template<typename type>
+requires(is_same_v<type, mstring>)
+inline const mstring& lexical_cast(const mstring& str)
+{
+    return str;
 }
 
 mstring operator+(str_holder l, const mstring& r);

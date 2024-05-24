@@ -14,17 +14,10 @@ void* tss_realloc(void* ptr, uint64_t old_size, uint64_t new_size);
 void tss_free(void* ptr, uint64_t size);
 
 template<typename type>
-[[nodiscard]] constexpr remove_reference_t<type>&& move(type&& t) noexcept
+void copy_backward(const type* first, const type* last, type* d_last)
 {
-    return static_cast<remove_reference_t<type>&&>(t);
-}
-
-template<typename type>
-void simple_swap(type& a, type& b)
-{
-    type tmp = a;
-    a = b;
-    b = tmp;
+    while(first != last)
+        *(--d_last) = *(--last);
 }
 
 template<typename type, bool tss_allocator = false>
@@ -60,16 +53,15 @@ protected:
         (void)it;
         assert(it >= buf && it <= buf + size_);
     }
-    static void __copy_impl(type* it, const type* from, const type* to) {
-        if constexpr(have_destructor) {
-            for(; from != to; ++from, ++it)
-                *it = *from;
-        }
+
+public:
+    static void __copy(const type* from, const type* to, type* it) {
+        if constexpr(have_destructor)
+            copy_backward(from, to, it + (to - from));
         else
             memmove((void*)it, from, (to - from) * sizeof(type));
     }
 
-public:
     typedef type* iterator;
     typedef const type* const_iterator;
     typedef type value_type;
@@ -306,15 +298,15 @@ public:
     void insert(const type* from, const type* to) {
         uint64_t size = size_;
         resize(size_ + (to - from));
-        __copy_impl(buf + size, from, to);
+        __copy(from, to, buf + size);
     }
     void insert(iterator it, const type* from, const type* to) {
         uint64_t size = size_;
         uint64_t pos = it - buf;
         resize(size_ + (to - from));
         it = buf + pos;
-        __copy_impl(it + (to - from), it, buf + size);
-        __copy_impl(it, from, to);
+        __copy(it, buf + size, it + (to - from));
+        __copy(from, to, it);
     }
     void __push_back_impl() {
         if(size_ == capacity_)

@@ -21,14 +21,10 @@ private:
     noncopyable(const noncopyable&) = delete;
 };
 
-template<> inline str_holder lexical_cast<str_holder>(char_cit from, char_cit to)
-{
-    return str_holder(from, to - from);
-}
-
-mvector<mstring> split(const mstring& str, char sep = ',');
+template<typename type>
+void split(mvector<type>& ret, char_cit it, char_cit ie, char sep);
+mvector<mstring> split_s(str_holder str, char sep = ',');
 mvector<str_holder> split(str_holder str, char sep = ',');
-void split(mvector<str_holder>& ret, char_cit it, char_cit ie, char sep = ',');
 
 mstring join(const mvector<mstring>& s, char sep = ',');
 mstring join(const mstring* it, const mstring* ie, char sep = ',');
@@ -178,7 +174,7 @@ auto end(const cont& c)
 template<char sep = ',', typename cont, typename func = print_default>
 auto print(const cont& c, func f = func())
 {
-    return print(::begin(c), ::end(c), f);
+    return print<sep>(::begin(c), ::end(c), f);
 }
 
 template<char sep = '\n', typename cont, typename func = print_default>

@@ -192,16 +192,16 @@ struct skelet
         throw mexception(es() % "unknown ini_type: " % ini_type);
     }
     void add_field(const mstring& data) {
-        mvector<mstring> tmp = split(data, ',');
+        mvector<str_holder> tmp = split(data.str(), ',');
         if(tmp.size() != 2 && tmp.size() != 4)
             throw mexception(es() % "bad add_field: " % data);
-        if(tmp.size() == 4 && !tmp[2].empty())
+        if(tmp.size() == 4 && tmp[2].size)
             cout() << data << endl;
         tuple<mstring, mstring, optional<mstring> > v;
         get<0>(v) = tmp[0];
         get<1>(v) = convert_type(tmp[1]);
         if(tmp.size() == 4)
-            get<2>(v) = tmp[3];
+            get<2>(v) = mstring(tmp[3]);
         types.push_back(v);
     }
     void set_replies(const mstring& data) {
@@ -209,8 +209,7 @@ struct skelet
             return;
         if(!replies.empty())
             throw mexception("replies already exists");
-        mvector<mstring> tmp = split(data, ',');
-        for(const auto& s: tmp)
+        for(const auto& s: split(data.str(), ','))
             replies.push_back(lexical_cast<uint32_t>(s));
     }
     template<typename value>
@@ -595,10 +594,10 @@ void proceed_selected(const mstring& ini_folder, const mstring& scheme, const ms
                 break;
             auto ii = find(it, ie, '\n');
             if(*it != ';') {
-                mvector<mstring> vs = split(mstring(it, ii), ';');
+                mvector<str_holder> vs = split(str_holder(it, ii), ';');
                 if(vs.size() != 4)
                     throw mexception(es() % "bad schema source: " % mstring(it, ii));
-                mvector<mstring> tables = split(vs[3], ',');
+                mvector<str_holder> tables = split(vs[3], ',');
 
                 unique_ptr<source> s(new source(out_folder + "/" + vs[0]));
                 s->ns = namespace_type(vs[1], vs[2]);

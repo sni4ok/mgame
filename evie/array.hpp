@@ -125,7 +125,7 @@ public:
         assert(size_ <= capacity_);
         copy(f, t, buf);
     }
-    template<uint64_t sz>
+    template<uint32_t sz>
     array(const type (&str)[sz]) : size_(sz - 1)
     {
         static_assert(sz - 1 <= capacity_);
@@ -185,10 +185,10 @@ public:
         return buf + size_;
     }
     reverse_iterator rbegin() const {
-        return reverse_iterator({end() - 1});
+        return {end() - 1};
     }
     reverse_iterator rend() const {
-        return reverse_iterator({begin() - 1});
+        return {begin() - 1};
     }
     const type& operator[](uint32_t elem) const {
         assert(elem < size_);
@@ -209,11 +209,9 @@ public:
         --size_;
     }
     bool equal(const type* f, const type* t) const {
-        if(size_ == t - f)
-            return ::equal(f, t, buf);
-        return false;
+        return ::equal(f, t, begin(), end());
     }
-    template<uint64_t sz>
+    template<uint32_t sz>
     bool operator==(const type (&str)[sz]) const {
         return equal(str, str + sz - 1);
     }
@@ -231,17 +229,26 @@ public:
         return lexicographical_compare(buf, buf + size_, r.buf, r.buf + size_);
     }
     void insert(iterator it, const type* from, const type* to) {
-        uint64_t size = size_;
-        uint64_t pos = it - buf;
+        uint32_t size = size_;
         resize(size_ + (to - from));
-        it = buf + pos;
-        copy(it, buf + size, it + (to - from));
-        copy(from, to, it);
+        mvector<type>::__copy(it, buf + size, it + (to - from));
+        mvector<type>::__copy(from, to, it);
+    }
+    iterator insert(iterator it, const type& v) {
+        insert(it, &v, &v + 1);
+        return it;
     }
     iterator erase(iterator from, iterator to) {
-        copy(to, end(), from);
+        mvector<type>::__copy(to, end(), from);
         size_ -= to - from;
         return from;
+    }
+    iterator erase(iterator it) {
+        return erase(it, it + 1);
+    }
+    void reserve(uint32_t sz) {
+        if(sz > capacity_)
+            throw str_exception("array::reserve() sz > capacity");
     }
 };
 
@@ -265,7 +272,7 @@ constexpr auto fill_carray(type v = type())
     return ret;
 }
 
-template<uint64_t sz>
+template<uint32_t sz>
 constexpr auto make_carray(const char (&str)[sz])
 {
     return carray<char, sz - 1>(str_holder(str));
