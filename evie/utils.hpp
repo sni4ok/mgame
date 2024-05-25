@@ -13,14 +13,6 @@
 #include "array.hpp"
 #include "mlog.hpp"
 
-struct noncopyable
-{
-    noncopyable() {
-    }
-private:
-    noncopyable(const noncopyable&) = delete;
-};
-
 template<typename type>
 void split(mvector<type>& ret, char_cit it, char_cit ie, char sep);
 mvector<mstring> split_s(str_holder str, char sep = ',');
@@ -181,6 +173,38 @@ template<char sep = '\n', typename cont, typename func = print_default>
 auto print_csv(const cont& c, func f = func())
 {
     return print<sep, false>(::begin(c), ::end(c), f);
+}
+
+extern const date cur_day_date;
+extern const my_string cur_day_date_str;
+
+template<typename stream>
+stream& operator<<(stream& s, const date& d)
+{
+    if(d == cur_day_date)
+        s << cur_day_date_str;
+    else
+        s << d.year << '-' << print2chars(d.month) << '-' << print2chars(d.day);
+    return s;
+}
+
+template<typename stream>
+stream& operator<<(stream& s, const time_duration& t)
+{
+    return s << print2chars(t.hours) << ':' << print2chars(t.minutes) << ':' << print2chars(t.seconds)
+        << "." << mlog_fixed<6>(t.nanos / 1000);
+}
+
+template<typename stream>
+stream& operator<<(stream& s, const time_parsed& p)
+{
+    return s << p.date() << ' ' << p.duration();
+}
+
+template<typename stream>
+stream& operator<<(stream& s, ttime_t v)
+{
+    return s << parse_time(v);
 }
 
 #endif

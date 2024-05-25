@@ -64,13 +64,13 @@ void print_init(int argc, char** argv)
     }
 }
 
-mvector<mstring> init_params(int argc, char** argv, bool log_params)
+mvector<str_holder> init_params(int argc, char** argv, bool log_params)
 {
     if(log_params)
         print_init(argc, argv);
-    mvector<mstring> ret(argc);
+    mvector<str_holder> ret(argc);
     for(int i = 0; i != argc; ++i)
-        ret[i] = _mstring(argv[i]);
+        ret[i] = _str_holder(argv[i]);
     return ret;
 }
 

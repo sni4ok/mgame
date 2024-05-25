@@ -64,5 +64,15 @@ constexpr inline bool operator==(ttime_t l, ttime_t r)
     return l.value == r.value;
 }
 
+inline constexpr int64_t seconds(uint32_t s)
+{
+    return int64_t(s) * ttime_t::frac;
+}
+
+inline constexpr int64_t milliseconds(uint32_t s)
+{
+    return int64_t(s) * (ttime_t::frac / 1000);
+}
+
 #endif
 

@@ -127,11 +127,6 @@ public:
     void write(char_cit v, uint32_t s);
     static void set_no_cout();
 
-    mlog& operator<<(const date& d);
-    mlog& operator<<(const time_duration& t);
-    mlog& operator<<(const time_parsed& p);
-    mlog& operator<<(const ttime_t& p);
-
     template<typename type>
     void write_numeric(type v)
     {

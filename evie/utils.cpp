@@ -74,7 +74,7 @@ mstring join(const mvector<mstring>& s, char sep)
     return join(s.begin(), s.end(), sep);
 }
 
-class crc32_table : noncopyable
+class crc32_table
 {
     uint32_t crc_table[256];
 
@@ -86,6 +86,9 @@ class crc32_table : noncopyable
             crc_table[i] = crc;
         }
     }
+
+    crc32_table(const crc32_table&) = delete;
+
 public:
     static uint32_t* get() {
         static crc32_table t;
@@ -169,27 +172,19 @@ namespace
         return ret;
     }
 
-    const uint32_t cur_day_seconds = day_seconds(cur_mtime_seconds());
-    const date cur_day_date = parse_time_impl(cur_mtime_seconds());
-
-    inline my_string get_cur_day_str()
-    {
-        buf_stream_fixed<20> str;
-        str << mlog_fixed<4>(cur_day_date.year) << "-" << mlog_fixed<2>(cur_day_date.month) << "-" << mlog_fixed<2>(cur_day_date.day);
-        return my_string(str.begin(), str.end());
-    }
-
-    const my_string cur_day_date_str = get_cur_day_str();
 }
 
-mlog& mlog::operator<<(const date& d)
+const uint32_t cur_day_seconds = day_seconds(cur_mtime_seconds());
+const date cur_day_date = parse_time_impl(cur_mtime_seconds());
+
+inline my_string get_cur_day_str()
 {
-    if(d == cur_day_date)
-        (*this) << cur_day_date_str;
-    else
-        (*this) << d.year << '-' << print2chars(d.month) << '-' << print2chars(d.day);
-    return *this;
+    buf_stream_fixed<20> str;
+    str << mlog_fixed<4>(cur_day_date.year) << "-" << mlog_fixed<2>(cur_day_date.month) << "-" << mlog_fixed<2>(cur_day_date.day);
+    return my_string(str.begin(), str.end());
 }
+
+const my_string cur_day_date_str = get_cur_day_str();
 
 time_parsed parse_time(const ttime_t& time)
 {

@@ -101,7 +101,7 @@ struct node_free
     }
 };
 
-struct actives : noncopyable
+struct actives
 {
     struct type
     {
@@ -118,6 +118,8 @@ private:
     mvector<type> data;
     type* last_value;
     type tmp;
+
+    actives(const actives&) = delete;
 
 public:
     actives() : last_value()
@@ -228,7 +230,7 @@ class engine::impl : public stack_singleton<engine::impl>
         }
     }
 
-    struct imple : noncopyable
+    struct imple
     {
         volatile bool& can_run;
         linked_list* ll;
@@ -265,6 +267,8 @@ class engine::impl : public stack_singleton<engine::impl>
                 mlog() << "~imple() " << e;
             }
         }
+
+        imple(const imple&) = delete;
     };
 
     cas_array<imple, 50> ies;

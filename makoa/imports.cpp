@@ -24,7 +24,7 @@ void import_context_destroy(pair<void*, str_holder> ctx);
 bool import_proceed_data(str_holder& buf, void* ctx);
 
 template<typename reader_state>
-struct reader : noncopyable
+struct reader
 {
     typedef uint32_t (*func)(reader_state socket, char* buf, uint32_t buf_size);
 
@@ -51,6 +51,7 @@ struct reader : noncopyable
     {
         import_context_destroy(ctx);
     }
+    reader(const reader&) = delete;
 };
 
 uint32_t socket_read(int socket, char* buf, uint32_t buf_size)

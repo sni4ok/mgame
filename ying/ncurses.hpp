@@ -31,7 +31,7 @@ struct ncurses_err
     ncurses_err(const ncurses_err&) = delete;
 };
 
-class window : noncopyable
+class window
 {
     static void end_win(WINDOW*)
     {
@@ -41,6 +41,8 @@ class window : noncopyable
     ncurses_err e;
 
     long log_par;
+
+    window(const window&) = delete;
 
 public:
     uint32_t rows, cols;

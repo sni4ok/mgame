@@ -105,7 +105,7 @@ namespace
 
     exporter shared_exporter(const mstring& module);
 
-    struct exports_factory : noncopyable
+    struct exports_factory
     {
         fmap<mstring, hole_exporter> exporters;
         mvector<exporter> dyn_exporters;

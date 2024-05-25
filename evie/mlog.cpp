@@ -287,22 +287,6 @@ void mlog::write(char_cit it, uint32_t size)
     }
 }
 
-mlog& mlog::operator<<(const time_duration& t)
-{
-    return *this << print2chars(t.hours) << ':' << print2chars(t.minutes) << ':' << print2chars(t.seconds)
-        << "." << mlog_fixed<6>(t.nanos / 1000);
-}
-
-mlog& mlog::operator<<(const time_parsed& p)
-{
-    return *this << p.date() << ' ' << p.duration();
-}
-
-mlog& mlog::operator<<(const ttime_t& p)
-{
-    return *this << parse_time(p);
-}
-
 void mlog::check_size(uint32_t delta)
 {
     if(buf.tail->size + delta > buf_size)
