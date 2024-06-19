@@ -21,18 +21,6 @@ str_holder _str_holder(char_cit str)
     return str_holder(str, strlen(str));
 }
 
-template<typename type>
-void split(mvector<type>& ret, char_cit it, char_cit ie, char sep)
-{
-    while(it != ie) {
-        char_cit i = find(it, ie, sep);
-        ret.push_back(type(it, i));
-        if(i != ie)
-            ++i;
-        it = i;
-    }
-}
-
 mvector<mstring> split_s(str_holder str, char sep)
 {
     mvector<mstring> ret;
@@ -186,7 +174,7 @@ inline my_string get_cur_day_str()
 
 const my_string cur_day_date_str = get_cur_day_str();
 
-time_parsed parse_time(const ttime_t& time)
+time_parsed parse_time(ttime_t time)
 {
     if(day_seconds(time) == cur_day_seconds)
     {
@@ -203,7 +191,7 @@ time_parsed parse_time(const ttime_t& time)
         return parse_time_impl(time);
 }
 
-time_duration get_time_duration(const ttime_t& time)
+time_duration get_time_duration(ttime_t time)
 {
     time_duration ret;
     uint32_t frac = (time.value / time.frac) % (24 * 3600);
@@ -308,7 +296,7 @@ int64_t read_decimal_impl(char_cit it, char_cit ie, int exponent)
     return ret;
 }
 
-r& r::operator+=(const r& v)
+rational& rational::operator+=(const rational& v)
 {
     uint32_t lcm = std::lcm(den, v.den);
     num = num * (lcm / den) + v.num * (lcm / v.den);
@@ -316,28 +304,28 @@ r& r::operator+=(const r& v)
     return *this;
 }
 
-r r::operator*(const r& v) const
+rational rational::operator*(const rational& v) const
 {
     int64_t n = num * v.num;
     uint64_t d = den * v.den;
     int64_t gcd = int64_t(std::gcd(d, abs(n)));
-    return r(int32_t(n / gcd), uint32_t(d / gcd));
+    return {int32_t(n / gcd), uint32_t(d / gcd)};
 }
 
-mstring to_string(r value)
+mstring to_string(rational value)
 {
     buf_stream_fixed<24> str;
     str << value;
     return str.str();
 }
 
-template<> r lexical_cast<r>(char_cit from, char_cit to)
+template<> rational lexical_cast<rational>(char_cit from, char_cit to)
 {
     char_cit i = find(from, to, '/');
     int32_t cur_n = lexical_cast<int32_t>(from, i);
-    int32_t cur_d = 1;
+    uint32_t cur_d = 1;
     if(i != to)
-        cur_d = lexical_cast<int32_t>(i + 1, to);
-    return r(cur_n, cur_d);
+        cur_d = lexical_cast<uint32_t>(i + 1, to);
+    return {cur_n, cur_d};
 }
 

@@ -14,7 +14,17 @@
 #include "mlog.hpp"
 
 template<typename type>
-void split(mvector<type>& ret, char_cit it, char_cit ie, char sep);
+void split(mvector<type>& ret, char_cit it, char_cit ie, char sep)
+{
+    while(it != ie) {
+        char_cit i = find(it, ie, sep);
+        ret.push_back(type(it, i));
+        if(i != ie)
+            ++i;
+        it = i;
+    }
+}
+
 mvector<mstring> split_s(str_holder str, char sep = ',');
 mvector<str_holder> split(str_holder str, char sep = ',');
 

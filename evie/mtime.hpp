@@ -135,8 +135,8 @@ struct time_parsed : date, time_duration
     }
 };
 
-time_parsed parse_time(const ttime_t& time);
-time_duration get_time_duration(const ttime_t& time);
+time_parsed parse_time(ttime_t time);
+time_duration get_time_duration(ttime_t time);
 ttime_t pack_time(const time_parsed& p);
 ttime_t time_from_date(const date& t);
 

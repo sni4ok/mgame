@@ -180,7 +180,7 @@ bool create_directory(const char* fname)
 uint32_t create_directories(const char* fname)
 {
     mstring buf(_str_holder(fname));
-    mstring::iterator it = buf.begin(), ie = buf.end();
+    mstring::iterator it = (char*)buf.c_str(), ie = buf.end();
     uint32_t ret = 0;
     while(it != ie)
     {

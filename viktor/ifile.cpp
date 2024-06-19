@@ -406,20 +406,15 @@ struct ifile
         return ttime_t();
     }
 
-    void read_directory(const mstring& fname)
+    void parse_folder(const mstring& f, uint64_t tfrom, uint64_t tto, const date& df, const date& dt,
+        const mstring& dir, const uint16_t* year = nullptr)
     {
-        MPROFILE("ifile::read_directory")
-        char_cit it = find_last(fname, '/') + 1;
-        mstring dir(fname.begin(), it);
-        mstring f(it, fname.end());
-
         dirent **ee;
         int n = scandir(dir.c_str(), &ee, NULL, alphasort);
         if(n == -1)
             throw_system_failure(es() % "scandir error " % dir);
 
         uint32_t f_size = f.size();
-        uint64_t tfrom = main_file.tf.value / ttime_t::frac, tto = main_file.tt.value / ttime_t::frac;
         for(int i = 0; i != n; ++i) {
             dirent *e = ee[i];
             str_holder fname(_str_holder(e->d_name));
@@ -436,12 +431,51 @@ struct ifile
                 if(t && t > tto)
                     break;
             }
+            else if(e->d_type == DT_DIR)
+            {
+                auto is_number = [](str_holder s)
+                {
+                    for(char c: s) {
+                        if(c < '0' || c > '9')
+                            return false;
+                    }
+                    return true;
+                };
+
+                if(year)
+                {
+                    if(fname.size && fname.size <= 2 && is_number(fname))
+                    {
+                        uint8_t month = lexical_cast<uint8_t>(fname);
+                        if(date{*year, month, 0} <= dt && df <= date{*year, month, 31})
+                            parse_folder(f, tfrom, tto, df, dt, dir + fname + "/");
+                    }
+                }
+                else if(fname.size == 4 && is_number(fname))
+                {
+                    uint16_t year = lexical_cast<uint16_t>(fname);
+                    if(year >= df.year && year <= dt.year)
+                        parse_folder(f, tfrom, tto, df, dt, dir + fname + "/", &year);
+                }
+            }
         }
-        dir_files.push_back(fname);
 
         for(int i = 0; i != n; ++i)
             free(ee[i]);
         free(ee);
+    }
+
+    void read_directory(const mstring& fname, ttime_t tf, ttime_t tt)
+    {
+        char_cit it = find_last(fname, '/') + 1;
+        mstring dir(fname.begin(), it);
+        mstring f(it, fname.end());
+        uint64_t tfrom = main_file.tf.value / ttime_t::frac, tto = main_file.tt.value / ttime_t::frac;
+
+        date df = parse_time(tf), dt = parse_time(tt);
+
+        parse_folder(f, tfrom, tto, df, dt, dir, nullptr);
+        dir_files.push_back(fname);
     }
 
     void load_cb()
@@ -468,7 +502,7 @@ struct ifile
     ifile(volatile bool& can_run, const mstring& fname, ttime_t tf, ttime_t tt, bool history)
         : can_run(can_run), main_file({fname, tf, tt, 0, 0, 0}), nt(), history(history), last_file_check_time()
     {
-        read_directory(fname);
+        read_directory(fname, tf, tt);
         load_cb();
         ping.id = msg_ping;
     }

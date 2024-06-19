@@ -50,7 +50,7 @@ struct fset
         return ::lower_bound(data.begin(), data.end(), k, comp());
     }
     const_iterator upper_bound(const type& k) const {
-        return upper_bound(data.begin(), data.end(), k, comp());
+        return ::upper_bound(data.begin(), data.end(), k, comp());
     }
     static bool not_equal(const type& l, const type& r) {
         return comp()(l, r) || comp()(r, l);

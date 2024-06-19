@@ -221,7 +221,7 @@ iterator min_element_impl(iterator from, iterator to, compare cmp)
     ++from;
     for(; from != to; ++from)
     {
-        if(min)
+        if constexpr(min)
         {
             if(cmp(*from, *it))
                 it = from;
@@ -294,6 +294,21 @@ iterator advance(iterator it, uint64_t size)
     for(uint32_t i = 0; i != size; ++i, ++it)
         ;
     return it;
+}
+
+template<typename iterator>
+requires requires { is_same_v<typename iterator::iterator_category, forward_iterator_tag>; }
+bool equal(iterator i1, iterator e1, iterator i2, iterator e2)
+{
+    for(; i1 != e1 && i2 != e2; ++i1, ++i2)
+    {
+        if(*i1 != *i2)
+            return false;
+    }
+    if(i1 != e1 || i2 != e2)
+        return false;
+
+    return true;
 }
 
 template<typename iterator>

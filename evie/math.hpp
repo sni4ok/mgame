@@ -17,7 +17,7 @@ extern "C"
 
 template<typename type>
 requires(is_signed_v<type>)
-type abs(type v)
+constexpr type abs(type v)
 {
     if(v < type())
         return -v;

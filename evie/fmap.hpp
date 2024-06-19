@@ -24,7 +24,7 @@ struct fmap
 
     fmap() {
     }
-    fmap(fmap&& r) : data(move(r.data)) {
+    fmap(fmap&& r) : data(::move(r.data)) {
     }
     fmap(const fmap& r) : data(r.data) {
     }
@@ -33,7 +33,7 @@ struct fmap
             insert(v);
     }
     fmap& operator=(fmap&& r) {
-        data = move(r.data);
+        data = ::move(r.data);
         return *this;
     }
     fmap& operator=(const fmap& r) {
@@ -128,7 +128,7 @@ struct fmap
     iterator insert(pair&& v) {
         auto it = lower_bound(v.first);
         if(it == data.end() || not_equal(it->first, v.first))
-            it = data.insert(it, move(v));
+            it = data.insert(it, ::move(v));
         return it;
     }
     bool erase(const key& k) {

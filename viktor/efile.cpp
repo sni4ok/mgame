@@ -65,9 +65,16 @@ struct efile
                         << ", error: " << r << ", " << _str_holder(errno ? strerror(errno) : "");
                 else
                     mlog(mlog::critical) << "file renamed from " << fname << ", to " << backup;
-                mstring gzip = "gzip " + backup;
-                r = system(gzip.c_str());
-                mlog(mlog::critical) << gzip << (r ? _str_holder(" fail") : _str_holder(" success"));
+                if(fsz % message_size)
+                {
+                    mlog(mlog::critical) << "file " << backup << " bad size: " << fsz << ", gzip skipped";
+                }
+                else
+                {
+                    mstring gzip = "gzip " + backup;
+                    r = system(gzip.c_str());
+                    mlog(mlog::critical) << gzip << (r ? _str_holder(" fail") : _str_holder(" success"));
+                }
             }
             if(fsz || !hfile)
                 fp |= O_EXCL;
