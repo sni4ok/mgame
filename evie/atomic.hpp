@@ -5,7 +5,6 @@
 #pragma once
 
 #include <cstdint>
-#include <cassert>
 
 inline uint64_t atomic_add(uint64_t& v, uint64_t value)
 {

@@ -137,6 +137,18 @@ namespace my_cvt
         static const uint32_t value = 30;
     };
 
+    template<>
+    struct atoi_size<char>
+    {
+        static const uint32_t value = 1;
+    };
+
+    template<>
+    struct atoi_size<bool>
+    {
+        static const uint32_t value = 1;
+    };
+
     template<typename type>
     inline constexpr uint32_t atoi_size_v = atoi_size<type>::value;
 }

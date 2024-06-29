@@ -5,8 +5,6 @@
 #include "myitoa.hpp"
 #include "math.hpp"
 
-#include <cassert>
-
 namespace my_cvt
 {
     exception::exception(str_holder h, str_holder m)

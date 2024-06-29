@@ -8,7 +8,6 @@
 #include "type_traits.hpp"
 
 #include <initializer_list>
-#include <cassert>
 
 void* tss_realloc(void* ptr, uint64_t old_size, uint64_t new_size);
 void tss_free(void* ptr, uint64_t size);

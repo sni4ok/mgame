@@ -9,8 +9,6 @@
 #include "profiler.hpp"
 #include "queue.hpp"
 
-#include <cassert>
-
 #include <pthread.h>
 #include <errno.h>
 

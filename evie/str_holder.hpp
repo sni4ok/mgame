@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include <cassert>
+
 extern "C"
 {
     extern void* memset(void*, int, size_t) __THROW __nonnull ((1));
@@ -86,6 +88,11 @@ struct str_holder
     constexpr char operator[](uint32_t idx) const
     {
         return *(str + idx);
+    }
+    constexpr char back() const
+    {
+        assert(size);
+        return *(end() - 1);
     }
 };
 
