@@ -117,6 +117,13 @@ struct tuple<type, types...>
 };
 
 template<typename t>
+concept __have_size = is_class_v<t> && requires(t* v)
+{
+    v->size();
+};
+
+template<typename t>
+requires(__have_size<t>)
 struct tuple_size
 {
     static constexpr size_t value = t::size();
@@ -276,14 +283,14 @@ bool tuple_for_each_one(func f)
         return false;
 }
 
-template<typename tuple, size_t sz = 0>
-void tuple_from_strings(const mvector<mstring>& params, tuple& p)
+template<typename tuple, typename str, size_t sz = 0>
+void tuple_from_strings(const mvector<str>& params, tuple& p)
 {
     if constexpr(tuple_size_v<tuple>)
     {
         get<sz>(p) = lexical_cast<tuple_element_t<sz, tuple> >(params[sz]);
         if constexpr(tuple_size_v<tuple> - sz - 1)
-            tuple_from_strings<tuple, sz + 1>(params, p);
+            tuple_from_strings<tuple, str, sz + 1>(params, p);
     }
 }
 

@@ -108,8 +108,11 @@ struct remove_reference<t&&>
 template<typename t>
 struct is_trivially_destructible 
 {
-    //static constexpr bool value = __is_trivially_destructible(t);
+#ifdef CLANG_COMPILER
+    static constexpr bool value = __is_trivially_destructible(t);
+#else
     static constexpr bool value = __has_trivial_destructor(t);
+#endif
 };
 
 template<typename t>

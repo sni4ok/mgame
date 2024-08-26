@@ -14,10 +14,15 @@ IF(NOT IS_CLANG)
     set(IS_CLANG OFF CACHE BOOL "clang" FORCE)
 ENDIF(NOT IS_CLANG)
 
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -march=native -std=c++20")
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 IF("${IS_CLANG}")
 
     set(CMAKE_C_COMPILER "/usr/bin/clang" CACHE STRING "clang compiler" FORCE)
     set(CMAKE_CXX_COMPILER "/usr/bin/clang++" CACHE STRING "clang compiler" FORCE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-missing-braces")
+    add_definitions(-DCLANG_COMPILER)
     message("clang mode")
 
 ELSE("${IS_CLANG}")
@@ -27,9 +32,6 @@ ELSE("${IS_CLANG}")
     message("gcc mode")
 
 ENDIF("${IS_CLANG}")
-
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -march=native -std=c++20")
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 SUBDIRS(evie makoa ying tyra viktor alco)
 
