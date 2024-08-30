@@ -39,7 +39,7 @@ inline void init_smc(void* ptr)
     }
 }
 
-uint8_t mmap_nusers(const char* params)
+uint8_t mmap_nusers(char_cit params)
 {
     int h = ::open(params, O_RDONLY, 0666);
     if(h <= 0)
@@ -53,7 +53,7 @@ uint8_t mmap_nusers(const char* params)
     return c - '1' + 1;
 }
 
-void* mmap_create(const char* params, bool create)
+void* mmap_create(char_cit params, bool create)
 {
     if(create)
     {

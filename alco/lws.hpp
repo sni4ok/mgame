@@ -31,8 +31,6 @@ struct lws;
 
 struct lws_impl : emessages, lws_dump, stack_singleton<lws_impl>
 {
-    typedef char_cit iterator;
-
     const bool log_lws;
     char buf[512];
     buf_stream bs;
@@ -60,9 +58,9 @@ void proceed_lws_parser_fake(volatile bool& can_run)
     for(;can_run;)
     {
         str_holder str = ls.read_dump();
-        if(str.size) {
+        if(!str.empty()) {
             MPROFILE("lws_fake")
-            ls.proceed(nullptr, str.str, str.size);
+            ls.proceed(nullptr, str.begin(), str.size());
         }
         else
             break;

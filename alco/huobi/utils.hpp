@@ -29,7 +29,7 @@ struct zlib_alloc
         uint32_t req = items * size;
         if(allocated + req > buf.size()) [[unlikely]]
             throw str_exception("zlibe::alloc() bad alloc");
-        char* ret = &buf[allocated];
+        char_it ret = &buf[allocated];
         allocated += req;
         return (void*)ret;
     }
@@ -58,7 +58,7 @@ struct zlib_impl : conditional_t<z_alloc, zlib_alloc, zlib_alloc_base>
         }
         strm.opaque = this;
     }
-    str_holder decompress(const char* p, uint32_t size)
+    str_holder decompress(char_cit p, uint32_t size)
     {
         if constexpr(z_alloc)
             this->decompress_pre();

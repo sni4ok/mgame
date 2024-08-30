@@ -166,7 +166,7 @@ namespace {
         }
     };
 
-    void* estat_init(const char* params)
+    void* estat_init(char_cit params)
     {
         return new estat(_mstring(params));
     }

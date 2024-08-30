@@ -7,9 +7,9 @@
 #include "../lws.hpp"
 #include "../utils.hpp"
 
-ttime_t read_time(const char* it, const char* ie)
+ttime_t read_time(char_cit it, char_cit ie)
 {
-    const char* ne = find(it, ie, '.');
+    char_cit ne = find(it, ie, '.');
     uint64_t time = my_cvt::atoi<uint32_t>(it, ne - it);
     it = ne + 1;
     uint64_t time_us = my_cvt::atoi<uint32_t>(it, 6);
@@ -21,7 +21,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     config& cfg;
     
     struct impl;
-    typedef void (lws_i::*func)(uint32_t security_id, ttime_t time, iterator& it, iterator ie);
+    typedef void (lws_i::*func)(uint32_t security_id, ttime_t time, char_cit& it, char_cit ie);
     struct impl
     {
         uint32_t security_id;
@@ -49,15 +49,15 @@ struct lws_i : sec_id_by_name<lws_impl>
     price_t t_price;
     count_t t_count;
     ttime_t t_time;
-    void parse_tick(iterator& it, iterator ie)
+    void parse_tick(char_cit& it, char_cit ie)
     {
         t_price = read_value(it, ie, read_price, false);
         t_count = read_value(it, ie, read_count, false);
         t_time = read_value(it, ie, read_time, true);
     }
-    void parse_spread(uint32_t security_id, ttime_t time, iterator& it, iterator ie)
+    void parse_spread(uint32_t security_id, ttime_t time, char_cit& it, char_cit ie)
     {
-        iterator f = it;
+        char_cit f = it;
         skip_fixed(it, "[");
         price_t bid_price = read_value(it, ie, read_price, false);
         price_t ask_price = read_value(it, ie, read_price, false);
@@ -75,10 +75,10 @@ struct lws_i : sec_id_by_name<lws_impl>
        
         send_messages();
     }
-    void parse_book(uint32_t security_id, ttime_t time, iterator& it, iterator ie)
+    void parse_book(uint32_t security_id, ttime_t time, char_cit& it, char_cit ie)
     {
         bool snapshot = false;
-        iterator f = it;
+        char_cit f = it;
         skip_fixed(it, "{");
         for(;;){
             skip_fixed(it, "\"");
@@ -129,9 +129,9 @@ struct lws_i : sec_id_by_name<lws_impl>
         it = ie;
         send_messages();
     }
-    void parse_trade(uint32_t security_id, ttime_t time, iterator& it, iterator ie)
+    void parse_trade(uint32_t security_id, ttime_t time, char_cit& it, char_cit ie)
     {
-        iterator f = it;
+        char_cit f = it;
         skip_fixed(it, "[");
         for(;;)
         {
@@ -164,17 +164,17 @@ struct lws_i : sec_id_by_name<lws_impl>
         it = ie;
         send_messages();
     }
-    void proceed(lws*, const char* in, size_t len)
+    void proceed(lws*, char_cit in, size_t len)
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
             mlog() << "lws proceed: " << str_holder(in, len);
-        iterator it = in, ie = it + len;
+        char_cit it = in, ie = it + len;
 
         if(*it == '[')
         {
             ++it;
-            iterator ne = find(it, ie, ',');
+            char_cit ne = find(it, ie, ',');
             uint32_t channel = my_cvt::atoi<uint32_t>(it, ne - it);
             impl& i = parsers.at(channel);
             it = ne + 1;
@@ -184,7 +184,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         {
             if(!cfg.log_lws)
                 mlog() << "" << str_holder(it, ie - it);
-            iterator ne = find(it, ie, ',');
+            char_cit ne = find(it, ie, ',');
             uint32_t channel = my_cvt::atoi<uint32_t>(it, ne - it);
             it = ne + 1;
             skip_fixed(it, "\"channelName\":\"");

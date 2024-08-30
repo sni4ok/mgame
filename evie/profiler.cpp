@@ -71,7 +71,7 @@ profilerinfo::profilerinfo() : cur_counters(), log_on_exit(true)
 {
 }
 
-uint64_t profilerinfo::register_counter(const char* id)
+uint64_t profilerinfo::register_counter(char_cit id)
 {
     for(;;)
     {

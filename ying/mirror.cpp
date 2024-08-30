@@ -435,7 +435,7 @@ void mirror::proceed(const message* m, uint32_t count)
     pimpl->proceed(m, count);
 }
 
-void* ying_init(const char* params)
+void* ying_init(char_cit params)
 {
     mlog() << "ying " << _str_holder(params) << " started";
     return create_mirror(_mstring(params));

@@ -189,7 +189,7 @@ struct mysql
     }
 };
 
-void* mysql_init(const char* params)
+void* mysql_init(char_cit params)
 {
     return new mysql(_mstring(params));
 }

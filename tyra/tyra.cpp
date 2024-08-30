@@ -12,7 +12,7 @@
 
 #include <unistd.h>
 
-tyra::tyra(const char* h) : send_from_call(), send_from_buffer(), bf(buf), bt(buf + sizeof(buf)), c(buf), e(buf) 
+tyra::tyra(char_cit h) : send_from_call(), send_from_buffer(), bf(buf), bt(buf + sizeof(buf)), c(buf), e(buf) 
 {
     str_holder host = _str_holder(h);
     mlog() << "tyra() " << host;
@@ -20,7 +20,7 @@ tyra::tyra(const char* h) : send_from_call(), send_from_buffer(), bf(buf), bt(bu
     if(i == ie || i + 1 == ie)
         throw mexception(es() % "tyra::tyra() bad host: " % host);
 
-    socket = socket_connect(mstring(host.begin(), i), lexical_cast<uint16_t>(i + 1, host.end()));
+    socket = socket_connect({host.begin(), i}, lexical_cast<uint16_t>(i + 1, host.end()));
     mlog() << "tyra() connected to socket " << socket;
 }
 
@@ -33,7 +33,7 @@ tyra::~tyra()
 void tyra::send(const message& m)
 {
     char_cit ptr = (char_cit)(&m);
-    const uint32_t sz = message_size;
+    uint32_t sz = message_size;
     if(c != e) {
         if(bt - e > sz) [[unlikely]]
             throw str_exception("tyra::send() message buffer overloaded");
@@ -60,8 +60,8 @@ void tyra::send(const message& m)
 
 void tyra::send(const message* m, uint32_t count)
 {
-    const char* ptr = (const char*)(m);
-    const uint32_t sz = count * message_size;
+    char_cit ptr = (char_cit)(m);
+    uint32_t sz = count * message_size;
     if(c != e) {
         if(bt - e > sz) [[unlikely]]
             throw str_exception("tyra::send() messages buffer overloaded");

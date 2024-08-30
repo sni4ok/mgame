@@ -13,21 +13,21 @@ struct mstring : mvector<char>
 {
     typedef mvector<char> base;
     
-    typedef char* iterator;
-    typedef const char* const_iterator;
+    typedef char_it iterator;
+    typedef char_cit const_iterator;
     typedef char value_type;
 
     mstring();
     mstring(str_holder str);
     mstring(std::initializer_list<char> r);
-    mstring(const char* from, const char* to);
+    mstring(char_cit from, char_cit to);
     mstring(const mstring& r);
     mstring(mstring&& r);
     mstring& operator=(mstring&& r);
     mstring& operator=(const mstring& r);
     void swap(mstring& r);
     str_holder str() const;
-    const char* c_str() const;
+    char_cit c_str() const;
     bool operator==(const mstring& r) const;
     bool operator==(const str_holder& r) const;
     bool operator!=(const mstring& r) const;
@@ -41,7 +41,7 @@ struct mstring : mvector<char>
     mstring operator+(char c) const;
 };
 
-inline mstring _mstring(const char* str)
+inline mstring _mstring(char_cit str)
 {
     return mstring(_str_holder(str));
 }

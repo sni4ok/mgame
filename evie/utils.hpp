@@ -215,5 +215,17 @@ stream& operator<<(stream& s, ttime_t v)
     return s << parse_time(v);
 }
 
+str_holder itoa_hex(uint8_t ch);
+
+inline auto print_binary(str_holder str)
+{
+    auto f = [](auto& s, char c)
+    {
+        s << itoa_hex((uint8_t)c);
+    };
+
+    return print<' '>(str, f);
+}
+
 #endif
 

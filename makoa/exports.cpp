@@ -51,7 +51,7 @@ namespace
         }
         mlog() << "<flush|";
     }
-    void* hole_no_init(const char*)
+    void* hole_no_init(char_cit)
     {
         return 0;
     }
@@ -61,7 +61,7 @@ namespace
     void hole_no_proceed(void*, const message*, uint32_t)
     {
     }
-    void* tyra_create(const char* params)
+    void* tyra_create(char_cit params)
     {
         return new tyra(params);
     }
@@ -173,7 +173,7 @@ namespace
         ret.p = ret.he.init(params.c_str());
         return ret;
     }
-    void* pipe_init(const char* params)
+    void* pipe_init(char_cit params)
     {
         int r = mkfifo(params, 0666);
         my_unused(r);
@@ -194,7 +194,7 @@ namespace
         if(ret != wsize) [[unlikely]]
             throw_system_failure(es() % "pipe::write, wsize: " % wsize  % ", ret: " % ret);
     }
-    void* mmap_init(const char* params)
+    void* mmap_init(char_cit params)
     {
         mlog() << "mmap_init() open: " << _str_holder(params);
         void *p = mmap_create(params, false);
@@ -203,7 +203,7 @@ namespace
 
         uint8_t* c = (uint8_t*)p;
         {
-            char& s = *((char*)p + mmap_alloc_size);
+            char& s = *((char_it)p + mmap_alloc_size);
             if(s != '1')
             {
                 mmap_store(c, 1);

@@ -181,7 +181,7 @@ namespace
         }
     };
 
-    void* stat_init(const char*)
+    void* stat_init(char_cit)
     {
         return new stat();
     }

@@ -23,6 +23,6 @@ struct config : stack_singleton<config>
     mstring push;
     bool log_lws;
 
-    config(const char* fname);
+    config(char_cit fname);
 };
 

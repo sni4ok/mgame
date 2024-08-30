@@ -14,12 +14,12 @@ typedef std::exception exception;
 
 struct str_exception : exception
 {
-    const char* msg;
+    char_cit msg;
 
-    str_exception(const char* msg) : msg(msg)
+    str_exception(char_cit msg) : msg(msg)
     {
     }
-    const char* what() const noexcept
+    char_cit what() const noexcept
     {
         return msg;
     }
@@ -34,7 +34,7 @@ stream& operator<<(stream& s, const exception& e)
 
 namespace my_cvt
 {
-    uint32_t itoa(char* buf, bool t);
+    uint32_t itoa(char_it buf, bool t);
     uint32_t itoa(char *buf, char v);
     uint32_t itoa(char *buf, int8_t v);
     uint32_t itoa(char *buf, uint8_t v);
@@ -51,11 +51,11 @@ namespace my_cvt
         char buf[64];
 
         exception(str_holder h, str_holder m);
-        const char* what() const noexcept;
+        char_cit what() const noexcept;
     };
 
     template<typename type>
-    type atoi_u(const char* buf, uint32_t size) {
+    type atoi_u(char_cit buf, uint32_t size) {
         static_assert(is_unsigned_v<type>);
         type ret = 0;
         static const type mm = limits<type>::max / 10;
@@ -72,7 +72,7 @@ namespace my_cvt
     }
 
     template<typename type>
-    type atoi(const char* buf, uint32_t size) {
+    type atoi(char_cit buf, uint32_t size) {
         static_assert(is_integral_v<type>);
         typedef make_unsigned_t<type> type_u;
         if constexpr(is_unsigned_v<type>)
@@ -85,14 +85,14 @@ namespace my_cvt
     }
 
     template<>
-    inline char atoi<char>(const char* buf, uint32_t size) {
+    inline char atoi<char>(char_cit buf, uint32_t size) {
         if(size != 1) [[unlikely]]
             throw exception(str_holder("atoi() bad char size: "), {buf, size});
         return *buf;
     }
 
     template<>
-    inline bool atoi<bool>(const char* buf, uint32_t size) {
+    inline bool atoi<bool>(char_cit buf, uint32_t size) {
         if(size != 1 || (buf[0] != '0' && buf[0] != '1')) [[unlikely]]
             throw exception(str_holder("atoi() bad bool number: "), {buf, size});
         return(buf[0] == '1');

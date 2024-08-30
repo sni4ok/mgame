@@ -11,7 +11,7 @@
 #include <unistd.h>
 #include <dirent.h>
 
-void fix_zero_tail(const char* fname)
+void fix_zero_tail(char_cit fname)
 {
     cout() << "fix_zero_tail(" << _str_holder(fname) << "):" << endl;
     mfile f(fname);
@@ -32,14 +32,14 @@ void fix_zero_tail(const char* fname)
 
 void sort_data_by_folders(str_holder folder)
 {
-    if(folder[folder.size - 1] != '/')
+    if(folder[folder.size() - 1] != '/')
         throw mexception(es() % "sort_data_by_folders() bad folder name: " % folder);
 
     cout() << "sort_data_by_folders(" << folder << "):" << endl;
     mvector<mstring> files_for_move;
     {
         dirent **ee;
-        int n = scandir(folder.str, &ee, NULL, alphasort);
+        int n = scandir(folder.begin(), &ee, NULL, alphasort);
         if(n == -1)
             throw_system_failure(es() % "scandir error " % folder);
         for(int i = 0; i != n; ++i) {
@@ -47,7 +47,7 @@ void sort_data_by_folders(str_holder folder)
             if(e->d_type == DT_REG)
             {
                 str_holder fname(_str_holder(e->d_name));
-                if(fname.size < 3 || str_holder(fname.end() - 3, fname.end()) != ".gz")
+                if(fname.size() < 3 || str_holder(fname.end() - 3, fname.end()) != ".gz")
                     throw mexception(es() % "sort_data_by_folders() unsupported file type: " % fname);
                 files_for_move.push_back(fname);
             }

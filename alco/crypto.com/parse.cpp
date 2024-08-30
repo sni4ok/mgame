@@ -35,14 +35,14 @@ struct lws_i: sec_id_by_name<lws_impl>
         subscribes.push_back(sub.str());
     }
 
-    void proceed(lws* wsi, const char* in, size_t len)
+    void proceed(lws* wsi, char_cit in, size_t len)
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
             mlog() << "lws proceed: " << str_holder(in, len);
-        iterator it = in, ie = it + len;
+        char_cit it = in, ie = it + len;
         skip_fixed(it, "{\"id\":");
-        iterator ne = it;
+        char_cit ne = it;
         it = find(it, ie, ',');
         if(skip_if_fixed(it, ",\"method\":\"subscribe\",\"code\":0,\"result\":{\"instrument_name\":\""))
         {

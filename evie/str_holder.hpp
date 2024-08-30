@@ -43,23 +43,24 @@ constexpr bool lexicographical_compare(it1 first1, it1 last1, it2 first2, it2 la
 typedef char* char_it;
 typedef const char* char_cit;
 
-struct str_holder
+class str_holder
 {
     char_cit str;
-    uint64_t size;
+    uint64_t size_;
 
-    constexpr str_holder() : str(), size()
+public:
+    constexpr str_holder() : str(), size_()
     {
     }
-    constexpr str_holder(char_cit str, uint64_t size) : str(str), size(size)
+    constexpr str_holder(char_cit str, uint64_t size) : str(str), size_(size)
     {
     }
-    constexpr str_holder(char_cit from, char_cit to) : str(from), size(to - from)
+    constexpr str_holder(char_cit from, char_cit to) : str(from), size_(to - from)
     {
     }
 
     template<uint64_t sz>
-    constexpr str_holder(const char (&str)[sz]) : str(str), size(sz - 1)
+    constexpr str_holder(const char (&str)[sz]) : str(str), size_(sz - 1)
     {
     }
     bool operator==(const str_holder& r) const;
@@ -75,7 +76,7 @@ struct str_holder
     }
     constexpr bool operator<(const str_holder& r) const
     {
-        return lexicographical_compare(str, str + size, r.str, r.str + r.size);
+        return lexicographical_compare(str, str + size_, r.str, r.str + r.size_);
     }
     constexpr char_cit begin() const
     {
@@ -83,7 +84,7 @@ struct str_holder
     }
     constexpr char_cit end() const
     {
-        return str + size;
+        return str + size_;
     }
     constexpr char operator[](uint32_t idx) const
     {
@@ -91,8 +92,23 @@ struct str_holder
     }
     constexpr char back() const
     {
-        assert(size);
+        assert(size_);
         return *(end() - 1);
+    }
+    constexpr uint64_t size() const
+    {
+        return size_;
+    }
+    constexpr bool empty() const {
+        return !size_;
+    }
+    void resize(uint64_t size) {
+        assert(size <= size_);
+        size_ = size;
+    }
+    void pop_back() {
+        assert(size_);
+        --size_;
     }
 };
 
@@ -110,7 +126,7 @@ constexpr str_holder from_array(const char (&str)[sz])
 template<typename stream>
 stream& operator<<(stream& s, str_holder str)
 {
-    s.write(str.str, str.size);
+    s.write(str.begin(), str.size());
     return s;
 }
 

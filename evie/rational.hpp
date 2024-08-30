@@ -2,6 +2,10 @@
     author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
+#pragma once
+
+#include "mstring.hpp"
+
 struct rational
 {
     int32_t num;
@@ -47,5 +51,5 @@ stream& operator<<(stream& str, const rational& v)
 }
 
 mstring to_string(rational value);
-template<> rational lexical_cast<rational>(const char* from, const char* to);
+template<> rational lexical_cast<rational>(char_cit from, char_cit to);
 

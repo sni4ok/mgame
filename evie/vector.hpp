@@ -296,13 +296,13 @@ public:
     }
     void insert(const type* from, const type* to) {
         uint64_t size = size_;
-        resize(size_ + (to - from));
+        resize(to + size_ - from);
         __copy(from, to, buf + size);
     }
     void insert(iterator it, const type* from, const type* to) {
         uint64_t size = size_;
         uint64_t pos = it - buf;
-        resize(size_ + (to - from));
+        resize(to + size_ - from);
         it = buf + pos;
         __copy(it, buf + size, it + (to - from));
         __copy(from, to, it);
@@ -332,6 +332,7 @@ public:
         return buf[size_ - 1];
     }
     void pop_back() {
+        assert(size_);
         resize(size_ - 1);
     }
     iterator erase(iterator it) {
@@ -516,6 +517,6 @@ struct mexception : exception
     mvector<char> msg;
 
     mexception(str_holder str);
-    const char* what() const noexcept;
+    char_cit what() const noexcept;
 };
 

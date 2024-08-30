@@ -8,7 +8,7 @@
 #include "../../evie/config.hpp"
 #include "../../evie/utils.hpp"
 
-config::config(const char* fname)
+config::config(char_cit fname)
 {
     auto buf = read_file(fname);
     cgate_host = get_config_param<str_holder>(buf, "cgate_host");

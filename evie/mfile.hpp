@@ -12,26 +12,26 @@ struct mfile
     int hfile;
 
     mfile(int hfile);
-    mfile(const char* file);
+    mfile(char_cit file);
     mfile(const mfile&) = delete;
     uint64_t size() const;
     void seekg(uint64_t pos);
-    void read(char* ptr, uint64_t size);
+    void read(char_it ptr, uint64_t size);
     ~mfile();
 
     void swap(mfile& r);
 };
 
-bool read_file(mvector<char>& buf, const char* fname, bool can_empty = false);
-bool read_file_and_truncate(mvector<char>& buf, const char* fname, bool can_empty = false);
-mvector<char> read_file(const char* fname, bool can_empty = false);
-void write_file(const char* fname, const char* buf, uint64_t size, bool trunc);
-bool is_file_exist(const char* fname, uint64_t* fsize = nullptr);
-uint64_t file_size(const char* fname);
-void remove_file(const char* fname);
-void rename_file(const char* from, const char* to);
-bool create_directory(const char* fname);
-uint32_t create_directories(const char* fname);
-bool is_directory(const char* fname);
-ttime_t get_file_mtime(const char* fname);
+bool read_file(mvector<char>& buf, char_cit fname, bool can_empty = false);
+bool read_file_and_truncate(mvector<char>& buf, char_cit fname, bool can_empty = false);
+mvector<char> read_file(char_cit fname, bool can_empty = false);
+void write_file(char_cit fname, char_cit buf, uint64_t size, bool trunc);
+bool is_file_exist(char_cit fname, uint64_t* fsize = nullptr);
+uint64_t file_size(char_cit fname);
+void remove_file(char_cit fname);
+void rename_file(char_cit from, char_cit to);
+bool create_directory(char_cit fname);
+uint32_t create_directories(char_cit fname);
+bool is_directory(char_cit fname);
+ttime_t get_file_mtime(char_cit fname);
 

@@ -14,7 +14,7 @@
 #include <sys/stat.h>
 #include <sys/file.h>
 
-mfile::mfile(const char* file)
+mfile::mfile(char_cit file)
 {
     hfile = ::open(file, O_RDONLY);
     if(hfile <= 0)
@@ -44,7 +44,7 @@ void mfile::seekg(uint64_t pos)
         throw_system_failure("lseek() error");
 }
 
-void mfile::read(char* ptr, uint64_t size)
+void mfile::read(char_it ptr, uint64_t size)
 {
     uint64_t read_bytes = 0;
     while(read_bytes != size)
@@ -62,7 +62,7 @@ mfile::~mfile()
         ::close(hfile);
 }
 
-inline bool read_file_impl(int hfile, bool trunc, mvector<char>& buf, const char* fname, bool can_empty)
+inline bool read_file_impl(int hfile, bool trunc, mvector<char>& buf, char_cit fname, bool can_empty)
 {
     bool ret = false;
     uint64_t buf_size = buf.size();
@@ -84,13 +84,13 @@ inline bool read_file_impl(int hfile, bool trunc, mvector<char>& buf, const char
     return ret;
 }
 
-bool read_file(mvector<char>& buf, const char* fname, bool can_empty)
+bool read_file(mvector<char>& buf, char_cit fname, bool can_empty)
 {
     int hfile = ::open(fname, O_RDONLY);
     return read_file_impl(hfile, false, buf, fname, can_empty);
 }
 
-bool read_file_and_truncate(mvector<char>& buf, const char* fname, bool can_empty)
+bool read_file_and_truncate(mvector<char>& buf, char_cit fname, bool can_empty)
 {
     int hfile = ::open(fname, O_RDWR);
     if(flock(hfile, LOCK_EX))
@@ -98,14 +98,14 @@ bool read_file_and_truncate(mvector<char>& buf, const char* fname, bool can_empt
     return read_file_impl(hfile, true, buf, fname, can_empty);
 }
 
-mvector<char> read_file(const char* fname, bool can_empty)
+mvector<char> read_file(char_cit fname, bool can_empty)
 {
     mvector<char> buf;
     read_file(buf, fname, can_empty);
     return buf;
 }
 
-void write_file(const char* fname, const char* buf, uint64_t size, bool trunc)
+void write_file(char_cit fname, char_cit buf, uint64_t size, bool trunc)
 {
     int flags = O_CREAT | O_APPEND | O_RDWR;
     if(trunc)
@@ -127,7 +127,7 @@ void write_file(const char* fname, const char* buf, uint64_t size, bool trunc)
         throw_system_failure(es() % "write_file(), " % _str_holder(fname) % ", size: " % size);
 }
 
-bool get_file_stat(const char* fname, struct stat& st)
+bool get_file_stat(char_cit fname, struct stat& st)
 {
     int hfile = ::open(fname, O_RDONLY);
     if(hfile < 0)
@@ -142,7 +142,7 @@ bool get_file_stat(const char* fname, struct stat& st)
     return ret;
 }
 
-bool is_file_exist(const char* fname, uint64_t* fsize)
+bool is_file_exist(char_cit fname, uint64_t* fsize)
 {
     struct stat st;
     if(!get_file_stat(fname, st))
@@ -155,32 +155,32 @@ bool is_file_exist(const char* fname, uint64_t* fsize)
     return ret;
 }
 
-uint64_t file_size(const char* fname)
+uint64_t file_size(char_cit fname)
 {
     return mfile(fname).size();
 }
 
-void remove_file(const char* fname)
+void remove_file(char_cit fname)
 {
     if(unlink(fname))
         throw_system_failure(es() % "unlink file error, " % _str_holder(fname));
 }
 
-void rename_file(const char* from, const char* to)
+void rename_file(char_cit from, char_cit to)
 {
     if(rename(from, to) == -1)
         throw_system_failure(es() % "rename_file error from " % _str_holder(from) % ", to " % _str_holder(to));
 }
 
-bool create_directory(const char* fname)
+bool create_directory(char_cit fname)
 {
     return !(mkdir(fname, 0777));
 }
 
-uint32_t create_directories(const char* fname)
+uint32_t create_directories(char_cit fname)
 {
     mstring buf(_str_holder(fname));
-    mstring::iterator it = (char*)buf.c_str(), ie = buf.end();
+    char_it it = (char_it)buf.c_str(), ie = buf.end();
     uint32_t ret = 0;
     while(it != ie)
     {
@@ -197,7 +197,7 @@ uint32_t create_directories(const char* fname)
     return ret;
 }
 
-bool is_directory(const char* fname)
+bool is_directory(char_cit fname)
 {
     struct stat st;
     bool ret = get_file_stat(fname, st);
@@ -207,7 +207,7 @@ bool is_directory(const char* fname)
     return S_ISDIR(st.st_mode);
 }
 
-ttime_t get_file_mtime(const char* fname)
+ttime_t get_file_mtime(char_cit fname)
 {
     struct stat st;
     bool ret = get_file_stat(fname, st);

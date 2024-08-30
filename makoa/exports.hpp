@@ -12,7 +12,7 @@
 
 struct hole_exporter
 {
-    void* (*init)(const char* params) = 0;
+    void* (*init)(char_cit params) = 0;
     void (*destroy)(void*) = 0;
     void (*proceed)(void* v, const message* m, uint32_t count) = 0;
 };

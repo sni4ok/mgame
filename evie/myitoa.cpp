@@ -9,15 +9,15 @@ namespace my_cvt
 {
     exception::exception(str_holder h, str_holder m)
     {
-        memcpy(buf, h.str, h.size);
-        uint32_t sz = sizeof(buf) - 1 - h.size;
-        if(sz > m.size)
-            sz = m.size;
-        memcpy(buf + h.size, m.str, sz);
-        buf[h.size + sz] = char();
+        memcpy(buf, h.begin(), h.size());
+        uint32_t sz = sizeof(buf) - 1 - h.size();
+        if(sz > m.size())
+            sz = m.size();
+        memcpy(buf + h.size(), m.begin(), sz);
+        buf[h.size() + sz] = char();
     }
 
-    const char* exception::what() const noexcept
+    char_cit exception::what() const noexcept
     {
         return buf;
     }
@@ -33,7 +33,7 @@ namespace my_cvt
         {
             char tmp[digits];
             memset(tmp, '0', digits);
-            char* ptr = data;
+            char_it ptr = data;
             for(uint32_t i = 0; i != values; ++i)
             {
                 memcpy(ptr, tmp, digits);
@@ -57,7 +57,7 @@ namespace my_cvt
         itoa_prealloc(const itoa_prealloc&) = delete;
 
         template<typename type>
-        uint32_t write(type value, char* buf) const
+        uint32_t write(type value, char_it buf) const
         {
             assert(value < values);
             memcpy(buf, &data[value * digits], digits);
@@ -78,7 +78,7 @@ namespace my_cvt
         }
 
         template<typename type>
-        uint32_t write(type value, char* buf) const
+        uint32_t write(type value, char_it buf) const
         {
             assert(value < values);
             buf += f.write(value / s.values, buf);
@@ -123,7 +123,7 @@ namespace my_cvt
         }
     }
 
-    uint32_t itoa(char* buf, bool t)
+    uint32_t itoa(char_it buf, bool t)
     {
         buf[0] = (t ? '1' : '0');
         return 1;
@@ -135,7 +135,7 @@ namespace my_cvt
         return 1;
     }
 
-    uint32_t itoa(char* buf, uint8_t i)
+    uint32_t itoa(char_it buf, uint8_t i)
     {
         return
             (i < ita2.values ?
@@ -144,7 +144,7 @@ namespace my_cvt
             );
     }
 
-    uint32_t itoa(char* buf, uint16_t i)
+    uint32_t itoa(char_it buf, uint16_t i)
     {
         return
             (i < ita2.values ?
@@ -156,7 +156,7 @@ namespace my_cvt
             );
     }
 
-    uint32_t itoa(char* buf, uint32_t i)
+    uint32_t itoa(char_it buf, uint32_t i)
     {
         if(i <= limits<uint16_t>::max)
             return itoa(buf, uint16_t(i));
@@ -172,7 +172,7 @@ namespace my_cvt
             );
     }
 
-    uint32_t itoa(char* buf, uint64_t i)
+    uint32_t itoa(char_it buf, uint64_t i)
     {
         if(i <= limits<uint32_t>::max)
             return itoa(buf, uint32_t(i));
@@ -185,7 +185,7 @@ namespace my_cvt
         return ret + ita8.digits;
     }
 
-    uint32_t itoa(char* buf, int8_t i)
+    uint32_t itoa(char_it buf, int8_t i)
     {
         if(i < 0) {
             *buf++ = '-';
@@ -195,7 +195,7 @@ namespace my_cvt
             return itoa(buf, uint8_t(i));
     }
 
-    uint32_t itoa(char* buf, int16_t i)
+    uint32_t itoa(char_it buf, int16_t i)
     {
         if(i < 0) {
             *buf++ = '-';
@@ -205,7 +205,7 @@ namespace my_cvt
             return itoa(buf, uint16_t(i));
     }
 
-    uint32_t itoa(char* buf, int32_t i)
+    uint32_t itoa(char_it buf, int32_t i)
     {
         if(i < 0) {
             *buf++ = '-';
@@ -215,7 +215,7 @@ namespace my_cvt
             return itoa(buf, uint32_t(i));
     }
 
-    uint32_t itoa(char* buf, int64_t i)
+    uint32_t itoa(char_it buf, int64_t i)
     {
         if(i < 0) {
             *buf++ = '-';
@@ -227,7 +227,7 @@ namespace my_cvt
 
     const double d_max_d = static_cast<double>(uint64_t(1) << 62);
 
-    uint32_t itoa(char* buf, double v) 
+    uint32_t itoa(char_it buf, double v) 
     {
         if(v != v) {
             *buf++ = 'N';

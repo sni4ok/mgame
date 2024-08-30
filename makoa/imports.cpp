@@ -26,7 +26,7 @@ bool import_proceed_data(str_holder& buf, void* ctx);
 template<typename reader_state>
 struct reader
 {
-    typedef uint32_t (*func)(reader_state socket, char* buf, uint32_t buf_size);
+    typedef uint32_t (*func)(reader_state socket, char_it buf, uint32_t buf_size);
 
     reader_state socket;
     func read;
@@ -35,10 +35,10 @@ struct reader
 
     bool proceed()
     {
-        uint32_t readed = read(socket, const_cast<char*>(ctx.second.str), ctx.second.size);
+        uint32_t readed = read(socket, const_cast<char_it>(ctx.second.begin()), ctx.second.size());
         if(!readed) [[unlikely]]
             return false;
-        ctx.second.size = readed;
+        ctx.second.resize(readed);
         bool ret = import_proceed_data(ctx.second, ctx.first);
         recv_time = time(NULL);
         return ret;
@@ -54,7 +54,7 @@ struct reader
     reader(const reader&) = delete;
 };
 
-uint32_t socket_read(int socket, char* buf, uint32_t buf_size)
+uint32_t socket_read(int socket, char_it buf, uint32_t buf_size)
 {
     int ret = ::recv(socket, buf, buf_size, 0);
     if(ret <= 0) [[unlikely]] {
@@ -74,7 +74,7 @@ uint32_t socket_read(int socket, char* buf, uint32_t buf_size)
     return ret;
 }
 
-uint32_t pipe_read(int hfile, char* buf, uint32_t buf_size)
+uint32_t pipe_read(int hfile, char_it buf, uint32_t buf_size)
 {
     uint32_t read_bytes = ::read(hfile, buf, buf_size);
     if(!read_bytes) [[unlikely]]
@@ -82,7 +82,7 @@ uint32_t pipe_read(int hfile, char* buf, uint32_t buf_size)
     return read_bytes;
 }
 
-uint32_t mmap_cp_read(void *v, char* buf, uint32_t buf_size)
+uint32_t mmap_cp_read(void *v, char_it buf, uint32_t buf_size)
 {
     uint8_t* f = (uint8_t*)v, *e = f + message_size, *i = f;
     uint8_t w = mmap_load(f);
@@ -325,7 +325,7 @@ void import_ifile_start(void* c, void* p)
 }
 
 template<typename type>
-void* importer_init(volatile bool& can_run, const char* params)
+void* importer_init(volatile bool& can_run, char_cit params)
 {
     return (void*)(new type(can_run, _mstring(params)));
 }
@@ -338,7 +338,7 @@ void importer_destroy(void* ptr)
 
 fmap<mstring, hole_importer> _importers;
 
-int register_importer(const char* s, hole_importer hi)
+int register_importer(char_cit s, hole_importer hi)
 {
     mstring name(_str_holder(s));
     auto it = _importers.find(name);
@@ -361,7 +361,7 @@ static const int _import_file = register_importer("file",
     {importer_init<import_ifile>, importer_destroy<import_ifile>, import_ifile_start, nullptr}
 );
 
-hole_importer create_importer(const char* s)
+hole_importer create_importer(char_cit s)
 {
     mstring name(_str_holder(s));
     auto it = _importers.find(name);

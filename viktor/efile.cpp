@@ -86,7 +86,7 @@ struct efile
         if(hfile < 0)
             throw_system_failure(es() % "open file " % fname % " error");
     }
-    void write(const char* buf, uint32_t count)
+    void write(char_cit buf, uint32_t count)
     {
         if(::write(hfile, buf, count) != count)
             throw_system_failure(es() % "efile " % fname % " writing error");
@@ -134,7 +134,7 @@ struct efile
     void proceed(const message* m, uint32_t count)
     {
         if(bin)
-            write((const char*)m, message_size * count);
+            write((char_cit)m, message_size * count);
         else
             proceed_csv(m, count);
     }
@@ -144,7 +144,7 @@ struct efile
     }
 };
 
-void* efile_init(const char* params)
+void* efile_init(char_cit params)
 {
     return new efile(_mstring(params));
 }

@@ -79,12 +79,12 @@ stream& operator<<(stream& s, const message_hello& h)
     return s;
 }
 
-inline price_t read_price(const char* it, const char* ie)
+inline price_t read_price(char_cit it, char_cit ie)
 {
     return read_decimal<price_t>(it, ie);
 }
 
-inline count_t read_count(const char* it, const char* ie)
+inline count_t read_count(char_cit it, char_cit ie)
 {
     return read_decimal<count_t>(it, ie);
 }

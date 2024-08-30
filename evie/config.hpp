@@ -11,14 +11,14 @@
 mstring get_log_name(const mstring& fname);
 void print_init(int argc, char** argv);
 mvector<str_holder> init_params(int argc, char** argv, bool log_params = true);
-str_holder get_config_param_str(char_cit it, char_cit it_e, str_holder tag, bool can_empty);
+str_holder get_config_param_str(char_cit it, char_cit ie, str_holder tag, bool can_empty);
 mvector<mstring> get_config_params(const mvector<char>& cfg, str_holder tag);
 
 template<typename type>
-type get_config_param(char_cit it, char_cit it_e, str_holder tag, bool can_empty = false, type empty_value = type())
+type get_config_param(char_cit it, char_cit ie, str_holder tag, bool can_empty = false, type empty_value = type())
 {
-    str_holder s = get_config_param_str(it, it_e, tag, can_empty);
-    if(can_empty && s.size == 0)
+    str_holder s = get_config_param_str(it, ie, tag, can_empty);
+    if(can_empty && s.empty())
         return empty_value;
     return lexical_cast<type>(s);
 }

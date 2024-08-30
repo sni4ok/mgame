@@ -31,18 +31,18 @@ struct lws_i : sec_id_by_name<lws_impl>
         sub << "],\"id\":1}";
         subscribes.push_back(sub.str());
     }
-    void proceed(lws*, const char* in, size_t len)
+    void proceed(lws*, char_cit in, size_t len)
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
             mlog() << "lws proceed: " << str_holder(in, len);
-        iterator it = in, ie = it + len;
+        char_cit it = in, ie = it + len;
         skip_fixed(it, "{\"");
         if(*it == 'u')
         {
             it = find(it + 1, ie, ',');
             skip_fixed(it, ",\"s\":\"");
-            iterator ne = find(it, ie, '\"');
+            char_cit ne = find(it, ie, '\"');
             uint32_t security_id = get_security_id(it, ne, time);
             it = ne + 1;
             skip_fixed(it, ",\"b\":\"");
@@ -79,7 +79,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             //ttime_t etime = {my_cvt::atoi<uint64_t>(it, 13) * (ttime_t::frac / 1000)};
             it = it + 14;
             skip_fixed(it, "\"s\":\"");
-            iterator ne = find(it, ie, '\"');
+            char_cit ne = find(it, ie, '\"');
             uint32_t security_id = get_security_id(it, ne, time);
             it = ne + 1;
             skip_fixed(it, ",\"t\":");

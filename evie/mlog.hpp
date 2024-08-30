@@ -23,6 +23,8 @@ static constexpr str_holder mlog_fixed_str[] =
 template<uint32_t sz>
 struct mlog_fixed
 {
+   const uint32_t value;
+
    mlog_fixed(uint32_t value) : value(value)
    {
       static_assert(sz <= 9, "out of range");
@@ -38,7 +40,6 @@ struct mlog_fixed
       }
       return mlog_fixed_str[idx];
    }
-   const uint32_t value;
 };
 
 template<typename stream, uint32_t sz>
@@ -49,34 +50,6 @@ stream& operator<<(stream& log, const mlog_fixed<sz>& v)
 }
 
 typedef mlog_fixed<2> print2chars;
-
-struct print_binary
-{
-    const uint8_t* data;
-    uint32_t size;
-
-    explicit print_binary(const str_holder& str) : data((const uint8_t*)str.str), size(str.size)
-    {
-    }
-    print_binary(const uint8_t* data, uint32_t size) : data(data), size(size)
-    {
-    }
-};
-
-str_holder itoa_hex(uint8_t ch);
-
-template<typename stream>
-stream& operator<<(stream& log, const print_binary& v)
-{
-    const uint8_t *it = &v.data[0], *ie = &v.data[v.size];
-    for(uint32_t i = 0; it != ie; ++i, ++it)
-    {
-        if(i)
-            log << ' ';
-        log << itoa_hex(*it);
-    }
-    return log;
-}
 
 struct mlog : ios_base
 {
@@ -136,7 +109,7 @@ public:
 };
 
 void simple_log_free(simple_log* ptr);
-unique_ptr<simple_log, simple_log_free> log_init(const char* file_name = 0, uint32_t params = 0, bool set_log_instance = true);
+unique_ptr<simple_log, simple_log_free> log_init(char_cit file_name = 0, uint32_t params = 0, bool set_log_instance = true);
 simple_log* log_get();
 void log_set(simple_log* sl);
 uint32_t& log_params();

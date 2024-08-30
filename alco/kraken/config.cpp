@@ -8,7 +8,7 @@
 #include "../../evie/config.hpp"
 #include "../../evie/utils.hpp"
 
-config::config(const char* fname)
+config::config(char_cit fname)
 {
     auto cs = read_file(fname);
     str_holder smb = get_config_param<str_holder>(cs, "tickers");

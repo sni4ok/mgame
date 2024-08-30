@@ -19,7 +19,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     char event[9];
 
     struct impl;
-    typedef void (lws_i::*func)(impl& i, ttime_t time, iterator& it, iterator ie);
+    typedef void (lws_i::*func)(impl& i, ttime_t time, char_cit& it, char_cit ie);
     struct impl
     {
         uint32_t security_id;
@@ -54,7 +54,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         }
         send_messages();
     }
-    void parse_trades(impl& i, ttime_t time, iterator& it, iterator ie)
+    void parse_trades(impl& i, ttime_t time, char_cit& it, char_cit ie)
     {
         if(*(it + 1) == '[')
         {
@@ -64,7 +64,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             return;
         }
         skip_fixed(it, "[");
-        iterator ne = find(it, ie, ',');
+        char_cit ne = find(it, ie, ',');
         uint32_t id = my_cvt::atoi<uint32_t>(it, ne - it);
         ++ne;
         ttime_t etime = {my_cvt::atoi<uint64_t>(ne, 13) * (ttime_t::frac / 1000)};
@@ -92,13 +92,13 @@ struct lws_i : sec_id_by_name<lws_impl>
             send_messages();
         }
     }
-    void parse_orders(impl& i, ttime_t time, iterator& it, iterator ie)
+    void parse_orders(impl& i, ttime_t time, char_cit& it, char_cit ie)
     {
         bool one = *(it + 1) != '[';
 
         if(!one)
             skip_fixed(it, "[");
-        iterator ne;
+        char_cit ne;
         for(;;)
         {
             skip_fixed(it, "[");
@@ -147,23 +147,23 @@ struct lws_i : sec_id_by_name<lws_impl>
     {
         mlog() << "add_channel: " << channel << ", ticker: " << ticker << ", is_trades: " << is_trades;
         impl& i = parsers[channel];
-        i.security_id = get_security_id(ticker.str, ticker.str + ticker.size, time);
+        i.security_id = get_security_id(ticker.begin(), ticker.end(), time);
         if(is_trades)
             i.f = &lws_i::parse_trades;
         else
             i.f = &lws_i::parse_orders;
     }
-    void proceed(lws* wsi, const char* in, size_t len)
+    void proceed(lws* wsi, char_cit in, size_t len)
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
             mlog() << "lws proceed: " << str_holder(in, len);
-        iterator it = in, ie = it + len;
+        char_cit it = in, ie = it + len;
 
         if(*it == '[') [[likely]]
         {
             ++it;
-            iterator ne = find(it, ie, ',');
+            char_cit ne = find(it, ie, ',');
             uint32_t channel = my_cvt::atoi<uint32_t>(it, ne - it);
             skip_fixed(ne, ",");
             ne = find(ne, ie, '[');
@@ -191,7 +191,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                         is_trades = true;
                     else
                         skip_fixed(it, book);
-                    iterator ne = find(it, ie, ',');
+                    char_cit ne = find(it, ie, ',');
                     uint32_t channel = my_cvt::atoi<uint32_t>(it, ne - it);
                     ++ne;
                     skip_fixed(ne, symbol);

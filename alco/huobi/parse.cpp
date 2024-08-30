@@ -36,7 +36,7 @@ struct lws_i : sec_id_by_name<lws_impl>
 
     typedef my_basic_string<64> string;
     struct impl;
-    typedef void (lws_i::*func)(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie);
+    typedef void (lws_i::*func)(impl& i, ttime_t etime, ttime_t time, char_cit& it, char_cit ie);
     struct impl
     {
         impl() : security_id(), f()
@@ -51,13 +51,13 @@ struct lws_i : sec_id_by_name<lws_impl>
     };
     fmap<string, impl> parsers;
 
-    void parse_bbo(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie)
+    void parse_bbo(impl& i, ttime_t etime, ttime_t time, char_cit& it, char_cit ie)
     {
         //MPROFILE("parse_bbo")
 
         it = find(it, ie, ',');
         skip_fixed(it, ask);
-        iterator ne = find(it, ie, ',');
+        char_cit ne = find(it, ie, ',');
         price_t ask_price = read_price(it, ne);
         skip_fixed(ne, askSize);
         it = find(ne, ie, ',');
@@ -78,13 +78,13 @@ struct lws_i : sec_id_by_name<lws_impl>
        
         send_messages();
     }
-    void parse_orders_impl(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie, bool a)
+    void parse_orders_impl(impl& i, ttime_t etime, ttime_t time, char_cit& it, char_cit ie, bool a)
     {
         if(*it != ']')
         {
             for(;;) {
                 skip_fixed(it, "[");
-                iterator ne = find(it, ie, ',');
+                char_cit ne = find(it, ie, ',');
                 price_t p = read_price(it, ne);
                 skip_fixed(ne, ",");
                 it = find(ne, ie, ']');
@@ -103,7 +103,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         else
             ++it;
     }
-    void parse_orders_impl(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie)
+    void parse_orders_impl(impl& i, ttime_t etime, ttime_t time, char_cit& it, char_cit ie)
     {
         search_and_skip_fixed(it, ie, "prevSeqNum\":");
         search_and_skip_fixed(it, ie, ",\"");
@@ -122,13 +122,13 @@ struct lws_i : sec_id_by_name<lws_impl>
             parse_orders_impl(i, etime, time, it, ie, true);
         }
     }
-    void parse_orders(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie)
+    void parse_orders(impl& i, ttime_t etime, ttime_t time, char_cit& it, char_cit ie)
     {
         parse_orders_impl(i, etime, time, it, ie);
         skip_fixed(it, end);
         send_messages();
     }
-    void parse_snapshot(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie)
+    void parse_snapshot(impl& i, ttime_t etime, ttime_t time, char_cit& it, char_cit ie)
     {
         add_clean(i.security_id, etime, time);
         parse_orders_impl(i, etime, time, it, ie);
@@ -136,7 +136,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         skip_fixed(it, end);
         send_messages();
     }
-    void parse_trades(impl& i, ttime_t etime, ttime_t time, iterator& it, iterator ie)
+    void parse_trades(impl& i, ttime_t etime, ttime_t time, char_cit& it, char_cit ie)
     {
         it = find(it, ie, '[') + 1;
         for(;;)
@@ -146,7 +146,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             it = find(it + 1, ie, ',');
             it = find(it + 1, ie, ',');
             skip_fixed(it, amount);
-            iterator ne = find(it, ie, ',');
+            char_cit ne = find(it, ie, ',');
             count_t c = read_count(it, ne);
             skip_fixed(ne, price);
             it = find(ne, ie, ',');
@@ -210,13 +210,13 @@ struct lws_i : sec_id_by_name<lws_impl>
             }
         }
     }
-    void proceed(lws* wsi, const char* in, size_t len)
+    void proceed(lws* wsi, char_cit in, size_t len)
     {
         ttime_t time = cur_ttime();
         str_holder str = zlib.decompress(in, len);
         if(config::instance().log_lws)
             mlog() << "lws proceed: " << str;
-        iterator it = str.str, ie = str.str + str.size;
+        char_cit it = str.begin(), ie = str.end();
         if(*it != '{' || *(it + 1) != '\"') [[unlikely]]
             throw mexception(es() % "bad message: " % str);
         it = it + 2;
@@ -224,7 +224,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         if(equal(ch, ch + sizeof(ch) - 1, it)) [[likely]]
         {
             it = it + sizeof(ch) - 1;
-            iterator ne = find(it, ie, '\"');
+            char_cit ne = find(it, ie, '\"');
             str_holder symbol(it, ne - it);
             auto i = parsers.find(symbol);
             if(i == parsers.end()) [[unlikely]]

@@ -23,7 +23,7 @@ struct cg_string
     {
         memset(buf, 0, sizeof(buf));
     }
-	cg_string(const char* str, uint32_t size)
+	cg_string(char_cit str, uint32_t size)
     {
         if(size > sz)
             throw mexception("cg_string::operator= size overflow");
@@ -111,7 +111,7 @@ inline void check_plaza_fail(uint32_t res, str_holder msg)
     }
 }
 
-inline void warn_plaza_fail(uint32_t res, const char* msg)
+inline void warn_plaza_fail(uint32_t res, char_cit msg)
 {
     if(res != CG_ERR_OK) [[unlikely]]
         mlog(mlog::critical) << "Client gate warning (" << _str_holder(msg) << "): " << res;
@@ -181,7 +181,7 @@ struct cg_listener_h
     {
         last_call_time = time(NULL);
     }
-    cg_listener_h(cg_conn_h& conn, const char* name, const char* cli_listener, plaza_func func, void* func_state = 0, mstring def_state = mstring())
+    cg_listener_h(cg_conn_h& conn, char_cit name, char_cit cli_listener, plaza_func func, void* func_state = 0, mstring def_state = mstring())
         : listener(), conn(conn), closed(true), name(_str_holder(name)), cli_listener(_str_holder(cli_listener)),
             func(func), func_state(func_state), def_state(def_state)
     {
@@ -190,9 +190,9 @@ struct cg_listener_h
     void set_replstate(cg_msg_t* msg)
     {
         if(def_state.empty())
-            rev = _mstring("replstate=") + _str_holder((char*)msg->data);
+            rev = _mstring("replstate=") + _str_holder((char_cit)msg->data);
         else
-            rev = def_state + ";" + "replstate=" + _str_holder((char*)msg->data);
+            rev = def_state + ";" + "replstate=" + _str_holder((char_cit)msg->data);
     }
     void set_closed()
     {
@@ -210,7 +210,7 @@ struct cg_listener_h
             closed = true;
         }
     }
-    const char* get_state() const
+    char_cit get_state() const
     {
         if(rev.empty()) {
             if(def_state.empty())

@@ -303,9 +303,9 @@ class engine::impl : public stack_singleton<engine::impl>
             mlog(mlog::error) << "exports: " << " " << e;
         }
     }
-    static void log_and_throw_error(const char* data, uint32_t size, str_holder reason)
+    static void log_and_throw_error(char_cit data, uint32_t size, str_holder reason)
     {
-        mlog() << "bad message (" << reason << "!): " << print_binary((const uint8_t*)data, min<uint32_t>(32, size));
+        mlog() << "bad message (" << reason << "!): " << print_binary({data, min<uint32_t>(32, size)});
         throw mexception(reason);
     }
 
@@ -335,11 +335,11 @@ public:
     str_holder alloc()
     {
         linked_node* p = ll.alloc();
-        return str_holder((const char*)p->m, sizeof(p->m));
+        return {(char_cit)p->m, sizeof(p->m)};
     }
     void free(str_holder buf, context* ctx)
     {
-        const char* m = (buf.str - ctx->buf_delta - sizeof(messages::_));
+        char_cit m = (buf.begin() - ctx->buf_delta - sizeof(messages::_));
         ll.free((linked_node*)m);
     }
     void init(const mvector<mstring>& exports, uint32_t export_threads)
@@ -349,17 +349,16 @@ public:
             ies.emplace(can_run, ll, e);
 
         for(uint32_t i = 0; i != export_threads; ++i)
-            threads.push_back(thread(&impl::work_thread, this));
+            threads.push_back({&impl::work_thread, this});
     }
     bool proceed(str_holder& buf, context* ctx)
     {
         //MPROFILE("engine::proceed()")
-
-        uint32_t full_size = buf.size + ctx->buf_delta;
+        uint32_t full_size = buf.size() + ctx->buf_delta;
         uint32_t count = full_size / message_size;
         uint32_t cur_delta = full_size % message_size;
 
-        const char* ptr = buf.str - ctx->buf_delta;
+        char_cit ptr = buf.begin() - ctx->buf_delta;
         message* m = (message*)(ptr);
         linked_node* n = (linked_node*)(ptr - sizeof(linked_node::_));
         set_export_mtime(m);
@@ -371,8 +370,7 @@ public:
         node_free nf(n, ll);
 
         linked_node *e = ll.alloc();
-        buf.size = sizeof(messages::m) - cur_delta;
-        buf.str = (const char*)(e->m) + cur_delta;
+        buf = {(char_cit)(e->m) + cur_delta, sizeof(messages::m) - cur_delta};
         if(cur_delta)
             memcpy(e->m, ptr + count * message_size, cur_delta);
         ctx->buf_delta = cur_delta;

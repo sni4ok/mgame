@@ -10,19 +10,19 @@ inline bool is_endl(char c)
     return c == '\r' || c == '\n';
 }
 
-inline char_cit found_tag(char_cit it_b, char_cit it_e, str_holder tag_)
+inline char_cit found_tag(char_cit it_b, char_cit ie, str_holder tag_)
 {
     mstring tag = mstring(tag_) + " = ";
     char_cit it = it_b;
 
     for(;;) {
-        it = ::search(it, it_e, tag.begin(), tag.end());
-        if(it == it_e)
-            return it_e;
+        it = ::search(it, ie, tag.begin(), tag.end());
+        if(it == ie)
+            return ie;
         bool found = true;
 
         if(it != it_b) {
-            const char* it_tmp = it - 1;
+            char_cit it_tmp = it - 1;
             if(!is_endl(*it_tmp) && *it_tmp != ' ' && *it_tmp != '\t')
                 found = false;
             else for(; it_tmp != it_b && !is_endl(*it_tmp); --it_tmp) {
@@ -35,7 +35,7 @@ inline char_cit found_tag(char_cit it_b, char_cit it_e, str_holder tag_)
         if(found)
             return it + tag.size();
         else
-            it = ::find_if(it, it_e, &is_endl);
+            it = ::find_if(it, ie, &is_endl);
     }
     return it;
 }
@@ -74,11 +74,11 @@ mvector<str_holder> init_params(int argc, char** argv, bool log_params)
     return ret;
 }
 
-str_holder get_config_param_str(char_cit it, char_cit it_e, str_holder tag, bool can_empty)
+str_holder get_config_param_str(char_cit it, char_cit ie, str_holder tag, bool can_empty)
 {
-    it = found_tag(it, it_e, tag);
-    const char* it_to = ::find_if(it, it_e, &is_endl);
-    if(it == it_e) {
+    it = found_tag(it, ie, tag);
+    char_cit it_to = ::find_if(it, ie, &is_endl);
+    if(it == ie) {
         if(can_empty)
             return str_holder();
         throw mexception(es() % "Load config: \"" % tag % "\" not found in config");
@@ -91,7 +91,7 @@ str_holder get_config_param_str(char_cit it, char_cit it_e, str_holder tag, bool
 mvector<mstring> get_config_params(const mvector<char>& cfg, str_holder tag)
 {
     mvector<mstring> ret;
-    const char* it = cfg.begin(), *ie = cfg.end(), *ii;
+    char_cit it = cfg.begin(), ie = cfg.end(), ii;
     while(it != ie) {
         it = found_tag(it, ie, tag);
         if(it != ie) {

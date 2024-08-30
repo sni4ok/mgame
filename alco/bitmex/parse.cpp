@@ -27,14 +27,14 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                 subscribes.push_back(sb + mstring("trade") + ":" + v + se);
         }
     }
-    void parse_ticks(iterator& it, iterator ie, uint32_t security_id, ttime_t time, bool ask)
+    void parse_ticks(char_cit& it, char_cit ie, uint32_t security_id, ttime_t time, bool ask)
     {
         if(this->m_s == 0)
             add_clean(security_id, ttime_t(), time);
         for(;;)
         {
             skip_fixed(it, "[");
-            iterator ne = find(it, ie, ',');
+            char_cit ne = find(it, ie, ',');
             price_t p = read_price(it, ne);
             it = ne + 1;
             ne = find(it, ie, ']');
@@ -52,17 +52,17 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
         skip_fixed(it, "]");
     }
 
-    void proceed(lws*, const char* in, size_t len)
+    void proceed(lws*, char_cit in, size_t len)
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
             mlog() << "lws proceed: " << str_holder(in, len);
-        iterator it = in, ie = it + len;
+        char_cit it = in, ie = it + len;
 
         skip_fixed(it, "{\"");
         if(skip_if_fixed(it, "table\":\""))
         {
-            iterator ne = find(it, ie, '\"');
+            char_cit ne = find(it, ie, '\"');
             str_holder table(it, ne - it);
             it = ne;
             if(table == orders_table)

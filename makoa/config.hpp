@@ -17,7 +17,7 @@ struct config : stack_singleton<config>
     uint32_t export_threads;
 
     bool pooling;
-    config(const char* fname);
+    config(char_cit fname);
     void print();
 };
 

@@ -24,7 +24,7 @@ struct carray
     }
     constexpr carray(str_holder str)
     requires(is_same_v<type, char>) {
-        if(str.size > size_)
+        if(str.size() > size_)
             throw mexception(es() % "carray<char, " % size_ % ">(str_holder) max size exceed for: " % str);
         copy(str.begin(), str.end(), buf);
     }
@@ -117,7 +117,7 @@ public:
         copy(r.begin(), r.end(), buf);
     }
     array(str_holder str)
-    requires(is_same_v<type, char>) : size_(str.size) {
+    requires(is_same_v<type, char>) : size_(str.size()) {
         assert(size_ <= capacity_);
         copy(str.begin(), str.end(), buf);
     }

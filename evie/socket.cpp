@@ -98,7 +98,7 @@ int socket_connect(const mstring& host, uint16_t port, uint32_t timeout)
     return sh.release();
 }
 
-void socket_send(int socket, const char* ptr, uint32_t sz)
+void socket_send(int socket, char_cit ptr, uint32_t sz)
 {
     while(sz)
     {
@@ -110,7 +110,7 @@ void socket_send(int socket, const char* ptr, uint32_t sz)
     }
 }
 
-uint32_t try_socket_send(int socket, const char* ptr, uint32_t sz)
+uint32_t try_socket_send(int socket, char_cit ptr, uint32_t sz)
 {
     uint32_t sended = 0;
     while(sz)
@@ -132,7 +132,7 @@ uint32_t try_socket_send(int socket, const char* ptr, uint32_t sz)
     return sended;
 }
 
-void socket_send_async(int socket, const char* ptr, uint32_t sz)
+void socket_send_async(int socket, char_cit ptr, uint32_t sz)
 {
     while(sz)
     {
@@ -164,7 +164,7 @@ void socket_send_async(int socket, const char* ptr, uint32_t sz)
     }
 }
 
-int my_accept_async(uint32_t port, bool local, bool sync, mstring* client_ip_ptr, volatile bool* can_run, const char* name)
+int my_accept_async(uint32_t port, bool local, bool sync, mstring* client_ip_ptr, volatile bool* can_run, char_cit name)
 {
     int socket = ::socket(AF_INET, local ? AF_LOCAL : SOCK_STREAM /*| SOCK_NONBLOCK*/, IPPROTO_TCP);
     if(socket < 0) 
@@ -233,7 +233,7 @@ int my_accept_async(uint32_t port, bool local, bool sync, mstring* client_ip_ptr
 }
 
 int my_accept_async(uint32_t port, const mstring& possible_client_ip, bool sync,
-    mstring* client_ip_ptr, volatile bool* can_run, const char* name)
+    mstring* client_ip_ptr, volatile bool* can_run, char_cit name)
 {
     mstring client_ip;
     int s = my_accept_async(port, (possible_client_ip == "127.0.0.1"), sync, &client_ip, can_run, name);
@@ -285,12 +285,12 @@ int socket_stream::recv()
     return ret;
 }
 
-socket_stream::socket_stream(uint32_t timeout, char* buf, uint32_t buf_size, int s, bool have_socket, socket_stream_op* op)
+socket_stream::socket_stream(uint32_t timeout, char_it buf, uint32_t buf_size, int s, bool have_socket, socket_stream_op* op)
     : op(op), cur(buf), readed(cur), beg(cur), all_sz(buf_size), timeout(timeout), socket(s), have_socket(have_socket)
 {
 }
 
-socket_stream::socket_stream(uint32_t timeout, char* buf, uint32_t buf_size, const mstring& host, uint16_t port, socket_stream_op* op)
+socket_stream::socket_stream(uint32_t timeout, char_it buf, uint32_t buf_size, const mstring& host, uint16_t port, socket_stream_op* op)
     : op(op), cur(buf), readed(cur), beg(cur), all_sz(buf_size), timeout(timeout), socket(), have_socket(true)
 {
     socket = socket_connect(host, port);
@@ -324,7 +324,7 @@ bool socket_stream::get(char& c)
     return true;
 }
 
-void socket_stream::read(char* s, uint32_t sz)
+void socket_stream::read(char_it s, uint32_t sz)
 {
     if(all_sz - (readed - beg) < sz)
     {

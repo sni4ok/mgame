@@ -179,11 +179,11 @@ struct skelet
             return tmp_str.str();
         }
         if(ini_type[0] == 'd') {
-            mstring::const_iterator p = find(ini_type.begin() + 1, ini_type.end(), '.');
-            mstring ms = mstring(ini_type.begin() + 1, p);
+            char_cit p = find(ini_type.begin() + 1, ini_type.end(), '.');
+            str_holder ms = {ini_type.begin() + 1, p};
             uint32_t m = lexical_cast<uint32_t>(ms);
-            mstring es = mstring(p + 1, ini_type.end());
-            uint32_t e = lexical_cast<uint32_t>(mstring(p + 1, ini_type.end()));
+            str_holder es = {p + 1, ini_type.end()};
+            uint32_t e = lexical_cast<uint32_t>(p + 1, ini_type.end());
             add_size(cg_decimal_size(m, e), 1);
             tmp_str = mstring("cg_decimal<") + ms + "," + es + ">";
             c_types.insert("char");
@@ -195,7 +195,7 @@ struct skelet
         mvector<str_holder> tmp = split(data.str(), ',');
         if(tmp.size() != 2 && tmp.size() != 4)
             throw mexception(es() % "bad add_field: " % data);
-        if(tmp.size() == 4 && tmp[2].size)
+        if(tmp.size() == 4 && !tmp[2].empty())
             cout() << data << endl;
         tuple<mstring, mstring, optional<mstring> > v;
         get<0>(v) = tmp[0];
@@ -363,7 +363,7 @@ void check_no_endl(const mstring& v)
 
 void parse_file(context& ctx, const mvector<char>& data)
 {
-    mvector<char>::const_iterator it = data.begin(), it_e = data.end(), it_tmp, ini_from = it;
+    char_cit it = data.begin(), it_e = data.end(), it_tmp, ini_from = it;
     skelet sk;
     //const mstring stream_name = "\x20\xCF\xEE\xF2\xEE\xEA\x20"; //" Potok "
     const str_holder stream_name = "\x20\xD0\x9F\xD0\xBE\xD1\x82\xD0\xBE\xD0\xBA\x20"; //" Potok "
@@ -382,7 +382,7 @@ void parse_file(context& ctx, const mvector<char>& data)
             if(i == ie) {
                 sk.commit(ctx, false, ini_from, it);
                 it_tmp = find(it, it_e, ' ');
-                ctx.cur_namespace.first = mstring(it, it_tmp);
+                ctx.cur_namespace.first = {it, it_tmp};
             }
 
             while(it != it_e && *it != '\n')
@@ -396,18 +396,18 @@ void parse_file(context& ctx, const mvector<char>& data)
             if(it_tmp == it_e) break;
             sk.commit(ctx, false, ini_from, it - 1);
             ini_from = it - 1;
-            if(mstring(it, it_tmp) == "table") {
+            if(str_holder(it, it_tmp) == "table") {
                 it = it_tmp + 1;
                 it_tmp = find(it, it_e, ':');
                 if(it_tmp == it_e)
                     throw mexception("parsing error 1");
-                ctx.cur_namespace.second = mstring(it, it_tmp);
+                ctx.cur_namespace.second = {it, it_tmp};
                 check_no_endl(ctx.cur_namespace.second);
                 it = it_tmp + 1;
                 it_tmp = find(it, it_e, ']');
                 if(it_tmp == it_e)
                     throw mexception("parsing error 2");
-                ctx.table_name = mstring(it, it_tmp);
+                ctx.table_name = {it, it_tmp};
                 check_no_endl(ctx.table_name);
             }
             it = it_tmp + 1;
@@ -419,17 +419,17 @@ void parse_file(context& ctx, const mvector<char>& data)
             if(it_tmp == it_e)
                 throw mexception("parsing error 3");
             mstring type(it, it_tmp);
-            while(!type.empty() && *type.rbegin() == ' ')
+            while(!type.empty() && type.back() == ' ')
                 type.pop_back();
             check_no_endl(type);
             it = it_tmp + 1;
             if(it == it_e)
                 throw mexception("parsing error 4");
             it_tmp = find_if(it, it_e, [](char c) {return c == '\r' || c == '\n';});
-            mstring data(it, it_tmp);
+            str_holder data(it, it_tmp);
             check_no_endl(data);
             while(!data.empty() && *data.begin() == ' ')
-                data = mstring(data.begin() + 1, data.end());;
+                data = {data.begin() + 1, data.end()};
 
             if(type == "table") {
             }
@@ -498,7 +498,7 @@ mvector<mstring> list_folder(const mstring& ini_folder)
 
     while((dirp = readdir(dp.get())) != NULL) {
         mstring fname(dirp->d_name);
-        if(dirp->d_type == DT_REG && fname.size() > 4 && *fname.rbegin() == 'i' && *(fname.rbegin() + 1) == 'n'
+        if(dirp->d_type == DT_REG && fname.size() > 4 && fname.back() == 'i' && *(fname.rbegin() + 1) == 'n'
          && *(fname.rbegin() + 2) == 'i' && *(fname.rbegin() + 3) == '.')
             files.push_back(fname);
     }
@@ -565,7 +565,7 @@ struct source : context
     }
     bool need_save() {
         if(ns == cur_namespace) {
-            std::set<mstring>::iterator it = tables.find(table_name);
+            auto it = tables.find(table_name);
             if(it != tables.end()) {
                 tables.erase(it);
                 tail << "using " << ns.first << "::" << ns.second << "::" << table_name << ";" << endl;
@@ -596,7 +596,7 @@ void proceed_selected(const mstring& ini_folder, const mstring& scheme, const ms
             if(*it != ';') {
                 mvector<str_holder> vs = split(str_holder(it, ii), ';');
                 if(vs.size() != 4)
-                    throw mexception(es() % "bad schema source: " % mstring(it, ii));
+                    throw mexception(es() % "bad schema source: " % str_holder(it, ii));
                 mvector<str_holder> tables = split(vs[3], ',');
 
                 unique_ptr<source> s(new source(out_folder + "/" + vs[0]));

@@ -9,7 +9,7 @@
 #include "../evie/mfile.hpp"
 #include "../evie/mlog.hpp"
 
-config::config(const char* fname)
+config::config(char_cit fname)
 {
     auto cs = read_file(fname);
     name = get_config_param<str_holder>(cs, "name");

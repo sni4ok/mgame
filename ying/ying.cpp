@@ -7,7 +7,7 @@
 
 #include "../makoa/exports.hpp"
 
-void* ying_init(const char* params);
+void* ying_init(char_cit params);
 void ying_destroy(void* w);
 void ying_proceed(void* w, const message* m, uint32_t count);
 

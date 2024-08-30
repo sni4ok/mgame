@@ -13,7 +13,7 @@ struct lws_i : lws_impl, read_time_impl
     typedef my_basic_string<sizeof(message_instr::security) + 1> ticker;
     fmap<ticker, security> securities;
 
-    security& get_security(iterator i, iterator ie, ttime_t time)
+    security& get_security(char_cit i, char_cit ie, ttime_t time)
     {
         ticker symbol(i, ie);
         auto it = securities.find(symbol);
@@ -38,16 +38,16 @@ struct lws_i : lws_impl, read_time_impl
         sub << "{\"name\": \"ticker\",\"product_ids\": [" << tickers << "]}]}";
         subscribes.push_back(sub.str());
     }
-    void proceed(lws*, const char* in, size_t len)
+    void proceed(lws*, char_cit in, size_t len)
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
             mlog() << "lws proceed: " << str_holder(in, len);
-        iterator it = in, ie = it + len;
+        char_cit it = in, ie = it + len;
         skip_fixed(it, "{\"type\":\"");
         if(skip_if_fixed(it, "l2update\",\"product_id\":\""))
         {
-            iterator ne = find(it, ie, '\"');
+            char_cit ne = find(it, ie, '\"');
             security& s = get_security(it, ne, time);
             it = ne + 1;
             skip_fixed(it, ",\"changes\":[[\"");
@@ -98,7 +98,7 @@ struct lws_i : lws_impl, read_time_impl
                 direction = 2;
             }
             skip_fixed(it, "size\":\"");
-            iterator ne = find(it, ie, '\"');
+            char_cit ne = find(it, ie, '\"');
             count_t c = read_count(it, ne);
             it = ne + 1;
             skip_fixed(it, ",\"price\":\"");

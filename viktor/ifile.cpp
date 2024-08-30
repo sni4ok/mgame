@@ -25,13 +25,13 @@ static ttime_t parse_time(const mstring& time)
     if(time == "now")
         return cur_ttime();
 
-    const char* it = time.c_str();
+    char_cit it = time.c_str();
     return read_time_impl().read_time<0>(it);
 }
 
-mstring::const_iterator find_last(const mstring& fname, const char c)
+char_cit find_last(const mstring& fname, char c)
 {
-    auto it = fname.end() - 1, ib = fname.begin();
+    char_cit it = fname.end() - 1, ib = fname.begin();
     while(it != ib && *it != c)
         --it;
     return it;
@@ -50,7 +50,7 @@ struct zip_file
     operator bool() const
     {
         if(zip)
-            return !!data.size;
+            return !data.empty();
         else
             return !!f.hfile;
     }
@@ -64,13 +64,12 @@ struct zip_file
             throw mexception(es() % "zlib probably bad file " % fn);
         return sz;
     }
-    void open(const char* fname)
+    void open(char_cit fname)
     {
         mlog() << "zip_file::open " << _str_holder(fname);
         close();
         str_holder fn = _str_holder(fname);
-        if(fn.size > 3 && str_holder(fn.end() - 3, fn.end()) == ".gz")
-        {
+        if(fn.size() > 3 && str_holder(fn.end() - 3, fn.end()) == ".gz") {
             mvector<char> f = read_file(fname);
             uint32_t data_sz = zlib_file_sz(f, fn);
             if(!zip)
@@ -79,8 +78,7 @@ struct zip_file
             data = zip->decompress(f.begin(), f.size());
             data_it = data.begin();
         }
-        else
-        {
+        else {
             zip.reset();
             mfile file(fname);
             f.swap(file);
@@ -90,18 +88,16 @@ struct zip_file
     {
         if(zip)
             data = str_holder();
-        else
-        {
+        else {
             mfile file(0);
             f.swap(file);
         }
     }
     void seekg(uint64_t pos)
     {
-        if(zip)
-        {
-            if(pos > data.size)
-                throw mexception(es() % "zip_file::seekg(), fsize " % data.size % ", pos " % pos);
+        if(zip) {
+            if(pos > data.size())
+                throw mexception(es() % "zip_file::seekg(), fsize " % data.size() % ", pos " % pos);
             data_it = data.begin() + pos;
         }
         else
@@ -111,8 +107,7 @@ struct zip_file
     {
         if(zip)
             data_it += pos;
-        else
-        {
+        else {
             if(::lseek(f.hfile, pos, SEEK_CUR) < 0)
                 throw_system_failure("lseek() error");
         }
@@ -120,20 +115,18 @@ struct zip_file
     uint64_t size() const
     {
         if(zip)
-            return data.size;
+            return data.size();
         else
             return f.size();
     }
     uint64_t read(char* ptr, uint64_t size)
     {
-        if(zip)
-        {
+        if(zip) {
             uint64_t sz = min<uint64_t>(size, data.end() - data_it);
             my_fast_copy(data_it, data_it + sz, ptr);
             data_it += sz;
         }
-        else
-        {
+        else {
             ssize_t r = ::read(f.hfile, ptr, size);
             if(r < 0)
                 throw_system_failure(es() % "read() error, size: " % size);
@@ -418,12 +411,12 @@ struct ifile
         for(int i = 0; i != n; ++i) {
             dirent *e = ee[i];
             str_holder fname(_str_holder(e->d_name));
-            if(fname.size > f_size + 10 && equal(fname.str, fname.str + f_size, f.begin())) {
+            if(fname.size() > f_size + 10 && equal(fname.begin(), fname.begin() + f_size, f.begin())) {
                 uint32_t t = 0;
-                if(fname.size > f_size) {
-                    if(fname.str[f_size] != '_')
+                if(fname.size() > f_size) {
+                    if(fname[f_size] != '_')
                         continue;
-                    t = my_cvt::atoi<uint32_t>(fname.str + f_size + 1, 10);
+                    t = my_cvt::atoi<uint32_t>(fname.begin() + f_size + 1, 10);
                     if(t < tfrom)
                         continue;
                 }
@@ -444,14 +437,14 @@ struct ifile
 
                 if(year)
                 {
-                    if(fname.size && fname.size <= 2 && is_number(fname))
+                    if(!fname.empty() && fname.size() <= 2 && is_number(fname))
                     {
                         uint8_t month = lexical_cast<uint8_t>(fname);
                         if(date{*year, month, 0} <= dt && df <= date{*year, month, 31})
                             parse_folder(f, tfrom, tto, df, dt, dir + fname + "/");
                     }
                 }
-                else if(fname.size == 4 && is_number(fname))
+                else if(fname.size() == 4 && is_number(fname))
                 {
                     uint16_t year = lexical_cast<uint16_t>(fname);
                     if(year >= df.year && year <= dt.year)
@@ -489,8 +482,7 @@ struct ifile
         if(nt.tt > main_file.tt)
             return false;
 
-        while(can_run && !dir_files.empty())
-        {
+        while(can_run && !dir_files.empty()) {
             ttime_t t = add_file(dir_files.front());
             dir_files.pop_front();
             if(t.value)
@@ -529,7 +521,7 @@ struct ifile
         return false;
     }
 
-    virtual uint32_t read(char* buf, uint32_t buf_size)
+    virtual uint32_t read(char_it buf, uint32_t buf_size)
     {
         if(buf_size % message_size) [[unlikely]]
             throw mexception(es() % "ifile::read(): inapropriate size: " % buf_size);

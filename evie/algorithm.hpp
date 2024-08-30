@@ -114,14 +114,14 @@ void replace(iterator from, iterator to, const type& f, const type& t)
 
 struct any_of
 {
-    const char *b, *e;
+    char_cit b, e;
 
-    any_of(const char* b, const char* e) : b(b), e(e)
+    any_of(char_cit b, char_cit e) : b(b), e(e)
     {
     }
     constexpr bool operator()(char c) const
     {
-        for(const char* i = b; i != e; ++i)
+        for(char_cit i = b; i != e; ++i)
         {
             if(*i == c)
                 return true;
