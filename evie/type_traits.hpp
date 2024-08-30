@@ -315,3 +315,9 @@ void simple_swap(type& a, type& b)
     b = tmp;
 }
 
+template<typename t>
+concept __have_tuple_size = is_class_v<t> && requires(t* v)
+{
+    v->tuple_size();
+};
+

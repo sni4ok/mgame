@@ -112,18 +112,15 @@ bool operator<(const mvector<type>& l, const mvector<type>& r)
     return lexicographical_compare(l.begin(), l.end(), r.begin(), r.end());
 }
 
-template<typename iterator, typename func, char s, bool no_end_s>
+template<char s, bool no_end_s, typename iterator, typename func>
 struct print_impl
 {
-    static const char sep = s;
-    static const bool no_end_sep = no_end_s;
-
     iterator from, to;
     func f;
 };
 
-template<typename stream, typename iterator, typename func, char sep, bool no_end_sep>
-stream& operator<<(stream& s, const print_impl<iterator, func, sep, no_end_sep>& p)
+template<typename stream, char sep, bool no_end_sep, typename iterator, typename func>
+stream& operator<<(stream& s, const print_impl<sep, no_end_sep, iterator, func>& p)
 {
     iterator it = p.from;
     for(; it != p.to; ++it)
@@ -131,11 +128,11 @@ stream& operator<<(stream& s, const print_impl<iterator, func, sep, no_end_sep>&
         if constexpr(no_end_sep)
         {
             if(it != p.from)
-                s << p.sep;
+                s << sep;
         }
         p.f(s, *it);
         if constexpr(!no_end_sep)
-            s << p.sep;
+            s << sep;
     }
     return s;
 }
@@ -150,7 +147,7 @@ struct print_default
 };
 
 template<char sep = ',', char no_end_sep = true, typename iterator, typename func = print_default>
-print_impl<iterator, func, sep, no_end_sep> print(iterator from, iterator to, func f = func())
+print_impl<sep, no_end_sep, iterator, func> print(iterator from, iterator to, func f = func())
 {
     return {from, to, f};
 }
@@ -175,6 +172,7 @@ auto end(const cont& c)
 
 template<char sep = ',', typename cont, typename func = print_default>
 auto print(const cont& c, func f = func())
+    requires(!__have_tuple_size<cont>)
 {
     return print<sep>(::begin(c), ::end(c), f);
 }

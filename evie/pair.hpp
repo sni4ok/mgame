@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <stddef.h>
+
 template<typename f, typename s>
 struct pair
 {
@@ -17,6 +19,25 @@ struct pair
     f end() const
     {
         return second;
+    }
+    static constexpr size_t tuple_size()
+    {
+        return 2;
+    }
+    template<unsigned i>
+    auto& get()
+    {
+        if constexpr(i == 0)
+            return first;
+        else if constexpr(i == 1)
+            return second;
+        else
+            static_assert(false);
+    }
+    template<unsigned i>
+    const auto& get() const
+    {
+        return const_cast<pair*>(this)->template get<i>();
     }
 };
 
@@ -50,11 +71,12 @@ stream& operator<<(stream& str, const pair<f, s>& p)
 template<unsigned i, typename f, typename s>
 const auto& get(const ::pair<f, s>& p)
 {
-    if constexpr(i == 0)
-        return p.first;
-    else if constexpr(i == 1)
-        return p.second;
-    else
-        static_assert(false);
+    return p.template get<i>();
+}
+
+template<unsigned i, typename f, typename s>
+auto& get(::pair<f, s>& p)
+{
+    return p.template get<i>();
 }
 

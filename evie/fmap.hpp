@@ -7,7 +7,7 @@
 #ifndef EVIE_FMAP_HPP
 #define EVIE_FMAP_HPP
 
-#include "vector.hpp"
+#include "string.hpp"
 #include "algorithm.hpp"
 
 template<typename key, typename value, typename comp = less<key>, template <typename> typename vector = fvector>
@@ -55,7 +55,13 @@ struct fmap
     const value& at(const key& k) const {
         auto it = lower_bound(k);
         if(it == data.end() || not_equal(it->first, k)) [[unlikely]]
-            throw mexception("fmap::at() error");
+            throw str_exception("fmap::at() error");
+        return it->second;
+    }
+    const value& at(const key& k, str_holder fmap_name) const {
+        auto it = lower_bound(k);
+        if(it == data.end() || not_equal(it->first, k)) [[unlikely]]
+            throw mexception(es() % "fmap::at() error, " % fmap_name % " unknown key: " % k);
         return it->second;
     }
     value& at(const key& k) {

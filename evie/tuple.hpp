@@ -4,9 +4,7 @@
 
 #pragma once
 
-#include "algorithm.hpp"
-#include "mstring.hpp"
-#include "string.hpp"
+#include "utils.hpp"
 
 template<typename ... types>
 struct tuple;
@@ -14,7 +12,7 @@ struct tuple;
 template<>
 struct tuple<>
 {
-    static constexpr size_t size() {
+    static constexpr size_t tuple_size() {
         return 0;
     }
     bool operator==(const tuple&) const
@@ -47,7 +45,7 @@ struct tuple<type>
     const type& get() const requires(!i) {
         return v;
     }
-    static constexpr size_t size() {
+    static constexpr size_t tuple_size() {
         return 1;
     }
     template<typename tuple2>
@@ -87,13 +85,10 @@ struct tuple<type, types...>
     }
     template<size_t i>
     const auto& get() const {
-        if constexpr(!i)
-            return v;
-        else
-            return values.template get<i - 1>();
+        return const_cast<tuple<type, types...>* >(this)->template get<i>();
     }
-    static constexpr size_t size() {
-        return 1 + tuple<types...>::size();
+    static constexpr size_t tuple_size() {
+        return 1 + tuple<types...>::tuple_size();
     }
     template<typename tuple2>
     auto add_front(const tuple2& t2) const
@@ -117,16 +112,10 @@ struct tuple<type, types...>
 };
 
 template<typename t>
-concept __have_size = is_class_v<t> && requires(t* v)
-{
-    v->size();
-};
-
-template<typename t>
-requires(__have_size<t>)
+requires(__have_tuple_size<t>)
 struct tuple_size
 {
-    static constexpr size_t value = t::size();
+    static constexpr size_t value = t::tuple_size();
 };
 
 template<typename t>
@@ -138,6 +127,14 @@ struct tuple_element
     typedef conditional_t<!i, typename t::element_type,
         typename tuple_element<i - 1, typename t::values_type>::type
     > type;
+};
+
+template<size_t i, typename f, typename s>
+struct tuple_element<i, pair<f, s> >
+{
+    typedef conditional_t<!i, f, s> type;
+
+    static_assert(i < 2);
 };
 
 template<size_t i>
@@ -259,18 +256,29 @@ struct type_value
     typedef value_type type;
 };
 
-template<typename tuple, size_t sz = 0, template<typename> typename type = type_value, typename func>
+template<typename tuple, template<typename> typename type = type_value, typename func, size_t sz = 0>
 void tuple_for_each(func f)
 {
     if constexpr(tuple_size_v<tuple>)
     {
         f(type<tuple_element_t<sz, tuple> >());
         if constexpr(tuple_size_v<tuple> - sz - 1)
-            tuple_for_each<tuple, sz + 1, type, func>(f);
+            tuple_for_each<tuple, type, func, sz + 1>(f);
     }
 }
 
-template<typename tuple, size_t sz = 0, template<typename> typename type = type_value, typename func>
+template<typename tuple, typename func, size_t sz = 0>
+void tuple_for_each(const tuple& t, func f)
+{
+    if constexpr(tuple_size_v<tuple>)
+    {
+        f(get<sz>(t));
+        if constexpr(tuple_size_v<tuple> - sz - 1)
+            tuple_for_each<func, tuple, sz + 1>(t, f);
+    }
+}
+
+template<typename tuple, template<typename> typename type = type_value, typename func, size_t sz = 0>
 bool tuple_for_each_one(func f)
 {
     if constexpr(!(tuple_size_v<tuple>))
@@ -278,7 +286,7 @@ bool tuple_for_each_one(func f)
     if(f(type<tuple_element_t<sz, tuple> >()))
         return true;
     if constexpr(tuple_size_v<tuple> - sz - 1)
-        return tuple_for_each_one<tuple, sz + 1, type, func>(f);
+        return tuple_for_each_one<tuple, type, func, sz + 1>(f);
     else
         return false;
 }
@@ -341,5 +349,37 @@ void read_csv(func f, char_cit i, char_cit e, char sep = ',')
         f(v);
         i = t + 1;
     }
+}
+
+template<char s, typename func, typename tuple>
+struct print_tuple
+{
+    func f;
+    const tuple& t;
+};
+
+template<size_t sz, typename stream, char sep, typename func, typename tuple>
+void print_tuple_impl(stream& s, const print_tuple<sep, func, tuple>& p)
+{
+    if constexpr(sz)
+        s << sep;
+    p.f(s, get<sz>(p.t));
+    if constexpr(tuple_size_v<tuple> - sz - 1)
+        print_tuple_impl<sz + 1>(s, p);
+}
+
+template<typename stream, char sep, typename func, typename tuple>
+stream& operator<<(stream& s, const print_tuple<sep, func, tuple>& p)
+{
+    if constexpr(tuple_size_v<tuple>)
+        print_tuple_impl<0>(s, p);
+    return s;
+}
+
+template<char sep = ',', typename func = print_default, typename tuple>
+print_tuple<sep, func, tuple> print(const tuple& t, func f = func())
+    requires(__have_tuple_size<tuple>)
+{
+    return {f, t};
 }
 
