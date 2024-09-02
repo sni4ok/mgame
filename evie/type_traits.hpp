@@ -106,6 +106,12 @@ struct remove_reference<t&&>
 };
 
 template<typename t>
+struct is_trivially_copyable
+{
+    static constexpr bool value = __is_trivially_copyable(t);
+};
+
+template<typename t>
 struct is_trivially_destructible 
 {
 #ifdef CLANG_COMPILER
@@ -178,6 +184,9 @@ inline constexpr bool is_array_v<type[count]> = true;
 
 template<typename type>
 using remove_reference_t = remove_reference<type>::type;
+
+template<typename type>
+inline constexpr bool is_trivially_copyable_v = is_trivially_copyable<type>::value;
 
 template<typename type>
 inline constexpr bool is_trivially_destructible_v = is_trivially_destructible<type>::value;
@@ -319,5 +328,23 @@ template<typename t>
 concept __have_tuple_size = is_class_v<t> && requires(t* v)
 {
     v->tuple_size();
+};
+
+template<typename t1, typename t2 = t1>
+concept __have_equal_op = is_class_v<t1> && requires(t1& v1, t2& v2)
+{
+    v1.operator==(v2);
+};
+
+template<typename t1, typename t2 = t1>
+concept __have_less_op = is_class_v<t1> && requires(t1& v1, t2& v2)
+{
+    v1.operator<(v2);
+};
+
+template<typename t>
+concept __have_begin = is_class_v<t> && requires(t* v)
+{
+    v->begin();
 };
 

@@ -69,15 +69,15 @@ void security::init(const mstring& exchange_id, const mstring& feed_id, const ms
 
     if(exchange_id.size() > sizeof(mi.exchange_id))
         throw mexception(es() % "exchange_id too big: " % exchange_id);
-    my_fast_copy(exchange_id.begin(), exchange_id.end(), &mi.exchange_id[0]);
+    copy(exchange_id.begin(), exchange_id.end(), &mi.exchange_id[0]);
 
     if(feed_id.size() > sizeof(mi.feed_id))
         throw mexception(es() % "feed_id too big: " % feed_id);
-    my_fast_copy(feed_id.begin(), feed_id.end(), &mi.feed_id[0]);
+    copy(feed_id.begin(), feed_id.end(), &mi.feed_id[0]);
 
     if(ticker.size() > sizeof(mi.security))
         throw mexception(es() % "security too big: " % ticker);
-    my_fast_copy(ticker.begin(), ticker.end(), &mi.security[0]);
+    copy(ticker.begin(), ticker.end(), &mi.security[0]);
 
     mi.security_id = calc_crc(mi);
     mi.time = cur_ttime();

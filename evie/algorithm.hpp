@@ -11,6 +11,24 @@
 #include "str_holder.hpp"
 #include "type_traits.hpp"
 
+template<typename cont>
+constexpr auto begin(const cont& c)
+{
+    if constexpr(is_array_v<cont>)
+        return &c[0];
+    else
+        return c.begin();
+}
+
+template<typename cont>
+constexpr auto end(const cont& c)
+{
+    if constexpr(is_array_v<cont>)
+        return &c[(sizeof(c) / sizeof(c[0])) - 1];
+    else
+        return c.end();
+}
+
 template<typename iterator, typename type>
 iterator find(iterator from, iterator to, const type& value)
 {
@@ -152,16 +170,19 @@ constexpr type max(type l, type r)
     return r;
 }
 
-inline bool equal(char_cit b1, char_cit e1, char_cit b2)
+template<typename type>
+bool equal(const type* b1, const type* e1, const type* b2)
+    requires(is_trivially_copyable_v<type>)
 {
-    return !(memcmp(b1, b2, e1 - b1));
+    return !(memcmp(b1, b2, (e1 - b1) * sizeof(type)));
 }
 
 template<typename type>
 bool equal(const type* b1, const type* e1, const type* b2)
+    requires(!is_trivially_copyable_v<type>)
 {
     for(; b1 != e1; ++b1, ++b2)
-        if(*b1 != *b2)
+        if(!(*b1 == *b2))
             return false;
     return true;
 }
@@ -173,6 +194,76 @@ bool equal(const type* b1, const type* e1, const type* b2, const type* e2)
         return equal(b1, e1, b2);
     else
         return false;
+}
+
+struct forward_iterator_tag
+{
+};
+
+template<class it1, class it2>
+constexpr bool lexicographical_compare(it1 first1, it1 last1, it2 first2, it2 last2)
+{
+    for (; (first1 != last1) && (first2 != last2); ++first1, ++first2)
+    {
+        if (*first1 < *first2)
+            return true;
+        if (*first2 < *first1)
+            return false;
+    }
+    return (first1 == last1) && (first2 != last2);
+}
+
+template<typename iterator>
+requires requires { is_same_v<typename iterator::iterator_category, forward_iterator_tag>; }
+bool equal(iterator b1, iterator e1, iterator b2, iterator e2)
+{
+    for(; b1 != e1 && b2 != e2; ++b1, ++b2)
+    {
+        if(!(*b1 == *b2))
+            return false;
+    }
+    if(b1 != e1 || b2 != e2)
+        return false;
+
+    return true;
+}
+
+template<typename t1, typename t2>
+concept __classes_with_begin = is_class_v<t1> && is_class_v<t2> && __have_begin<t1> && __have_begin<t2>;
+
+template<typename t1, typename t2>
+bool operator==(const t1& v1, const t2& v2)
+    requires(__classes_with_begin<t1, t2> && !__have_equal_op<t1, t2>)
+{
+    return equal(v1.begin(), v1.end(), v2.begin(), v2.end());
+}
+
+template<typename t1, typename t2>
+bool operator==(const t1& v1, const t2& v2)
+    requires(is_class_v<t1> && __have_begin<t1> && is_array_v<t2> && !__have_equal_op<t1, t2>)
+{
+    return equal(v1.begin(), v1.end(), begin(v2), end(v2));
+}
+
+template<typename f, typename s>
+bool operator<(const pair<f, s>& l, const pair<f, s>& r)
+{
+    if(l.first == r.first)
+        return l.second < r.second;
+    return l.first < r.first;
+}
+
+template<typename f, typename s>
+bool operator==(const pair<f, s>& l, const pair<f, s>& r)
+{
+    return (l.first == r.first) && (l.second == r.second);
+}
+
+template<typename t1, typename t2>
+bool operator<(const t1& v1, const t2& v2)
+    requires(__classes_with_begin<t1, t2> && !__have_less_op<t1, t2>)
+{
+    return lexicographical_compare(v1.begin(), v1.end(), v2.begin(), v2.end());
 }
 
 template<typename iterator, typename type>
@@ -210,6 +301,13 @@ constexpr void copy(ifrom from, ifrom to, ito out)
 {
     for(; from != to; ++from, ++out)
         *out = *from;
+}
+
+template<typename type>
+inline void copy(type* from, type* to, remove_const_t<type>* out)
+    requires(is_trivially_copyable_v<type>)
+{
+    memcpy(out, from, (to - from) * sizeof(type));
 }
 
 template<bool min, typename iterator, typename compare>
@@ -283,10 +381,6 @@ struct ref
     }
 };
 
-struct forward_iterator_tag
-{
-};
-
 template<typename iterator>
 requires requires { is_same_v<typename iterator::iterator_category, forward_iterator_tag>; }
 iterator advance(iterator it, uint64_t size)
@@ -294,21 +388,6 @@ iterator advance(iterator it, uint64_t size)
     for(uint32_t i = 0; i != size; ++i, ++it)
         ;
     return it;
-}
-
-template<typename iterator>
-requires requires { is_same_v<typename iterator::iterator_category, forward_iterator_tag>; }
-bool equal(iterator i1, iterator e1, iterator i2, iterator e2)
-{
-    for(; i1 != e1 && i2 != e2; ++i1, ++i2)
-    {
-        if(*i1 != *i2)
-            return false;
-    }
-    if(i1 != e1 || i2 != e2)
-        return false;
-
-    return true;
 }
 
 template<typename iterator>

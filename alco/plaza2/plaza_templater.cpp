@@ -382,7 +382,7 @@ void parse_file(context& ctx, const mvector<char>& data)
             if(i == ie) {
                 sk.commit(ctx, false, ini_from, it);
                 it_tmp = find(it, it_e, ' ');
-                ctx.cur_namespace.first = {it, it_tmp};
+                ctx.cur_namespace.first = str_holder(it, it_tmp);
             }
 
             while(it != it_e && *it != '\n')
@@ -401,13 +401,13 @@ void parse_file(context& ctx, const mvector<char>& data)
                 it_tmp = find(it, it_e, ':');
                 if(it_tmp == it_e)
                     throw mexception("parsing error 1");
-                ctx.cur_namespace.second = {it, it_tmp};
+                ctx.cur_namespace.second = str_holder(it, it_tmp);
                 check_no_endl(ctx.cur_namespace.second);
                 it = it_tmp + 1;
                 it_tmp = find(it, it_e, ']');
                 if(it_tmp == it_e)
                     throw mexception("parsing error 2");
-                ctx.table_name = {it, it_tmp};
+                ctx.table_name = str_holder(it, it_tmp);
                 check_no_endl(ctx.table_name);
             }
             it = it_tmp + 1;

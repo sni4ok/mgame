@@ -204,6 +204,73 @@ public:
     }
 };
 
+simple_log* simple_log::log = 0;
+
+void mlog::init()
+{
+    buf.head = log.alloc();
+    buf.tail = buf.head;
+
+    uint32_t params = log.params | buf.extra_param;
+    if(params & mlog::store_pid)
+        *this << "pid: " << getpid() << " ";
+    if(params & mlog::store_tid)
+        *this << "tid: " << get_thread_id() << " ";
+    if(buf.extra_param & mlog::warning)
+        *this << "WARNING ";
+    if(buf.extra_param & mlog::error)
+        *this << "ERROR ";
+    *this << cur_mtime() << ": ";
+}
+
+void mlog::check_size(uint32_t delta)
+{
+    if(buf.tail->size + delta > buf_size)
+    {
+        if(delta > buf_size) [[unlikely]]
+            throw str_exception("mlog() max size exceed");
+        node* tail = buf.tail;
+        buf.tail = log.alloc();
+        tail->next = buf.tail;
+    }
+}
+
+mlog::mlog(uint32_t extra_param) : log(simple_log::instance())
+{
+    buf.extra_param = extra_param;
+    init();
+}
+
+mlog::mlog(simple_log* log, uint32_t extra_param) : log(*log)
+{
+    buf.extra_param = extra_param;
+    init();
+}
+
+mlog::~mlog()
+{
+    *this << '\n';
+    log.write(buf);
+}
+
+void mlog::write(char_cit it, uint32_t size)
+{
+    while(size)
+    {
+        uint32_t cur_write = min(size, buf_size - buf.tail->size);
+        memcpy(&buf.tail->buf[buf.tail->size], it, cur_write);
+        buf.tail->size += cur_write;
+        it += cur_write;
+        size -= cur_write;
+        if(buf.tail->size == buf_size)
+        {
+            node* tail = buf.tail;
+            buf.tail = log.alloc();
+            tail->next = buf.tail;
+        }
+    }
+}
+
 void mlog::set_no_cout()
 {
     simple_log::instance().no_cout = true;
@@ -232,71 +299,6 @@ simple_log* log_get()
 uint32_t& log_params()
 {
     return log_get()->params;
-}
-
-void mlog::init()
-{
-    buf.head = log.alloc();
-    buf.tail = buf.head;
-
-    uint32_t params = log.params | buf.extra_param;
-    if(params & mlog::store_pid)
-        *this << "pid: " << getpid() << " ";
-    if(params & mlog::store_tid)
-        *this << "tid: " << get_thread_id() << " ";
-    if(buf.extra_param & mlog::warning)
-        *this << "WARNING ";
-    if(buf.extra_param & mlog::error)
-        *this << "ERROR ";
-    *this << cur_mtime() << ": ";
-}
-
-mlog::mlog(uint32_t extra_param) : log(simple_log::instance())
-{
-    buf.extra_param = extra_param;
-    init();
-}
-
-mlog::mlog(simple_log* log, uint32_t extra_param) : log(*log)
-{
-    buf.extra_param = extra_param;
-    init();
-}
-
-mlog::~mlog()
-{
-    *this << '\n';
-    log.write(buf);
-}
-
-void mlog::write(char_cit it, uint32_t size)
-{
-    while(size)
-    {
-        uint32_t cur_write = min(size, buf_size - buf.tail->size);
-        my_fast_copy(it, cur_write, &buf.tail->buf[buf.tail->size]);
-        buf.tail->size += cur_write;
-        it += cur_write;
-        size -= cur_write;
-        if(buf.tail->size == buf_size)
-        {
-            node* tail = buf.tail;
-            buf.tail = log.alloc();
-            tail->next = buf.tail;
-        }
-    }
-}
-
-void mlog::check_size(uint32_t delta)
-{
-    if(buf.tail->size + delta > buf_size)
-    {
-        if(delta > buf_size) [[unlikely]]
-            throw str_exception("mlog() max size exceed");
-        node* tail = buf.tail;
-        buf.tail = log.alloc();
-        tail->next = buf.tail;
-    }
 }
 
 void MlogTestThread(size_t thread_id, size_t log_count)
@@ -328,6 +330,4 @@ void log_test(size_t thread_count, size_t log_count)
     }
     mlog() << "mlog test successfully ended";
 }
-
-simple_log* simple_log::log = 0;
 

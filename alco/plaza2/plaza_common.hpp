@@ -27,14 +27,14 @@ struct cg_string
     {
         if(size > sz)
             throw mexception("cg_string::operator= size overflow");
-        my_fast_copy(str, size, &buf[0]);
-        memset(&buf[sz], 0, sizeof(buf) - size);
+        memcpy(&buf[0], str, size);
+        memset(&buf[size], 0, sizeof(buf) - size);
     }
     template<typename array>
     cg_string(const array& v)
     {
         static_assert(sizeof(v[0]) == 1 && is_array_v<array> && sizeof(v) <= sizeof(buf));
-        my_fast_copy(&v[0], sizeof(v), &buf[0]);
+        memcpy(&buf[0], &v[0], sizeof(v));
         memset(&buf[sizeof(v)], 0, sizeof(buf) - sizeof(v));
     }
     cg_string& operator=(const mstring& str)

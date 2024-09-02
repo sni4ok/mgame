@@ -73,9 +73,9 @@ private:
     simple_log& log;
     data buf;
 
-    void check_size(uint32_t delta);
     void init();
     mlog(const mlog&) = delete;
+    void check_size(uint32_t delta);
 
 public:
 
@@ -94,8 +94,8 @@ public:
         no_cout = 512,
     };
 
-    mlog(simple_log* log, uint32_t extra_param = info);
     mlog(uint32_t extra_param = info);
+    mlog(simple_log* log, uint32_t extra_param = info);
     ~mlog();
     void write(char_cit v, uint32_t s);
     static void set_no_cout();
@@ -109,7 +109,7 @@ public:
 };
 
 void simple_log_free(simple_log* ptr);
-unique_ptr<simple_log, simple_log_free> log_init(char_cit file_name = 0, uint32_t params = 0, bool set_log_instance = true);
+unique_ptr<simple_log, simple_log_free> log_init(char_cit file_name = nullptr, uint32_t params = 0, bool set_log_instance = true);
 simple_log* log_get();
 void log_set(simple_log* sl);
 uint32_t& log_params();

@@ -28,8 +28,8 @@ void split(mvector<type>& ret, char_cit it, char_cit ie, char sep)
 mvector<mstring> split_s(str_holder str, char sep = ',');
 mvector<str_holder> split(str_holder str, char sep = ',');
 
-mstring join(const mvector<mstring>& s, char sep = ',');
 mstring join(const mstring* it, const mstring* ie, char sep = ',');
+mstring join(const mvector<mstring>& s, char sep = ',');
 
 struct crc32
 {
@@ -106,12 +106,6 @@ struct counting_iterator
     }
 };
 
-template<typename type>
-bool operator<(const mvector<type>& l, const mvector<type>& r)
-{
-    return lexicographical_compare(l.begin(), l.end(), r.begin(), r.end());
-}
-
 template<char s, bool no_end_s, typename iterator, typename func>
 struct print_impl
 {
@@ -150,24 +144,6 @@ template<char sep = ',', char no_end_sep = true, typename iterator, typename fun
 print_impl<sep, no_end_sep, iterator, func> print(iterator from, iterator to, func f = func())
 {
     return {from, to, f};
-}
-
-template<typename cont>
-auto begin(const cont& c)
-{
-    if constexpr(is_array_v<cont>)
-        return &c[0];
-    else
-        return c.begin();
-}
-
-template<typename cont>
-auto end(const cont& c)
-{
-    if constexpr(is_array_v<cont>)
-        return &c[sizeof(c) / sizeof(c[0])];
-    else
-        return c.end();
 }
 
 template<char sep = ',', typename cont, typename func = print_default>

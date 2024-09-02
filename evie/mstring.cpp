@@ -21,7 +21,11 @@ mstring::mstring()
     __clear();
 }
 
-mstring::mstring(str_holder str) : base(str.begin(), str.end())
+mstring::mstring(str_holder r) : base(r.begin(), r.end())
+{
+}
+
+mstring::mstring(const mstring& r) : base(static_cast<const base&>(r))
 {
 }
 
@@ -33,10 +37,6 @@ mstring::mstring(char_cit from, char_cit to) : base(from, to)
 {
 }
 
-mstring::mstring(const mstring& r) : base(static_cast<const base&>(r))
-{
-}
-
 mstring::mstring(mstring&& r) : base(move(static_cast<base&&>(r)))
 {
 }
@@ -44,6 +44,13 @@ mstring::mstring(mstring&& r) : base(move(static_cast<base&&>(r)))
 mstring& mstring::operator=(mstring&& r)
 {
     base::swap(r);
+    return *this;
+}
+
+mstring& mstring::operator=(str_holder r)
+{
+    clear();
+    insert(r.begin(), r.end());
     return *this;
 }
 
@@ -71,29 +78,10 @@ char_cit mstring::c_str() const
     return begin();
 }
 
-bool mstring::operator==(const mstring& r) const
+mstring& mstring::operator+=(str_holder r)
 {
-    return str() == r.str();
-}
-
-bool mstring::operator==(const str_holder& r) const
-{
-    return str() == r;
-}
-
-bool mstring::operator!=(const mstring& r) const
-{
-    return !(*this == r);
-}
-
-bool mstring::operator!=(const str_holder& r) const
-{
-    return !(*this == r);
-}
-
-bool mstring::operator<(const mstring& r) const
-{
-    return lexicographical_compare(begin(), begin() + size(), r.begin(), r.begin() + r.size());
+    base::insert(r.begin(), r.end());
+    return *this;
 }
 
 mstring& mstring::operator+=(const mstring& r)
@@ -102,19 +90,13 @@ mstring& mstring::operator+=(const mstring& r)
     return *this;
 }
 
-mstring& mstring::operator+=(str_holder r)
-{
-    base::insert(r.begin(), r.end());
-    return *this;
-}
-
-mstring mstring::operator+(const mstring& r) const
+mstring mstring::operator+(str_holder r) const
 {
     mstring ret(*this);
     return ret += r;
 }
 
-mstring mstring::operator+(str_holder r) const
+mstring mstring::operator+(const mstring& r) const
 {
     mstring ret(*this);
     return ret += r;
@@ -139,12 +121,5 @@ mstring operator+(str_holder l, const mstring& r)
     memcpy(ret.begin(), l.begin(), l.size());
     memcpy(ret.begin() + l.size(), r.begin(), r.size());
     return ret;
-}
-
-bool str_holder::operator==(const str_holder& r) const
-{
-    if(size() == r.size())
-        return !memcmp(begin(), r.begin(), size());
-    return false;
 }
 

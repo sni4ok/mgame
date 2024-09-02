@@ -14,12 +14,11 @@ struct mfile
     mfile(int hfile);
     mfile(char_cit file);
     mfile(const mfile&) = delete;
+    void swap(mfile& r);
     uint64_t size() const;
     void seekg(uint64_t pos);
     void read(char_it ptr, uint64_t size);
     ~mfile();
-
-    void swap(mfile& r);
 };
 
 bool read_file(mvector<char>& buf, char_cit fname, bool can_empty = false);

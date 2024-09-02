@@ -4,6 +4,7 @@
 
 #include "myitoa.hpp"
 #include "math.hpp"
+#include "algorithm.hpp"
 
 namespace my_cvt
 {

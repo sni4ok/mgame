@@ -20,8 +20,8 @@ void fix_zero_tail(char_cit fname)
     int64_t nsz = fsz - fsz % message_size;
     while(nsz > 0) {
         f.seekg(nsz - message_size);
-        f.read(&m[0], message_size);
-        if(m != mc)
+        f.read(m.begin(), message_size);
+        if(!(m == mc))
             break;
         nsz -= message_size;
     }

@@ -97,11 +97,7 @@ struct tuple<type, types...>
     }
     bool operator==(const tuple& r) const
     {
-        return v == r.v && values == r.values;
-    }
-    bool operator!=(const tuple& r) const
-    {
-        return v != r.v || values != r.values;
+        return (v == r.v) && (values == r.values);
     }
     bool operator<(const tuple& r) const
     {

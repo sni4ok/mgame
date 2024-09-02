@@ -14,15 +14,15 @@
 #include <sys/stat.h>
 #include <sys/file.h>
 
+mfile::mfile(int hfile) : hfile(hfile)
+{
+}
+
 mfile::mfile(char_cit file)
 {
     hfile = ::open(file, O_RDONLY);
     if(hfile <= 0)
         throw_system_failure(es() % "open file " % _str_holder(file) % " error");
-}
-
-mfile::mfile(int hfile) : hfile(hfile)
-{
 }
 
 void mfile::swap(mfile& r)

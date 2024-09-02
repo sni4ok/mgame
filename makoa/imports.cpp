@@ -288,7 +288,7 @@ void import_tcp_start(void* c, void* p)
         while(it.can_run && it.count >= max_connections)
             it.cond.timed_uwait(lock, 50 * 1000);
         lock.unlock();
-        int socket = my_accept_async(it.port, false/*local*/, false/*sync*/, &client, &it.can_run, it.params.c_str());
+        int socket = socket_accept_async(it.port, false/*local*/, false/*sync*/, &client, &it.can_run, it.params.c_str());
         volatile bool initialized = false;
         thread thrd(&import_tcp_thread, &it, socket, client, ref(initialized), p);
         lock.lock();

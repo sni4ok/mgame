@@ -86,12 +86,6 @@ struct fset
     void swap(fset& r) {
         data.swap(r.data);
     }
-    bool operator==(const fset& r) const {
-        return data == r.data;
-    }
-    bool operator!=(const fset& r) const {
-        return data != r.data;
-    }
     iterator insert(iterator it, const value_type& k) {
         if(it == data.end() || not_equal(*it, k))
             return data.insert(it, k);

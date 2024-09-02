@@ -263,14 +263,6 @@ public:
     const type& back() const {
         return buf[size_ - 1];
     }
-    bool operator==(const mvector& r) const {
-        if(size_ == r.size_)
-            return !memcmp(buf, r.buf, size_ * sizeof(type));
-        return false;
-    }
-    bool operator!=(const mvector& r) const {
-        return !(*this == r);
-    }
     void __insert_impl(iterator& it) {
         if(size_ == capacity_) {
             uint64_t pos = it - buf;

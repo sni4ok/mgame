@@ -18,32 +18,28 @@ struct mstring : mvector<char>
     typedef char value_type;
 
     mstring();
-    mstring(str_holder str);
+    mstring(str_holder r);
+    mstring(const mstring& r);
     mstring(std::initializer_list<char> r);
     mstring(char_cit from, char_cit to);
-    mstring(const mstring& r);
     mstring(mstring&& r);
     mstring& operator=(mstring&& r);
+    mstring& operator=(str_holder r);
     mstring& operator=(const mstring& r);
     void swap(mstring& r);
     str_holder str() const;
     char_cit c_str() const;
-    bool operator==(const mstring& r) const;
-    bool operator==(const str_holder& r) const;
-    bool operator!=(const mstring& r) const;
-    bool operator!=(const str_holder& r) const;
-    bool operator<(const mstring& r) const;
-    mstring& operator+=(const mstring& r);
     mstring& operator+=(str_holder r);
-    mstring operator+(const mstring& r) const;
+    mstring& operator+=(const mstring& r);
     mstring operator+(str_holder r) const;
+    mstring operator+(const mstring& r) const;
     mstring& operator+=(char c);
     mstring operator+(char c) const;
 };
 
 inline mstring _mstring(char_cit str)
 {
-    return mstring(_str_holder(str));
+    return _str_holder(str);
 }
 
 template<typename stream>

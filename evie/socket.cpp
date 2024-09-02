@@ -6,6 +6,7 @@
 #include "string.hpp"
 #include "profiler.hpp"
 #include "mlog.hpp"
+#include "algorithm.hpp"
 
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
@@ -164,7 +165,7 @@ void socket_send_async(int socket, char_cit ptr, uint32_t sz)
     }
 }
 
-int my_accept_async(uint32_t port, bool local, bool sync, mstring* client_ip_ptr, volatile bool* can_run, char_cit name)
+int socket_accept_async(uint32_t port, bool local, bool sync, mstring* client_ip_ptr, volatile bool* can_run, char_cit name)
 {
     int socket = ::socket(AF_INET, local ? AF_LOCAL : SOCK_STREAM /*| SOCK_NONBLOCK*/, IPPROTO_TCP);
     if(socket < 0) 
@@ -232,11 +233,11 @@ int my_accept_async(uint32_t port, bool local, bool sync, mstring* client_ip_ptr
     return sc.release();
 }
 
-int my_accept_async(uint32_t port, const mstring& possible_client_ip, bool sync,
+int socket_accept_async(uint32_t port, const mstring& possible_client_ip, bool sync,
     mstring* client_ip_ptr, volatile bool* can_run, char_cit name)
 {
     mstring client_ip;
-    int s = my_accept_async(port, (possible_client_ip == "127.0.0.1"), sync, &client_ip, can_run, name);
+    int s = socket_accept_async(port, (possible_client_ip == "127.0.0.1"), sync, &client_ip, can_run, name);
 
     if(possible_client_ip != "*" && client_ip != possible_client_ip)
     {
@@ -337,7 +338,7 @@ void socket_stream::read(char_it s, uint32_t sz)
         while(cur - readed < sz)
             recv();
 
-        my_fast_copy(readed, sz, s);
+        memcpy(s, readed, sz);
         readed += sz;
         compact();
     }

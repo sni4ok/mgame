@@ -43,6 +43,10 @@ static stream& operator<<(stream &log,  const write_time& t)
     return log;
 }
 
+profilerinfo::info::info() : time(), time_max(), time_min(limits<uint64_t>::max), count(), name()
+{
+}
+
 void profilerinfo::print_impl(const long param)
 {
     uint64_t ncounters = atomic_load(cur_counters);
@@ -61,10 +65,6 @@ void profilerinfo::print_impl(const long param)
             << ", minimum time: " << write_time(i.time_min) << ", maximum time: " <<  write_time(i.time_max)
             << ", all time: " << write_time(i.time) << ", count: " << i.count << endl;
     }
-}
-
-profilerinfo::info::info() : time(), time_max(), time_min(limits<uint64_t>::max), count(), name()
-{
 }
 
 profilerinfo::profilerinfo() : cur_counters(), log_on_exit(true)

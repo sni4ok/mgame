@@ -59,18 +59,6 @@ struct carray
         assert(elem < size_);
         return buf[elem];
     }
-    constexpr bool equal(const type* f) const {
-        return ::equal(f, f + size_, buf);
-    }
-    constexpr bool operator<(const carray& r) const {
-        return lexicographical_compare(buf, buf + size_, r.buf, r.buf + size_);
-    }
-    constexpr bool operator==(const carray& r) const {
-        return ::equal(buf, buf + size_, r.buf);
-    }
-    constexpr bool operator!=(const carray& r) const {
-        return !(*this == r);
-    }
     constexpr str_holder str() const
     requires(is_same_v<type, char>) {
         return from_array(buf);
@@ -208,25 +196,9 @@ public:
         assert(size_);
         --size_;
     }
-    bool equal(const type* f, const type* t) const {
-        return ::equal(f, t, begin(), end());
-    }
-    template<uint32_t sz>
-    bool operator==(const type (&str)[sz]) const {
-        return equal(str, str + sz - 1);
-    }
-    bool operator==(const array& r) const {
-        return equal(r.begin(), r.end());
-    }
-    bool operator!=(const array& r) const {
-        return !(*this == r);
-    }
     str_holder str() const
     requires(is_same_v<type, char>) {
         return str_holder(begin(), end());
-    }
-    bool operator<(const array& r) const {
-        return lexicographical_compare(buf, buf + size_, r.buf, r.buf + size_);
     }
     void insert(iterator it, const type* from, const type* to) {
         uint32_t size = size_;

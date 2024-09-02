@@ -9,23 +9,6 @@
 
 #include "vector.hpp"
 
-inline void my_fast_copy(char_cit from, uint64_t size, char_it out)
-{
-    memcpy(out, from, size);
-}
-inline void my_fast_move(char_cit from, uint64_t size, char_it out)
-{
-    memmove(out, from, size);
-}
-inline void my_fast_copy(char_cit from, char_cit to, char_it out)
-{
-    memcpy(out, from, to - from);
-}
-inline void my_fast_move(char_cit from, char_cit to, char_it out)
-{
-    memmove(out, from, to - from);
-}
-
 struct buf_stream : ios_base
 {
     char_it from, cur, to;
@@ -79,7 +62,7 @@ struct buf_stream : ios_base
     {
         if(cur + s > to) [[unlikely]]
             throw str_exception("buf_stream::write() overloaded");
-        my_fast_copy(v, s, cur);
+        memcpy(cur, v, s);
         cur += s;
     }
     void check_size(uint64_t delta) const

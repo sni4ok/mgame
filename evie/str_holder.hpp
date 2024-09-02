@@ -27,19 +27,6 @@ extern "C"
 
 static const char endl = '\n';
 
-template<class it1, class it2>
-constexpr bool lexicographical_compare(it1 first1, it1 last1, it2 first2, it2 last2)
-{
-    for (; (first1 != last1) && (first2 != last2); ++first1, ++first2)
-    {
-        if (*first1 < *first2)
-            return true;
-        if (*first2 < *first1)
-            return false;
-    }
-    return (first1 == last1) && (first2 != last2);
-}
-
 typedef char* char_it;
 typedef const char* char_cit;
 
@@ -62,21 +49,6 @@ public:
     template<uint64_t sz>
     constexpr str_holder(const char (&str)[sz]) : str(str), size_(sz - 1)
     {
-    }
-    bool operator==(const str_holder& r) const;
-
-    template<uint64_t sz>
-    bool operator==(const char (&str)[sz]) const
-    {
-        return (*this) == str_holder(str);
-    }
-    bool operator!=(const str_holder& r) const
-    {
-        return !(*this == r);
-    }
-    constexpr bool operator<(const str_holder& r) const
-    {
-        return lexicographical_compare(str, str + size_, r.str, r.str + r.size_);
     }
     constexpr char_cit begin() const
     {
@@ -102,11 +74,11 @@ public:
     constexpr bool empty() const {
         return !size_;
     }
-    void resize(uint64_t size) {
+    constexpr void resize(uint64_t size) {
         assert(size <= size_);
         size_ = size;
     }
-    void pop_back() {
+    constexpr void pop_back() {
         assert(size_);
         --size_;
     }

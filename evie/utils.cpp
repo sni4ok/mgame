@@ -107,7 +107,7 @@ ttime_t read_time_impl::read_time(char_cit& it)
     //2020-01-26T10:45:21.418 //frac_size 3
     //2020-01-26T10:45:21.418000001 //frac_size 9
 
-    if(!cur_date.equal(it)) [[unlikely]]
+    if(!equal(cur_date.begin(), cur_date.end(), it)) [[unlikely]]
     {
         if(*(it + 4) != '-' || *(it + 7) != '-')
             throw mexception(es() % "bad time: " % str_holder(it, 26));

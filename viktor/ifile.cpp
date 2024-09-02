@@ -123,7 +123,7 @@ struct zip_file
     {
         if(zip) {
             uint64_t sz = min<uint64_t>(size, data.end() - data_it);
-            my_fast_copy(data_it, data_it + sz, ptr);
+            memcpy(ptr, data_it, sz);
             data_it += sz;
         }
         else {
@@ -529,7 +529,7 @@ struct ifile
             if(!cb.book.empty())
             {
                 uint32_t read_size = min<uint32_t>(buf_size, cb.book.size() - cb.book_off);
-                my_fast_copy(&cb.book[0] + cb.book_off, &cb.book[0] + cb.book_off + read_size, buf);
+                memcpy(buf, &cb.book[0] + cb.book_off, read_size);
                 cb.book_off += read_size;
                 if(cb.book_off == cb.book.size())
                     cb.book.clear();
@@ -625,7 +625,7 @@ struct ifile_replay : ifile
                 break;
         }
         uint32_t ret = (mi - mb) * message_size;
-        my_fast_copy((char*)mb, (char*)mi, buf);
+        copy((char_cit)mb, (char_cit)mi, buf);
         b.erase(b.begin(), b.begin() + ret);
         if(!ret && !b.empty())
         {
