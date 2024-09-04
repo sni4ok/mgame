@@ -10,6 +10,7 @@
 #include "../evie/thread.hpp"
 #include "../evie/smart_ptr.hpp"
 #include "../evie/fast_alloc.hpp"
+#include "../evie/mlog.hpp"
 
 bool pooling_mode = false;
 

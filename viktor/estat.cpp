@@ -9,6 +9,7 @@
 #include "../makoa/types.hpp"
 
 #include "../evie/math.hpp"
+#include "../evie/mlog.hpp"
 
 namespace {
 
@@ -168,7 +169,7 @@ namespace {
 
     void* estat_init(char_cit params)
     {
-        return new estat(_mstring(params));
+        return new estat(_str_holder(params));
     }
     void estat_destroy(void* v)
     {

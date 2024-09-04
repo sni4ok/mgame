@@ -8,6 +8,7 @@
 #include "../evie/thread.hpp"
 #include "../evie/utils.hpp"
 #include "../evie/fmap.hpp"
+#include "../evie/mlog.hpp"
 
 #include <unistd.h>
 
@@ -80,7 +81,7 @@ struct server::impl
         for(mstring i: imports)
         {
             if(i.size() > 7 && str_holder(i.begin(), i.begin() + 7) == "mmap_cp")
-                i = i + (pooling_mode ? " 1" : " 0");
+                i += pooling_mode ? str_holder(" 1") : " 0";
 
             threads.push_back(thread(&impl::import_thread, this, ref(count), i));
         }

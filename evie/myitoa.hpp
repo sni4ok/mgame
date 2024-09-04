@@ -61,10 +61,10 @@ namespace my_cvt
         static const type mm = limits<type>::max / 10;
         for(uint32_t i = 0; i != size; ++i) {
             if(ret > mm) [[unlikely]]
-                throw exception(str_holder("atoi() max possible size exceed for: "), {buf, size});
+                throw exception("atoi() max possible size exceed for: ", {buf, size});
             char ch = buf[i];
             if(ch < '0' || ch > '9') [[unlikely]]
-                throw exception(str_holder("atoi() bad integral number: "), {buf, size});
+                throw exception("atoi() bad integral number: ", {buf, size});
             ret *= 10;
             ret += (ch - '0');
         }
@@ -87,14 +87,14 @@ namespace my_cvt
     template<>
     inline char atoi<char>(char_cit buf, uint32_t size) {
         if(size != 1) [[unlikely]]
-            throw exception(str_holder("atoi() bad char size: "), {buf, size});
+            throw exception("atoi() bad char size: ", {buf, size});
         return *buf;
     }
 
     template<>
     inline bool atoi<bool>(char_cit buf, uint32_t size) {
         if(size != 1 || (buf[0] != '0' && buf[0] != '1')) [[unlikely]]
-            throw exception(str_holder("atoi() bad bool number: "), {buf, size});
+            throw exception("atoi() bad bool number: ", {buf, size});
         return(buf[0] == '1');
     }
 
@@ -170,21 +170,19 @@ type lexical_cast(char_cit from, char_cit to);
 template<> double lexical_cast<double>(char_cit from, char_cit to);
 
 template<typename type>
-type lexical_cast(const str_holder& str)
+type lexical_cast(str_holder str)
 {
     return lexical_cast<type>(str.begin(), str.end());
 }
 
 template<> inline str_holder lexical_cast<str_holder>(char_cit from, char_cit to)
 {
-    return str_holder(from, to - from);
+    return {from, to};
 }
 
 template<typename ... args>
 inline void my_unused(args& ...) {
 }
-
-#define MY_UNUSED(name)
 
 struct ios_base
 {

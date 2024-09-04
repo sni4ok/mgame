@@ -12,7 +12,7 @@ inline bool is_endl(char c)
 
 inline char_cit found_tag(char_cit it_b, char_cit ie, str_holder tag_)
 {
-    mstring tag = mstring(tag_) + " = ";
+    mstring tag = tag_ + " = ";
     char_cit it = it_b;
 
     for(;;) {
@@ -40,7 +40,7 @@ inline char_cit found_tag(char_cit it_b, char_cit ie, str_holder tag_)
     return it;
 }
 
-mstring get_log_name(const mstring& fname)
+mstring get_log_name(str_holder fname)
 {
     //a.conf, ../a.conf, ~/a.conf
     auto ib = fname.begin(), ie5 = ib + (fname.size() - 5);
@@ -51,7 +51,7 @@ mstring get_log_name(const mstring& fname)
         ;
     if(it != ib)
         ++it;
-    return mstring(it, ie5) + ".log";
+    return str_holder(it, ie5) + ".log";
 }
 
 void print_init(int argc, char** argv)

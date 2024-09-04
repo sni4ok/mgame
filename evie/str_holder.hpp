@@ -30,39 +30,42 @@ static const char endl = '\n';
 typedef char* char_it;
 typedef const char* char_cit;
 
-class str_holder
+template<typename type>
+class span
 {
-    char_cit str;
+    const type* data;
     uint64_t size_;
 
 public:
-    constexpr str_holder() : str(), size_()
+    typedef const type* iterator;
+
+    constexpr span() : data(), size_()
     {
     }
-    constexpr str_holder(char_cit str, uint64_t size) : str(str), size_(size)
+    constexpr span(iterator data, uint64_t size) : data(data), size_(size)
     {
     }
-    constexpr str_holder(char_cit from, char_cit to) : str(from), size_(to - from)
+    constexpr span(iterator from, iterator to) : data(from), size_(to - from)
     {
     }
 
     template<uint64_t sz>
-    constexpr str_holder(const char (&str)[sz]) : str(str), size_(sz - 1)
+    constexpr span(const type (&buf)[sz]) : data(buf), size_(sz - 1)
     {
     }
-    constexpr char_cit begin() const
+    constexpr iterator begin() const
     {
-        return str;
+        return data;
     }
-    constexpr char_cit end() const
+    constexpr iterator end() const
     {
-        return str + size_;
+        return data + size_;
     }
-    constexpr char operator[](uint32_t idx) const
+    constexpr auto& operator[](uint32_t idx) const
     {
-        return *(str + idx);
+        return *(data + idx);
     }
-    constexpr char back() const
+    constexpr auto& back() const
     {
         assert(size_);
         return *(end() - 1);
@@ -83,6 +86,8 @@ public:
         --size_;
     }
 };
+
+typedef span<char> str_holder;
 
 str_holder _str_holder(char_cit str);
 

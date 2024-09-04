@@ -190,7 +190,7 @@ struct cg_listener_h
     void set_replstate(cg_msg_t* msg)
     {
         if(def_state.empty())
-            rev = _mstring("replstate=") + _str_holder((char_cit)msg->data);
+            rev = "replstate=" + _str_holder((char_cit)msg->data);
         else
             rev = def_state + ";" + "replstate=" + _str_holder((char_cit)msg->data);
     }

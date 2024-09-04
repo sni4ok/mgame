@@ -8,6 +8,7 @@
 #include "../../evie/mfile.hpp"
 #include "../../evie/config.hpp"
 #include "../../evie/tuple.hpp"
+#include "../../evie/smart_ptr.hpp"
 
 #include <map>
 #include <set>
@@ -174,7 +175,7 @@ struct skelet
             mstring v(ini_type.begin() + 1, ini_type.end());
             uint32_t vs = lexical_cast<uint32_t>(v);
             add_size(vs + 1, 1);
-            tmp_str = mstring("cg_string<") + v + ">";
+            tmp_str = "cg_string<" + v + ">";
             c_types.insert("char");
             return tmp_str.str();
         }
@@ -185,7 +186,7 @@ struct skelet
             str_holder es = {p + 1, ini_type.end()};
             uint32_t e = lexical_cast<uint32_t>(p + 1, ini_type.end());
             add_size(cg_decimal_size(m, e), 1);
-            tmp_str = mstring("cg_decimal<") + ms + "," + es + ">";
+            tmp_str = "cg_decimal<" + ms + "," + es + ">";
             c_types.insert("char");
             return tmp_str.str();
         }
@@ -641,7 +642,7 @@ int main(int argc, char** arg)
             return 1;
         }
         if(argc == 2)
-            parse_all(argv[1], mstring("plaza_template.inl"));
+            parse_all(argv[1], "plaza_template.inl");
         else
             proceed_selected(argv[1], argv[2], argv[3]);
 

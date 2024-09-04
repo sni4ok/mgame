@@ -8,6 +8,7 @@
 #include "../makoa/exports.hpp"
 #include "../makoa/types.hpp"
 
+#include "../evie/mlog.hpp"
 #include "../evie/math.hpp"
 #include "../evie/optional.hpp"
 

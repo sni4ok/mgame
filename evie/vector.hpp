@@ -12,11 +12,33 @@
 void* tss_realloc(void* ptr, uint64_t old_size, uint64_t new_size);
 void tss_free(void* ptr, uint64_t size);
 
-template<typename type>
-void copy_backward(const type* first, const type* last, type* d_last)
+template<typename ifrom, typename ito>
+constexpr void copy(ifrom from, ifrom to, ito out)
 {
-    while(first != last)
-        *(--d_last) = *(--last);
+    for(; from != to; ++from, ++out)
+        *out = *from;
+}
+
+template<typename type>
+inline void copy(type* from, type* to, remove_const_t<type>* out)
+    requires(is_trivially_destructible_v<type>)
+{
+    memcpy(out, from, (to - from) * sizeof(type));
+}
+
+template<typename ifrom, typename ito>
+constexpr void copy_backward(ifrom from, ifrom to, ito out)
+{
+    out += (to - from);
+    while(from != to)
+        *(--out) = *(--to);
+}
+
+template<typename type>
+inline void copy_backward(type* from, type* to, remove_const_t<type>* out)
+    requires(is_trivially_destructible_v<type>)
+{
+    memmove(out, from, (to - from) * sizeof(type));
 }
 
 template<typename type, bool tss_allocator = false>
@@ -54,12 +76,6 @@ protected:
     }
 
 public:
-    static void __copy(const type* from, const type* to, type* it) {
-        if constexpr(have_destructor)
-            copy_backward(from, to, it + (to - from));
-        else
-            memmove((void*)it, from, (to - from) * sizeof(type));
-    }
 
     typedef type* iterator;
     typedef const type* const_iterator;
@@ -72,11 +88,14 @@ public:
     explicit mvector(uint64_t size) {
         __clear();
         resize(size);
-        memset((void*)buf, 0, size * sizeof(type));
     }
     mvector(mvector&& r) {
         __clear();
         swap(r);
+    }
+    mvector(span<type> str) {
+        __clear();
+        insert(str.begin(), str.end());
     }
     mvector(const type* from, const type* to) {
         __clear();
@@ -86,7 +105,7 @@ public:
         __clear();
         insert(r.begin(), r.end());
     }
-	mvector(std::initializer_list<value_type> r) {
+    mvector(std::initializer_list<type> r) {
         __clear();
         insert(r.begin(), r.end());
     }
@@ -95,23 +114,33 @@ public:
         swap(r);
         return *this;
     }
+    mvector& operator=(span<type> r) {
+        clear();
+        insert(r.begin(), r.end());
+        return *this;
+    }
     mvector& operator=(const mvector& r) {
         clear();
         insert(r.begin(), r.end());
         return *this;
     }
-    void resize(uint64_t new_size) {
-        if(new_size == size_)
-            return;
-        if(new_size < size_) {
-            __destroy(begin() + new_size, begin() + size_);
-            size_ = new_size;
-        }
+    mvector& operator=(std::initializer_list<type> r) {
+        clear();
+        insert(r.begin(), r.end());
+        return *this;
+    }
+    template<bool fill_zero>
+    void __resize(uint64_t new_size) {
         if(new_size <= capacity_) {
-            memset((void*)(buf + size_), 0, (new_size - size_) * sizeof(type));
-            size_ = new_size;
+            if(new_size < size_)
+                __destroy(begin() + new_size, begin() + size_);
+            else if(new_size > size_) {
+                if constexpr(fill_zero)
+                    memset((void*)(buf + size_), 0, (new_size - size_) * sizeof(type));
+            }
         }
-        else {
+        else
+        {
             void *new_ptr;
             if constexpr(tss_allocator)
                 new_ptr = tss_realloc((void*)buf, capacity_ * sizeof(type), new_size * sizeof(type));
@@ -120,10 +149,14 @@ public:
             if(!new_ptr)
                 throw std::bad_alloc();
             buf = (type*)new_ptr;
-            memset((void*)(buf + size_), 0, (new_size - size_) * sizeof(type));
-            size_ = new_size;
+            if constexpr(fill_zero)
+                memset((void*)(buf + size_), 0, (new_size - size_) * sizeof(type));
             capacity_ = new_size;
         }
+        size_ = new_size;
+    }
+    void resize(uint64_t new_size) {
+        __resize<true>(new_size);
     }
     void compact() {
         if constexpr(tss_allocator)
@@ -151,7 +184,8 @@ public:
         capacity_ = new_capacity;
     }
     void clear() {
-        resize(0);
+        __destroy(begin(), end());
+        size_ = 0;
     }
     uint64_t size() const {
         return size_;
@@ -179,6 +213,9 @@ public:
     }
     iterator end() {
         return buf + size_;
+    }
+    span<type> str() const {
+        return {begin(), end()};
     }
 
     template<typename t>
@@ -288,16 +325,16 @@ public:
     }
     void insert(const type* from, const type* to) {
         uint64_t size = size_;
-        resize(to + size_ - from);
-        __copy(from, to, buf + size);
+        __resize<have_destructor>(to + size_ - from);
+        copy(from, to, buf + size);
     }
     void insert(iterator it, const type* from, const type* to) {
         uint64_t size = size_;
         uint64_t pos = it - buf;
-        resize(to + size_ - from);
+        __resize<have_destructor>(to + size_ - from);
         it = buf + pos;
-        __copy(it, buf + size, it + (to - from));
-        __copy(from, to, it);
+        copy_backward(it, buf + size, it + (to - from));
+        copy(from, to, it);
     }
     void __push_back_impl() {
         if(size_ == capacity_)
@@ -316,8 +353,7 @@ public:
         ++size_;
     }
     template<class ... params>
-    reference emplace_back(params&&... args)
-    {
+    reference emplace_back(params&&... args) {
         __push_back_impl();
         new(&buf[size_])type(args...);
         ++size_;
@@ -325,7 +361,8 @@ public:
     }
     void pop_back() {
         assert(size_);
-        resize(size_ - 1);
+        __destroy(begin() + size_ - 1);
+        --size_;
     }
     iterator erase(iterator it) {
         __check_iterator(it);
@@ -462,7 +499,7 @@ struct pvector : mvector<type*>
     }
     void splice(pvector& r) {
         base::insert(r.begin().it, r.end().it);
-        r.base::resize(0);
+        r.base::clear();
     }
     type& back() {
         return *(*(base::end() - 1));

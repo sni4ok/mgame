@@ -6,6 +6,7 @@
 
 #include "../evie/utils.hpp"
 #include "../evie/mfile.hpp"
+#include "../evie/mlog.hpp"
 
 #include <sys/stat.h>
 

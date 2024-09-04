@@ -296,20 +296,6 @@ void copy_back(iterator from, iterator to, cont& c)
         c.push_back(*from);
 }
 
-template<typename ifrom, typename ito>
-constexpr void copy(ifrom from, ifrom to, ito out)
-{
-    for(; from != to; ++from, ++out)
-        *out = *from;
-}
-
-template<typename type>
-inline void copy(type* from, type* to, remove_const_t<type>* out)
-    requires(is_trivially_copyable_v<type>)
-{
-    memcpy(out, from, (to - from) * sizeof(type));
-}
-
 template<bool min, typename iterator, typename compare>
 iterator min_element_impl(iterator from, iterator to, compare cmp)
 {

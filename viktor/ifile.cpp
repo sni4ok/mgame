@@ -11,6 +11,7 @@
 #include "../evie/utils.hpp"
 #include "../evie/queue.hpp"
 #include "../evie/profiler.hpp"
+#include "../evie/mlog.hpp"
 
 #include <map>
 #include <unordered_map>

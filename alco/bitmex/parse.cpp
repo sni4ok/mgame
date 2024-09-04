@@ -24,7 +24,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
             if(cfg.orders)
                 subscribes.push_back(sb + cfg.orders_table + ":" + v + se);
             if(cfg.trades)
-                subscribes.push_back(sb + mstring("trade") + ":" + v + se);
+                subscribes.push_back(sb + "trade" + ":" + v + se);
         }
     }
     void parse_ticks(char_cit& it, char_cit ie, uint32_t security_id, ttime_t time, bool ask)

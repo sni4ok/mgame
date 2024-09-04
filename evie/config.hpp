@@ -8,7 +8,7 @@
 #include "mstring.hpp"
 #include "algorithm.hpp"
 
-mstring get_log_name(const mstring& fname);
+mstring get_log_name(str_holder fname);
 void print_init(int argc, char** argv);
 mvector<str_holder> init_params(int argc, char** argv, bool log_params = true);
 str_holder get_config_param_str(char_cit it, char_cit ie, str_holder tag, bool can_empty);

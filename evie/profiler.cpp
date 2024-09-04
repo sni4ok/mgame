@@ -3,8 +3,9 @@
 */
 
 #include "profiler.hpp"
-#include "string.hpp"
+#include "vector.hpp"
 #include "atomic.hpp"
+#include "mtime.hpp"
 #include "mlog.hpp"
 
 struct write_time

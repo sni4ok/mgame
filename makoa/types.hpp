@@ -26,7 +26,7 @@ stream& operator<<(stream& s, const brief_time& t)
     uint32_t m = (tt - h * 3600) / 60;
     s << print2chars(h) << ':' << print2chars(m) << ':' << print2chars(tt % 60);
     if(t.show_frac)
-        s << '.' << mlog_fixed<9>(t.value % ttime_t::frac);
+        s << '.' << uint_fixed<9>(t.value % ttime_t::frac);
     return s;
 }
 

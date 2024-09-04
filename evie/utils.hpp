@@ -11,7 +11,45 @@
 #include "mstring.hpp"
 #include "algorithm.hpp"
 #include "array.hpp"
-#include "mlog.hpp"
+#include "mtime.hpp"
+
+static constexpr str_holder uint_fixed_str[] =
+{
+   "", "0", "00",
+   "000", "0000", "00000",
+   "000000", "0000000", "00000000"
+};
+
+template<uint32_t sz>
+struct uint_fixed
+{
+   const uint32_t value;
+
+   uint_fixed(uint32_t value) : value(value)
+   {
+      static_assert(sz <= 9, "out of range");
+   }
+   const constexpr str_holder& str() const
+   {
+      uint32_t v = value;
+      uint32_t idx = sz - 1;
+      while(v > 9 && idx)
+      {
+         v /= 10;
+         --idx;
+      }
+      return uint_fixed_str[idx];
+   }
+};
+
+template<typename stream, uint32_t sz>
+stream& operator<<(stream& log, const uint_fixed<sz>& v)
+{
+    log << v.str() << v.value;
+    return log;
+}
+
+typedef uint_fixed<2> print2chars;
 
 template<typename type>
 void split(mvector<type>& ret, char_cit it, char_cit ie, char sep)
@@ -69,7 +107,7 @@ void write_decimal(stream& s, const decimal& d)
         int_ = -int_;
         float_ = -float_;
     }
-    s << int_ << "." << mlog_fixed<-decimal::exponent>(float_);
+    s << int_ << "." << uint_fixed<-decimal::exponent>(float_);
 }
 
 struct counting_iterator
@@ -176,7 +214,7 @@ template<typename stream>
 stream& operator<<(stream& s, const time_duration& t)
 {
     return s << print2chars(t.hours) << ':' << print2chars(t.minutes) << ':' << print2chars(t.seconds)
-        << "." << mlog_fixed<6>(t.nanos / 1000);
+        << "." << uint_fixed<6>(t.nanos / 1000);
 }
 
 template<typename stream>

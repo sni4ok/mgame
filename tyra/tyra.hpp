@@ -16,7 +16,6 @@ class tyra
     char *c, *e; 
 
     tyra(const tyra&) = delete;
-    message_ping mp;
 
 public:
     tyra(const char* host);

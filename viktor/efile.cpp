@@ -146,7 +146,7 @@ struct efile
 
 void* efile_init(char_cit params)
 {
-    return new efile(_mstring(params));
+    return new efile(_str_holder(params));
 }
 
 void efile_destroy(void* v)

@@ -10,6 +10,7 @@
 #include "../evie/utils.hpp"
 #include "../evie/thread.hpp"
 #include "../evie/profiler.hpp"
+#include "../evie/mlog.hpp"
 
 #include <sys/stat.h>
 #include <unistd.h>
@@ -327,7 +328,7 @@ void import_ifile_start(void* c, void* p)
 template<typename type>
 void* importer_init(volatile bool& can_run, char_cit params)
 {
-    return (void*)(new type(can_run, _mstring(params)));
+    return (void*)(new type(can_run, _str_holder(params)));
 }
 
 template<typename type>

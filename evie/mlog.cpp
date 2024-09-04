@@ -2,12 +2,12 @@
     author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
+#include "mlog.hpp"
 #include "utils.hpp"
 #include "thread.hpp"
 #include "fast_alloc.hpp"
 
-#include "stdio.h"
-
+#include <stdio.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -161,7 +161,7 @@ public:
             stream.reset(new ofile(file_name));
             if(!(params & mlog::no_crit_file))
             {
-                mstring crit_file = _mstring(file_name) + "_crit";
+                mstring crit_file = _str_holder(file_name) + "_crit";
                 stream_crit.reset(new ofile(crit_file.c_str()));
             }
             if(params & mlog::lock_file)

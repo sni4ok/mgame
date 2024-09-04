@@ -2,9 +2,9 @@
     author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
+#include "algorithm.hpp"
 #include "myitoa.hpp"
 #include "math.hpp"
-#include "algorithm.hpp"
 
 namespace my_cvt
 {

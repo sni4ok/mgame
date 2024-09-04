@@ -12,6 +12,7 @@
 #include "../evie/profiler.hpp"
 #include "../evie/smart_ptr.hpp"
 #include "../evie/fmap.hpp"
+#include "../evie/mlog.hpp"
 
 #include <sys/stat.h>
 #include <unistd.h>

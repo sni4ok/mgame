@@ -17,15 +17,15 @@ struct carray
     void init(const type* from) {
        copy(from, from + size_, buf);
     }
-	constexpr carray(std::initializer_list<type> r) {
+    constexpr carray(std::initializer_list<type> r) {
         if(r.size() > size_)
             throw mexception(es() % "carray(initializer_list) for " % r.size() % " elems but size " % size_);
        copy(r.begin(), r.end(), buf);
     }
-    constexpr carray(str_holder str)
-    requires(is_same_v<type, char>) {
+    constexpr carray(span<type> str)
+    {
         if(str.size() > size_)
-            throw mexception(es() % "carray<char, " % size_ % ">(str_holder) max size exceed for: " % str);
+            throw mexception(es() % "carray<type, " % size_ % ">(span) max size overload");
         copy(str.begin(), str.end(), buf);
     }
 
@@ -59,9 +59,11 @@ struct carray
         assert(elem < size_);
         return buf[elem];
     }
-    constexpr str_holder str() const
-    requires(is_same_v<type, char>) {
-        return from_array(buf);
+    constexpr span<type> str() const {
+        if constexpr(is_same_v<type, char>)
+            return from_array(buf);
+        else
+            return span<type>(begin(), end());
     }
     constexpr carray& operator+=(const carray& r) {
         for(uint32_t i = 0; i != size_; ++i)
@@ -104,8 +106,7 @@ public:
     array(const array& r) : size_(r.size_) {
         copy(r.begin(), r.end(), buf);
     }
-    array(str_holder str)
-    requires(is_same_v<type, char>) : size_(str.size()) {
+    array(span<type> str) : size_(str.size()) {
         assert(size_ <= capacity_);
         copy(str.begin(), str.end(), buf);
     }
@@ -196,22 +197,22 @@ public:
         assert(size_);
         --size_;
     }
-    str_holder str() const
-    requires(is_same_v<type, char>) {
-        return str_holder(begin(), end());
+    span<type> str() const
+    {
+        return span<type>(begin(), end());
     }
     void insert(iterator it, const type* from, const type* to) {
         uint32_t size = size_;
         resize(size_ + (to - from));
-        mvector<type>::__copy(it, buf + size, it + (to - from));
-        mvector<type>::__copy(from, to, it);
+        copy_backward(it, buf + size, it + (to - from));
+        copy(from, to, it);
     }
     iterator insert(iterator it, const type& v) {
         insert(it, &v, &v + 1);
         return it;
     }
     iterator erase(iterator from, iterator to) {
-        mvector<type>::__copy(to, end(), from);
+        copy_backward(to, end(), from);
         size_ -= to - from;
         return from;
     }

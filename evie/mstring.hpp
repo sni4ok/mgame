@@ -12,22 +12,35 @@
 struct mstring : mvector<char>
 {
     typedef mvector<char> base;
-    
-    typedef char_it iterator;
-    typedef char_cit const_iterator;
-    typedef char value_type;
 
-    mstring();
-    mstring(str_holder r);
-    mstring(const mstring& r);
-    mstring(std::initializer_list<char> r);
-    mstring(char_cit from, char_cit to);
-    mstring(mstring&& r);
-    mstring& operator=(mstring&& r);
-    mstring& operator=(str_holder r);
-    mstring& operator=(const mstring& r);
-    void swap(mstring& r);
-    str_holder str() const;
+    using base::base;
+    using base::operator=;
+
+    template<uint64_t sz>
+    mstring(const char (&buf)[sz]) : base(buf, buf + sz - 1)
+    {
+    }
+    template<uint64_t sz>
+    mstring& operator=(const char (&buf)[sz])
+    {
+        clear();
+        insert(buf, buf + sz - 1);
+        return *this;
+    }
+    template<uint64_t sz>
+    mstring& operator+=(const char (&buf)[sz])
+    {
+        insert(buf, buf + sz - 1);
+        return *this;
+    }
+    template<uint64_t sz>
+    mstring operator+(const char (&buf)[sz]) const
+    {
+        mstring ret(*this);
+        ret.insert(buf, buf + sz - 1);
+        return ret;
+    }
+
     char_cit c_str() const;
     mstring& operator+=(str_holder r);
     mstring& operator+=(const mstring& r);
@@ -36,11 +49,6 @@ struct mstring : mvector<char>
     mstring& operator+=(char c);
     mstring operator+(char c) const;
 };
-
-inline mstring _mstring(char_cit str)
-{
-    return _str_holder(str);
-}
 
 template<typename stream>
 stream& operator<<(stream& s, const mstring& str)
@@ -72,7 +80,20 @@ inline const mstring& lexical_cast(const mstring& str)
     return str;
 }
 
-mstring operator+(str_holder l, const mstring& r);
+mstring operator+(str_holder l, str_holder r);
+
+template<typename t>
+concept __have_str = is_class_v<t> && requires(t* v)
+{
+    v->str();
+};
+
+template<typename type>
+requires(__have_str<type>)
+mstring operator+(str_holder l, const type& r)
+{
+    return l + r.str();
+}
 
 #endif
 

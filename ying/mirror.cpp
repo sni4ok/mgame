@@ -81,7 +81,7 @@ stream& operator<<(stream& s, print_dt v)
     }
     if(minus)
         s << "-";
-    s << (v.value / ttime_t::frac) << "." << mlog_fixed<9>(v.value % ttime_t::frac);
+    s << (v.value / ttime_t::frac) << "." << uint_fixed<9>(v.value % ttime_t::frac);
     return s;
 }
 
@@ -150,7 +150,7 @@ struct mirror::impl
     void set_instrument(const message_instr& i)
     {
         mi = i;
-        head_msg = mstring(from_array(mi.exchange_id)) + "/" + from_array(mi.feed_id) + "/" + from_array(mi.security);
+        head_msg = from_array(mi.exchange_id) + "/" + from_array(mi.feed_id) + "/" + from_array(mi.security);
         set_auto_scroll();
     }
     int32_t get_top_order(window& w)
@@ -409,9 +409,9 @@ struct mirror::impl
     }
 };
 
-inline mirror::impl* create_mirror(const mstring& params)
+inline mirror::impl* create_mirror(str_holder params)
 {
-    auto p = split(params.str(), ' ');
+    auto p = split(params, ' ');
     if(p.size() > 2)
         throw mexception(es() % "mirror::mirror() bad params: " % params);
     uint32_t refresh_rate = p.size() == 2 ? lexical_cast<uint32_t>(p[1]) : 100;
@@ -420,7 +420,7 @@ inline mirror::impl* create_mirror(const mstring& params)
     return new mirror::impl(p[0], refresh_rate);
 }
 
-mirror::mirror(const mstring& params)
+mirror::mirror(str_holder params)
 {
     pimpl = create_mirror(params);
 }
@@ -438,7 +438,7 @@ void mirror::proceed(const message* m, uint32_t count)
 void* ying_init(char_cit params)
 {
     mlog() << "ying " << _str_holder(params) << " started";
-    return create_mirror(_mstring(params));
+    return create_mirror(_str_holder(params));
 }
 
 void ying_destroy(void* w)

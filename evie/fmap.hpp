@@ -28,7 +28,7 @@ struct fmap
     }
     fmap(const fmap& r) : data(r.data) {
     }
-	fmap(std::initializer_list<value_type> init) {
+    fmap(std::initializer_list<value_type> init) {
         for(const auto& v: init)
             insert(v);
     }

@@ -8,48 +8,9 @@
 #define EVIE_MLOG_HPP
 
 #include "myitoa.hpp"
-#include "mtime.hpp"
 #include "smart_ptr.hpp"
 
 class simple_log;
-
-static constexpr str_holder mlog_fixed_str[] =
-{
-   "", "0", "00",
-   "000", "0000", "00000",
-   "000000", "0000000", "00000000"
-};
-
-template<uint32_t sz>
-struct mlog_fixed
-{
-   const uint32_t value;
-
-   mlog_fixed(uint32_t value) : value(value)
-   {
-      static_assert(sz <= 9, "out of range");
-   }
-   const constexpr str_holder& str() const
-   {
-      uint32_t v = value;
-      uint32_t idx = sz - 1;
-      while(v > 9 && idx)
-      {
-         v /= 10;
-         --idx;
-      }
-      return mlog_fixed_str[idx];
-   }
-};
-
-template<typename stream, uint32_t sz>
-stream& operator<<(stream& log, const mlog_fixed<sz>& v)
-{
-    log << v.str() << v.value;
-    return log;
-}
-
-typedef mlog_fixed<2> print2chars;
 
 struct mlog : ios_base
 {

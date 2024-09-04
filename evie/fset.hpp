@@ -23,7 +23,7 @@ struct fset
     }
     fset(const fset& r) : data(r.data) {
     }
-	fset(std::initializer_list<value_type> init) {
+    fset(std::initializer_list<value_type> init) {
         for(const auto& v: init)
             insert(v);
     }

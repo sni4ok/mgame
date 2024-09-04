@@ -11,7 +11,6 @@
 #include "../makoa/types.hpp"
 
 #include "../evie/mlog.hpp"
-#include "../evie/mstring.hpp"
 #include "../evie/smart_ptr.hpp"
 
 #include <mysql/mysql.h>
@@ -28,11 +27,11 @@ struct mysql
     unique_ptr<MYSQL, mysql_close> sql;
     bool truncate, rename_new;
 
-    mysql(const mstring& params) : bufi(), bufo(), buft(), bsi(bufi), bso(bufo), bst(buft), sql(mysql_init(0)), truncate(), rename_new()
+    mysql(str_holder params) : bufi(), bufo(), buft(), bsi(bufi), bso(bufo), bst(buft), sql(mysql_init(0)), truncate(), rename_new()
     {
         if(!sql)
             throw str_exception("mysql() mysql_init error");
-        mvector<mstring> p = split_s(params.str(), ' ');
+        mvector<mstring> p = split_s(params, ' ');
         if(p.size() != 6)
             throw mexception(es() % "mysql() \"mysql (truncate,append,rename_new) host port dbname user password\", params: " % params);
 
@@ -191,7 +190,7 @@ struct mysql
 
 void* mysql_init(char_cit params)
 {
-    return new mysql(_mstring(params));
+    return new mysql(_str_holder(params));
 }
 
 void mysql_destroy(void* v)

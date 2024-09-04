@@ -157,7 +157,7 @@ CG_RESULT instruments_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg,
                     auto it = tickers.find(f->isin_id);
                     if(it == tickers.end()) {
                         security& sec = tickers[f->isin_id];
-                        sec.init(c.exchange_id, c.feed_id, mstring(f->short_isin.buf));
+                        sec.init(c.exchange_id, c.feed_id, f->short_isin.buf);
                     }
                     else {
                         if(!parser::instance().tickers_initialized)

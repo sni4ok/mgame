@@ -7,6 +7,7 @@
 #include "../../evie/mfile.hpp"
 #include "../../evie/config.hpp"
 #include "../../evie/utils.hpp"
+#include "../../evie/mlog.hpp"
 
 config::config(char_cit fname)
 {
