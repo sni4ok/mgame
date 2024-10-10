@@ -58,17 +58,17 @@ struct lws_i : sec_id_by_name<lws_impl>
         it = find(it, ie, ',');
         skip_fixed(it, ask);
         char_cit ne = find(it, ie, ',');
-        price_t ask_price = read_price(it, ne);
+        price_t ask_price = lexical_cast<price_t>(it, ne);
         skip_fixed(ne, askSize);
         it = find(ne, ie, ',');
-        count_t ask_count = read_count(ne, it);
+        count_t ask_count = lexical_cast<count_t>(ne, it);
         ask_count.value = -ask_count.value;
         skip_fixed(it, bid);
         ne = find(it, ie, ',');
-        price_t bid_price = read_price(it, ne);
+        price_t bid_price = lexical_cast<price_t>(it, ne);
         skip_fixed(ne, bidSize);
         it = find(ne, ie, ',');
-        count_t bid_count = read_count(ne, it);
+        count_t bid_count = lexical_cast<count_t>(ne, it);
 
         it = find(it, ie, '}');
         skip_fixed(it, end);
@@ -85,10 +85,10 @@ struct lws_i : sec_id_by_name<lws_impl>
             for(;;) {
                 skip_fixed(it, "[");
                 char_cit ne = find(it, ie, ',');
-                price_t p = read_price(it, ne);
+                price_t p = lexical_cast<price_t>(it, ne);
                 skip_fixed(ne, ",");
                 it = find(ne, ie, ']');
-                count_t c = read_count(ne, it);
+                count_t c = lexical_cast<count_t>(ne, it);
                 if(a)
                     c.value = -c.value;
                 skip_fixed(it, "]");
@@ -147,10 +147,10 @@ struct lws_i : sec_id_by_name<lws_impl>
             it = find(it + 1, ie, ',');
             skip_fixed(it, amount);
             char_cit ne = find(it, ie, ',');
-            count_t c = read_count(it, ne);
+            count_t c = lexical_cast<count_t>(it, ne);
             skip_fixed(ne, price);
             it = find(ne, ie, ',');
-            price_t p = read_price(ne, it);
+            price_t p = lexical_cast<price_t>(ne, it);
             skip_fixed(it, direction);
             uint32_t dir;
             if(*it == 's') {

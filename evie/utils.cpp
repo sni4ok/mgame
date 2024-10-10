@@ -143,27 +143,16 @@ template ttime_t read_time_impl::read_time<3>(char_cit&);
 template ttime_t read_time_impl::read_time<6>(char_cit&);
 template ttime_t read_time_impl::read_time<9>(char_cit&);
 
-namespace
+inline time_parsed parse_time_impl(ttime_t time)
 {
-    time_parsed parse_time_impl(const ttime_t& time)
-    {
-        time_parsed ret;
-        time_t ti = time.value / ttime_t::frac;
-        struct tm * t = gmtime(&ti);
-        ret.year = t->tm_year + 1900;
-        ret.month = t->tm_mon + 1;
-        ret.day = t->tm_mday;
-        ret.hours = t->tm_hour;
-        ret.minutes = t->tm_min;
-        ret.seconds = t->tm_sec;
-        ret.nanos = time.value % ttime_t::frac;
-        return ret;
-    }
-
+    time_t ti = time.value / ttime_t::frac;
+    struct tm* t = gmtime(&ti);
+    return {{uint16_t(t->tm_year + 1900), uint8_t(t->tm_mon + 1), uint8_t(t->tm_mday)},
+        {uint8_t(t->tm_hour), uint8_t(t->tm_min), uint8_t(t->tm_sec), uint32_t(time.value % ttime_t::frac)}};
 }
 
 const uint32_t cur_day_seconds = day_seconds(cur_mtime_seconds());
-const date cur_day_date = parse_time_impl(cur_mtime_seconds());
+const date cur_day_date = parse_time_impl(cur_mtime_seconds()).date;
 
 inline my_string get_cur_day_str()
 {
@@ -179,12 +168,12 @@ time_parsed parse_time(ttime_t time)
     if(day_seconds(time) == cur_day_seconds)
     {
         time_parsed ret;
-        ret.date() = cur_day_date;
+        ret.date = cur_day_date;
         uint32_t frac = (time.value / ttime_t::frac) % (24 * 3600);
-        ret.seconds = frac % 60;
-        ret.hours = frac / 3600;
-        ret.minutes = (frac - ret.hours * 3600) / 60;
-        ret.nanos = time.value % ttime_t::frac;
+        ret.duration.seconds = frac % 60;
+        ret.duration.hours = frac / 3600;
+        ret.duration.minutes = (frac - ret.duration.hours * 3600) / 60;
+        ret.duration.nanos = time.value % ttime_t::frac;
         return ret;
     }
     else
@@ -202,44 +191,44 @@ time_duration get_time_duration(ttime_t time)
     return ret;
 }
 
-ttime_t pack_time(const time_parsed& p)
+ttime_t pack_time(time_parsed p)
 {
     struct tm t = tm();
-    t.tm_year = p.year - 1900;
-    t.tm_mon = p.month - 1;
-    t.tm_mday = p.day;
-    t.tm_hour = p.hours;
-    t.tm_min = p.minutes;
-    t.tm_sec = p.seconds;
-    return {uint64_t(timegm(&t) * ttime_t::frac + p.nanos)};
+    t.tm_year = p.date.year - 1900;
+    t.tm_mon = p.date.month - 1;
+    t.tm_mday = p.date.day;
+    t.tm_hour = p.duration.hours;
+    t.tm_min = p.duration.minutes;
+    t.tm_sec = p.duration.seconds;
+    return {uint64_t(timegm(&t) * ttime_t::frac + p.duration.nanos)};
 }
 
 date& date::operator+=(date_duration d)
 {
     time_parsed tp = time_parsed();
-    tp.date() = *this;
+    tp.date = *this;
     ttime_t t = pack_time(tp);
     t.value += int64_t(d.days) * 24 * 3600 * ttime_t::frac;
     tp = parse_time(t);
-    *this = tp.date();
+    *this = tp.date;
     return *this;
 }
 
-date_duration date::operator-(const date& r) const
+date_duration date::operator-(date r) const
 {
     time_parsed t = time_parsed();
-    t.date() = *this;
+    t.date = *this;
     ttime_t tl = pack_time(t);
-    t.date() = r;
+    t.date = r;
     ttime_t tr = pack_time(t);
     int64_t ns = tl - tr;
     return date_duration(ns / ttime_t::frac / (24 * 3600));
 }
 
-ttime_t time_from_date(const date& t)
+ttime_t time_from_date(date t)
 {
     time_parsed p = time_parsed();
-    p.date() = t;
+    p.date = t;
     return pack_time(p);
 }
 
@@ -296,7 +285,7 @@ int64_t read_decimal_impl(char_cit it, char_cit ie, int exponent)
     return ret;
 }
 
-rational& rational::operator+=(const rational& v)
+rational& rational::operator+=(rational v)
 {
     uint32_t lcm = std::lcm(den, v.den);
     num = num * (lcm / den) + v.num * (lcm / v.den);
@@ -304,7 +293,7 @@ rational& rational::operator+=(const rational& v)
     return *this;
 }
 
-rational rational::operator*(const rational& v) const
+rational rational::operator*(rational v) const
 {
     int64_t n = num * v.num;
     uint64_t d = den * v.den;

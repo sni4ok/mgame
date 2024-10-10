@@ -60,11 +60,11 @@ struct lws_i : lws_impl, read_time_impl
                 ask = false;
             }
             ne = find(it, ie, '\"');
-            price_t p = read_price(it, ne);
+            price_t p = lexical_cast<price_t>(it, ne);
             it = ne + 1;
             skip_fixed(it, ",\"");
             ne = find(it, ie, '\"');
-            count_t c = read_count(it, ne);
+            count_t c = lexical_cast<count_t>(it, ne);
             if(ask)
                 c.value = -c.value;
             it = ne + 1;
@@ -99,11 +99,11 @@ struct lws_i : lws_impl, read_time_impl
             }
             skip_fixed(it, "size\":\"");
             char_cit ne = find(it, ie, '\"');
-            count_t c = read_count(it, ne);
+            count_t c = lexical_cast<count_t>(it, ne);
             it = ne + 1;
             skip_fixed(it, ",\"price\":\"");
             ne = find(it, ie, '\"');
-            price_t p = read_price(it, ne);
+            price_t p = lexical_cast<price_t>(it, ne);
             it = ne + 1;
             skip_fixed(it, ",\"product_id\":\"");
             ne = find(it, ie, '\"');

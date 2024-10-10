@@ -14,7 +14,7 @@
 
 my_mutex::my_mutex()
 {
-    if(pthread_mutex_init(&mutex, NULL))
+    if(pthread_mutex_init(&mutex, nullptr))
         throw str_exception("create mutex error");
 }
 
@@ -77,7 +77,7 @@ my_mutex::scoped_lock::~scoped_lock()
 
 my_condition::my_condition()
 {
-    if(pthread_cond_init(&condition, NULL))
+    if(pthread_cond_init(&condition, nullptr))
         throw str_exception("create condition error");
 }
 

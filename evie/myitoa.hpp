@@ -154,6 +154,24 @@ namespace my_cvt
 }
 
 template<typename type>
+concept is_decimal = is_class_v<type> && requires(type* t)
+{
+    t->frac;
+    t->exponent;
+};
+
+int64_t read_decimal_impl(char_cit it, char_cit ie, int exponent);
+
+template<typename decimal>
+inline decimal lexical_cast(char_cit it, char_cit ie)
+    requires(is_decimal<decimal>)
+{
+    decimal ret;
+    ret.value = read_decimal_impl(it, ie, decimal::exponent);
+    return ret;
+}
+
+template<typename type>
 requires(is_integral_v<type>)
 type lexical_cast(char_cit from, char_cit to)
 {
@@ -164,7 +182,7 @@ type lexical_cast(char_cit from, char_cit to)
 
 struct mstring;
 template<typename type>
-requires(!(is_integral_v<type> || is_same_v<type, mstring>))
+requires(!(is_integral_v<type> || is_same_v<type, mstring> || is_decimal<type>))
 type lexical_cast(char_cit from, char_cit to);
 
 template<> double lexical_cast<double>(char_cit from, char_cit to);

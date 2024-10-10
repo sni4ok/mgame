@@ -65,7 +65,7 @@ void sort_data_by_folders(str_holder folder)
         if(f == e || (e - f) != 11)
             throw mexception(es() % "sort_data_by_folders() unsupported file: " % fname);
         uint32_t t = lexical_cast<uint32_t>(f + 1, e);
-        date d = parse_time({uint64_t(t) * 1000000000});
+        date d = parse_time({uint64_t(t) * 1000000000}).date;
         mstring nf = folder + to_string(d.year) + "/" + to_string(d.month) + "/";
         if(created_dirs.find(nf) == created_dirs.end())
         {
@@ -83,15 +83,15 @@ void test_io(type c)
     char buf[128];
     buf_stream str(buf);
     str << c;
-    type v = read_decimal<type>(str.begin(), str.end());
+    type v = lexical_cast<type>(str.str());
     assert(v == c);
     my_unused(v);
 }
 
 void test_impl(str_holder a1, str_holder a2)
 {
-    count_t v1 = read_count(a1.begin(), a1.end());
-    count_t v2 = read_count(a2.begin(), a2.end());
+    count_t v1 = lexical_cast<count_t>(a1);
+    count_t v2 = lexical_cast<count_t>(a2);
     test_io(v1);
     assert(v1.value == v2.value);
     test_io(v1);
@@ -111,7 +111,7 @@ void amount_test()
     test_impl("5e-7", "0.5E-6");
 
     str_holder v = "9.79380846343861E-4";
-    count_t c = read_count(v.begin(), v.end());
+    count_t c = lexical_cast<count_t>(v);
     my_unused(c);
 
     test_io(price_t({limits<int64_t>::max}));

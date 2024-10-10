@@ -29,7 +29,7 @@ struct uint_fixed
    {
       static_assert(sz <= 9, "out of range");
    }
-   const constexpr str_holder& str() const
+   constexpr str_holder str() const
    {
       uint32_t v = value;
       uint32_t idx = sz - 1;
@@ -43,7 +43,7 @@ struct uint_fixed
 };
 
 template<typename stream, uint32_t sz>
-stream& operator<<(stream& log, const uint_fixed<sz>& v)
+stream& operator<<(stream& log, uint_fixed<sz> v)
 {
     log << v.str() << v.value;
     return log;
@@ -87,18 +87,8 @@ struct read_time_impl
     ttime_t read_time(char_cit& it);
 };
 
-int64_t read_decimal_impl(char_cit it, char_cit ie, int exponent);
-
-template<typename decimal>
-inline decimal read_decimal(char_cit it, char_cit ie)
-{
-    decimal ret;
-    ret.value = read_decimal_impl(it, ie, decimal::exponent);
-    return ret;
-}
-
 template<typename stream, typename decimal>
-void write_decimal(stream& s, const decimal& d)
+void write_decimal(stream& s, decimal d)
 {
     int64_t int_ = d.value / decimal::frac;
     int32_t float_ = d.value % decimal::frac;
@@ -117,7 +107,7 @@ struct counting_iterator
     counting_iterator(int64_t value) : value(value)
     {
     }
-    int64_t operator-(const counting_iterator& r) const
+    int64_t operator-(counting_iterator r) const
     {
         return value - r.value;
     }
@@ -130,11 +120,11 @@ struct counting_iterator
     {
         return counting_iterator(value + v);
     }
-    bool operator==(const counting_iterator& r) const
+    bool operator==(counting_iterator r) const
     {
         return value == r.value;
     }
-    bool operator!=(const counting_iterator& r) const
+    bool operator!=(counting_iterator r) const
     {
         return value != r.value;
     }
@@ -201,7 +191,7 @@ extern const date cur_day_date;
 extern const my_string cur_day_date_str;
 
 template<typename stream>
-stream& operator<<(stream& s, const date& d)
+stream& operator<<(stream& s, date d)
 {
     if(d == cur_day_date)
         s << cur_day_date_str;
@@ -211,16 +201,16 @@ stream& operator<<(stream& s, const date& d)
 }
 
 template<typename stream>
-stream& operator<<(stream& s, const time_duration& t)
+stream& operator<<(stream& s, time_duration t)
 {
     return s << print2chars(t.hours) << ':' << print2chars(t.minutes) << ':' << print2chars(t.seconds)
         << "." << uint_fixed<6>(t.nanos / 1000);
 }
 
 template<typename stream>
-stream& operator<<(stream& s, const time_parsed& p)
+stream& operator<<(stream& s, time_parsed p)
 {
-    return s << p.date() << ' ' << p.duration();
+    return s << p.date << ' ' << p.duration;
 }
 
 template<typename stream>

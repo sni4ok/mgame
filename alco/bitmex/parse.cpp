@@ -35,10 +35,10 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
         {
             skip_fixed(it, "[");
             char_cit ne = find(it, ie, ',');
-            price_t p = read_price(it, ne);
+            price_t p = lexical_cast<price_t>(it, ne);
             it = ne + 1;
             ne = find(it, ie, ']');
-            count_t c = read_count(it, ne);
+            count_t c = lexical_cast<count_t>(it, ne);
             if(ask)
                 c.value = -c.value;
             it = ne;
@@ -94,7 +94,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                         count_t c = count_t();
                         if(skip_if_fixed(it, ",\"size\":")) {
                             ne = find_if(it, ie, [](char c) {return c == '}' || c == ',';});
-                            c = read_count(it, ne);
+                            c = lexical_cast<count_t>(it, ne);
                             if(ask)
                                 c.value = -c.value;
                             it = ne;
@@ -103,7 +103,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                         if(skip_if_fixed(it, ",\"price\":"))
                         {
                             ne = find(it, ie, ',');
-                            p = read_price(it, ne);
+                            p = lexical_cast<price_t>(it, ne);
                             it = ne;
                         }
                         skip_fixed(it, ",\"timestamp\":\"");

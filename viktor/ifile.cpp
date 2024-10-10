@@ -466,7 +466,7 @@ struct ifile
         mstring f(it, fname.end());
         uint64_t tfrom = main_file.tf.value / ttime_t::frac, tto = main_file.tt.value / ttime_t::frac;
 
-        date df = parse_time(tf), dt = parse_time(tt);
+        date df = parse_time(tf).date, dt = parse_time(tt).date;
 
         parse_folder(f, tfrom, tto, df, dt, dir, nullptr);
         dir_files.push_back(fname);

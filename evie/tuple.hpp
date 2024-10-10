@@ -298,14 +298,14 @@ void tuple_from_strings(const mvector<str>& params, tuple& p)
     }
 }
 
-template<int>
-auto read_csv_impl(char_cit, char_cit, char)
+template<int, char>
+auto read_csv_impl(char_cit, char_cit)
 {
     return tuple<>();
 }
 
-template<int idx, typename type, typename ... types>
-auto read_csv_impl(char_cit& i, char_cit e, char sep)
+template<int idx, char sep, typename type, typename ... types>
+auto read_csv_impl(char_cit& i, char_cit e)
 {
     char_cit te, t;
     if((e - i) >= 2 && *i == '\"') {
@@ -323,25 +323,26 @@ auto read_csv_impl(char_cit& i, char_cit e, char sep)
     i = t;
     if(i != e)
         ++i;
-    auto ret = tuple_cat(make_tuple(v), read_csv_impl<idx + 1, types...>(i, e, sep));
+    auto ret = tuple_cat(make_tuple(v), read_csv_impl<idx + 1, sep, types...>(i, e));
     if(i != e)
         throw mexception(es() % "read_csv not complete: " % str_holder(i, e));
     return ret;
 }
 
-template<typename ... types, typename func>
-void read_csv(func f, char_cit i, char_cit e, char sep = ',')
+template<typename ... types, typename func, char sep = ',', bool skip_empty_lines = true>
+void read_csv(func f, str_holder s)
 {
+    char_cit i = s.begin(), e = s.end();
     while(i != e)
     {
         char_cit t = find(i, e, endl);
         if(t == e)
             throw str_exception("read_csv no endl found");
-        if(*i == '#') {
+        if(*i == '#' || (skip_empty_lines && i == t)) {
             i = t + 1;
             continue;
         }
-        auto v = read_csv_impl<0, types...>(i, t, sep);
+        auto v = read_csv_impl<0, sep, types...>(i, t);
         f(v);
         i = t + 1;
     }

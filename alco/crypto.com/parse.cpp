@@ -78,11 +78,11 @@ struct lws_i: sec_id_by_name<lws_impl>
                         {
                             skip_fixed(it, "\"");
                             ne = find(it, ie, '"');
-                            price_t price = read_price(it, ne);
+                            price_t price = lexical_cast<price_t>(it, ne);
                             it = ne + 2;
                             skip_fixed(it, "\"");
                             ne = find(it, ie, '"');
-                            count_t count = read_count(it, ne);
+                            count_t count = lexical_cast<count_t>(it, ne);
                             count.value = -count.value;
                             add_order(security_id, price.value, price, count, etime, time);
                             it = find(ne, ie, ']');
@@ -107,11 +107,11 @@ struct lws_i: sec_id_by_name<lws_impl>
                         {
                             skip_fixed(it, "\"");
                             ne = find(it, ie, '"');
-                            price_t price = read_price(it, ne);
+                            price_t price = lexical_cast<price_t>(it, ne);
                             it = ne + 2;
                             skip_fixed(it, "\"");
                             ne = find(it, ie, '"');
-                            count_t count = read_count(it, ne);
+                            count_t count = lexical_cast<count_t>(it, ne);
                             add_order(security_id, price.value, price, count, etime, time);
                             it = find(ne, ie, ']');
                             ++it;
@@ -140,11 +140,11 @@ struct lws_i: sec_id_by_name<lws_impl>
                     etime.value = lexical_cast<uint64_t>(it, ne) * (ttime_t::frac / 1000);
                     skip_fixed(ne, ",\"p\":\"");
                     it = find(ne, ie, '\"');
-                    price_t price = read_price(ne, it);
+                    price_t price = lexical_cast<price_t>(ne, it);
                     it = it + 2;
                     skip_fixed(it, "\"q\":\"");
                     ne = find(it, ie, '\"');
-                    count_t count = read_count(it, ne);
+                    count_t count = lexical_cast<count_t>(it, ne);
                     it = ne + 2;
                     skip_fixed(it, "\"s\":\"");
                     uint32_t direction;

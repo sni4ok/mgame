@@ -71,7 +71,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         ne += 13;
         skip_fixed(ne, ",");
         it = find(ne, ie, ',');
-        count_t count = read_count(ne, it);
+        count_t count = lexical_cast<count_t>(ne, it);
         int dir = 1;
         if(count.value < 0)
         {
@@ -80,7 +80,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         }
         skip_fixed(it, ",");
         ne = find(it, ie, ']');
-        price_t price = read_price(it, ne);
+        price_t price = lexical_cast<price_t>(it, ne);
         
         if(*ne == ']' && *(ne + 1) == ']')
             it = ne + 2;
@@ -108,10 +108,10 @@ struct lws_i : sec_id_by_name<lws_impl>
                 int64_t level_id = my_cvt::atoi<int64_t>(it, ne - it);
                 ++ne;
                 it = find(ne, ie, ',');
-                price_t price = read_price(ne, it);
+                price_t price = lexical_cast<price_t>(ne, it);
                 ++it;
                 ne = find(it, ie, ']');
-                count_t amount = read_count(it, ne);
+                count_t amount = lexical_cast<count_t>(it, ne);
                 if(price != price_t())
                     add_order(i.security_id, level_id, price, amount, ttime_t(), time);
                 else
@@ -119,13 +119,13 @@ struct lws_i : sec_id_by_name<lws_impl>
             }
             else
             {
-                price_t price = read_price(it, ne);
+                price_t price = lexical_cast<price_t>(it, ne);
                 ++ne;
                 it = find(ne, ie, ',');
                 uint32_t count = my_cvt::atoi<uint32_t>(ne, it - ne);
                 ++it;
                 ne = find(it, ie, ']');
-                count_t amount = read_count(it, ne);
+                count_t amount = lexical_cast<count_t>(it, ne);
                 if(count > 0)
                     add_order(i.security_id, price.value, price, amount, ttime_t(), time);
                 else

@@ -90,13 +90,13 @@ mlog& operator<<(mlog& ml, const cg_decimal<m, e>& d)
 inline mlog& operator<<(mlog& ml, const cg_time_t& t)
 {
     time_parsed p;
-    p.year = t.year;
-    p.month = t.month;
-    p.day = t.day;
-    p.hours = t.hour;
-    p.minutes = t.minute;
-    p.seconds = t.second;
-    p.nanos = t.msec * 1000 * 1000;
+    p.date.year = t.year;
+    p.date.month = t.month;
+    p.date.day = t.day;
+    p.duration.hours = t.hour;
+    p.duration.minutes = t.minute;
+    p.duration.seconds = t.second;
+    p.duration.nanos = t.msec * 1000 * 1000;
     ml << p;
     return ml;
 }

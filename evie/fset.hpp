@@ -23,7 +23,7 @@ struct fset
     }
     fset(const fset& r) : data(r.data) {
     }
-    fset(std::initializer_list<value_type> init) {
+    fset(std::initializer_list<type> init) {
         for(const auto& v: init)
             insert(v);
     }
@@ -63,7 +63,7 @@ struct fset
         return it;
     }
     iterator find(const type& k) {
-        return const_cast<value_type*>(const_cast<const fset*>(this)->find(k));
+        return const_cast<type*>(const_cast<const fset*>(this)->find(k));
     }
     const_iterator begin() const {
         return data.begin();
@@ -86,21 +86,21 @@ struct fset
     void swap(fset& r) {
         data.swap(r.data);
     }
-    iterator insert(iterator it, const value_type& k) {
+    iterator insert(iterator it, const type& k) {
         if(it == data.end() || not_equal(*it, k))
             return data.insert(it, k);
         return it;
     }
-    iterator insert(iterator it, value_type&& k) {
+    iterator insert(iterator it, type&& k) {
         if(it == data.end() || not_equal(*it, k))
             return data.insert(it, move(k));
         return it;
     }
-    iterator insert(const value_type& k) {
+    iterator insert(const type& k) {
         iterator it = ::lower_bound(data.begin(), data.end(), k, comp());
         return insert(it, k);
     }
-    iterator insert(value_type&& k) {
+    iterator insert(type&& k) {
         iterator it = ::lower_bound(data.begin(), data.end(), k, comp());
         return insert(it, move(k));
     }

@@ -49,27 +49,27 @@ struct date
     uint16_t year;
     uint8_t month, day;
 
-    constexpr bool operator==(const date& r) const {
+    constexpr bool operator==(date r) const {
         return year == r.year && month == r.month && day == r.day;
     }
-    constexpr bool operator!=(const date& r) const {
+    constexpr bool operator!=(date r) const {
         return !(*this == r);
     }
-    constexpr bool operator<(const date& r) const {
+    constexpr bool operator<(date r) const {
         if(year != r.year)
             return year < r.year;
         if(month != r.month)
             return month < r.month;
         return day < r.day;
     }
-    constexpr bool operator<=(const date& r) const {
+    constexpr bool operator<=(date r) const {
         if(*this == r)
             return true;
         else
             return *this < r;
     }
 
-    date_duration operator-(const date& r) const;
+    date_duration operator-(date r) const;
     date& operator+=(date_duration d);
 
     date& operator-=(date_duration d) {
@@ -90,7 +90,7 @@ struct time_duration
     uint8_t hours, minutes, seconds;
     uint32_t nanos;
 
-    constexpr bool operator<(const time_duration& r) const {
+    constexpr bool operator<(time_duration r) const {
         if(hours != r.hours)
             return hours < r.hours;
         if(minutes != r.minutes)
@@ -99,7 +99,7 @@ struct time_duration
             return seconds < r.seconds;
         return nanos < r.nanos;
     }
-    constexpr bool operator!=(const time_duration& r) const {
+    constexpr bool operator!=(time_duration r) const {
         return nanos != r.nanos || seconds != r.seconds || minutes != r.minutes || hours != r.hours;
     }
     constexpr uint32_t total_seconds() const {
@@ -110,33 +110,19 @@ struct time_duration
     }
 };
 
-constexpr inline ttime_t time_from(uint32_t day_seconds, const time_duration& td)
+constexpr inline ttime_t time_from(uint32_t day_seconds, time_duration td)
 {
     return {(uint64_t(day_seconds) + td.total_seconds()) * ttime_t::frac + td.nanos};
 }
 
-struct time_parsed : date, time_duration
+struct time_parsed
 {
-    ::date& date()
-    {
-        return *this;
-    }
-    constexpr const ::date& date() const
-    {
-        return *this;
-    }
-    constexpr time_duration& duration()
-    {
-        return *this;
-    }
-    constexpr const time_duration& duration() const
-    {
-        return *this;
-    }
+    ::date date;
+    time_duration duration;
 };
 
 time_parsed parse_time(ttime_t time);
 time_duration get_time_duration(ttime_t time);
-ttime_t pack_time(const time_parsed& p);
-ttime_t time_from_date(const date& t);
+ttime_t pack_time(time_parsed p);
+ttime_t time_from_date(date t);
 

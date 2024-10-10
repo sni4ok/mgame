@@ -34,7 +34,7 @@ class profilerinfo : public stack_singleton<profilerinfo>
     info counters[max_counters];
     uint64_t cur_counters;
 
-    void print_impl(const long param);
+    void print_impl(long param);
     profilerinfo();
 
     friend class simple_log;

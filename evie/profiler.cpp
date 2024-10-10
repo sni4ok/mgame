@@ -48,7 +48,7 @@ profilerinfo::info::info() : time(), time_max(), time_min(limits<uint64_t>::max)
 {
 }
 
-void profilerinfo::print_impl(const long param)
+void profilerinfo::print_impl(long param)
 {
     uint64_t ncounters = atomic_load(cur_counters);
     if(!ncounters)

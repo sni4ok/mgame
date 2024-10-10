@@ -78,7 +78,7 @@ int socket_connect(const mstring& host, uint16_t port, uint32_t timeout)
         timeval tv = timeval();
         tv.tv_sec = timeout;
 
-        if((result = select(socket + 1, NULL, &fdset, NULL, &tv)) < 0)
+        if((result = select(socket + 1, nullptr, &fdset, nullptr, &tv)) < 0)
             throw_system_failure(es() % "socket_connect select, err: " % result % ": " % host % ":" % port);
         if(result == 0)
             throw mexception("socket_connect timeout");
@@ -200,7 +200,7 @@ int socket_accept_async(uint32_t port, bool local, bool sync, mstring* client_ip
             timeval tv = timeval();
             tv.tv_sec = 1;
         
-            result = select(socket + 1, &fdset, NULL, NULL, &tv);
+            result = select(socket + 1, &fdset, nullptr, nullptr, &tv);
             if(result < 0)
                 throw_system_failure(es() % "my_accept_async select, err: " % result);
         }

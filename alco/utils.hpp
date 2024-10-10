@@ -74,6 +74,17 @@ inline bool skip_if_fixed(char_cit& it, const str& v)
         it += sizeof(v) - 1;
     return eq;
 }
+
+inline price_t read_price(char_cit it, char_cit ie)
+{
+    return lexical_cast<price_t>(it, ie);
+}
+
+inline count_t read_count(char_cit it, char_cit ie)
+{
+    return lexical_cast<count_t>(it, ie);
+}
+
 template<typename func>
 auto read_value(char_cit &it, char_cit ie, func f, bool last)
 {
