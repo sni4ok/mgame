@@ -80,17 +80,3 @@ constexpr inline bool operator==(count_t l, count_t r)
     return l.value == r.value;
 }
 
-template<typename stream>
-stream& operator<<(stream& s, const price_t& p)
-{
-    write_decimal(s, p);
-    return s;
-}
-
-template<typename stream>
-stream& operator<<(stream& s, const count_t& c)
-{
-    write_decimal(s, c);
-    return s;
-}
-

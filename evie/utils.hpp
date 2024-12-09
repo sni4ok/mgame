@@ -88,7 +88,9 @@ struct read_time_impl
 };
 
 template<typename stream, typename decimal>
-void write_decimal(stream& s, decimal d)
+
+stream& operator<<(stream& s, decimal d)
+    requires(is_decimal<decimal>)
 {
     int64_t int_ = d.value / decimal::frac;
     int32_t float_ = d.value % decimal::frac;
@@ -98,6 +100,7 @@ void write_decimal(stream& s, decimal d)
         float_ = -float_;
     }
     s << int_ << "." << uint_fixed<-decimal::exponent>(float_);
+    return s;
 }
 
 struct counting_iterator
