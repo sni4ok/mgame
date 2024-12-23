@@ -54,12 +54,14 @@ typedef uint_fixed<2> print2chars;
 template<typename type>
 void split(mvector<type>& ret, char_cit it, char_cit ie, char sep)
 {
-    while(it != ie) {
-        char_cit i = find(it, ie, sep);
-        ret.push_back(type(it, i));
-        if(i != ie)
-            ++i;
-        it = i;
+    if(it != ie) {
+        for(;;) {
+            char_cit i = find(it, ie, sep);
+            ret.push_back(type(it, i));
+            if(i == ie)
+                break;
+            it = i + 1;
+        }
     }
 }
 

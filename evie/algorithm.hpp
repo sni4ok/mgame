@@ -40,6 +40,15 @@ iterator find(iterator from, iterator to, const type& value)
     return from;
 }
 
+template<typename iterator, typename type>
+iterator find_e(iterator from, iterator to, const type& value)
+{
+    iterator i = find(from, to, value);
+    if(i != to)
+        ++i;
+    return i;
+}
+
 template<typename iterator, typename compare>
 iterator find_if(iterator from, iterator to, compare cmp)
 {
