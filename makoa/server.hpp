@@ -18,5 +18,5 @@ private:
     impl* pimpl;
 };
 
-void server_set_close();
+void server_set_close(int);
 

@@ -127,9 +127,9 @@ struct mirror::impl
     
     volatile bool can_run;
     my_mutex mutex;
-    jthread refresh_thrd;
 
     const char empty[10];
+    jthread refresh_thrd;
 
     impl(const mstring& sec, uint32_t refresh_rate_ms) :
         sec(sec), refresh_rate(refresh_rate_ms * 1000), ob(),

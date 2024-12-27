@@ -206,9 +206,9 @@ class engine::impl : public stack_singleton<engine::impl>
     volatile bool can_exit;
     my_mutex mutex;
     my_condition cond;
-    mvector<jthread> threads;
     linked_list ll;
     uint32_t consumers;
+    mvector<jthread> threads;
 
     void notify()
     {

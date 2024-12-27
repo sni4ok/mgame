@@ -67,6 +67,9 @@ struct fmap
     value& at(const key& k) {
         return const_cast<value&>(const_cast<const fmap*>(this)->at(k));
     }
+    value& at(const key& k, str_holder fmap_name) {
+        return const_cast<value&>(const_cast<const fmap*>(this)->at(k, fmap_name));
+    }
     value& operator[](const key_type& k) {
         auto it = lower_bound(k);
         if(it == data.end() || not_equal(it->first, k)) {

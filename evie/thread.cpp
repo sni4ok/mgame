@@ -3,14 +3,19 @@
 */
 
 #include "thread.hpp"
+#include "signals.hpp"
 #include "atomic.hpp"
 #include "mlog.hpp"
 #include "smart_ptr.hpp"
 #include "profiler.hpp"
 #include "queue.hpp"
 
+#include <csignal>
+
 #include <pthread.h>
 #include <errno.h>
+
+#include <sys/resource.h>
 
 my_mutex::my_mutex()
 {
@@ -292,5 +297,56 @@ void thread::detach()
 {
     pthread_detach(tid);
     tid = 0;
+}
+
+volatile bool can_run = true;
+signals_holder::signal_f on_term_signal = nullptr;
+
+void term_signal(int sign)
+{
+    mlog() << "Termination signal received: " << sign;
+    can_run = false;
+    if(on_term_signal)
+        on_term_signal(sign);
+}
+
+void on_signal(int sign)
+{
+    mlog() << "Signal received: " << sign;
+}
+
+void on_usr_signal(int sign)
+{
+    mlog(mlog::critical) << "Signal usr received: " << sign;
+    profilerinfo::instance().print();
+}
+
+void enable_core_dump()
+{
+    rlimit corelim = rlimit();
+    corelim.rlim_cur = RLIM_INFINITY;
+    corelim.rlim_max = RLIM_INFINITY;
+    if(setrlimit(RLIMIT_CORE, &corelim))
+        throw str_exception("enable_core_dump() error");
+}
+
+signals_holder::signals_holder(signal_f term_signal_func, signal_f usr_signal_func)
+{
+    enable_core_dump();
+    on_term_signal = term_signal_func;
+    std::signal(SIGTERM, &term_signal);
+    std::signal(SIGINT, &term_signal);
+    std::signal(SIGHUP, &on_signal);
+    std::signal(SIGPIPE, &on_signal);
+    std::signal(SIGUSR1, usr_signal_func ? usr_signal_func : &on_usr_signal);
+}
+
+signals_holder::~signals_holder()
+{
+    std::signal(SIGTERM, SIG_DFL);
+    std::signal(SIGINT, SIG_DFL);
+    std::signal(SIGHUP, SIG_DFL);
+    std::signal(SIGPIPE, SIG_DFL);
+    std::signal(SIGUSR1, SIG_DFL);
 }
 

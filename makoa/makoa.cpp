@@ -9,10 +9,10 @@
 #include "engine.hpp"
 #include "server.hpp"
 #include "config.hpp"
-#include "signals.hpp"
 
 #include "../evie/config.hpp"
 #include "../evie/mlog.hpp"
+#include "../evie/signals.hpp"
 
 int main(int argc, char** argv)
 {
@@ -20,8 +20,9 @@ int main(int argc, char** argv)
         cout_write("Usage: ./makoa_server [config file]\n");
         return 1;
     }
-    auto log = log_init(argc == 1 ? "makoa_server.log" : get_log_name(_str_holder(argv[1])).c_str(), mlog::store_tid | mlog::always_cout | mlog::lock_file);
-    init_signals(server_set_close);
+    auto log = log_init(argc == 1 ? "makoa_server.log" : get_log_name(_str_holder(argv[1])).c_str(),
+        mlog::store_tid | mlog::always_cout | mlog::lock_file);
+    signals_holder sl(server_set_close);
     mstring name;
     try {
         mlog(mlog::always_cout) << "makoa started";

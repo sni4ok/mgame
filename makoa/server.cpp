@@ -105,7 +105,7 @@ struct server::impl
     }
 };
 
-void server_set_close()
+void server_set_close(int)
 {
     if(server_impl)
         server_impl->set_close();
