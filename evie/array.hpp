@@ -103,6 +103,8 @@ public:
 
     array() : size_() {
     }
+    explicit array(uint32_t size) : size_(size) {
+    }
     array(const array& r) : size_(r.size_) {
         copy(r.begin(), r.end(), buf);
     }

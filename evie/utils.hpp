@@ -152,13 +152,13 @@ stream& operator<<(stream& s, const print_impl<sep, no_end_sep, iterator, func>&
     iterator it = p.from;
     for(; it != p.to; ++it)
     {
-        if constexpr(no_end_sep)
+        if constexpr(no_end_sep && sep)
         {
             if(it != p.from)
                 s << sep;
         }
         p.f(s, *it);
-        if constexpr(!no_end_sep)
+        if constexpr(!no_end_sep && sep)
             s << sep;
     }
     return s;

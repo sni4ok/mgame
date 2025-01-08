@@ -215,7 +215,13 @@ void mlog::init()
     if(params & mlog::store_pid)
         *this << "pid: " << getpid() << " ";
     if(params & mlog::store_tid)
-        *this << "tid: " << get_thread_id() << " ";
+    {
+        uint32_t tid = get_thread_id();
+        *this << "tid: ";
+        if(tid < 10)
+            *this << ' ';
+        *this << tid << " ";
+    }
     if(buf.extra_param & mlog::warning)
         *this << "WARNING ";
     if(buf.extra_param & mlog::error)

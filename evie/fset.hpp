@@ -49,8 +49,14 @@ struct fset
     const_iterator lower_bound(const type& k) const {
         return ::lower_bound(data.begin(), data.end(), k, comp());
     }
+    iterator lower_bound(const type& k) {
+        return iterator(const_cast<const fset*>(this)->lower_bound(k));
+    }
     const_iterator upper_bound(const type& k) const {
         return ::upper_bound(data.begin(), data.end(), k, comp());
+    }
+    iterator upper_bound(const type& k) {
+        return iterator(const_cast<const fset*>(this)->upper_bound(k));
     }
     static bool not_equal(const type& l, const type& r) {
         return comp()(l, r) || comp()(r, l);

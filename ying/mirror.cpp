@@ -134,8 +134,8 @@ struct mirror::impl
     impl(const mstring& sec, uint32_t refresh_rate_ms) :
         sec(sec), refresh_rate(refresh_rate_ms * 1000), ob(),
         auto_scroll(true), top_order_p(), trades_from(),
-        dE(), dP(), can_run(true), refresh_thrd(&impl::refresh_thread, this),
-        empty("         ")
+        dE(), dP(), can_run(true), empty("         "),
+        refresh_thrd(&impl::refresh_thread, this)
     {
     }
     ~impl()
@@ -228,13 +228,21 @@ struct mirror::impl
         if(it < 0)
         {
             auto b = ob->bids.begin() - it, i = ob->bids.begin();
+            if(b >= ob->bids.end())
+                b = ob->bids.end() - 1;
             for(; row != w.rows - 1 && b >= i; --b)
+            {
+                assert(b->first != price_t());
                 print_book(true, b->first, b->second, w, row);
+            }
         }
         {
             auto b = ob->asks.begin(), i = ob->asks.end();
             for(; row != w.rows - 1 && b != i; ++b)
+            {
+                assert(b->first != price_t());
                 print_book(false, b->first, b->second, w, row);
+            }
         }
         e = attroff(A_BOLD);
         e = attron(COLOR_PAIR(1));
