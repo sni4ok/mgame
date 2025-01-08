@@ -117,7 +117,7 @@ struct mirror::impl
 
     bool auto_scroll;
     price_t top_order_p;
-    uint32_t trades_from = 48, trades_width = 0;
+    uint32_t trades_from, trades_width;
     book last_printed_trade;
 
     my_stream bs;
@@ -128,13 +128,12 @@ struct mirror::impl
     volatile bool can_run;
     my_mutex mutex;
 
-    const char empty[10];
     jthread refresh_thrd;
 
     impl(const mstring& sec, uint32_t refresh_rate_ms) :
         sec(sec), refresh_rate(refresh_rate_ms * 1000), ob(),
-        auto_scroll(true), top_order_p(), trades_from(),
-        dE(), dP(), can_run(true), empty("         "),
+        auto_scroll(true), top_order_p(), trades_from(48), trades_width(),
+        dE(), dP(), can_run(true),
         refresh_thrd(&impl::refresh_thread, this)
     {
     }
@@ -208,7 +207,7 @@ struct mirror::impl
             e = attron(COLOR_PAIR(bids ? 2 : 3));
             bs << brief_time(b.time) << " " << price << " " << c;
             if(trades_from > bs.size())
-                bs.write(empty, trades_from - bs.size());
+                bs.write(w.blank_row.begin(), trades_from - bs.size());
             e = mvwaddnstr(w, row, 0, bs.begin(), bs.size());
             if(bs.size() > trades_from)
             {
@@ -218,6 +217,7 @@ struct mirror::impl
             bs.clear();
             books_printed[row] = bo;
         }
+        wrefresh(w);
         ++row;
     }
     void print_order_book(window& w)
@@ -244,8 +244,16 @@ struct mirror::impl
                 print_book(false, b->first, b->second, w, row);
             }
         }
+
         e = attroff(A_BOLD);
         e = attron(COLOR_PAIR(1));
+        for(; row != books_printed.size(); ++row)
+        {
+            if(books_printed[row] == book())
+                break;
+            books_printed[row] = book();
+            e = mvwaddnstr(w, row, 0, w.blank_row.begin(), trades_from);
+        }
     }
     void print_head(window& w)
     {
@@ -265,7 +273,7 @@ struct mirror::impl
     }
     void refresh(window& w)
     {
-        books_printed.resize(w.rows);
+        books_printed.resize(w.rows - 1);
         my_mutex::scoped_lock lock(mutex);
         if(!sec.security_id)
             return;
@@ -274,7 +282,7 @@ struct mirror::impl
         print_head(w);
         lock.unlock();
         move(w.rows - 1, 0);
-        ::refresh();
+        wrefresh(w);
     }
     void wait_input(window& w)
     {
@@ -296,6 +304,7 @@ struct mirror::impl
                 }
                 else if(key == 260 || key == 261) //arrow left || arrow right
                 {
+                    w.clear();
                     if(!all_securities.empty() && sec.security_id) {
                         auto i = all_securities.find(sec.security_id);
                         if(i != all_securities.end()) {
@@ -361,6 +370,7 @@ struct mirror::impl
     {
         try {
             window w;
+            curs_set(0);
             e = start_color()
                 & init_pair(1, COLOR_WHITE, COLOR_BLACK)
                 & init_pair(2, COLOR_BLUE, COLOR_YELLOW)

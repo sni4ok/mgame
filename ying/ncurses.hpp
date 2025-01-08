@@ -75,8 +75,7 @@ public:
     }
     void clear()
     {
-        for(uint32_t i = 0; i != rows - 1; ++i)
-            e = mvwaddnstr(w.get(), i, 0, &blank_row[0], blank_row.size());
+        wclear(w.get());
     }
     ~window()
     {
