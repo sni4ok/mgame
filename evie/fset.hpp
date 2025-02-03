@@ -27,6 +27,8 @@ struct fset
         for(const auto& v: init)
             insert(v);
     }
+    fset(span<type> str): data(str) {
+    }
     fset(const type* from, const type* to): data(from, to) {
     }
     fset& operator=(fset&& r) {

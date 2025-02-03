@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "pair.hpp"
 #include "myitoa.hpp"
 #include "type_traits.hpp"
 
@@ -268,6 +269,9 @@ public:
     }
     const_reverse_iterator rend() const {
         return {begin() - 1};
+    }
+    pair<const_reverse_iterator, const_reverse_iterator> rstr() const {
+        return {rbegin(), rend()};
     }
     ~mvector() {
         __destroy(begin(), end());

@@ -327,6 +327,7 @@ struct mirror::impl
                             sec.security_id = i->first;
                             top_order_p = price_t();
                             set_instrument(i->second);
+                            books_printed.clear();
                         }
                     }
                 }
