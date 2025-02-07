@@ -15,17 +15,15 @@ struct carray
     carray() : buf() {
     }
     void init(const type* from) {
-       copy(from, from + size_, buf);
+        copy(from, from + size_, buf);
     }
     constexpr carray(std::initializer_list<type> r) {
-        if(r.size() > size_)
-            throw mexception(es() % "carray(initializer_list) for " % r.size() % " elems but size " % size_);
-       copy(r.begin(), r.end(), buf);
+        assert(r.size() <= size_);
+        copy(r.begin(), r.end(), buf);
     }
     constexpr carray(span<type> str)
     {
-        if(str.size() > size_)
-            throw mexception(es() % "carray<type, " % size_ % ">(span) max size overload");
+        assert(str.size() <= size_);
         copy(str.begin(), str.end(), buf);
     }
 
@@ -104,8 +102,10 @@ public:
     array() : size_() {
     }
     explicit array(uint32_t size) : size_(size) {
+        assert(size_ <= capacity_);
     }
     array(const array& r) : size_(r.size_) {
+        assert(size_ <= capacity_);
         copy(r.begin(), r.end(), buf);
     }
     array(span<type> str) : size_(str.size()) {
@@ -123,7 +123,8 @@ public:
         copy(str, str + size_, buf);
     }
     array(std::initializer_list<value_type> r) : size_(r.size()) {
-       copy(r.begin(), r.end(), buf);
+        assert(size_ <= capacity_);
+        copy(r.begin(), r.end(), buf);
     }
     array& operator=(const array& r) {
         size_ = r.size_;

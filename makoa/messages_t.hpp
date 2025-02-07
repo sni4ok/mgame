@@ -6,15 +6,7 @@
 
 #include <cstdint>
 
-#ifndef TTIME_T_DEFINED
-struct ttime_t
-{
-    //value equals (unix_time * 10^9 + nanoseconds)
-    static const uint64_t frac = 1000000000;
-    uint64_t value;
-};
-#define TTIME_T_DEFINED
-#endif
+#include "../evie/time.hpp"
 
 struct price_t
 {

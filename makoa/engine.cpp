@@ -208,7 +208,6 @@ class engine::impl : public stack_singleton<engine::impl>
     my_condition cond;
     linked_list ll;
     uint32_t consumers;
-    mvector<jthread> threads;
 
     void notify()
     {
@@ -238,7 +237,8 @@ class engine::impl : public stack_singleton<engine::impl>
         exporter exp;
         linked_node *prev, *ptmp;
 
-        imple(volatile bool& can_run, linked_list& ll, const mstring& eparams) : can_run(can_run), ll(&ll), exp(eparams), prev(), ptmp()
+        imple(volatile bool& can_run, linked_list& ll, const mstring& eparams) :
+            can_run(can_run), ll(&ll), exp(eparams), prev(), ptmp()
         {
         }
         bool proceed()
@@ -273,6 +273,7 @@ class engine::impl : public stack_singleton<engine::impl>
     };
 
     cas_array<imple, 50> ies;
+    mvector<jthread> threads;
 
     void work_thread()
     {

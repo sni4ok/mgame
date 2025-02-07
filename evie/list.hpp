@@ -6,6 +6,7 @@
 
 #include "array.hpp"
 #include "thread.hpp"
+#include "atomic.hpp"
 
 template<typename node, bool use_tss>
 struct data_tss;

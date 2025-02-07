@@ -11,15 +11,12 @@
 
 #include <time.h>
 
-#ifndef TTIME_T_DEFINED
 struct ttime_t
 {
     //value equals (unix_time * 10^9 + nanoseconds)
     static const uint64_t frac = 1000000000;
     uint64_t value;
 };
-#define TTIME_T_DEFINED
-#endif
 
 inline ttime_t cur_ttime()
 {

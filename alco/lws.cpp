@@ -160,6 +160,11 @@ int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user, void* i
             mlog() << "lws closed... " << (len ? str_holder((char_cit)in, len) : str_holder(""));
             return 1;
         }
+        case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
+        case LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION:
+        {
+            return 0;
+        }
         default:
         {
             if(user && ((lws_impl*)user)->log_lws) [[unlikely]]

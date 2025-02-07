@@ -13,11 +13,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-void set_export_mtime(message* m)
-{
-    (m - 1)->t.time = cur_ttime();
-}
-
 inline void init_smc(void* ptr)
 {
     shared_memory_sync* p = get_smc(ptr);

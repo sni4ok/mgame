@@ -45,7 +45,10 @@ inline ttime_t get_export_mtime(const message* m)
     return (m - 1)->t.time;
 }
 
-void set_export_mtime(message* m);
+inline void set_export_mtime(message* m)
+{
+    (m - 1)->t.time = cur_ttime();
+}
 
 class simple_log;
 
