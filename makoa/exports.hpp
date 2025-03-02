@@ -36,8 +36,6 @@ struct exporter
     }
 };
 
-uint32_t register_exporter(str_holder module, hole_exporter he);
-
 inline ttime_t get_export_mtime(const message* m)
 {
     return (m - 1)->t.time;
@@ -52,6 +50,7 @@ class simple_log;
 struct exports_factory;
 void free_exports_factory(exports_factory* ptr);
 unique_ptr<exports_factory, free_exports_factory> init_efactory();
+void register_exporter(exports_factory *ef, str_holder module, hole_exporter he);
 
 struct exporter_params
 {

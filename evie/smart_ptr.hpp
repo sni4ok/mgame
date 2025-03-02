@@ -4,6 +4,9 @@
 
 #pragma once
 
+#ifndef EVIE_SMART_PTR_HPP
+#define EVIE_SMART_PTR_HPP
+
 template<typename type>
 void default_free(type* ptr)
 {
@@ -83,4 +86,6 @@ const type& operator*(const unique_ptr<type, free>& p)
 {
     return *p.ptr;
 }
+
+#endif
 

@@ -47,6 +47,13 @@ struct exports_factory
     exports_factory(const exports_factory&) = delete;
 };
 
+void register_exporter(exports_factory *ef, str_holder module, hole_exporter he)
+{
+    if(ef->exporters.find(module) != ef->exporters.end())
+        throw mexception(es() % "exports_factory() double registration for " % module);
+    ef->exporters[module] = he;
+}
+
 void free_exports_factory(exports_factory* ptr)
 {
     delete ptr;
