@@ -69,8 +69,9 @@ public:
     }
 };
 
-void simple_log_free(simple_log* ptr);
-unique_ptr<simple_log, simple_log_free> log_init(char_cit file_name = nullptr, uint32_t params = 0, bool set_log_instance = true);
+void free_simple_log(simple_log* ptr);
+unique_ptr<simple_log, free_simple_log> log_init(char_cit file_name = nullptr,
+    uint32_t params = 0, bool set_log_instance = true);
 simple_log* log_get();
 void log_set(simple_log* sl);
 uint32_t& log_params();

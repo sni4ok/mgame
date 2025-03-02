@@ -10,7 +10,6 @@
 #include "../tyra/tyra.hpp"
 
 #include "../evie/profiler.hpp"
-#include "../evie/smart_ptr.hpp"
 #include "../evie/fmap.hpp"
 #include "../evie/mlog.hpp"
 
@@ -20,16 +19,79 @@
 #include <fcntl.h>
 
 volatile bool* can_run_impl = nullptr;
+exports_factory* efactory = nullptr;
 
 void set_can_run(volatile bool* can_run)
 {
     can_run_impl = can_run;
 }
 
+void shared_destroy(void* handle)
+{
+    if(handle)
+        dlclose(handle);
+}
+
+struct exports_factory
+{
+    mvector<unique_ptr<void, shared_destroy> > dyn_exporters;
+    fmap<mstring, hole_exporter> exporters;
+
+    exports_factory();
+    hole_exporter get(const mstring& module);
+
+    ~exports_factory()
+    {
+    }
+
+    exports_factory(const exports_factory&) = delete;
+};
+
+void free_exports_factory(exports_factory* ptr)
+{
+    delete ptr;
+}
+
+unique_ptr<exports_factory, free_exports_factory> init_efactory()
+{
+    assert(!efactory);
+    efactory = new exports_factory;
+    return {efactory};
+}
+
 void init_exporter_params(exporter_params params)
 {
     log_set(params.sl);
     set_can_run(params.can_run);
+    efactory = params.efactory;
+}
+
+hole_exporter load_exporter(const mstring& module)
+{
+    mstring lib = "./lib" + module + ".so";
+    unique_ptr<void, shared_destroy> p(dlopen(lib.c_str(), RTLD_NOW));
+    if(!p)
+        throw_system_failure(es() % "load library '" % lib % "' error");
+
+    typedef void (create_hole)(hole_exporter* m, exporter_params params);
+    create_hole *hole = (create_hole*)dlsym(p.get(), "create_hole");
+    if(!hole)
+        throw_system_failure(es() % "not found create_hole() in '" % lib % "'");
+
+    hole_exporter he;
+    hole(&he, {log_get(), can_run_impl, efactory});
+    efactory->dyn_exporters.push_back(move(p));
+    return he;
+}
+
+hole_exporter exports_factory::get(const mstring& module)
+{
+    auto it = exporters.find(module);
+    if(it != exporters.end())
+        return it->second;
+    hole_exporter he = load_exporter(module);
+    exporters[module] = he;
+    return he;
 }
 
 namespace
@@ -83,6 +145,9 @@ namespace
         exports_chain() : size()
         {
         }
+        ~exports_chain()
+        {
+        }
         void proceed(const message* m, uint32_t count)
         {
             for(uint32_t i = 0; i != size; ++i)
@@ -103,62 +168,6 @@ namespace
     {
         ((exports_chain*)ec)->proceed(m, count);
     }
-
-    exporter shared_exporter(const mstring& module);
-
-    struct exports_factory
-    {
-        fmap<mstring, hole_exporter> exporters;
-        mvector<exporter> dyn_exporters;
-
-        uint32_t register_exporter(const mstring& module, hole_exporter he)
-        {
-            auto it = exporters.find(module);
-            if(it != exporters.end())
-                return 0;
-                //throw mexception(es() % "exports_factory() double registration for " % module);
-            exporters[module] = he;
-            return exporters.size();
-        }
-        hole_exporter get(const mstring& module)
-        {
-            auto it = exporters.find(module);
-            if(it != exporters.end())
-                return it->second;
-            dyn_exporters.push_back(shared_exporter(module));
-            exporter& e = dyn_exporters.back();
-            hole_exporter he = e.he;
-            exporters[module] = he;
-            return he;
-        }
-    };
-
-    static exports_factory efactory;
-    
-    void shared_destroy(void* handle)
-    {
-        if(handle)
-            dlclose(handle);
-    }
-    exporter shared_exporter(const mstring& module)
-    {
-        mstring lib = "./lib" + module + ".so";
-        exporter ret;
-        ret.he.destroy = &shared_destroy;
-        ret.p = dlopen(lib.c_str(), RTLD_NOW);
-        if(!ret.p)
-            throw_system_failure(es() % "load library '" % lib % "' error");
-        typedef void (create_hole)(hole_exporter* m, exporter_params params);
-        create_hole *hole = (create_hole*)dlsym(ret.p, "create_hole");
-        if(!hole)
-            throw_system_failure(es() % "not found create_hole() in '" % lib % "'");
-
-        efactory.dyn_exporters.push_back(move(ret));
-        exporter e;
-        assert(can_run_impl);
-        hole(&e.he, {log_get(), can_run_impl});
-        return e;
-    }
     exporter create_impl(const mstring& m)
     {
         auto ib = m.begin(), ie = m.end(), it = find(ib, ie, ' ');
@@ -170,7 +179,7 @@ namespace
             params = mstring(it + 1, ie);
         }
         exporter ret;
-        ret.he = efactory.get(module);
+        ret.he = efactory->get(module);
         ret.p = ret.he.init(params.c_str());
         return ret;
     }
@@ -244,7 +253,8 @@ namespace
         uint8_t w = *f;
         uint8_t r = *(f + 1);
         if(w < 2 || w >= message_size || !r || r >= message_size) [[unlikely]]
-            throw mexception(es() % "mmap_proceed() internal error, wp: " % uint32_t(w) % ", rp: " % uint32_t(r));
+            throw mexception(es() % "mmap_proceed() internal error, wp: "
+                % uint32_t(w) % ", rp: " % uint32_t(r));
 
         i += w;
         message* p = (((message*)v) + 1) + (w - 2) * 255;
@@ -266,7 +276,8 @@ namespace
                     nf = mmap_load(i);
                 }
                 if(nf)
-                    throw mexception(es() % "mmap_proceed() map overload, wp: " % uint32_t(*f) % ", rp: " % uint32_t(*(f + 1)));
+                    throw mexception(es() % "mmap_proceed() map overload, wp: "
+                        % uint32_t(*f) % ", rp: " % uint32_t(*(f + 1)));
             }
             memcpy(p, m + c, cur_count * message_size);
             mmap_store(i, cur_count);
@@ -277,7 +288,8 @@ namespace
             if(i == e)
                 i = f + 2;
             if(!mmap_compare_exchange(f, w, i - f))
-                throw mexception(es() % "mmap_proceed() set w error, w: " % *f % ", from: " % uint32_t(w) % ", to: " % uint32_t(i - f));
+                throw mexception(es() % "mmap_proceed() set w error, w: " % *f
+                    % ", from: " % uint32_t(w) % ", to: " % uint32_t(i - f));
             w = i - f;
             c += cur_count;
         }
@@ -295,11 +307,6 @@ namespace
     }
 }
 
-uint32_t register_exporter(str_holder module, hole_exporter he)
-{
-    return efactory.register_exporter(module, he);
-}
-
 exporter::exporter(const mstring& params)
 {
     mvector<str_holder> exports = split(params.str(), ';');
@@ -308,14 +315,22 @@ exporter::exporter(const mstring& params)
     if(exports.size() == 1)
         (*this) = create_impl(exports[0]);
     else {
-        exports_chain *ec = new exports_chain;
-        this->p = ec;
+        unique_ptr<exports_chain> ec(new exports_chain);
+        this->p = ec.get();
         this->he.destroy = &chain_destroy;
         this->he.proceed = &chain_proceed;
 
         for(auto&& v: exports)
             ec->add(create_impl(v));
+
+        ec.release();
     }
+}
+
+exporter::~exporter()
+{
+    if(p && he.destroy)
+        he.destroy(p);
 }
 
 exporter::exporter(exporter&& r)
@@ -334,9 +349,12 @@ void exporter::operator=(exporter&& r)
     r.he = hole_exporter();
 }
 
-static const uint32_t register_log_message = register_exporter("log_messages", {&hole_no_init, &hole_no_destroy, &log_message});
-static const uint32_t register_tyra = register_exporter("tyra", {&tyra_create, &tyra_destroy, &tyra_proceed});
-static const uint32_t register_pipe = register_exporter("pipe", {&pipe_init, &pipe_destroy, &pipe_proceed});
-static const uint32_t register_mmap = register_exporter("mmap_cp", {&mmap_init, &mmap_destroy, &mmap_proceed});
-static const uint32_t register_null = register_exporter("/dev/null", {&hole_no_init, &hole_no_destroy, &hole_no_proceed});
+exports_factory::exports_factory()
+{
+    exporters["log_messages"] = {&hole_no_init, &hole_no_destroy, &log_message};
+    exporters["tyra"] = {&tyra_create, &tyra_destroy, &tyra_proceed};
+    exporters["pipe"] = {&pipe_init, &pipe_destroy, &pipe_proceed};
+    exporters["mmap_cp"] = {&mmap_init, &mmap_destroy, &mmap_proceed};
+    exporters["/dev/null"] = {&hole_no_init, &hole_no_destroy, &hole_no_proceed};
+}
 

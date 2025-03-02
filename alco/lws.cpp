@@ -85,7 +85,8 @@ lws_dump::~lws_dump()
         ::close(hfile);
 }
 
-lws_impl::lws_impl(const mstring& push, bool log_lws) : emessages(push), log_lws(log_lws), bs(buf, buf + sizeof(buf) - 1), closed(), data_time(time(NULL))
+lws_impl::lws_impl(const mstring& push, bool log_lws) :
+    emessages(push), log_lws(log_lws), bs(buf, buf + sizeof(buf) - 1), closed(), data_time(time(NULL))
 {
     bs.resize(LWS_PRE);
 }

@@ -9,6 +9,7 @@
 #include "messages.hpp"
 
 #include "../evie/mstring.hpp"
+#include "../evie/smart_ptr.hpp"
 
 struct hole_exporter
 {
@@ -28,11 +29,8 @@ struct exporter
     exporter(const mstring& params);
     exporter(exporter&& r);
     void operator=(exporter&& r);
+    ~exporter();
 
-    ~exporter() {
-        if(p && he.destroy)
-            he.destroy(p);
-    }
     void proceed(const message* m, uint32_t count) {
         he.proceed(p, m, count);
     }
@@ -51,11 +49,15 @@ inline void set_export_mtime(message* m)
 }
 
 class simple_log;
+struct exports_factory;
+void free_exports_factory(exports_factory* ptr);
+unique_ptr<exports_factory, free_exports_factory> init_efactory();
 
 struct exporter_params
 {
     simple_log* sl;
     volatile bool* can_run;
+    exports_factory* efactory;
 };
 
 void set_can_run(volatile bool* can_run);

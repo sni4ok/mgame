@@ -282,12 +282,12 @@ void mlog::set_no_cout()
     simple_log::instance().no_cout = true;
 }
 
-void simple_log_free(simple_log* ptr)
+void free_simple_log(simple_log* ptr)
 {
     delete ptr;
 }
 
-unique_ptr<simple_log, simple_log_free> log_init(char_cit file_name, uint32_t params, bool set_instance)
+unique_ptr<simple_log, free_simple_log> log_init(char_cit file_name, uint32_t params, bool set_instance)
 {
     return new simple_log(file_name, params, set_instance);
 }

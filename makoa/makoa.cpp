@@ -9,6 +9,7 @@
 #include "engine.hpp"
 #include "server.hpp"
 #include "config.hpp"
+#include "exports.hpp"
 
 #include "../evie/config.hpp"
 #include "../evie/mlog.hpp"
@@ -26,6 +27,7 @@ int main(int argc, char** argv)
     mstring name;
     try {
         mlog(mlog::always_cout) << "makoa started";
+        auto ef = init_efactory();
         print_init(argc, argv);
         config cfg(argc == 1 ? "makoa_server.conf" : argv[1]);
         cfg.print();
