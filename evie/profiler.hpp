@@ -34,7 +34,7 @@ class profilerinfo : public stack_singleton<profilerinfo>
     info counters[max_counters];
     uint64_t cur_counters;
 
-    void print_impl(long param);
+    void print_impl(long mlog_params);
     profilerinfo();
 
     friend class simple_log;
@@ -43,7 +43,7 @@ public:
 
     uint64_t register_counter(const char* id);
     void add_info(uint64_t counter_id, uint64_t time);
-    void print();
+    void print(long mlog_params);
     ~profilerinfo();
 };
 

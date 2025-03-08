@@ -48,13 +48,13 @@ profilerinfo::info::info() : time(), time_max(), time_min(limits<uint64_t>::max)
 {
 }
 
-void profilerinfo::print_impl(long param)
+void profilerinfo::print_impl(long mlog_params)
 {
     uint64_t ncounters = atomic_load(cur_counters);
     if(!ncounters)
         return;
 
-    mlog log(param);
+    mlog log(mlog_params);
     log << "profiler: \n";
     for(uint64_t c = 0; c != ncounters; ++c)
     {
@@ -116,9 +116,9 @@ void profilerinfo::add_info(uint64_t counter_id, uint64_t time)
     atomic_add(i.count, 1);
 }
 
-void profilerinfo::print()
+void profilerinfo::print(long mlog_params)
 {
-    print_impl(mlog::critical);
+    print_impl(mlog_params);
 }
 
 profilerinfo::~profilerinfo()

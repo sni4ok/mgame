@@ -34,11 +34,16 @@ class simple_log
     {
         mstring name;
         int hfile;
+        static const uint32_t b_size = 1024 * 1024;
+        buf_stream_fixed<b_size> b_stream;
 
     public:
-        ofile(char_cit file) : name(_str_holder(file))
+        ofile(char_cit file, bool trunc = false) : name(_str_holder(file))
         {
-            hfile = ::open(file, O_WRONLY | O_CREAT | O_APPEND, S_IWRITE | S_IREAD | S_IRGRP | S_IWGRP);
+            int flags = O_WRONLY | O_CREAT | O_APPEND;
+            if(trunc)
+                flags |= O_TRUNC;
+            hfile = ::open(file, flags, S_IWRITE | S_IREAD | S_IRGRP | S_IWGRP);
             if(hfile <= 0)
                 throw_system_failure(es() % "open file " % name % " error");
         }
@@ -47,35 +52,45 @@ class simple_log
             if(flock(hfile, LOCK_EX | LOCK_NB))
                 throw_system_failure(es() % "lock file " % name % " error");
         }
+        void flush(bool force)
+        {
+            if(!b_stream.empty() && (force || (b_stream.size() > b_size / 2)))
+            {
+                if(uint64_t(::write(hfile, b_stream.begin(), b_stream.size())) != b_stream.size())
+                    throw_system_failure(es() % "file " % name % " writing error");
+                b_stream.clear();
+            }
+        }
         void write(char_cit buf, uint32_t size)
         {
-            if(::write(hfile, buf, size) != size)
-                throw_system_failure(es() % "file " % name % " writing error");
+            b_stream.write(buf, size);
+            flush(false);
         }
         ~ofile()
         {
+            flush(true);
             ::close(hfile);
         }
     };
 
     static const uint32_t log_no_cout_size = 10;
 
-    typedef fast_alloc<mlog::node> string_pool;
-    typedef fast_alloc_list<mlog::data> nodes_type;
+    typedef fast_alloc<mlog::node, mt> string_pool;
+    typedef fast_alloc_list<mlog::data, mt> nodes_type;
 
-    void write_impl(char_it str, uint32_t size, uint32_t extra_param, uint32_t all_sz, uint32_t cur_size)
+    void write_impl(char_cit str, uint32_t size, uint32_t params, uint32_t all_sz, bool first)
     {
         if(str)
         {
             if(stream)
                 stream->write(str, size);
-            if((extra_param & mlog::critical) && stream_crit)
+            if((params & mlog::critical) && stream_crit)
                 stream_crit->write(str, size);
-            if((!stream || ((params & mlog::always_cout) && !(extra_param & mlog::no_cout))) && !no_cout)
+            if((!stream || ((params & mlog::always_cout) && !(params & mlog::no_cout))) && !no_cout)
             {
                 if(all_sz >= log_no_cout_size)
                 {
-                    if(!cur_size)
+                    if(first)
                         cout_write(es() % "[[skipped " % all_sz % " rows from logging to stdout, see log file for found it]]" % endl, true);
                 }
                 else
@@ -92,17 +107,37 @@ class simple_log
             mlog::data* data;
             static const uint32_t cntr_from = 128, cntr_to = 524288;
             uint32_t cntr = 128;
+            my_stream str;
             for(;;)
             {
                 uint32_t all_sz = atomic_load(all_size) - writed_sz;
                 for(uint32_t cur_i = 0; cur_i != all_sz; ++cur_i)
                 {
                     data = nodes.pop();
+                    {
+                        str.clear();
+                        if(data->params & mlog::store_pid)
+                            str << "pid: " << data->pid << " ";
+                        if(data->params & mlog::store_tid)
+                        {
+                            uint32_t tid = data->tid;
+                            str << "tid: ";
+                            if(tid < 10)
+                                str << ' ';
+                            str << tid << " ";
+                        }
+                        if(data->params & mlog::warning)
+                            str << "WARNING ";
+                        if(data->params & mlog::error)
+                            str << "ERROR ";
+                        str << data->time << ": ";
+                        write_impl(str.begin(), str.size(), data->params, all_sz, !cur_i);
+                    }
 
                     while(data->head)
                     {
                         mlog::node* next = data->head->next;
-                        write_impl(data->head->buf, data->head->size, data->extra_param, all_sz, cur_i);
+                        write_impl(data->head->buf, data->head->size, data->params, all_sz, false);
                         pool.free(data->head);
                         data->head = next;
                     }
@@ -114,6 +149,10 @@ class simple_log
                 {
                     if(cntr != cntr_from)
                         cntr /= 2;
+                    if(stream)
+                        stream->flush(true);
+                    if(stream_crit)
+                        stream_crit->flush(true);
                 }
                 if(!all_sz && !can_run)
                     break;
@@ -155,14 +194,15 @@ public:
             log = this;
             free_threads = init_free_threads();
             profiler = new profilerinfo;
+            profiler->log_on_exit = false;
         }
         if(file_name)
         {
-            stream.reset(new ofile(file_name));
+            stream.reset(new ofile(file_name, params & mlog::truncate_file));
             if(!(params & mlog::no_crit_file))
             {
                 mstring crit_file = _str_holder(file_name) + "_crit";
-                stream_crit.reset(new ofile(crit_file.c_str()));
+                stream_crit.reset(new ofile(crit_file.c_str(), params & mlog::truncate_crit_file));
             }
             if(params & mlog::lock_file)
             {
@@ -175,9 +215,10 @@ public:
     }
     ~simple_log()
     {
+        profiler->print(mlog::info);
         can_run = false;
-        delete profiler;
         work_thread.join();
+        delete profiler;
         delete_free_threads(free_threads);
     }
     mlog::node* alloc()
@@ -211,22 +252,11 @@ void mlog::init()
     buf.head = log.alloc();
     buf.tail = buf.head;
 
-    uint32_t params = log.params | buf.extra_param;
-    if(params & mlog::store_pid)
-        *this << "pid: " << getpid() << " ";
-    if(params & mlog::store_tid)
-    {
-        uint32_t tid = get_thread_id();
-        *this << "tid: ";
-        if(tid < 10)
-            *this << ' ';
-        *this << tid << " ";
-    }
-    if(buf.extra_param & mlog::warning)
-        *this << "WARNING ";
-    if(buf.extra_param & mlog::error)
-        *this << "ERROR ";
-    *this << cur_mtime() << ": ";
+    buf.time = cur_mtime();
+    if(buf.params & mlog::store_pid)
+        buf.pid = getpid();
+    if(buf.params & mlog::store_tid)
+        buf.tid = get_thread_id();
 }
 
 void mlog::check_size(uint32_t delta)
@@ -243,13 +273,13 @@ void mlog::check_size(uint32_t delta)
 
 mlog::mlog(uint32_t extra_param) : log(simple_log::instance())
 {
-    buf.extra_param = extra_param;
+    buf.params = log.params | extra_param;
     init();
 }
 
 mlog::mlog(simple_log* log, uint32_t extra_param) : log(*log)
 {
-    buf.extra_param = extra_param;
+    buf.params = log->params | extra_param;
     init();
 }
 

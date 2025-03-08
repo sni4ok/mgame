@@ -9,6 +9,7 @@
 
 #include "myitoa.hpp"
 #include "smart_ptr.hpp"
+#include "time.hpp"
 
 class simple_log;
 
@@ -25,9 +26,11 @@ struct mlog : ios_base
 
     struct data
     {
+        ttime_t time;
+        uint32_t pid, tid;
         node* head;
         node* tail;
-        uint32_t extra_param;
+        uint32_t params;
     };
 
 private:
@@ -47,12 +50,14 @@ public:
         always_cout = 4,
         lock_file = 8,
         no_crit_file = 16,
+        truncate_file = 32,
+        truncate_crit_file = 64,
 
-        info = 32,
-        warning = 64,
-        error = 128,
-        critical = 256,
-        no_cout = 512,
+        info = 128,
+        warning = 256,
+        error = 512,
+        critical = 1024,
+        no_cout = 2048
     };
 
     mlog(uint32_t extra_param = info);
