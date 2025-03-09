@@ -136,8 +136,10 @@ struct list_base : data_tss<node_type*, use_tss>
     bool erase(type* p) { //liniar complexity
         node* n = to_node(p);
 
+        bool free_lock;
+
         if constexpr(use_mt)
-            this->cs.lock();
+            free_lock = this->cs.lock();
 
         node* prev = this->get_data();
 
@@ -157,7 +159,7 @@ struct list_base : data_tss<node_type*, use_tss>
                         n->next->prev = prev;
 
                 if constexpr(use_mt)
-                    this->cs.unlock();
+                    this->cs.unlock(free_lock);
 
                 if constexpr(delete_on_exit)
                     fast_alloc_delete(n);
@@ -170,7 +172,7 @@ struct list_base : data_tss<node_type*, use_tss>
         }
 
         if constexpr(use_mt)
-            this->cs.unlock();
+            this->cs.unlock(free_lock);
 
         return false;
     }
@@ -238,27 +240,31 @@ struct forward_list : list_base<type, use_mt, use_tss, delete_on_exit, node_type
         node* n = base::to_node(p);
         node* ptr = this->get_data_impl(n);
 
+        bool free_lock;
+
         if constexpr(use_mt)
-            this->cs.lock();
+            free_lock = this->cs.lock();
 
         n->next = ptr->next;
         ptr->next = n;
 
         if constexpr(use_mt)
-            this->cs.unlock();
+            this->cs.unlock(free_lock);
     }
     type* pop_front() {
         node* ptr = this->get_data();
 
+        bool free_lock;
+
         if constexpr(use_mt)
-            this->cs.lock();
+            free_lock = this->cs.lock();
 
         node* n = ptr->next;
         if(n)
             ptr->next = n->next;
 
         if constexpr(use_mt)
-            this->cs.unlock();
+            this->cs.unlock(free_lock);
 
         if constexpr(use_tss)
             if(n)
@@ -304,8 +310,10 @@ struct blist : list_base<type, use_mt, use_tss, delete_on_exit, node_type, true>
 
         n->prev = nullptr;
 
+        bool free_lock;
+
         if constexpr(use_mt)
-            this->cs.lock();
+            free_lock = this->cs.lock();
 
         n->next = ptr->next;
         if(n->next)
@@ -315,7 +323,7 @@ struct blist : list_base<type, use_mt, use_tss, delete_on_exit, node_type, true>
         ptr->next = n;
 
         if constexpr(use_mt)
-            this->cs.unlock();
+            this->cs.unlock(free_lock);
     }
     void push_back(type* p) {
         node* n = base::to_node(p);
@@ -323,8 +331,10 @@ struct blist : list_base<type, use_mt, use_tss, delete_on_exit, node_type, true>
 
         n->next = nullptr;
 
+        bool free_lock;
+
         if constexpr(use_mt)
-            this->cs.lock();
+            free_lock = this->cs.lock();
 
         n->prev = ptr->prev;
         if(n->prev)
@@ -334,13 +344,15 @@ struct blist : list_base<type, use_mt, use_tss, delete_on_exit, node_type, true>
         ptr->prev = n;
 
         if constexpr(use_mt)
-            this->cs.unlock();
+            this->cs.unlock(free_lock);
     }
     type* pop_front() {
         node* ptr = this->get_data();
 
+        bool free_lock;
+
         if constexpr(use_mt)
-            this->cs.lock();
+            free_lock = this->cs.lock();
 
         node* n = ptr->next;
         if(n) {
@@ -352,7 +364,7 @@ struct blist : list_base<type, use_mt, use_tss, delete_on_exit, node_type, true>
         }
 
         if constexpr(use_mt)
-            this->cs.unlock();
+            this->cs.unlock(free_lock);
 
         if constexpr(use_tss)
             if(n)
@@ -363,8 +375,10 @@ struct blist : list_base<type, use_mt, use_tss, delete_on_exit, node_type, true>
     type* pop_back() {
         node* ptr = this->get_data();
 
+        bool free_lock;
+
         if constexpr(use_mt)
-            this->cs.lock();
+            free_lock = this->cs.lock();
 
         node* n = ptr->prev;
         if(n) {
@@ -376,7 +390,7 @@ struct blist : list_base<type, use_mt, use_tss, delete_on_exit, node_type, true>
         }
 
         if constexpr(use_mt)
-            this->cs.unlock();
+            this->cs.unlock(free_lock);
 
         if constexpr(use_tss)
             if(n)

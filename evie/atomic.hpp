@@ -124,34 +124,3 @@ inline uint16_t atomic_exchange(uint16_t& v, uint16_t to)
     return __atomic_exchange_n(&v, to, __ATOMIC_RELAXED);
 }
 
-struct critical_section
-{
-    bool flag;
-
-    critical_section() : flag() {
-    }
-    bool try_lock() {
-        return !__atomic_test_and_set(&flag, __ATOMIC_RELAXED);
-    }
-    void lock() {
-        for(;;)
-            if(try_lock())
-                return;
-    }
-    void unlock() {
-        __atomic_clear(&flag, __ATOMIC_RELAXED);
-    }
-
-    struct scoped_lock
-    {
-        critical_section& cs;
-
-        scoped_lock(critical_section& cs) : cs(cs) {
-            cs.lock();
-        }
-        ~scoped_lock() {
-            cs.unlock();
-        }
-    };
-};
-

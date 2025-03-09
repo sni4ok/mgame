@@ -33,6 +33,58 @@ struct my_mutex
     };
 };
 
+struct critical_section
+{
+    bool flag;
+    my_mutex mutex;
+    static const uint32_t free_lock_count = 10;
+
+    critical_section() : flag()
+    {
+    }
+    bool try_lock()
+    {
+        return !__atomic_test_and_set(&flag, __ATOMIC_RELAXED);
+    }
+    [[nodiscard]] bool lock()
+    {
+        if(try_lock()) [[likely]]
+            return true;
+        for(uint32_t i = 0; i != free_lock_count; ++i)
+            if(try_lock())
+                return true;
+
+        { [[unlikely]]
+            mutex.lock();
+            for(;;)
+                if(try_lock())
+                    return false;
+        }
+    }
+    void unlock(bool free_lock)
+    {
+        __atomic_clear(&flag, __ATOMIC_RELAXED);
+
+        if(!free_lock) [[unlikely]]
+            mutex.unlock();
+    }
+
+    struct scoped_lock
+    {
+        critical_section& cs;
+        bool free_lock;
+
+        scoped_lock(critical_section& cs) : cs(cs)
+        {
+            free_lock = cs.lock();
+        }
+        ~scoped_lock()
+        {
+            cs.unlock(free_lock);
+        }
+    };
+};
+
 struct my_condition
 {
     pthread_cond_t condition;
