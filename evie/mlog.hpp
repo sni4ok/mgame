@@ -28,16 +28,16 @@ struct mlog : ios_base
     {
         ttime_t time;
         uint32_t pid, tid;
-        node* head;
+        node head;
         node* tail;
         uint32_t params;
     };
 
 private:
     simple_log& log;
-    data buf;
+    data* buf;
 
-    void init();
+    void init(uint32_t extra_param);
     mlog(const mlog&) = delete;
     void check_size(uint32_t delta);
 
@@ -70,7 +70,7 @@ public:
     void write_numeric(type v)
     {
         check_size(my_cvt::atoi_size<type>::value);
-        buf.tail->size += my_cvt::itoa(&buf.tail->buf[buf.tail->size], v);
+        buf->tail->size += my_cvt::itoa(&buf->tail->buf[buf->tail->size], v);
     }
 };
 

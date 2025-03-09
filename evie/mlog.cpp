@@ -75,9 +75,6 @@ class simple_log
 
     static const uint32_t log_no_cout_size = 10;
 
-    typedef fast_alloc<mlog::node, mt> string_pool;
-    typedef fast_alloc_list<mlog::data, mt> nodes_type;
-
     void write_impl(char_cit str, uint32_t size, uint32_t params, uint32_t all_sz, bool first)
     {
         if(str)
@@ -134,12 +131,15 @@ class simple_log
                         write_impl(str.begin(), str.size(), data->params, all_sz, !cur_i);
                     }
 
-                    while(data->head)
+                    mlog::node* head = &data->head;
+
+                    while(head)
                     {
-                        mlog::node* next = data->head->next;
-                        write_impl(data->head->buf, data->head->size, data->params, all_sz, false);
-                        pool.free(data->head);
-                        data->head = next;
+                        mlog::node* next = head->next;
+                        write_impl(head->buf, head->size, data->params, all_sz, false);
+                        if(head != &data->head)
+                            pool.free(head);
+                        head = next;
                     }
 
                     nodes.free(data);
@@ -174,8 +174,8 @@ class simple_log
     unique_ptr<ofile> stream, stream_crit;
     volatile bool can_run;
     uint32_t all_size;
-    string_pool pool;
-    nodes_type nodes;
+    fast_alloc_list<mlog::data, mt> nodes;
+    fast_alloc<mlog::node, mt> pool;
     jthread work_thread;
     static simple_log* log;
 
@@ -228,6 +228,11 @@ public:
         node->size = 0;
         return node;
     }
+    mlog::data* alloc_buf()
+    {
+        mlog::data* buf = nodes.alloc();
+        return buf;
+    }
     static void set_instance(simple_log* l)
     {
         log = l;
@@ -238,49 +243,50 @@ public:
     {
         return *log;
     }
-    void write(const mlog::data& buf)
+    void write(mlog::data* buf)
     {
-        nodes.emplace(buf);
+        nodes.push_back(buf);
         atomic_add(all_size, 1);
     }
 };
 
 simple_log* simple_log::log = 0;
 
-void mlog::init()
+void mlog::init(uint32_t extra_param)
 {
-    buf.head = log.alloc();
-    buf.tail = buf.head;
+    buf = log.alloc_buf();
+    buf->params = log.params | extra_param;
+    buf->head.next = nullptr;
+    buf->head.size = 0;
+    buf->tail = &buf->head;
 
-    buf.time = cur_mtime();
-    if(buf.params & mlog::store_pid)
-        buf.pid = getpid();
-    if(buf.params & mlog::store_tid)
-        buf.tid = get_thread_id();
+    buf->time = cur_mtime();
+    if(buf->params & mlog::store_pid)
+        buf->pid = getpid();
+    if(buf->params & mlog::store_tid)
+        buf->tid = get_thread_id();
 }
 
 void mlog::check_size(uint32_t delta)
 {
-    if(buf.tail->size + delta > buf_size)
+    if(buf->tail->size + delta > buf_size)
     {
         if(delta > buf_size) [[unlikely]]
             throw str_exception("mlog() max size exceed");
-        node* tail = buf.tail;
-        buf.tail = log.alloc();
-        tail->next = buf.tail;
+        node* tail = buf->tail;
+        buf->tail = log.alloc();
+        tail->next = buf->tail;
     }
 }
 
 mlog::mlog(uint32_t extra_param) : log(simple_log::instance())
 {
-    buf.params = log.params | extra_param;
-    init();
+    init(extra_param);
 }
 
 mlog::mlog(simple_log* log, uint32_t extra_param) : log(*log)
 {
-    buf.params = log->params | extra_param;
-    init();
+    init(extra_param);
 }
 
 mlog::~mlog()
@@ -293,16 +299,16 @@ void mlog::write(char_cit it, uint32_t size)
 {
     while(size)
     {
-        uint32_t cur_write = min(size, buf_size - buf.tail->size);
-        memcpy(&buf.tail->buf[buf.tail->size], it, cur_write);
-        buf.tail->size += cur_write;
+        uint32_t cur_write = min(size, buf_size - buf->tail->size);
+        memcpy(&buf->tail->buf[buf->tail->size], it, cur_write);
+        buf->tail->size += cur_write;
         it += cur_write;
         size -= cur_write;
-        if(buf.tail->size == buf_size)
+        if(buf->tail->size == buf_size)
         {
-            node* tail = buf.tail;
-            buf.tail = log.alloc();
-            tail->next = buf.tail;
+            node* tail = buf->tail;
+            buf->tail = log.alloc();
+            tail->next = buf->tail;
         }
     }
 }
