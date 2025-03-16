@@ -4,6 +4,11 @@
 
 #pragma once
 
+#ifndef TYPE_TRAITS_HPP
+#define TYPE_TRAITS_HPP
+
+#include <cstdint>
+
 template<typename t>
 struct is_signed
 {
@@ -83,7 +88,7 @@ struct make_signed<t> \
   __VA_OPT__(FOR_EACH_AGAIN PP (macro, __VA_ARGS__))
 #define FOR_EACH_AGAIN() FOR_EACH_HELPER
 
-FOR_EACH(SET_INTEGRAL_TYPE, char, short, int, long, long long)
+FOR_EACH(SET_INTEGRAL_TYPE, char, short, int, long, long long, __int128)
 FOR_EACH(SET_INTEGRAL, char, wchar_t, bool)
 SET_UNSIGNED(char, char)
 
@@ -179,7 +184,7 @@ template<typename type>
 inline constexpr bool is_array_v = false;
 template<typename type>
 inline constexpr bool is_array_v<type[]> = true;
-template<typename type, size_t count>
+template<typename type, uint64_t count>
 inline constexpr bool is_array_v<type[count]> = true;
 
 template<typename type>
@@ -347,4 +352,6 @@ concept __have_begin = is_class_v<t> && requires(t* v)
 {
     v->begin();
 };
+
+#endif
 

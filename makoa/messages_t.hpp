@@ -4,8 +4,7 @@
 
 #pragma once
 
-#include <cstdint>
-
+#include "../evie/decimal.hpp"
 #include "../evie/time.hpp"
 
 struct price_t
@@ -22,53 +21,4 @@ struct count_t
     int64_t value;
 };
 
-constexpr inline bool operator<(price_t l, price_t r)
-{
-    return l.value < r.value;
-}
-
-constexpr inline bool operator>(price_t l, price_t r)
-{
-    return l.value > r.value;
-}
-
-constexpr inline bool operator!=(price_t l, price_t r)
-{
-    return l.value != r.value;
-}
-
-constexpr inline bool operator==(price_t l, price_t r)
-{
-    return l.value == r.value;
-}
-
-constexpr inline bool operator<(count_t l, count_t r)
-{
-    return l.value < r.value;
-}
-
-constexpr inline bool operator<=(count_t l, count_t r)
-{
-    return l.value <= r.value;
-}
-
-constexpr inline bool operator>(count_t l, count_t r)
-{
-    return l.value > r.value;
-}
-
-constexpr inline bool operator>=(count_t l, count_t r)
-{
-    return l.value >= r.value;
-}
-
-constexpr inline bool operator!=(count_t l, count_t r)
-{
-    return l.value != r.value;
-}
-
-constexpr inline bool operator==(count_t l, count_t r)
-{
-    return l.value == r.value;
-}
 

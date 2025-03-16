@@ -156,7 +156,7 @@ const date cur_day_date = parse_time_impl(cur_mtime_seconds()).date;
 
 inline my_string get_cur_day_str()
 {
-    buf_stream_fixed<20> str;
+    buf_stream_fixed<28> str;
     str << uint_fixed<4>(cur_day_date.year) << "-" << uint_fixed<2>(cur_day_date.month) << "-" << uint_fixed<2>(cur_day_date.day);
     return my_string(str.begin(), str.end());
 }

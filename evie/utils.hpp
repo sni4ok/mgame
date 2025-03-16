@@ -15,23 +15,24 @@
 
 static constexpr str_holder uint_fixed_str[] =
 {
-   "", "0", "00",
-   "000", "0000", "00000",
+   "", "0", "00", "000", "0000", "00000",
    "000000", "0000000", "00000000"
+   "000000000", "0000000000", "00000000000",
+   "000000000000"
 };
 
 template<uint32_t sz>
 struct uint_fixed
 {
-   const uint32_t value;
+   const uint64_t value;
 
-   uint_fixed(uint32_t value) : value(value)
+   uint_fixed(uint64_t value) : value(value)
    {
-      static_assert(sz <= 9, "out of range");
+      static_assert(sz <= 13, "out of range");
    }
    constexpr str_holder str() const
    {
-      uint32_t v = value;
+      uint64_t v = value;
       uint32_t idx = sz - 1;
       while(v > 9 && idx)
       {
@@ -94,8 +95,8 @@ template<typename stream, typename decimal>
 stream& operator<<(stream& s, decimal d)
     requires(is_decimal<decimal>)
 {
-    int64_t int_ = d.value / decimal::frac;
-    int32_t float_ = d.value % decimal::frac;
+    decltype(decimal::value) int_ = d.value / decimal::frac;
+    decltype(decimal::value) float_ = d.value % decimal::frac;
     if(d.value < 0) {
         s << '-';
         int_ = -int_;

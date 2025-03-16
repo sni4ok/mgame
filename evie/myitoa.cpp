@@ -90,15 +90,17 @@ namespace my_cvt
 
     typedef itoa_prealloc<1> pit1; typedef itoa_prealloc<2> pit2;
     typedef itoa_prealloc<3> pit3; typedef itoa_prealloc<4> pit4;
-    typedef itoa_combined<pit4, pit1> pit5; typedef itoa_combined<pit4, pit2> pit6;
+    typedef itoa_prealloc<5> pit5; typedef itoa_combined<pit4, pit2> pit6;
     typedef itoa_combined<pit4, pit3> pit7; typedef itoa_combined<pit4, pit4> pit8;
-    typedef itoa_combined<pit8, pit1> pit9; typedef itoa_combined<pit8, pit2> pit10;
+    typedef itoa_combined<pit5, pit4> pit9; typedef itoa_combined<pit5, pit5> pit10;
+    typedef itoa_combined<pit10, pit9> pit19;
 
     const pit1 ita1; const pit2 ita2;
     const pit3 ita3; const pit4 ita4;
-    const pit5 ita5(ita4, ita1); const pit6 ita6(ita4, ita2);
+    const pit5 ita5; const pit6 ita6(ita4, ita2);
     const pit7 ita7(ita4, ita3); const pit8 ita8(ita4, ita4);
-    const pit9 ita9(ita8, ita1); const pit10 ita10(ita8, ita2);
+    const pit9 ita9(ita5, ita4); const pit10 ita10(ita5, ita5);
+    const pit19 ita19(ita10, ita9);
 
     inline uint32_t log10(uint32_t i)
     {
@@ -162,7 +164,7 @@ namespace my_cvt
         if(i <= limits<uint16_t>::max)
             return itoa(buf, uint16_t(i));
 
-        //i >= 65536 here
+        //i > 65536 here
         return
             (i < ita6.values ?
                 (i < ita5.values ? ita5.write(i, buf) : ita6.write(i, buf)) :
@@ -178,12 +180,24 @@ namespace my_cvt
         if(i <= limits<uint32_t>::max)
             return itoa(buf, uint32_t(i));
 
-        //i >= 4294967296 here :D
+        //i > 4294967296 here :D
         uint32_t ret = itoa(buf, i / ita8.values);
         buf += ret;
         ita8.write(i % ita8.values, buf);
         buf += ita8.digits;
         return ret + ita8.digits;
+    }
+
+    uint32_t itoa(char *buf, __uint128_t i)
+    {
+        if(i <= limits<uint64_t>::max)
+            return itoa(buf, uint64_t(i));
+        //i > 18446744073709551615
+        uint32_t ret = itoa(buf, i / ita19.values);
+        buf += ret;
+        ita19.write(i % ita19.values, buf);
+        buf += ita19.digits;
+        return ret + ita19.digits;
     }
 
     uint32_t itoa(char_it buf, int8_t i)
@@ -224,6 +238,16 @@ namespace my_cvt
         }
         else
             return itoa(buf, uint64_t(i));
+    }
+
+    uint32_t itoa(char_it buf, __int128_t i)
+    {
+        if(i < 0) {
+            *buf++ = '-';
+            return itoa(buf, __uint128_t(-i)) + 1;
+        }
+        else
+            return itoa(buf, __uint128_t(i));
     }
 
     const double d_max_d = static_cast<double>(uint64_t(1) << 62);
@@ -317,10 +341,6 @@ namespace my_cvt
     {
         char buf[1024];
 
-        for(uint32_t i = 0; i <= 65535; ++i) {
-            uint32_t sz = itoa(buf, uint16_t(i));
-            my_unused(sz);
-        }
         uint32_t sz = itoa(buf, true);
         my_unused(sz);
 
@@ -357,16 +377,19 @@ namespace my_cvt
         check("9475934712395012");
         assert(atoi<uint64_t>(buf, sz) == 9475934712395012);
 
-        auto check_double = [&buf, &sz](double v, str_holder s) {
+        auto check_double = [&buf, &sz](double v, str_holder s)
+        {
             my_unused(v, s);
             sz = itoa(buf, v);
             assert(str_holder(buf, sz) == s);
             double d = lexical_cast<double>(buf, buf + sz);
             my_unused(d);
-            if(v == v) {
+            if(v == v)
+            {
                 assert(d == v);
             }
-            else {
+            else
+            {
                 assert(!memcmp(&v, &d, sizeof(double)));
             }
         };
@@ -383,6 +406,38 @@ namespace my_cvt
         double v = lexical_cast<double>("1e10");
         my_unused(v);
         assert(v == 10000000000.);
+
+        auto check_i = [&]<typename type>(type)
+        {
+            auto c = [&]<typename t>(t i)
+            {
+                uint32_t sz = itoa(buf, i);
+                type v = atoi<t>(buf, sz);
+                assert(v == i);
+                my_unused(sz, v);
+            };
+
+            type a = limits<type>::max, b = limits<type>::min;
+            while(a != 0 || b != 0)
+            {
+                c(a);
+                c(b);
+                a /= 10;
+                b /= 10;
+            }
+        };
+
+        auto check_itoa = [&]<typename type>(type v)
+        {
+            check_i(v);
+            check_i(make_unsigned_t<type>());
+        };
+
+        check_itoa(int8_t());
+        check_itoa(int16_t());
+        check_itoa(int32_t());
+        check_itoa(int64_t());
+        check_itoa(__int128_t());
     }
 }
 

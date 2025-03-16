@@ -6,6 +6,7 @@
 
 #include "str_holder.hpp"
 #include "type_traits.hpp"
+#include "decimal.hpp"
 #include "limits.hpp"
 
 #include <new>
@@ -35,16 +36,18 @@ stream& operator<<(stream& s, const exception& e)
 namespace my_cvt
 {
     uint32_t itoa(char_it buf, bool t);
-    uint32_t itoa(char *buf, char v);
-    uint32_t itoa(char *buf, int8_t v);
-    uint32_t itoa(char *buf, uint8_t v);
-    uint32_t itoa(char *buf, uint16_t v);
-    uint32_t itoa(char *buf, int16_t v);
-    uint32_t itoa(char *buf, uint32_t v);
-    uint32_t itoa(char *buf, int32_t v);
-    uint32_t itoa(char *buf, uint64_t v);
-    uint32_t itoa(char *buf, int64_t v);
-    uint32_t itoa(char *buf, double v);
+    uint32_t itoa(char_it buf, char v);
+    uint32_t itoa(char_it buf, int8_t v);
+    uint32_t itoa(char_it buf, uint8_t v);
+    uint32_t itoa(char_it buf, uint16_t v);
+    uint32_t itoa(char_it buf, int16_t v);
+    uint32_t itoa(char_it buf, uint32_t v);
+    uint32_t itoa(char_it buf, int32_t v);
+    uint32_t itoa(char_it buf, uint64_t v);
+    uint32_t itoa(char_it buf, int64_t v);
+    uint32_t itoa(char_it buf, __uint128_t v);
+    uint32_t itoa(char_it buf, __int128_t v);
+    uint32_t itoa(char_it buf, double v);
 
     struct exception : ::exception
     {
@@ -122,8 +125,8 @@ namespace my_cvt
         p10<19>()
     };
 
-    static constexpr uint32_t atoi_u_ps[] = {3, 5, 10, 20, 20};
-    static constexpr uint32_t atoi_s_ps[] = {4, 6, 11, 21, 21};
+    static constexpr uint32_t atoi_u_ps[] = {3, 5, 10, 0, 20, 0, 0, 0, 39};
+    static constexpr uint32_t atoi_s_ps[] = {4, 6, 11, 0, 21, 0, 0, 0, 40};
 
     template<typename type>
     struct atoi_size
@@ -152,13 +155,6 @@ namespace my_cvt
     template<typename type>
     inline constexpr uint32_t atoi_size_v = atoi_size<type>::value;
 }
-
-template<typename type>
-concept is_decimal = is_class_v<type> && requires(type* t)
-{
-    t->frac;
-    t->exponent;
-};
 
 int64_t read_decimal_impl(char_cit it, char_cit ie, int exponent);
 

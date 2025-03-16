@@ -356,7 +356,7 @@ public:
         buf[size_] = v;
         ++size_;
     }
-    template<class ... params>
+    template<typename ... params>
     reference emplace_back(params&&... args) {
         __push_back_impl();
         new(&buf[size_])type(args...);
