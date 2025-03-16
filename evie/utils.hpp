@@ -13,14 +13,6 @@
 #include "array.hpp"
 #include "mtime.hpp"
 
-static constexpr str_holder uint_fixed_str[] =
-{
-   "", "0", "00", "000", "0000", "00000",
-   "000000", "0000000", "00000000"
-   "000000000", "0000000000", "00000000000",
-   "000000000000"
-};
-
 template<uint32_t sz>
 struct uint_fixed
 {
@@ -39,7 +31,7 @@ struct uint_fixed
          v /= 10;
          --idx;
       }
-      return uint_fixed_str[idx];
+      return str_holder("0000000000000", idx);
    }
 };
 
