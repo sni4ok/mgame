@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "decimal.hpp"
+
 #include <float.h>
 
 template<typename t>
@@ -27,6 +29,14 @@ struct limits<double>
     static constexpr double epsilon = DBL_EPSILON;
     static constexpr double quiet_NaN = __builtin_nanl("");
     static constexpr double signaling_NaN = __builtin_nansl("");
+};
+
+template<typename decimal>
+requires(is_decimal<decimal>)
+struct limits<decimal>
+{
+    static constexpr decimal min = {limits<decltype(decimal::value)>::min};
+    static constexpr decimal max = {limits<decltype(decimal::value)>::max};
 };
 
 //#define CHECK_LIMITS

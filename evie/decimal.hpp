@@ -86,9 +86,23 @@ constexpr inline type& operator-=(type& l, type r)
 
 template<typename type>
 requires(is_decimal<type>)
-bool operator!(type v)
+constexpr inline type operator%(type l, type r)
+{
+    return {l.value % r.value};
+}
+
+template<typename type>
+requires(is_decimal<type>)
+constexpr bool operator!(type v)
 {
     return !v.value;
+}
+
+template<typename type>
+requires(is_decimal<type>)
+constexpr type operator-(type v)
+{
+    return {-v.value};
 }
 
 #endif

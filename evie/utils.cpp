@@ -131,11 +131,11 @@ ttime_t read_time_impl::read_time(char_cit& it)
     if constexpr(frac_size)
     {
         uint64_t frac = my_cvt::atoi<uint64_t>(it + 10, frac_size);
-        ns = frac * my_cvt::p10<9 - frac_size>();
+        ns = uint64_t(frac * my_cvt::p10<9 - frac_size>());
         it += (frac_size + 1);
     }
     it += 9;
-    return ttime_t{cur_date_time + ns + (s + m * 60 + h * 3600) * ttime_t::frac};
+    return ttime_t{int64_t(cur_date_time + ns + (s + m * 60 + h * 3600) * ttime_t::frac)};
 }
 
 template ttime_t read_time_impl::read_time<0>(char_cit&);
@@ -200,7 +200,7 @@ ttime_t pack_time(time_parsed p)
     t.tm_hour = p.duration.hours;
     t.tm_min = p.duration.minutes;
     t.tm_sec = p.duration.seconds;
-    return {uint64_t(timegm(&t) * ttime_t::frac + p.duration.nanos)};
+    return {int64_t(timegm(&t) * ttime_t::frac + p.duration.nanos)};
 }
 
 date& date::operator+=(date_duration d)
@@ -221,8 +221,8 @@ date_duration date::operator-(date r) const
     ttime_t tl = pack_time(t);
     t.date = r;
     ttime_t tr = pack_time(t);
-    int64_t ns = tl - tr;
-    return date_duration(ns / ttime_t::frac / (24 * 3600));
+    ttime_t ns = tl - tr;
+    return date_duration(ns.value / ttime_t::frac / (24 * 3600));
 }
 
 ttime_t time_from_date(date t)

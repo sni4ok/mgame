@@ -133,6 +133,6 @@ mprofiler::mprofiler(uint64_t counter_id) : counter_id(counter_id), time(cur_tti
 
 mprofiler::~mprofiler()
 {
-    profilerinfo::instance().add_info(counter_id, cur_ttime() - time);
+    profilerinfo::instance().add_info(counter_id, uint64_t((cur_ttime() - time).value));
 }
 

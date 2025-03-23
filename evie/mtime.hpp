@@ -6,22 +6,7 @@
 
 #include "time.hpp"
 
-const int64_t cur_utc_time_delta = 3 * 3600 * ttime_t::frac;
-
-constexpr inline ttime_t operator+(ttime_t l, int64_t nanos)
-{
-    return {l.value + nanos};
-}
-
-constexpr inline ttime_t operator-(ttime_t l, int64_t nanos)
-{
-    return {l.value - nanos};
-}
-
-constexpr inline int64_t operator-(ttime_t l, ttime_t r)
-{
-    return int64_t(l.value) - int64_t(r.value);
-}
+const ttime_t cur_utc_time_delta = seconds(3 * 3600);
 
 constexpr inline uint32_t day_seconds(ttime_t t)
 {
@@ -112,7 +97,7 @@ struct time_duration
 
 constexpr inline ttime_t time_from(uint32_t day_seconds, time_duration td)
 {
-    return {(uint64_t(day_seconds) + td.total_seconds()) * ttime_t::frac + td.nanos};
+    return {(int64_t(day_seconds) + td.total_seconds()) * ttime_t::frac + td.nanos};
 }
 
 struct time_parsed

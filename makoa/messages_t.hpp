@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "../evie/decimal.hpp"
 #include "../evie/time.hpp"
 
 struct price_t

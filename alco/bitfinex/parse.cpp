@@ -29,7 +29,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         {
         }
     };
-    const uint64_t ping;
+    const ttime_t ping;
     ttime_t ping_t;
 
     fmap<uint32_t, impl> parsers; //channel, impl
@@ -40,7 +40,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         book("\"book\",\"chanId\":"),
         symbol("\"symbol\":\""),
         event("\"event\":"),
-        ping(uint64_t(cfg.ping) * ttime_t::frac), ping_t(cur_ttime())
+        ping(seconds(cfg.ping)), ping_t(cur_ttime())
     {
         prec_R0 = (cfg.precision == "R0");
         for(auto& v: cfg.tickers) {
@@ -67,7 +67,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         char_cit ne = find(it, ie, ',');
         uint32_t id = my_cvt::atoi<uint32_t>(it, ne - it);
         ++ne;
-        ttime_t etime = {my_cvt::atoi<uint64_t>(ne, 13) * (ttime_t::frac / 1000)};
+        ttime_t etime = milliseconds(my_cvt::atoi<int64_t>(ne, 13));
         ne += 13;
         skip_fixed(ne, ",");
         it = find(ne, ie, ',');
@@ -210,8 +210,8 @@ struct lws_i : sec_id_by_name<lws_impl>
         else
             mlog(mlog::critical) << "unsupported message: " << str_holder(it, len);
 
-        if(ping) {
-            if(time.value > ping_t.value + ping) {
+        if(!!ping) {
+            if(time > ping_t + ping) {
                 ping_t = time;
                 bs << "{\"event\":\"ping\",\"cid\":\"" << ping_t.value / ttime_t::frac << "\"}";
                 send(wsi);

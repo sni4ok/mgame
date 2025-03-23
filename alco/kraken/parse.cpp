@@ -10,10 +10,10 @@
 ttime_t read_time(char_cit it, char_cit ie)
 {
     char_cit ne = find(it, ie, '.');
-    uint64_t time = my_cvt::atoi<uint32_t>(it, ne - it);
+    uint32_t time = my_cvt::atoi<uint32_t>(it, ne - it);
     it = ne + 1;
-    uint64_t time_us = my_cvt::atoi<uint32_t>(it, 6);
-    return ttime_t{time * ttime_t::frac + time_us * 1000};
+    uint32_t time_us = my_cvt::atoi<uint32_t>(it, 6);
+    return seconds(time) + microseconds(time_us);
 }
 
 struct lws_i : sec_id_by_name<lws_impl>

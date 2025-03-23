@@ -122,7 +122,7 @@ struct mirror::impl
 
     my_stream bs;
  
-    int64_t dE, dP;
+    ttime_t dE, dP;
     bool dEdP_printed = false;
     
     volatile bool can_run;
@@ -264,7 +264,7 @@ struct mirror::impl
         }
         if(!dEdP_printed)
         {
-            bs << "dE: " << print_dt(dE) << ", dP: " << print_dt(dP) << '\0';
+            bs << "dE: " << print_dt(dE.value) << ", dP: " << print_dt(dP.value) << '\0';
             //e = mvwaddstr(w, w.rows - 1, head_msg_auto_scroll.size(), w.blank_row.begin() + head_msg_auto_scroll.size() + bs.size());
             e = mvwaddnstr(w, w.rows - 1, w.cols - bs.size(), bs.begin(), bs.size());
             bs.clear();

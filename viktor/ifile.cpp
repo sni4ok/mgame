@@ -237,9 +237,9 @@ struct compact_book
         for(; i != e; ++i) {
             auto it = i->second.begin(), ie = i->second.end();
             for(; it != ie; ++it) {
-                if(it->second.count.value) {
+                if(!!it->second.count) {
                     message m;
-                    assert(it->second.price.value);
+                    assert(!!it->second.price);
                     m.mb = it->second;
                     m.mi.time = last_time;
                     m.mi.etime = ttime_t();
@@ -282,7 +282,7 @@ struct ifile
     bool history;
     message_ping ping;
     mvector<message> read_buf;
-    static const int64_t check_time = {1 * ttime_t::frac};
+    static constexpr ttime_t check_time = seconds(1);
     ttime_t last_file_check_time;
     ino_t last_file_ino;
 
@@ -324,7 +324,7 @@ struct ifile
         sz = sz - sz % message_size;
         cur_file.read((char*)&mt, message_size);
         nt.tf = mt.t.time;
-        if(!nt.tf.value)
+        if(!nt.tf)
             throw mexception(es() % "time_from error for " % fname);
         nt.from = 0;
         nt.off = 0;
@@ -333,7 +333,7 @@ struct ifile
         cur_file.read((char*)&mt, message_size);
         nt.tt = mt.t.time;
         mlog() << fname << " tf: " << nt.tf.value << ", tt: " << nt.tt.value;
-        if(!nt.tt.value || nt.tt.value < nt.tf.value)
+        if(!nt.tt || nt.tt < nt.tf)
             throw mexception(es() % "time_to error for " % fname);
 
         if(main_file.crossed(nt) || (!history && last_file)) {
@@ -486,7 +486,7 @@ struct ifile
         while(can_run && !dir_files.empty()) {
             ttime_t t = add_file(dir_files.front());
             dir_files.pop_front();
-            if(t.value)
+            if(!!t)
                 return true;
         }
         return false;
@@ -615,14 +615,14 @@ struct ifile_replay : ifile
             else if(b.empty())
                 return 0;
         }
-        message *mb = (message*)&b[0], *me = mb + b.size() / message_size, *mi = mb;
-        if(!file_time.value)
-            file_time.value = mb->t.time.value;
+        message* mb = (message*)&b[0], *me = mb + b.size() / message_size, *mi = mb;
+        if(!file_time)
+            file_time = mb->t.time;
         ttime_t t = cur_ttime();
-        int64_t dt = (t - start_time) * speed;
-        ttime_t f_to{file_time.value + dt};
+        ttime_t dt = {int64_t((t - start_time).value * speed)};
+        ttime_t f_to{file_time + dt};
         for(; mi != me; ++mi) {
-            if(mi->t.time.value > f_to.value)
+            if(mi->t.time > f_to)
                 break;
         }
         uint32_t ret = (mi - mb) * message_size;
@@ -633,15 +633,15 @@ struct ifile_replay : ifile
             if(!can_run)
                 return ret;
 
-            int64_t s = (mb->t.time - file_time) - dt;
-            assert(s >= 0);
-            if(s < int64_t(11 * ttime_t::frac))
-                usleep(s / 1000);
+            ttime_t s = mb->t.time - file_time - dt;
+            assert(s >= ttime_t());
+            if(s < seconds(11))
+                usleep(s.value / 1000);
             else
             {
                 sleep(10);
                 start_time = cur_ttime();
-                file_time.value = mb->t.time.value;
+                file_time = mb->t.time;
                 mlog() << "ifile_replay() reinit, start_time: " << start_time << ", file_time: " << file_time;
             }
             goto rep;

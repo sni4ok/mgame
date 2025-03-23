@@ -75,8 +75,6 @@ struct lws_i : sec_id_by_name<lws_impl>
         {
             ++it;
             skip_fixed(it, "\":\"trade\",\"E\":");
-            //event time
-            //ttime_t etime = {my_cvt::atoi<uint64_t>(it, 13) * (ttime_t::frac / 1000)};
             it = it + 14;
             skip_fixed(it, "\"s\":\"");
             char_cit ne = find(it, ie, '\"');
@@ -96,7 +94,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             ne = find(it, ie, 'T');
             it = ne + 1;
             skip_fixed(it, "\":");
-            ttime_t etime = {my_cvt::atoi<uint64_t>(it, 13) * (ttime_t::frac / 1000)};
+            ttime_t etime = milliseconds(my_cvt::atoi<int64_t>(it, 13));
             it = it + 14;
             skip_fixed(it, "\"m\":");
             int direction;

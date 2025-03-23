@@ -65,7 +65,7 @@ void sort_data_by_folders(str_holder folder)
         if(f == e || (e - f) != 11)
             throw mexception(es() % "sort_data_by_folders() unsupported file: " % fname);
         uint32_t t = lexical_cast<uint32_t>(f + 1, e);
-        date d = parse_time({uint64_t(t) * 1000000000}).date;
+        date d = parse_time(seconds(t)).date;
         mstring nf = folder + to_string(d.year) + "/" + to_string(d.month) + "/";
         if(created_dirs.find(nf) == created_dirs.end())
         {
