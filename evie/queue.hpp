@@ -30,7 +30,12 @@ public:
         return data.back();
     }
     void __pop_front_impl() {
-        if(from * 2 >= data.capacity())
+        if(from == data.size())
+        {
+            data.clear();
+            from = 0;
+        }
+        else if(from * 2 >= data.capacity())
         {
             memmove((void*)data.begin(), data.begin() + from, (data.size() - from) * sizeof(type));
             memset((void*)(data.end() - from), 0, from * sizeof(type));
@@ -39,12 +44,12 @@ public:
         }
     }
     void pop_front(uint64_t count) {
-        assert(from + count < data.size());
+        assert(from + count <= data.size());
         from += count;
         __pop_front_impl();
     }
     void pop_front() {
-        assert(from < data.size());
+        assert(from <= data.size());
         ++from;
         __pop_front_impl();
     }
