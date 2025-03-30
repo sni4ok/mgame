@@ -114,6 +114,7 @@ namespace
         ~stat()
         {
             mlog ml;
+            ml << endl;
             for(auto&& v: data)
             {
                 info& i = v.second.second;

@@ -211,6 +211,35 @@ namespace
         if(ret != wsize) [[unlikely]]
             throw_system_failure(es() % "pipe::write, wsize: " % wsize  % ", ret: " % ret);
     }
+
+    struct crc_check
+    {
+        uint32_t count;
+        crc32 crc;
+
+        crc_check() : count(), crc(0)
+        {
+        }
+        ~crc_check()
+        {
+            mlog() << "crc_check: " << count << " messages, crc: " << crc.checksum();
+        }
+    };
+
+    void* crc_init(char_cit)
+    {
+        return new crc_check;
+    }
+    void crc_destroy(void *p)
+    {
+        delete (crc_check*)p;
+    }
+    void crc_proceed(void* p, const message* m, uint32_t count)
+    {
+        crc_check* c = (crc_check*)p;
+        c->count += count;
+        c->crc.process_bytes((char_cit)m, message_size * count);
+    }
     void* mmap_init(char_cit params)
     {
         mlog() << "mmap_init() open: " << _str_holder(params);
@@ -358,10 +387,11 @@ void exporter::operator=(exporter&& r)
 
 exports_factory::exports_factory()
 {
-    exporters["log_messages"] = {&hole_no_init, &hole_no_destroy, &log_message};
-    exporters["tyra"] = {&tyra_create, &tyra_destroy, &tyra_proceed};
-    exporters["pipe"] = {&pipe_init, &pipe_destroy, &pipe_proceed};
-    exporters["mmap_cp"] = {&mmap_init, &mmap_destroy, &mmap_proceed};
-    exporters["/dev/null"] = {&hole_no_init, &hole_no_destroy, &hole_no_proceed};
+    exporters["log_messages"] = {hole_no_init, hole_no_destroy, log_message};
+    exporters["tyra"] = {tyra_create, tyra_destroy, tyra_proceed};
+    exporters["pipe"] = {pipe_init, pipe_destroy, pipe_proceed};
+    exporters["crc"] = {crc_init, crc_destroy, crc_proceed};
+    exporters["mmap_cp"] = {mmap_init, mmap_destroy, mmap_proceed};
+    exporters["/dev/null"] = {hole_no_init, hole_no_destroy, hole_no_proceed};
 }
 

@@ -299,25 +299,30 @@ void import_tcp_start(void* c, void* p)
     }
 }
 
-struct import_ifile
+template<void* (*fcreate)(const char* params, volatile bool& can_run), void (*fdestroy)(void *v)>
+struct import_ifile_impl
 {
-    volatile bool& can_run;
     void* ptr;
+    volatile bool& can_run;
 
-    import_ifile(volatile bool& can_run, const mstring& params) : can_run(can_run)
+    import_ifile_impl(volatile bool& can_run, const mstring& params) : can_run(can_run)
     {
-        ptr = ifile_create(params.c_str(), can_run);
+        ptr = fcreate(params.c_str(), can_run);
     }
-    ~import_ifile()
+    ~import_ifile_impl()
     {
-        ifile_destroy(ptr);
+        fdestroy(ptr);
     }
 };
 
+typedef import_ifile_impl<ifile_create, ifile_destroy> import_ifile;
+typedef import_ifile_impl<files_replay_create, files_replay_destroy> import_files_replay;
+
+template<typename fimport, uint32_t (*fread)(void *v, char* buf, uint32_t buf_size)>
 void import_ifile_start(void* c, void* p)
 {
-    import_ifile& f = *((import_ifile*)(c));
-    reader<void*> r(p, f.ptr, &ifile_read);
+    fimport& f = *((fimport*)(c));
+    reader<void*> r(p, f.ptr, fread);
     while(f.can_run) {
         bool ret = r.proceed();
         if(!ret) [[unlikely]]
@@ -359,7 +364,10 @@ static const int _import_tcp = register_importer("tyra",
     {importer_init<import_tcp>, importer_destroy<import_tcp>, import_tcp_start, nullptr}
 );
 static const int _import_file = register_importer("file",
-    {importer_init<import_ifile>, importer_destroy<import_ifile>, import_ifile_start, nullptr}
+    {importer_init<import_ifile>, importer_destroy<import_ifile>, import_ifile_start<import_ifile, ifile_read>, nullptr}
+);
+static const int _import_files_replay = register_importer("files_replay",
+    {importer_init<import_files_replay>, importer_destroy<import_files_replay>, import_ifile_start<import_files_replay, files_replay_read>, nullptr}
 );
 
 hole_importer create_importer(char_cit s)

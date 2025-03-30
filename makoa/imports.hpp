@@ -22,5 +22,9 @@ extern "C"
     void* ifile_create(const char* params, volatile bool& can_run);
     void ifile_destroy(void *v);
     uint32_t ifile_read(void *v, char* buf, uint32_t buf_size);
+
+    void* files_replay_create(const char* params, volatile bool& can_run);
+    void files_replay_destroy(void *v);
+    uint32_t files_replay_read(void *v, char* buf, uint32_t buf_size);
 }
 

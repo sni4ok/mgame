@@ -130,7 +130,10 @@ namespace {
         }
         estat(mstring params) : brief(params == "brief"), name(params), count()
         {
-            mlog() << "stat " << params << " initialized";
+            if(!params.empty())
+                params.push_back(' ');
+
+            mlog() << "stat " << params << "initialized";
         }
         void proceed(const message* mes, uint32_t count)
         {

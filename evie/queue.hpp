@@ -49,7 +49,7 @@ public:
         __pop_front_impl();
     }
     void pop_front() {
-        assert(from <= data.size());
+        assert(from < data.size());
         ++from;
         __pop_front_impl();
     }
@@ -61,6 +61,10 @@ public:
     }
     void push_back(const type& v) {
         data.push_back(v);
+    }
+    void insert(const type* from, const type* to)
+    {
+        data.insert(data.end(), from, to);
     }
     void clear() {
         data.clear();
@@ -94,8 +98,19 @@ public:
     uint64_t size() const {
         return data.size() - from;
     }
+    uint64_t buf_size() const {
+        return data.size();
+    }
     iterator erase(iterator it) {
         return data.erase(it);
+    }
+    void reserve(uint64_t size)
+    {
+        data.reserve(size);
+    }
+    void add_size(uint64_t size)
+    {
+        data.template __resize<false>(data.size() + size);
     }
 };
 

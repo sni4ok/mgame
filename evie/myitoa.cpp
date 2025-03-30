@@ -5,6 +5,7 @@
 #include "algorithm.hpp"
 #include "myitoa.hpp"
 #include "math.hpp"
+#include "string.hpp"
 
 namespace my_cvt
 {
@@ -444,6 +445,7 @@ namespace my_cvt
 template<>
 double lexical_cast<double>(char_cit from, char_cit to)
 {
+    try{
     uint32_t size = to - from;
     if(!size)
         throw str_exception("lexical_cast<double>() from == to");
@@ -492,5 +494,10 @@ double lexical_cast<double>(char_cit from, char_cit to)
 
     int64_t v = my_cvt::atoi<int64_t>(from, size);
     return double(v);
+    }
+    catch(exception& e)
+    {
+        throw mexception(es() % "lexical_cast<double>() error for: " % str_holder(from, to));
+    }
 }
 

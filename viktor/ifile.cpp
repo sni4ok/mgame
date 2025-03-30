@@ -522,7 +522,7 @@ struct ifile
         return false;
     }
 
-    virtual uint32_t read(char_it buf, uint32_t buf_size)
+    uint32_t read(char_it buf, uint32_t buf_size)
     {
         if(buf_size % message_size) [[unlikely]]
             throw mexception(es() % "ifile::read(): inapropriate size: " % buf_size);
@@ -586,54 +586,93 @@ struct ifile
         }
     }
 
-    virtual ~ifile()
+    ~ifile()
     {
     }
 };
 
-struct ifile_replay : ifile
+struct ifiles_replay
 {
     volatile bool& can_run;
     const double speed;
-    ttime_t file_time, start_time;
-    mvector<char> b, b2;
+    mvector<ifile> files;
 
-    ifile_replay(volatile bool& can_run, const mstring& fname, ttime_t tf, ttime_t tt, double speed)
-        : ifile(can_run, fname, tf, tt, true), can_run(can_run), speed(speed), file_time()
+    ttime_t start_time, files_time;
+    queue<message> b;
+    mvector<queue<char> > b2;
+
+    ifiles_replay(volatile bool& can_run, const mvector<str_holder>& files, ttime_t tf, ttime_t tt, double speed)
+        : can_run(can_run), speed(speed), files_time()
     {
+        for(str_holder f: files)
+            this->files.emplace_back(can_run, f, tf, tt, true);
         start_time = cur_ttime();
+        b2.resize(files.size());
     }
     uint32_t read(char* buf, uint32_t buf_size)
     {
     rep:
-        uint32_t sz = b.size();
-        if(buf_size - sz) {
-            b2.resize(buf_size - sz);
-            uint32_t r = ifile::read(&b2[0], buf_size - sz);
-            if(r)
-                b.insert(b2.begin(), b2.begin() + r);
-            else if(b.empty())
-                return 0;
+        for(uint32_t i = 0; i != files.size(); ++i)
+        {
+            queue<char>& b2_ = b2[i];
+            if(b2_.size() < buf_size) {
+                b2_.reserve(b2_.buf_size() + 10 * buf_size);
+                uint32_t r = files[i].read(b2_.end(), buf_size);
+                b2_.add_size(r);
+            }
         }
-        message* mb = (message*)&b[0], *me = mb + b.size() / message_size, *mi = mb;
-        if(!file_time)
-            file_time = mb->t.time;
+
+        uint32_t mc = buf_size / message_size;
+        while(b.size() != mc)
+        {
+            ttime_t min_time = limits<ttime_t>::max;
+            uint32_t min_idx = 0;
+            for(uint32_t i = 0; i != files.size(); ++i)
+            {
+                queue<char>& b2_ = b2[i];
+                if(b2_.size() >= message_size)
+                {
+                    message* m = (message*)b2_.begin();
+                    if(m->t.time < min_time)
+                    {
+                        min_idx = i;
+                        min_time = m->t.time;
+                    }
+                }
+            }
+            if(min_time == limits<ttime_t>::max)
+                break;
+            assert(min_time != ttime_t());
+
+            queue<char>& b2_ = b2[min_idx];
+            message* m = (message*)b2_.begin();
+            b.push_back(*m);
+            b2_.pop_front(message_size);
+        }
+
+        message* mb = b.begin(), *me = b.end(), *mi = mb;
+
+        if(!files_time) [[unlikely]]
+            files_time = mb->t.time;
+
         ttime_t t = cur_ttime();
         ttime_t dt = {int64_t((t - start_time).value * speed)};
-        ttime_t f_to{file_time + dt};
+        ttime_t f_to = files_time + dt;
+
         for(; mi != me; ++mi) {
             if(mi->t.time > f_to)
                 break;
         }
-        uint32_t ret = (mi - mb) * message_size;
+
+        uint32_t ret = mi - mb;
         copy((char_cit)mb, (char_cit)mi, buf);
-        b.erase(b.begin(), b.begin() + ret);
+        b.pop_front(ret);
         if(!ret && !b.empty())
         {
             if(!can_run)
-                return ret;
+                return 0;
 
-            ttime_t s = mb->t.time - file_time - dt;
+            ttime_t s = mb->t.time - files_time - dt;
             assert(s >= ttime_t());
             if(s < seconds(11))
                 usleep(s.value / 1000);
@@ -641,49 +680,61 @@ struct ifile_replay : ifile
             {
                 sleep(10);
                 start_time = cur_ttime();
-                file_time = mb->t.time;
-                mlog() << "ifile_replay() reinit, start_time: " << start_time << ", file_time: " << file_time;
+                files_time = mb->t.time;
+                mlog() << "ifile_replay() reinit, start_time: " << start_time << ", files_time: " << files_time;
             }
             goto rep;
         }
-        return ret;
+        return ret * message_size;
     }
 };
 
 extern "C"
 {
+    void* files_replay_create(const char* params, volatile bool& can_run)
+    {
+        mvector<str_holder> p = split(_str_holder(params), ' ');
+        if(p.empty() || p.size() > 4)
+            throw str_exception("files_replay_create() speed file_name[ time_from[ time_to]]");
+        double speed = lexical_cast<double>(p[0]);
+        mvector<str_holder> files = split(p[1], ',');
+        ttime_t tf = p.size() > 2 ? parse_time(p[2]) : limits<ttime_t>::min;
+        ttime_t tt = p.size() > 3 ? parse_time(p[3]) : limits<ttime_t>::max;
+        return new ifiles_replay(can_run, files, tf, tt, speed);
+    }
+
+    void files_replay_destroy(void *v)
+    {
+        delete ((ifiles_replay*)v);
+    }
+
+    uint32_t files_replay_read(void *v, char* buf, uint32_t buf_size)
+    {
+        return ((ifiles_replay*)v)->read(buf, buf_size);
+    }
+
     void* ifile_create(const char* params, volatile bool& can_run)
     {
         mvector<str_holder> p = split(_str_holder(params), ' ');
         if(p.empty() || p.size() > 5)
-            throw str_exception("ifile_create() [history ,replay speed ]file_name[ time_from[ time_to]]");
+            throw str_exception("ifile_create() [history ]file_name[ time_from[ time_to]]");
 
         bool history = (p[0] == "history");
         if(history)
             p.erase(p.begin());
 
-        bool replay = (p[0] == "replay");
-        double speed = 1.;
-        if(replay) {
-            speed = lexical_cast<double>(p[1]);
-            p.erase(p.begin(), p.begin() + 2);
-        }
-
         ttime_t tf = ttime_t(), tt = ttime_t();
         if(p.size() >= 2)
             tf = parse_time(p[1]);
-        else if(!history && !replay)
+        else if(!history)
             tf = cur_ttime();
 
         if(p.size() == 3)
             tt = parse_time(p[2]);
         else
-            tt.value = limits<uint64_t>::max;
+            tt = limits<ttime_t>::max;
 
-        if(replay)
-            return new ifile_replay(can_run, p[0], tf, tt, speed);
-        else
-            return new ifile(can_run, p[0], tf, tt, history);
+        return new ifile(can_run, p[0], tf, tt, history);
     }
 
     void ifile_destroy(void *v)
