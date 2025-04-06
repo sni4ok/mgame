@@ -33,7 +33,7 @@ stream& operator<<(stream& s, const brief_time& t)
 template<typename stream>
 stream& operator<<(stream& s, const message_trade& t)
 {
-    s << "trade|"<< t.security_id << "|" << t.direction << "|"
+    s << "trade|" << t.id << "|" << t.security_id << "|" << t.direction << "|"
         << t.price << "|" << t.count
         << "|" << t.etime << "|" << t.time << "|";
     return s;
@@ -42,7 +42,7 @@ stream& operator<<(stream& s, const message_trade& t)
 template<typename stream>
 stream& operator<<(stream& s, const message_instr& i)
 {
-    s << "instr|"<< i.exchange_id << "|" << i.feed_id << "|" << i.security << "|" << i.security_id
+    s << "instr|" << i.id << "|" << i.exchange_id << "|" << i.feed_id << "|" << i.security << "|" << i.security_id
         << "|" << i.etime << "|" << i.time << "|";
     return s;
 }
@@ -50,7 +50,7 @@ stream& operator<<(stream& s, const message_instr& i)
 template<typename stream>
 stream& operator<<(stream& s, const message_clean& c)
 {
-    s << "clean|"<< c.security_id << "|" << c.source
+    s << "clean|" << c.id << "|" << c.security_id << "|" << c.source
         << "|" << c.etime << "|" << c.time << "|";
     return s;
 }
@@ -58,7 +58,7 @@ stream& operator<<(stream& s, const message_clean& c)
 template<typename stream>
 stream& operator<<(stream& s, const message_book& t)
 {
-    s << "book|"<< t.security_id << "|" << t.level_id << "|" << t.price << "|" << t.count
+    s << "book|" << t.id << "|" << t.security_id << "|" << t.level_id << "|" << t.price << "|" << t.count
         << "|" << t.etime << "|" << t.time << "|";
     return s;
 }
@@ -66,7 +66,7 @@ stream& operator<<(stream& s, const message_book& t)
 template<typename stream>
 stream& operator<<(stream& s, const message_ping& p)
 {
-    s << "ping|"
+    s << "ping|" << p.id << "|"
         << p.etime << "|" << p.time << "|";
     return s;
 }
@@ -74,7 +74,7 @@ stream& operator<<(stream& s, const message_ping& p)
 template<typename stream>
 stream& operator<<(stream& s, const message_hello& h)
 {
-    s << "ping|" << h.name
+    s << "ping|" << h.name << h.id << "|"
         << "|" << h.etime << "|" << h.time << "|";
     return s;
 }

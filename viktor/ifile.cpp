@@ -212,8 +212,10 @@ struct compact_book
                 o.clear();
                 o.mi = it->mi;
             }
-            else if(it->id == msg_clean)
-                orders.erase(it->mc.security_id);
+            else if(it->id == msg_clean) {
+                orders_t& o = orders[it->mc.security_id];
+                o.clear();
+            }
             else {
                 assert(it->id == msg_trade || it->id == msg_clean || it->id == msg_ping);
             }

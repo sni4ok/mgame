@@ -270,7 +270,7 @@ void tuple_for_each(const tuple& t, func f)
     {
         f(get<sz>(t));
         if constexpr(tuple_size_v<tuple> - sz - 1)
-            tuple_for_each<func, tuple, sz + 1>(t, f);
+            tuple_for_each<tuple, func, sz + 1>(t, f);
     }
 }
 

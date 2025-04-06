@@ -33,7 +33,7 @@ lws_dump::lws_dump() : hfile(), lws_not_fake(true), lws_dump_en(), dump_buf("\n 
 
     if(dump) {
         lws_dump_en = true;
-        hfile = ::open(dump, O_WRONLY | O_CREAT | O_APPEND, S_IWRITE | S_IREAD | S_IRGRP | S_IWGRP);
+        hfile = ::open(dump, O_WRONLY | O_CREAT | O_TRUNC, S_IWRITE | S_IREAD | S_IRGRP | S_IWGRP);
         if(hfile < 0)
             throw_system_failure(es() % "lws_dump() open file " % _str_holder(dump) % " error");
         mlog() << "lws_dump to " << _str_holder(dump) << " enabled";
