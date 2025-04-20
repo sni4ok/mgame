@@ -57,7 +57,8 @@ public:
         warning = 256,
         error = 512,
         critical = 1024,
-        no_cout = 2048
+        no_cout = 2048,
+        only_cout = 4096
     };
 
     mlog(uint32_t extra_param = info);

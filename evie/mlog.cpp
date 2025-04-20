@@ -75,23 +75,30 @@ class simple_log
 
     static const uint32_t log_no_cout_size = 10;
 
-    void write_impl(char_cit str, uint32_t size, uint32_t params, uint32_t all_sz, bool first)
+    void write_impl(char_cit str, uint32_t size, uint32_t params, uint32_t all_sz, bool& first)
     {
         if(str)
         {
-            if(stream)
-                stream->write(str, size);
-            if((params & mlog::critical) && stream_crit)
-                stream_crit->write(str, size);
+            if(!(params & mlog::only_cout))
+            {
+                if(stream)
+                    stream->write(str, size);
+                if((params & mlog::critical) && stream_crit)
+                    stream_crit->write(str, size);
+            }
             if((!stream || ((params & mlog::always_cout) && !(params & mlog::no_cout))) && !no_cout)
             {
                 if(all_sz >= log_no_cout_size)
                 {
                     if(first)
-                        cout_write(es() % "[[skipped " % all_sz % " rows from logging to stdout, see log file for found it]]" % endl, true);
+                    {
+                        cout_write(es() % "[[skipped " % all_sz %
+                            " rows from logging to stdout, see log file for found it]]" % endl, true);
+                        first = false;
+                    }
                 }
                 else
-                    cout_write({str, size}, false);
+                    cout_write({str, size}, params & mlog::only_cout);
             }
         }
     }
@@ -108,9 +115,12 @@ class simple_log
             for(;;)
             {
                 uint32_t all_sz = atomic_load(all_size) - writed_sz;
+                bool first = true;
                 for(uint32_t cur_i = 0; cur_i != all_sz; ++cur_i)
                 {
                     data = nodes.pop();
+
+                    if(!(data->params & mlog::only_cout))
                     {
                         str.clear();
                         if(data->params & mlog::store_pid)
@@ -128,7 +138,7 @@ class simple_log
                         if(data->params & mlog::error)
                             str << "ERROR ";
                         str << data->time << ": ";
-                        write_impl(str.begin(), str.size(), data->params, all_sz, !cur_i);
+                        write_impl(str.begin(), str.size(), data->params, all_sz, first);
                     }
 
                     mlog::node* head = &data->head;
@@ -136,11 +146,14 @@ class simple_log
                     while(head)
                     {
                         mlog::node* next = head->next;
-                        write_impl(head->buf, head->size, data->params, all_sz, false);
+                        write_impl(head->buf, head->size, data->params, all_sz, first);
                         if(head != &data->head)
                             pool.free(head);
                         head = next;
                     }
+
+                    if(!(data->params & mlog::only_cout))
+                        write_impl("\n", 1, data->params, all_sz, first);
 
                     nodes.free(data);
                     ++writed_sz;
@@ -291,7 +304,6 @@ mlog::mlog(simple_log* log, uint32_t extra_param) : log(*log)
 
 mlog::~mlog()
 {
-    *this << '\n';
     log.write(buf);
 }
 

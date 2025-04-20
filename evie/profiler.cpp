@@ -7,6 +7,7 @@
 #include "atomic.hpp"
 #include "mtime.hpp"
 #include "mlog.hpp"
+#include "sort.hpp"
 
 struct write_time
 {
@@ -54,11 +55,17 @@ void profilerinfo::print_impl(long mlog_params)
     if(!ncounters)
         return;
 
+    info counters_cpy[max_counters];
+    copy(counters, counters + ncounters, counters_cpy);
+    sort(counters_cpy, counters_cpy + ncounters, [](const info& l, const info& r)
+        {return strcmp(l.name, r.name) < 0;}
+    );
+
     mlog log(mlog_params);
     log << "profiler: \n";
     for(uint64_t c = 0; c != ncounters; ++c)
     {
-        const info i = counters[c];
+        const info i = counters_cpy[c];
         if(!i.count)
             continue;
         uint64_t time_av = i.time / i.count;
