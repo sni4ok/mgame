@@ -7,6 +7,8 @@
 
 #include "../evie/mfile.hpp"
 #include "../evie/fset.hpp"
+#include "../evie/signals.hpp"
+#include "../evie/mlog.hpp"
 
 #include <unistd.h>
 #include <dirent.h>
@@ -123,6 +125,75 @@ void amount_test()
     cout() << "amount_test successfully ended" << endl;
 }
 
+void clear_screen()
+{
+    cout() << "\033[2J\033[1;1H";
+}
+
+void parsers_stat(str_holder f)
+{
+    auto log = log_init();
+    signals_holder sl;
+    mvector<mstring> files = split_s(f);
+
+    struct st
+    {
+        ttime_t from;
+        uint64_t from_size;
+        uint64_t size;
+    };
+
+    mvector<st> stats(files.size());
+    ttime_t ct;
+
+    auto update_stat = [&]()
+    {
+        for(uint32_t i = 0; i != files.size(); ++i)
+        {
+            st& s = stats[i];
+            uint64_t sz;
+
+            if(is_file_exist(files[i].c_str(), &sz))
+            {
+                if(!s.from || sz < s.size)
+                {
+                    s.from = ct;
+                    s.from_size = sz;
+                }
+
+                s.size = sz;
+            }
+            else
+                s = st();
+        }
+    };
+
+    while(can_run)
+    {
+        ct = cur_mtime();
+        update_stat();
+        ct = cur_mtime();
+        clear_screen();
+
+        for(uint32_t i = 0; i != files.size(); ++i)
+        {
+            st& s = stats[i];
+            ttime_t d = ct - s.from;
+
+            if(!!s.from)
+            {
+                uint64_t sz = (s.size - s.from_size) / message_size;
+                uint64_t mps = sz * ttime_t::frac / d.value;
+                cout() << uint_fixed<7, false>(mps) << "/s " << files[i] << endl;;
+            }
+            else
+                cout() << "[no data] " << files[i] << endl;
+        }
+
+        usleep(500000);
+    }
+}
+
 int main(int argc, char** argv)
 {
     try
@@ -133,6 +204,8 @@ int main(int argc, char** argv)
             sort_data_by_folders(_str_holder(argv[2]));
         else if(argc == 2 && _str_holder(argv[1]) == "amount_test")
             amount_test();
+        else if(argc == 3 && _str_holder(argv[1]) == "parsers_stat")
+            parsers_stat(_str_holder(argv[2]));
         else
             throw str_exception("unsupported params");
     }

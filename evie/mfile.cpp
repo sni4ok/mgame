@@ -213,6 +213,7 @@ ttime_t get_file_mtime(char_cit fname)
     bool ret = get_file_stat(fname, st);
     if(!ret)
         throw_system_failure(es() % "fstat() error for " % _str_holder(fname));
-    return {st.st_mtime * ttime_t::frac};
+
+    return {st.st_mtim.tv_sec * ttime_t::frac + st.st_mtim.tv_nsec};
 }
 

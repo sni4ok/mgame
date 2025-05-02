@@ -13,7 +13,7 @@
 #include "array.hpp"
 #include "mtime.hpp"
 
-template<uint32_t sz>
+template<uint32_t sz, bool zeros = true>
 struct uint_fixed
 {
    const uint64_t value;
@@ -31,12 +31,15 @@ struct uint_fixed
          v /= 10;
          --idx;
       }
-      return str_holder("0000000000000", idx);
+      if constexpr(zeros)
+          return str_holder("0000000000000", idx);
+      else
+          return str_holder("             ", idx);
    }
 };
 
-template<typename stream, uint32_t sz>
-stream& operator<<(stream& log, uint_fixed<sz> v)
+template<typename stream, uint32_t sz, bool zeros>
+stream& operator<<(stream& log, uint_fixed<sz, zeros> v)
 {
     log << v.str() << v.value;
     return log;
