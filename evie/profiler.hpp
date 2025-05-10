@@ -57,5 +57,10 @@ struct mprofiler
     ~mprofiler();
 };
 
+struct write_time
+{
+    uint64_t time;
+};
+
 #endif
 

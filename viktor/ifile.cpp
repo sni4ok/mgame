@@ -50,7 +50,7 @@ struct zip_file
     }
     operator bool() const
     {
-        if(zip)
+        if(!!zip)
             return !data.empty();
         else
             return !!f.hfile;
@@ -87,7 +87,7 @@ struct zip_file
     }
     void close()
     {
-        if(zip)
+        if(!!zip)
             data = str_holder();
         else {
             mfile file(0);
@@ -96,7 +96,7 @@ struct zip_file
     }
     void seekg(uint64_t pos)
     {
-        if(zip) {
+        if(!!zip) {
             if(pos > data.size())
                 throw mexception(es() % "zip_file::seekg(), fsize " % data.size() % ", pos " % pos);
             data_it = data.begin() + pos;
@@ -106,7 +106,7 @@ struct zip_file
     }
     void seek_cur(int64_t pos)
     {
-        if(zip)
+        if(!!zip)
             data_it += pos;
         else {
             if(::lseek(f.hfile, pos, SEEK_CUR) < 0)
@@ -115,14 +115,14 @@ struct zip_file
     }
     uint64_t size() const
     {
-        if(zip)
+        if(!!zip)
             return data.size();
         else
             return f.size();
     }
     uint64_t read(char* ptr, uint64_t size)
     {
-        if(zip) {
+        if(!!zip) {
             uint64_t sz = min<uint64_t>(size, data.end() - data_it);
             memcpy(ptr, data_it, sz);
             data_it += sz;
@@ -504,7 +504,7 @@ struct ifile
 
     bool last_file_moved()
     {
-        if(cur_file.zip)
+        if(!!cur_file.zip)
             return false;
 
         int f = ::open(main_file.name.c_str(), O_RDONLY);

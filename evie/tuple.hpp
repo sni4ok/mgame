@@ -349,14 +349,14 @@ void read_csv(func f, str_holder s, char sep = ',', bool skip_empty_lines = true
 }
 
 template<char s, typename func, typename tuple>
-struct print_tuple
+struct print_tuple_t
 {
     func f;
     const tuple& t;
 };
 
 template<size_t sz, typename stream, char sep, typename func, typename tuple>
-void print_tuple_impl(stream& s, const print_tuple<sep, func, tuple>& p)
+void print_tuple_impl(stream& s, const print_tuple_t<sep, func, tuple>& p)
 {
     if constexpr(sz)
         s << sep;
@@ -366,7 +366,7 @@ void print_tuple_impl(stream& s, const print_tuple<sep, func, tuple>& p)
 }
 
 template<typename stream, char sep, typename func, typename tuple>
-stream& operator<<(stream& s, const print_tuple<sep, func, tuple>& p)
+stream& operator<<(stream& s, const print_tuple_t<sep, func, tuple>& p)
 {
     if constexpr(tuple_size_v<tuple>)
         print_tuple_impl<0>(s, p);
@@ -374,8 +374,7 @@ stream& operator<<(stream& s, const print_tuple<sep, func, tuple>& p)
 }
 
 template<char sep = ',', typename func = print_default, typename tuple>
-print_tuple<sep, func, tuple> print(const tuple& t, func f = func())
-    requires(__have_tuple_size<tuple>)
+print_tuple_t<sep, func, tuple> print_tuple(const tuple& t, func f = func())
 {
     return {f, t};
 }

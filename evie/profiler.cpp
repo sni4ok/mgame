@@ -9,24 +9,14 @@
 #include "mlog.hpp"
 #include "sort.hpp"
 
-struct write_time
-{
-    uint64_t time;
-
-    explicit write_time(uint64_t time) : time(time)
-    {
-    }
-};
-
-template<typename stream>
-static stream& operator<<(stream &log,  const write_time& t)
+mlog& operator<<(mlog &log,  const write_time& t)
 {
     uint64_t sec = t.time / ttime_t::frac;
     if(sec)
     {
         log << sec << "sec";
         if(sec < 100)
-            log << " (" << (t.time / 1000000) << "ms)";
+            log << " " << (t.time / 1000000) % 1000 << "ms";
         return log;
     }
 
@@ -35,13 +25,20 @@ static stream& operator<<(stream &log,  const write_time& t)
     {
         log << ms << "ms";
         if(ms < 100)
-            log << " (" << (t.time / 1000) << "us)";
+            log << " " << (t.time / 1000) % 1000 << "us";
         return log;
     }
 
-    log << (t.time / 1000) << "us";
-    if(t.time / 1000 < 100)
-        log << " (" << t.time << "ns)";
+    uint64_t us = t.time / 1000;
+    if(us)
+    {
+        log << us << "us";
+        if(t.time / 1000 < 100)
+            log << " " << t.time % 1000 << "ns";
+        return log;
+    }
+
+    log << t.time << "ns";
     return log;
 }
 
@@ -69,9 +66,9 @@ void profilerinfo::print_impl(long mlog_params)
         if(!i.count)
             continue;
         uint64_t time_av = i.time / i.count;
-        log << _str_holder(i.name) << ": average time: " << write_time(time_av)
-            << ", minimum time: " << write_time(i.time_min) << ", maximum time: " <<  write_time(i.time_max)
-            << ", all time: " << write_time(i.time) << ", count: " << i.count << endl;
+        log << _str_holder(i.name) << ": avg: " << write_time(time_av)
+            << ", min: " << write_time(i.time_min) << ", max: " <<  write_time(i.time_max)
+            << ", all: " << write_time(i.time) << ", count: " << i.count << endl;
     }
 }
 

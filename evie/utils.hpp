@@ -26,11 +26,13 @@ struct uint_fixed
    {
       uint64_t v = value;
       uint32_t idx = sz - 1;
+
       while(v > 9 && idx)
       {
          v /= 10;
          --idx;
       }
+
       if constexpr(zeros)
           return str_holder("0000000000000", idx);
       else
@@ -50,12 +52,16 @@ typedef uint_fixed<2> print2chars;
 template<typename type>
 void split(mvector<type>& ret, char_cit it, char_cit ie, char sep)
 {
-    if(it != ie) {
-        for(;;) {
+    if(it != ie)
+    {
+        for(;;)
+        {
             char_cit i = find(it, ie, sep);
             ret.push_back(type(it, i));
+
             if(i == ie)
                 break;
+
             it = i + 1;
         }
     }
@@ -92,11 +98,14 @@ stream& operator<<(stream& s, decimal d)
 {
     decltype(decimal::value) int_ = d.value / decimal::frac;
     decltype(decimal::value) float_ = d.value % decimal::frac;
-    if(d.value < 0) {
+
+    if(d.value < 0)
+    {
         s << '-';
         int_ = -int_;
         float_ = -float_;
     }
+
     s << int_ << "." << uint_fixed<-decimal::exponent>(float_);
     return s;
 }
@@ -135,6 +144,16 @@ struct counting_iterator
     }
 };
 
+typedef pair<counting_iterator, counting_iterator> pcc;
+
+struct zpcc : pcc
+{
+    zpcc(int64_t value) : pcc(0, value)
+    {
+    }
+};
+
+
 template<char s, bool no_end_s, typename iterator, typename func>
 struct print_impl
 {
@@ -145,14 +164,14 @@ struct print_impl
 template<typename stream, char sep, bool no_end_sep, typename iterator, typename func>
 stream& operator<<(stream& s, const print_impl<sep, no_end_sep, iterator, func>& p)
 {
-    iterator it = p.from;
-    for(; it != p.to; ++it)
+    for(iterator it = p.from; it != p.to; ++it)
     {
         if constexpr(no_end_sep && sep)
         {
             if(it != p.from)
                 s << sep;
         }
+
         p.f(s, *it);
         if constexpr(!no_end_sep && sep)
             s << sep;
@@ -163,9 +182,9 @@ stream& operator<<(stream& s, const print_impl<sep, no_end_sep, iterator, func>&
 struct print_default
 {
     template<typename stream, typename type>
-    void operator()(stream& s, const type& v) const
+    stream& operator()(stream& s, const type& v) const
     {
-        s << v;
+        return s << v;
     }
 };
 
@@ -177,7 +196,6 @@ print_impl<sep, no_end_sep, iterator, func> print(iterator from, iterator to, fu
 
 template<char sep = ',', typename cont, typename func = print_default>
 auto print(const cont& c, func f = func())
-    requires(!__have_tuple_size<cont>)
 {
     return print<sep>(::begin(c), ::end(c), f);
 }

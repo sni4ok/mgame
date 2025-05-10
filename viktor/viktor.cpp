@@ -123,7 +123,7 @@ struct viktor
             if(!e) [[unlikely]]
                 reconnect();
             last_times = (m + count - 1)->mt;
-            if(e) [[likely]]
+            if(!!e) [[likely]]
                 e->proceed(m, count);
         }
         catch(exception& exc)

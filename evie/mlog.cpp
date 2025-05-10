@@ -81,9 +81,9 @@ class simple_log
         {
             if(!(params & mlog::only_cout))
             {
-                if(stream)
+                if(!!stream)
                     stream->write(str, size);
-                if((params & mlog::critical) && stream_crit)
+                if((params & mlog::critical) && !!stream_crit)
                     stream_crit->write(str, size);
             }
             if((!stream || ((params & mlog::always_cout) && !(params & mlog::no_cout))) && !no_cout)
@@ -162,9 +162,9 @@ class simple_log
                 {
                     if(cntr != cntr_from)
                         cntr /= 2;
-                    if(stream)
+                    if(!!stream)
                         stream->flush(true);
-                    if(stream_crit)
+                    if(!!stream_crit)
                         stream_crit->flush(true);
                 }
                 if(!all_sz && !can_run)
@@ -220,7 +220,7 @@ public:
             if(params & mlog::lock_file)
             {
                 stream->lock();
-                if(stream_crit)
+                if(!!stream_crit)
                     stream_crit->lock();
             }
         }

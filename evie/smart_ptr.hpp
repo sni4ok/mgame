@@ -59,9 +59,9 @@ struct unique_ptr
     {
         return ptr;
     }
-    operator bool() const
+    bool operator!() const
     {
-        return ptr;
+        return !ptr;
     }
     type* release()
     {
