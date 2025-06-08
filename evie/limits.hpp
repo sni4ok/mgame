@@ -11,7 +11,7 @@
 template<typename t>
 struct limits
 {
-    static constexpr t min = is_signed_v<t> ? t(1) << (sizeof(t) * 8 - 1) : t();
+    static constexpr t min = is_signed_v<t> ? t(-1) << (sizeof(t) * 8 - 1) : t();
     static constexpr t max = ~min;
 };
 

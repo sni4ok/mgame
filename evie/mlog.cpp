@@ -207,7 +207,6 @@ public:
             log = this;
             free_threads = init_free_threads();
             profiler = new profilerinfo;
-            profiler->log_on_exit = false;
         }
         if(file_name)
         {
@@ -228,7 +227,9 @@ public:
     }
     ~simple_log()
     {
-        profiler->print(mlog::info);
+        if(!(params & mlog::no_profiler))
+            profiler->print(mlog::info);
+
         can_run = false;
         work_thread.join();
         delete profiler;

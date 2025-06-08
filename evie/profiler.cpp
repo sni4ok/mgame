@@ -72,7 +72,7 @@ void profilerinfo::print_impl(long mlog_params)
     }
 }
 
-profilerinfo::profilerinfo() : cur_counters(), log_on_exit(true)
+profilerinfo::profilerinfo() : cur_counters()
 {
 }
 
@@ -127,8 +127,6 @@ void profilerinfo::print(long mlog_params)
 
 profilerinfo::~profilerinfo()
 {
-    if(log_on_exit)
-        print_impl(mlog::info);
 }
 
 mprofiler::mprofiler(uint64_t counter_id) : counter_id(counter_id), time(cur_ttime())

@@ -14,7 +14,7 @@ IF(NOT IS_CLANG)
     set(IS_CLANG OFF CACHE BOOL "clang" FORCE)
 ENDIF(NOT IS_CLANG)
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -march=native -std=c++23")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic -march=native -std=c++23")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 IF("${IS_CLANG}")

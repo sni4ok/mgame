@@ -45,8 +45,8 @@ namespace my_cvt
     uint32_t itoa(char_it buf, int32_t v);
     uint32_t itoa(char_it buf, uint64_t v);
     uint32_t itoa(char_it buf, int64_t v);
-    uint32_t itoa(char_it buf, __uint128_t v);
-    uint32_t itoa(char_it buf, __int128_t v);
+    uint32_t itoa(char_it buf, uint128_t v);
+    uint32_t itoa(char_it buf, int128_t v);
     uint32_t itoa(char_it buf, double v);
 
     struct exception : ::exception

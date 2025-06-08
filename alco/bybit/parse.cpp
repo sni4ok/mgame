@@ -38,8 +38,6 @@ struct lws_i : sec_id_by_name<lws_impl>
         if(cfg.log_lws)
             mlog() << "lws proceed: " << str_holder(in, len);
 
-        static uint32_t counter = 0;
-        ++counter;
         char_cit it = in, ie = it + len, ne;
         skip_fixed(it, "{\"");
         if(*it == 't')

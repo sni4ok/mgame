@@ -39,7 +39,6 @@ class profilerinfo : public stack_singleton<profilerinfo>
 
     friend class simple_log;
 public:
-    bool log_on_exit;
 
     uint64_t register_counter(const char* id);
     void add_info(uint64_t counter_id, uint64_t time);

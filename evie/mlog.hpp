@@ -52,6 +52,7 @@ public:
         no_crit_file = 16,
         truncate_file = 32,
         truncate_crit_file = 64,
+        no_profiler = 8192,
 
         info = 128,
         warning = 256,

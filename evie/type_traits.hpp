@@ -41,9 +41,9 @@ struct is_integral<t> \
     static constexpr bool value = true; \
 };
 
-#define SET_INTEGRALE(t) \
-    SET_INTEGRAL(signed t) \
-    SET_INTEGRAL(unsigned t)
+#define SET_INTEGRALE(st, ut) \
+    SET_INTEGRAL(st) \
+    SET_INTEGRAL(ut)
 
 template<typename t>
 struct make_unsigned
@@ -55,25 +55,25 @@ struct make_signed
 {
 };
 
-#define SET_UNSIGNED(t, ft) \
+#define SET_UNSIGNED(t, st, ut) \
 template<> \
 struct make_unsigned<t> \
 { \
-    typedef unsigned ft type; \
+    typedef ut type; \
 }; \
 template<> \
 struct make_signed<t> \
 { \
-    typedef signed ft type; \
+    typedef st type; \
 };
 
-#define SET_UNSIGNEDE(t) \
-    SET_UNSIGNED(signed t, t) \
-    SET_UNSIGNED(unsigned t, t)
+#define SET_INTEGRAL_TYPE(st, ut) \
+    SET_INTEGRALE(st, ut) \
+    SET_UNSIGNED(st, st, ut) \
+    SET_UNSIGNED(ut, st, ut)
 
-#define SET_INTEGRAL_TYPE(t) \
-    SET_INTEGRALE(t) \
-    SET_UNSIGNEDE(t)
+#define SET_INTEGRAL_TYPE_E(t) \
+    SET_INTEGRAL_TYPE(signed t, unsigned t)
 
 #define PP ()
 #define EXPAND(...) EXPAND4(__VA_ARGS__)
@@ -88,9 +88,12 @@ struct make_signed<t> \
   __VA_OPT__(FOR_EACH_AGAIN PP (macro, __VA_ARGS__))
 #define FOR_EACH_AGAIN() FOR_EACH_HELPER
 
-FOR_EACH(SET_INTEGRAL_TYPE, char, short, int, long, long long, __int128)
+__extension__ typedef __int128 int128_t;
+__extension__ typedef  __uint128_t uint128_t;
+
+FOR_EACH(SET_INTEGRAL_TYPE_E, char, short, int, long, long long)
+SET_INTEGRAL_TYPE(int128_t, uint128_t)
 FOR_EACH(SET_INTEGRAL, char, wchar_t, bool)
-SET_UNSIGNED(char, char)
 
 template<typename t>
 struct remove_reference

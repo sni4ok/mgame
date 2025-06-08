@@ -192,11 +192,14 @@ struct cas_array : emplace_decl<type, cas_array<type, max_size, blist> >
         union {
             uint64_t id;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
             struct {
                 uint16_t prev, next;
                 uint16_t a_next;
                 uint16_t salt;
             };
+#pragma GCC diagnostic pop
         };
     };
 

@@ -189,7 +189,7 @@ namespace my_cvt
         return ret + ita8.digits;
     }
 
-    uint32_t itoa(char *buf, __uint128_t i)
+    uint32_t itoa(char *buf,uint128_t i)
     {
         if(i <= limits<uint64_t>::max)
             return itoa(buf, uint64_t(i));
@@ -241,14 +241,14 @@ namespace my_cvt
             return itoa(buf, uint64_t(i));
     }
 
-    uint32_t itoa(char_it buf, __int128_t i)
+    uint32_t itoa(char_it buf, int128_t i)
     {
         if(i < 0) {
             *buf++ = '-';
-            return itoa(buf, __uint128_t(-i)) + 1;
+            return itoa(buf, uint128_t(-i)) + 1;
         }
         else
-            return itoa(buf, __uint128_t(i));
+            return itoa(buf, uint128_t(i));
     }
 
     const double d_max_d = static_cast<double>(uint64_t(1) << 62);
@@ -438,7 +438,7 @@ namespace my_cvt
         check_itoa(int16_t());
         check_itoa(int32_t());
         check_itoa(int64_t());
-        check_itoa(__int128_t());
+        check_itoa(int128_t());
     }
 }
 

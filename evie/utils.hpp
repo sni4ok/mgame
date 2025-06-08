@@ -188,7 +188,7 @@ struct print_default
     }
 };
 
-template<char sep = ',', char no_end_sep = true, typename iterator, typename func = print_default>
+template<char sep = ',', bool no_end_sep = true, typename iterator, typename func = print_default>
 print_impl<sep, no_end_sep, iterator, func> print(iterator from, iterator to, func f = func())
 {
     return {from, to, f};
