@@ -59,7 +59,8 @@ public:
     void release_node(linked_node* n)
     {
         uint32_t consumers_left = atomic_sub(n->cnt, 1);
-        if(!consumers_left) {
+        if(!consumers_left)
+        {
             n->next = nullptr;
             this->free(n);
         }
@@ -92,11 +93,13 @@ struct node_free
     }
     ~node_free()
     {
-        try {
+        try
+        {
             if(n)
                 ll.release_node(n);
         }
-        catch(exception& e) {
+        catch(exception& e)
+        {
             mlog() << "~node_free() " << e;
         }
     }
@@ -110,7 +113,8 @@ struct actives
         ttime_t time; //last parser time for current security_id
         bool disconnected;
 
-        bool operator < (const type& r) const {
+        bool operator < (const type& r) const
+        {
             return security_id < r.security_id;
         }
     };
@@ -130,16 +134,18 @@ public:
     {
         tmp = {security_id, ttime_t(), false};
         auto it = lower_bound(data.begin(), data.end(), tmp);
-        if(it != data.end() && it->security_id == security_id) [[unlikely]]{
+        if(it != data.end() && it->security_id == security_id) [[unlikely]]
+        {
             //if(!it->disconnected)
             //    throw mexception(es() % "activites, security_id " % security_id % " already in active list");
             //else {
                 it->disconnected = false;
                 it->time = ttime_t(); //TODO: this for several usage makoa_test etc, remove or overthink it later 
             //}
-        } else {
-            it = data.insert(it, tmp);
         }
+        else
+            it = data.insert(it, tmp);
+
         last_value = &(*it);
         return *last_value;
     }
@@ -175,8 +181,10 @@ struct context
     actives::type& check(uint32_t security_id, ttime_t time)
     {
         auto& m = acs.get(security_id);
+
         if(m.time > time) [[unlikely]]
             throw mexception(es() % "context::check() m.time: " % m.time.value % " > time: " % time.value);
+
         m.time = time;
         return m;
     }
@@ -203,6 +211,7 @@ struct context
 class engine::impl : public stack_singleton<engine::impl>
 {
     volatile bool& can_run;
+    bool set_engine_time;
     volatile bool can_exit;
     my_mutex mutex;
     my_condition cond;
@@ -260,11 +269,13 @@ class engine::impl : public stack_singleton<engine::impl>
         }
         ~imple()
         {
-            try {
+            try
+            {
                 if(prev)
                     ll->release_node(prev);
             }
-            catch(exception& e) {
+            catch(exception& e)
+            {
                 mlog() << "~imple() " << e;
             }
         }
@@ -291,7 +302,8 @@ class engine::impl : public stack_singleton<engine::impl>
                     ies.push(i);
                     i = nullptr;
                 }
-                if(!res) {
+                if(!res)
+                {
                     if(can_exit)
                         break;
                     wait_updates();
@@ -331,7 +343,8 @@ public:
         if(i)
             ies.push(i);*/
     }
-    impl(volatile bool& can_run) : can_run(can_run), can_exit(false), ies("exporters_queue")
+    impl(volatile bool& can_run, bool set_engine_time) : can_run(can_run), set_engine_time(set_engine_time),
+        can_exit(false), ies("exporters_queue")
     {
     }
     str_holder alloc()
@@ -362,6 +375,14 @@ public:
 
         char_cit ptr = buf.begin() - ctx->buf_delta;
         message* m = (message*)(ptr);
+
+        if(set_engine_time)
+        {
+            ttime_t ct = cur_ttime();
+            for(uint32_t i = 0; i != count; ++i)
+                m[i].t.time = ct;
+        }
+
         linked_node* n = (linked_node*)(ptr - sizeof(linked_node::_));
         set_export_mtime(m);
         n->count = count;
@@ -382,7 +403,8 @@ public:
 
         for(uint32_t i = 0; i != count; ++i, ++m)
         {
-            switch(m->id.id) {
+            switch(m->id.id)
+            {
                 case(msg_book) : {
                     ctx->check(m->mb.security_id, m->mb.time);
                     break;
@@ -398,7 +420,8 @@ public:
                 case(msg_instr) : {
                     uint32_t security_id = calc_crc(m->mi);
                     if(security_id != m->mi.security_id)
-                        throw mexception(es() % "instrument crc mismatch, in: " % m->mi.security_id % ", calculated: " % security_id);
+                        throw mexception(es() % "instrument crc mismatch, in: "
+                            % m->mi.security_id % ", calculated: " % security_id);
                     ctx->insert(security_id, m->mi.time);
                     break;
                 }
@@ -431,18 +454,20 @@ public:
             n->count = cur_c;
             n->cnt = consumers;
             for(uint32_t i = 0; i != cur_c; ++i, ++ci)
-                n->m[i].mc = message_clean{{secs[ci].time, ttime_t()}, msg_clean, "", secs[ci].security_id, 1/*source*/};
+                n->m[i].mc = message_clean{{secs[ci].time, ttime_t()}, msg_clean, "",
+                    secs[ci].security_id, 1/*source*/};
             ll.push(n);
             notify();
         }
     }
 };
 
-engine::engine(volatile bool& can_run, bool pooling, const mvector<mstring>& exports, uint32_t export_threads) : pimpl()
+engine::engine(volatile bool& can_run, bool pooling, const mvector<mstring>& exports, uint32_t export_threads,
+    bool set_engine_time) : pimpl()
 {
     set_can_run(&can_run);
     pooling_mode = pooling;
-    unique_ptr<engine::impl> p(new engine::impl(can_run));
+    unique_ptr<engine::impl> p(new engine::impl(can_run, set_engine_time));
     p->init(exports, export_threads);
     pimpl = p.release();
 }
@@ -461,7 +486,8 @@ void actives::on_disconnect()
     {
         auto& v = get(it->security_id);
         if(v.disconnected)
-            mlog(mlog::warning) << "makoa() actives::on_disconnect(), " << it->security_id << " already disconnected";
+            mlog(mlog::warning) << "makoa() actives::on_disconnect(), "
+                << it->security_id << " already disconnected";
 
         get(it->security_id).disconnected = true;
     }

@@ -34,20 +34,20 @@ struct date
     uint16_t year;
     uint8_t month, day;
 
-    constexpr bool operator==(date r) const {
+    constexpr bool operator==(date r) const
+    {
         return year == r.year && month == r.month && day == r.day;
     }
-    constexpr bool operator!=(date r) const {
-        return !(*this == r);
-    }
-    constexpr bool operator<(date r) const {
+    constexpr bool operator<(date r) const
+    {
         if(year != r.year)
             return year < r.year;
         if(month != r.month)
             return month < r.month;
         return day < r.day;
     }
-    constexpr bool operator<=(date r) const {
+    constexpr bool operator<=(date r) const
+    {
         if(*this == r)
             return true;
         else
@@ -57,14 +57,17 @@ struct date
     date_duration operator-(date r) const;
     date& operator+=(date_duration d);
 
-    date& operator-=(date_duration d) {
+    date& operator-=(date_duration d)
+    {
         return *this += date_duration(-d.days);
     }
-    date operator+(date_duration d) const {
+    date operator+(date_duration d) const
+    {
         date td = *this;
         return td += d;
     }
-    date operator-(date_duration d) const {
+    date operator-(date_duration d) const
+    {
         date td = *this;
         return td -= d;
     }
@@ -75,7 +78,8 @@ struct time_duration
     uint8_t hours, minutes, seconds;
     uint32_t nanos;
 
-    constexpr bool operator<(time_duration r) const {
+    constexpr bool operator<(time_duration r) const
+    {
         if(hours != r.hours)
             return hours < r.hours;
         if(minutes != r.minutes)
@@ -84,13 +88,16 @@ struct time_duration
             return seconds < r.seconds;
         return nanos < r.nanos;
     }
-    constexpr bool operator!=(time_duration r) const {
+    constexpr bool operator!=(time_duration r) const
+    {
         return nanos != r.nanos || seconds != r.seconds || minutes != r.minutes || hours != r.hours;
     }
-    constexpr uint32_t total_seconds() const {
+    constexpr uint32_t total_seconds() const
+    {
         return uint32_t(hours) * 3600 + minutes * 60 + seconds;
     }
-    constexpr uint64_t total_ns() const {
+    constexpr uint64_t total_ns() const
+    {
         return uint64_t(total_seconds()) * ttime_t::frac + nanos;
     }
 };

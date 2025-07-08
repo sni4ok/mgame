@@ -28,7 +28,8 @@ namespace
             return ret;
         }
         template<typename key>
-        void advance_impl(std::map<key, uint64_t>::iterator& it, std::map<key, uint64_t>::iterator ie, uint64_t count)
+        void advance_impl(std::map<key, uint64_t>::iterator& it,
+            std::map<key, uint64_t>::iterator ie, uint64_t count)
         {
             while(it != ie)
             {
@@ -82,6 +83,7 @@ namespace
                     ++v.bids;
                     v.bids_p.insert(p);
                 }
+
                 v.ob.proceed(*m);
                 if(!v.first_ob_time.value)
                     v.first_ob_time = m->mb.time;
@@ -91,7 +93,8 @@ namespace
                     v.last_ob_time = m->mb.time;
                 }
             }
-            else if(m->id == msg_trade) {
+            else if(m->id == msg_trade)
+            {
                 const price_t& p = m->mt.price;
                 info& v = (data.at(m->mt.security_id)).second;
                 v.min_trade = !!v.min_trade ? min(*v.min_trade, p) : p;
@@ -100,7 +103,8 @@ namespace
                 if(m->mt.count.value)
                     ++v.trades[m->mt.count];
             }
-            else if(m->id == msg_instr) {
+            else if(m->id == msg_instr)
+            {
                 pair<message_instr, info>& v = data[m->mi.security_id];
                 v.first = m->mi;
                 v.second.ob.proceed(*m);
@@ -119,8 +123,10 @@ namespace
             {
                 info& i = v.second.second;
                 ml << "exchange: " << v.second.first.exchange_id << ", feed: " << v.second.first.feed_id
-                    << ", security: " << v.second.first.security << ", security_id: " << v.second.first.security_id << "\n"
-                    << "  from " << i.first_ob_time << " to " << i.last_ob_time << "\n";
+                    << ", security: " << v.second.first.security << ", security_id: "
+                    << v.second.first.security_id << "\n" << "  from "
+                    << i.first_ob_time << " to " << i.last_ob_time << "\n";
+
                 if(!!i.min_trade)
                     ml << "  min_trade: " << *i.min_trade;
                 if(!!i.max_trade)
@@ -133,6 +139,7 @@ namespace
                     ml << " min_ask: " << *i.min_ask;
                 if(!!i.max_ask)
                     ml << " max_ask: " << *i.max_ask;
+
                 auto get_pips = [](const std::set<price_t>& prices)
                 {
                     if(prices.empty())
@@ -149,7 +156,9 @@ namespace
                 };
                 uint64_t trades = sum(i.trades);
                 ml << "\n  trades: " << trades << "(min price step " << get_pips(i.trades_p)  << ") bids: "
-                    << i.bids << "(min price step " << get_pips(i.bids_p) << ") asks: " << i.asks << "(min price step " << get_pips(i.asks_p) << ")";
+                    << i.bids << "(min price step " << get_pips(i.bids_p) << ") asks: "
+                    << i.asks << "(min price step " << get_pips(i.asks_p) << ")";
+
                 if(!i.trades.empty()) {
                     auto it = i.trades.begin(), ie = i.trades.end();
                     ml << "\n  min_trade_count: " << it->first;

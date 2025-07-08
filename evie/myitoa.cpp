@@ -103,7 +103,7 @@ namespace my_cvt
     const pit9 ita9(ita5, ita4); const pit10 ita10(ita5, ita5);
     const pit19 ita19(ita10, ita9);
 
-    inline uint32_t log10(uint32_t i)
+    uint32_t log10(uint32_t i)
     {
         if(i <= 9999) {
             if(i <= 99) {

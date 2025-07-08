@@ -37,18 +37,20 @@ mvector<str_holder> split(str_holder str, char sep)
 
 mstring join(const mstring* it, const mstring* ie, char sep)
 {
+    mstring ret;
+
     if(it == ie)
-        return mstring();
+        return ret;
 
     uint32_t sz = 0;
     for(auto v = it; v != ie; ++v)
         sz += v->size();
 
-    mstring ret;
     ret.resize(sz + (ie - it) - 1);
     buf_stream str(&ret[0], &ret[0] + ret.size());
 
-    for(auto v = it; v != ie; ++v) {
+    for(auto v = it; v != ie; ++v)
+    {
         if(v != it)
             str << sep;
         str << *v;
@@ -66,8 +68,10 @@ class crc32_table
 {
     uint32_t crc_table[256];
 
-    crc32_table() {
-        for(uint32_t i = 0; i != 256; ++i) {
+    crc32_table()
+    {
+        for(uint32_t i = 0; i != 256; ++i)
+        {
             uint32_t crc = i;
             for (uint32_t j = 0; j != 8; j++)
                 crc = crc & 1 ? (crc >> 1) ^ 0xedb88320ul : crc >> 1;
@@ -78,7 +82,8 @@ class crc32_table
     crc32_table(const crc32_table&) = delete;
 
 public:
-    static uint32_t* get() {
+    static uint32_t* get()
+    {
         static crc32_table t;
         return t.crc_table;
     }
@@ -124,6 +129,7 @@ ttime_t read_time_impl::read_time(char_cit& it)
     it += 10;
     if(*it != 'T' || *(it + 3) != ':' || *(it + 6) != ':' || (frac_size ? *(it + 9) != '.' : false))
         throw mexception(es() % "bad time: " % str_holder(it - 10, 20 + (frac_size ? 1 + frac_size : 0)));
+
     uint64_t h = my_cvt::atoi<uint64_t>(it + 1, 2);
     uint64_t m = my_cvt::atoi<uint64_t>(it + 4, 2);
     uint64_t s = my_cvt::atoi<uint64_t>(it + 7, 2);
@@ -157,7 +163,8 @@ const date cur_day_date = parse_time_impl(cur_mtime_seconds()).date;
 inline my_string get_cur_day_str()
 {
     buf_stream_fixed<29> str;
-    str << uint_fixed<4>(cur_day_date.year) << "-" << uint_fixed<2>(cur_day_date.month) << "-" << uint_fixed<2>(cur_day_date.day);
+    str << uint_fixed<4>(cur_day_date.year) << "-" << uint_fixed<2>(cur_day_date.month)
+        << "-" << uint_fixed<2>(cur_day_date.day);
     return my_string(str.begin(), str.end());
 }
 
@@ -247,21 +254,25 @@ int64_t read_decimal_impl(char_cit it, char_cit ie, int exponent)
         ++it;
     char_cit p = find(it, ie, '.');
     char_cit E = find_if((p == ie ? it : p + 1), ie,
-            [](char c) {
-                return c == 'E' || c == 'e';
-                });
+        [](char c)
+        {
+            return c == 'E' || c == 'e';
+        });
 
     int64_t ret = my_cvt::atoi<int64_t>(it, min(p, E) - it);
     int digits = 0;
     int64_t _float = 0;
 
-    if(p != ie) {
+    if(p != ie)
+    {
         ++p;
         digits = E - p;
         _float = my_cvt::atoi<int64_t>(p, digits);
     }
+
     int e = 0;
-    if(E != ie) {
+    if(E != ie)
+    {
         ++E;
         e = my_cvt::atoi<int>(E, ie - E);
     }

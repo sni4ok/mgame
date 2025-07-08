@@ -39,6 +39,7 @@ struct reader
         uint32_t readed = read(socket, const_cast<char_it>(ctx.second.begin()), ctx.second.size());
         if(!readed) [[unlikely]]
             return false;
+
         ctx.second.resize(readed);
         bool ret = import_proceed_data(ctx.second, ctx.first);
         recv_time = time(NULL);
@@ -58,16 +59,19 @@ struct reader
 uint32_t socket_read(int socket, char_it buf, uint32_t buf_size)
 {
     int ret = ::recv(socket, buf, buf_size, 0);
-    if(ret <= 0) [[unlikely]] {
-        if(ret == -1) {
-            if(errno == EAGAIN || errno == EWOULDBLOCK) {
+    if(ret <= 0) [[unlikely]]
+    {
+        if(ret == -1)
+        {
+            if(errno == EAGAIN || errno == EWOULDBLOCK)
+            {
                 MPROFILE("server_EAGAIN")
                 return 0;
             }
             else
                 throw_system_failure("recv() error");
         }
-        else if(ret == 0)
+        else if(!ret)
             throw_system_failure("socket closed");
         else
             throw_system_failure("socket error");
@@ -88,12 +92,14 @@ uint32_t mmap_cp_read(void *v, char_it buf, uint32_t buf_size)
     uint8_t* f = (uint8_t*)v, *e = f + message_size, *i = f;
     uint8_t w = mmap_load(f);
     uint8_t r = mmap_load(f + 1);
+
     if(w < 2 || w >= message_size || r < 2 || r >= message_size) [[unlikely]]
         throw mexception(es() % "mmap_cp_read() internal error, wp: " % uint32_t(w) % ", rp: " % uint32_t(r));
 
     i += r;
     const message* p = (((const message*)v) + 1) + (r - 2) * 255;
     uint8_t cur_count = mmap_load(i);
+
     if(cur_count)
     {
         if(buf_size < cur_count) [[unlikely]]
@@ -138,7 +144,8 @@ struct import_mmap_cp
         {
             uint8_t wc = mmap_load(w);
             uint8_t rc = mmap_load(r);
-            if((rc != 1 && rc != 0) || wc == 1) {
+            if((rc != 1 && rc != 0) || wc == 1)
+            {
                 mmap_store(w, 0);
                 throw mexception(es() % "mmap inconsistence, wp: " % wc % ", rp: " % rc);
             }
@@ -172,7 +179,8 @@ void import_mmap_cp_start(void* imc, void* params)
                 if(!pthread_mutex_trylock(&(s->mutex)))
                 {
                     uint8_t rc = *r;
-                    if(rc < 2) {
+                    if(rc < 2)
+                    {
                         pthread_mutex_unlock(&(s->mutex));
                         throw mexception(es() % "mmap inconsistence 2, rp: " % rc);
                     }
@@ -207,7 +215,9 @@ void work_thread_reader(reader<int>& r, volatile bool& can_run, uint32_t timeout
         int ret = poll(&pfd, 1, 50);
         if(ret < 0)
             throw_system_failure("poll() error");
-        if(ret == 0) {
+
+        if(!ret)
+        {
             //timeout here
             if(time(NULL) > r.recv_time + timeout)
                 throw str_exception("feed timeout");
@@ -244,7 +254,8 @@ struct import_tcp
     my_mutex mutex;
     my_condition cond;
 
-    import_tcp(volatile bool& can_run, const mstring& params) : can_run(can_run), params(params), port(lexical_cast<uint16_t>(params)), count()
+    import_tcp(volatile bool& can_run, const mstring& params) : can_run(can_run), params(params),
+        port(lexical_cast<uint16_t>(params)), count()
     {
     }
     ~import_tcp()
@@ -257,21 +268,26 @@ struct import_tcp
 
 void import_tcp_thread(import_tcp* it, int socket, mstring client, volatile bool& initialized, void* p)
 {
-    try {
+    try
+    {
         socket_holder ss(socket);
         my_mutex::scoped_lock lock(it->mutex);
         ++(it->count);
         initialized = true;
         if(it->count == max_connections)
             mlog(mlog::warning) << "server(" << it->params << ") max_connections exceed on client " << client;
+
         if(it->count > max_connections)
             throw str_exception("limit connections exceed");
+
         it->cond.notify_all();
         lock.unlock();
         mlog() << "server() thread for " << client << " started";
         reader<int> r(p, socket, socket_read);
         work_thread_reader(r, it->can_run, timeout);
-    } catch(exception& e) {
+    }
+    catch(exception& e)
+    {
         mlog(mlog::error) << "server(" << it->params << ") client " << client << " " << e;
     }
     my_mutex::scoped_lock lock(it->mutex);
@@ -283,18 +299,22 @@ void import_tcp_thread(import_tcp* it, int socket, mstring client, volatile bool
 void import_tcp_start(void* c, void* p)
 {
     import_tcp& it = *((import_tcp*)(c));
-    while(it.can_run) {
+    while(it.can_run)
+    {
         mstring client;
         my_mutex::scoped_lock lock(it.mutex);
         while(it.can_run && it.count >= max_connections)
             it.cond.timed_uwait(lock, 50 * 1000);
+
         lock.unlock();
         int socket = socket_accept_async(it.port, false/*local*/, false/*sync*/, &client, &it.can_run, it.params.c_str());
         volatile bool initialized = false;
         thread thrd(&import_tcp_thread, &it, socket, client, ref(initialized), p);
         lock.lock();
+
         while(!initialized)
             it.cond.timed_uwait(lock, 50 * 1000);
+
         thrd.detach();
     }
 }
@@ -323,7 +343,8 @@ void import_ifile_start(void* c, void* p)
 {
     fimport& f = *((fimport*)(c));
     reader<void*> r(p, f.ptr, fread);
-    while(f.can_run) {
+    while(f.can_run)
+    {
         bool ret = r.proceed();
         if(!ret) [[unlikely]]
             return;
@@ -367,7 +388,8 @@ static const int _import_file = register_importer("file",
     {importer_init<import_ifile>, importer_destroy<import_ifile>, import_ifile_start<import_ifile, ifile_read>, nullptr}
 );
 static const int _import_files_replay = register_importer("files_replay",
-    {importer_init<import_files_replay>, importer_destroy<import_files_replay>, import_ifile_start<import_files_replay, files_replay_read>, nullptr}
+    {importer_init<import_files_replay>, importer_destroy<import_files_replay>,
+    import_ifile_start<import_files_replay, files_replay_read>, nullptr}
 );
 
 hole_importer create_importer(char_cit s)

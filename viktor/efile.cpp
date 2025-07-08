@@ -19,7 +19,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-namespace {
+namespace
+{
 
 struct efile
 {
@@ -50,14 +51,16 @@ struct efile
         {
             uint64_t fsz = 0;
             int hfile = open(fname.c_str(), O_RDONLY);
-            if(hfile > 0) {
+            if(hfile > 0)
+            {
                 struct stat st;
                 if(fstat(hfile, &st))
                     throw_system_failure("fstat() error");
                 fsz = st.st_size;
                 close(hfile);
             }
-            if(fsz) {
+            if(fsz)
+            {
                 mstring backup = fname + "_" + to_string(uint64_t(time(NULL)));
                 int r = rename(fname.c_str(), backup.c_str());
                 if(r)
@@ -65,6 +68,7 @@ struct efile
                         << ", error: " << r << ", " << _str_holder(errno ? strerror(errno) : "");
                 else
                     mlog(mlog::critical) << "file renamed from " << fname << ", to " << backup;
+
                 if(fsz % message_size)
                 {
                     mlog(mlog::critical) << "file " << backup << " bad size: " << fsz << ", gzip skipped";
@@ -118,16 +122,16 @@ struct efile
     }
     void proceed_csv(const message* m, uint32_t count)
     {
-        for(uint32_t i = 0; i != count; ++i, ++m) {
+        for(uint32_t i = 0; i != count; ++i, ++m)
+        {
             if(m->id == msg_book)
                 write_csv((message_book&)*m);
             else if(m->id == msg_trade)
                 write_csv((message_trade&)*m);
             else if(m->id == msg_clean)
                 write_csv((message_clean&)*m);
-            else if(m->id == msg_instr) {
+            else if(m->id == msg_instr)
                 write_csv((message_instr&)*m);
-            }
         }
         flush();
     }

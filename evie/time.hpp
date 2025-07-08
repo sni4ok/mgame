@@ -44,10 +44,30 @@ inline constexpr ttime_t microseconds(int64_t s)
     return {s * 1000};
 }
 
+inline constexpr int64_t to_seconds(ttime_t time)
+{
+    return time.value / ttime_t::frac;
+}
+
+inline constexpr int64_t to_ms(ttime_t time)
+{
+    return time.value / (ttime_t::frac / 1000);
+}
+
+inline constexpr int64_t to_us(ttime_t time)
+{
+    return time.value / 1000;
+}
+
 inline ttime_t cur_ttime_seconds()
 {
     return seconds(time(NULL));
 }
+
+struct print_t
+{
+    ttime_t value;
+};
 
 #endif
 

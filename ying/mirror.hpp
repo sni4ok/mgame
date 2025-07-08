@@ -10,8 +10,9 @@ struct mirror
 {
     struct impl;
     
-    mirror(str_holder params); //like "837037107 100"
-                                       //  or  "tBTCUSD 100"
+    mirror(str_holder params); //like "837037107[ 100]"
+                               //  or "tBTCUSD[ 100]"
+                               //  or "$0[ 100]"
 
     void proceed(const message* m, uint32_t count);
     ~mirror();

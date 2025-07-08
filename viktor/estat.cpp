@@ -11,31 +11,10 @@
 #include "../evie/math.hpp"
 #include "../evie/mlog.hpp"
 
-namespace {
+mlog& operator<<(mlog& m, print_t t);
 
-    struct print_t
-    {
-        int64_t value;
-
-        print_t(int64_t value) :  value(value)
-        {
-        }
-    };
-    mlog& operator<<(mlog& m, print_t t)
-    {
-        uint64_t ta = abs(t.value);
-        if(ta > 31536000 * my_cvt::p10<9>())
-            m << (t.value / my_cvt::p10<9>() / 31536000) << " years";
-        else if(ta > my_cvt::p10<10>())
-            m << (t.value / my_cvt::p10<9>()) << "sec";
-        else if(ta > my_cvt::p10<7>())
-            m << (t.value / my_cvt::p10<6>()) << "ms";
-        else if(ta > my_cvt::p10<4>())
-            m << (t.value / my_cvt::p10<3>()) << "us";
-        else
-            m << t.value << "ns";
-        return m;
-    }
+namespace
+{
     struct estat
     {
         bool brief;
@@ -44,7 +23,8 @@ namespace {
 
         struct stat
         {
-            int64_t min, max, sum;
+            int64_t min, max;
+            int128_t sum;
             uint64_t d2, count;
 
             stat() : min(limits<int64_t>::max), max(limits<int64_t>::min), sum(), d2(), count()
@@ -53,7 +33,7 @@ namespace {
 
             void add(ttime_t f, ttime_t t)
             {
-                if(f.value == uint64_t() || t.value == uint64_t())
+                if(!(f || t))
                     return;
 
                 int64_t delta = t.value - f.value;
@@ -61,7 +41,8 @@ namespace {
                 max = ::max(max, delta);
                 sum += delta;
 
-                if(abs(delta) > 1000000) {
+                if(abs(delta) > 1000000)
+                {
                     delta /= 1000;
                     d2 += (delta * delta);
                 }
@@ -71,14 +52,15 @@ namespace {
             }
             void print(mlog& ml, mstring name) const
             {
-                if(count) {
+                if(count)
+                {
                     int64_t mean = sum / count;
                     double dm = double(mean) / 1000.;
                     double var = double(d2 / count) - dm * dm;
                     int64_t stddev = int64_t(sqrt(abs(var)) * 1000);
-                    ml << "\n    " << name << " count:" << count << ", mean: "
-                        << print_t(mean) << ", std: " << print_t(stddev) <<
-                        ", min: " << print_t(min) << ", max: " << print_t(max);
+                    ml << "\n    " << name << " count: " << count << ", mean: "
+                        << print_t({mean}) << ", std: " << print_t({stddev}) <<
+                        ", min: " << print_t({min}) << ", max: " << print_t({max});
                 }
             }
         };
@@ -117,9 +99,13 @@ namespace {
 
         void print() const
         {
-            if(count) {
+            if(count)
+            {
                 mlog ml;
-                ml << "\nstat " << name << " proceed " << count << " messages";
+                ml << "\nstat ";
+                if(!name.empty())
+                    ml << name << " ";
+                ml << "proceed " << count << " messages";
                 mb.print(ml, "book");
                 mt.print(ml, "trades");
                 mc.print(ml, "clear");
@@ -138,8 +124,10 @@ namespace {
         void proceed(const message* mes, uint32_t count)
         {
             this->count += count;
-            if(brief) {
-                for(uint32_t i = 0; i != count; ++i, ++mes) {
+            if(brief)
+            {
+                for(uint32_t i = 0; i != count; ++i, ++mes)
+                {
                     const message& m = *mes;
                     if(m.id == msg_book)
                         mb.add(m.mb.etime, m.mb.time);
@@ -147,9 +135,11 @@ namespace {
                         mt.add(m.mt.etime, m.mt.time);
                 }
             }
-            else {
+            else
+            {
                 ttime_t mtime = get_export_mtime(mes);
-                for(uint32_t i = 0; i != count; ++i, ++mes) {
+                for(uint32_t i = 0; i != count; ++i, ++mes)
+                {
                     const message& m = *mes;
                     ttime_t ctime = cur_ttime();
                     if(m.id == msg_book)

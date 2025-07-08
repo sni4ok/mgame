@@ -48,6 +48,7 @@ namespace my_cvt
     uint32_t itoa(char_it buf, uint128_t v);
     uint32_t itoa(char_it buf, int128_t v);
     uint32_t itoa(char_it buf, double v);
+    uint32_t log10(uint32_t i);
 
     struct exception : ::exception
     {

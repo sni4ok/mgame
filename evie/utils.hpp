@@ -13,19 +13,16 @@
 #include "array.hpp"
 #include "mtime.hpp"
 
-template<uint32_t sz, bool zeros = true>
-struct uint_fixed
+struct uint_fix
 {
-   const uint64_t value;
+   uint64_t value;
+   uint32_t size;
+   bool zeros;
 
-   uint_fixed(uint64_t value) : value(value)
-   {
-      static_assert(sz <= 13, "out of range");
-   }
    constexpr str_holder str() const
    {
       uint64_t v = value;
-      uint32_t idx = sz - 1;
+      uint32_t idx = size - 1;
 
       while(v > 9 && idx)
       {
@@ -33,15 +30,25 @@ struct uint_fixed
          --idx;
       }
 
-      if constexpr(zeros)
+      if(zeros)
           return str_holder("0000000000000", idx);
       else
           return str_holder("             ", idx);
    }
 };
 
-template<typename stream, uint32_t sz, bool zeros>
-stream& operator<<(stream& log, uint_fixed<sz, zeros> v)
+
+template<uint32_t sz, bool zero = true>
+struct uint_fixed : uint_fix
+{
+   uint_fixed(uint64_t value) : uint_fix(value, sz, zero)
+   {
+      static_assert(sz <= 13, "out of range");
+   }
+};
+
+template<typename stream>
+stream& operator<<(stream& log, const uint_fix& v)
 {
     log << v.str() << v.value;
     return log;
@@ -92,7 +99,6 @@ struct read_time_impl
 };
 
 template<typename stream, typename decimal>
-
 stream& operator<<(stream& s, decimal d)
     requires(is_decimal<decimal>)
 {

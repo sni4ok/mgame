@@ -34,7 +34,8 @@ void tyra::send(const message& m)
 {
     char_cit ptr = (char_cit)(&m);
     uint32_t sz = message_size;
-    if(c != e) {
+    if(c != e)
+    {
         if(bt - e > sz) [[unlikely]]
             throw str_exception("tyra::send() message buffer overloaded");
         copy(ptr, ptr + sz, e);
@@ -42,16 +43,20 @@ void tyra::send(const message& m)
 
         uint32_t s = try_socket_send(socket, c, e - c);
         send_from_buffer += s;
-        if(s == e - c) {
+        if(s == e - c)
+        {
             c = bf;
             e = bf;
-        } else {
-            c += s;
         }
-    } else {
+        else
+            c += s;
+    }
+    else
+    {
         uint32_t s = try_socket_send(socket, ptr, sz);
         send_from_call += s;
-        if(s != sz) {
+        if(s != sz)
+        {
             copy(ptr + s, ptr + sz, e);
             e += (sz - s);
         }
@@ -62,16 +67,20 @@ void tyra::send(const message* m, uint32_t count)
 {
     char_cit ptr = (char_cit)(m);
     uint32_t sz = count * message_size;
-    if(c != e) {
+    if(c != e)
+    {
         if(bt - e > sz) [[unlikely]]
             throw str_exception("tyra::send() messages buffer overloaded");
         copy(ptr, ptr + sz, e);
         e += sz;
         flush();
-    } else {
+    }
+    else
+    {
         uint32_t s = try_socket_send(socket, ptr, sz);
         send_from_call += s;
-        if(s != sz) {
+        if(s != sz)
+        {
             copy(ptr + s, ptr + sz, e);
             e += (sz - s);
         }
@@ -80,7 +89,8 @@ void tyra::send(const message* m, uint32_t count)
 
 void tyra::flush()
 {
-    if(c != e) {
+    if(c != e)
+    {
         socket_send_async(socket, c, e - c);
         send_from_buffer += (e - c);
         c = bf;

@@ -76,10 +76,8 @@ struct make_signed<t> \
     SET_INTEGRAL_TYPE(signed t, unsigned t)
 
 #define PP ()
-#define EXPAND(...) EXPAND4(__VA_ARGS__)
-#define EXPAND4(...) EXPAND3(__VA_ARGS__)
-#define EXPAND3(...) EXPAND2(__VA_ARGS__)
-#define EXPAND2(...) EXPAND1(__VA_ARGS__)
+#define EXPAND(...) EXPAND2(EXPAND2(EXPAND2(EXPAND2(__VA_ARGS__))))
+#define EXPAND2(...) EXPAND1(EXPAND1(EXPAND1(__VA_ARGS__)))
 #define EXPAND1(...) __VA_ARGS__
 #define FOR_EACH(macro, ...) \
   __VA_OPT__(EXPAND(FOR_EACH_HELPER(macro, __VA_ARGS__)))

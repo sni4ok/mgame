@@ -70,7 +70,8 @@ struct zip_file
         mlog() << "zip_file::open " << _str_holder(fname);
         close();
         str_holder fn = _str_holder(fname);
-        if(fn.size() > 3 && str_holder(fn.end() - 3, fn.end()) == ".gz") {
+        if(fn.size() > 3 && str_holder(fn.end() - 3, fn.end()) == ".gz")
+        {
             mvector<char> f = read_file(fname);
             uint32_t data_sz = zlib_file_sz(f, fn);
             if(!zip)
@@ -79,7 +80,8 @@ struct zip_file
             data = zip->decompress(f.begin(), f.size());
             data_it = data.begin();
         }
-        else {
+        else
+        {
             zip.reset();
             mfile file(fname);
             f.swap(file);
@@ -89,14 +91,16 @@ struct zip_file
     {
         if(!!zip)
             data = str_holder();
-        else {
+        else
+        {
             mfile file(0);
             f.swap(file);
         }
     }
     void seekg(uint64_t pos)
     {
-        if(!!zip) {
+        if(!!zip)
+        {
             if(pos > data.size())
                 throw mexception(es() % "zip_file::seekg(), fsize " % data.size() % ", pos " % pos);
             data_it = data.begin() + pos;
@@ -108,10 +112,8 @@ struct zip_file
     {
         if(!!zip)
             data_it += pos;
-        else {
-            if(::lseek(f.hfile, pos, SEEK_CUR) < 0)
-                throw_system_failure("lseek() error");
-        }
+        else if(::lseek(f.hfile, pos, SEEK_CUR) < 0)
+            throw_system_failure("lseek() error");
     }
     uint64_t size() const
     {
@@ -122,12 +124,14 @@ struct zip_file
     }
     uint64_t read(char* ptr, uint64_t size)
     {
-        if(!!zip) {
+        if(!!zip)
+        {
             uint64_t sz = min<uint64_t>(size, data.end() - data_it);
             memcpy(ptr, data_it, sz);
             data_it += sz;
         }
-        else {
+        else
+        {
             ssize_t r = ::read(f.hfile, ptr, size);
             if(r < 0)
                 throw_system_failure(es() % "read() error, size: " % size);
@@ -148,9 +152,11 @@ class last_used_c : public map
 
 public:
 
-    last_used_c() : last(), v() {
+    last_used_c() : last(), v()
+    {
     }
-    value_type& operator[](const key_type& key) {
+    value_type& operator[](const key_type& key)
+    {
         if(key == last)
             return *v;
         map* m = this;
@@ -158,7 +164,8 @@ public:
         last = key;
         return *v;
     }
-    void erase(const key_type& key) {
+    void erase(const key_type& key)
+    {
         last = key_type();
         ((map*)this)->erase(key);
     }
@@ -196,27 +203,33 @@ struct compact_book
         f.read((char*)(buf.begin()), to - from);
         auto it = buf.begin(), ie = buf.end();
 
-        for(; it != ie; ++it) {
-            if(it->id == msg_book) {
+        for(; it != ie; ++it)
+        {
+            if(it->id == msg_book)
+            {
                 const message_book& m = it->mb;
                 orders_t& o = orders[m.security_id];
-                if(o.mi.security_id) {
+                if(o.mi.security_id)
+                {
                     message_book& mb = o[m.level_id];
                     price_t price = m.price.value ? m.price : mb.price;
                     mb = m;
                     mb.price = price;
                 }
             }
-            else if(it->id == msg_instr) {
+            else if(it->id == msg_instr)
+            {
                 orders_t& o = orders[it->mi.security_id];
                 o.clear();
                 o.mi = it->mi;
             }
-            else if(it->id == msg_clean) {
+            else if(it->id == msg_clean)
+            {
                 orders_t& o = orders[it->mc.security_id];
                 o.clear();
             }
-            else {
+            else
+            {
                 assert(it->id == msg_trade || it->id == msg_clean || it->id == msg_ping);
             }
             last_time = it->mt.time;
@@ -226,7 +239,8 @@ struct compact_book
         buf.clear();
         auto i = orders.begin(), e = orders.end();
 
-        for(; i != e; ++i) {
+        for(; i != e; ++i)
+        {
             assert(i->second.mi.id == msg_instr);
             message m;
             m.mi = i->second.mi;
@@ -236,10 +250,13 @@ struct compact_book
         }
         i = orders.begin();
 
-        for(; i != e; ++i) {
+        for(; i != e; ++i)
+        {
             auto it = i->second.begin(), ie = i->second.end();
-            for(; it != ie; ++it) {
-                if(!!it->second.count) {
+            for(; it != ie; ++it)
+            {
+                if(!!it->second.count)
+                {
                     message m;
                     assert(!!it->second.price);
                     m.mb = it->second;
@@ -292,7 +309,8 @@ struct ifile
     static int64_t lower_bound_int(int64_t first, int64_t last, const type& val, pred pr)
     {
         int64_t count = last - first;
-        while(count > 0) {
+        while(count > 0)
+        {
             int64_t step = count / 2;
             int64_t mid = first + step;
             if(pr(mid, val))
@@ -323,11 +341,13 @@ struct ifile
         uint64_t sz = cur_file.size();
         if(sz < message_size)
             return ttime_t();
+
         sz = sz - sz % message_size;
         cur_file.read((char*)&mt, message_size);
         nt.tf = mt.t.time;
         if(!nt.tf)
             throw mexception(es() % "time_from error for " % fname);
+
         nt.from = 0;
         nt.off = 0;
         nt.sz = last_file ? 0 : sz;
@@ -338,17 +358,20 @@ struct ifile
         if(!nt.tt || nt.tt < nt.tf)
             throw mexception(es() % "time_to error for " % fname);
 
-        if(main_file.crossed(nt) || (!history && last_file)) {
+        if(main_file.crossed(nt) || (!history && last_file))
+        {
             nt.name = fname;
             auto pred =
-                [&](int64_t off, ttime_t tt) {
+                [&](int64_t off, ttime_t tt)
+                {
                     message m;
                     cur_file.seekg(off * message_size);
                     cur_file.read((char*)&m, message_size);
                     return m.mt.time < tt;
                 };
 
-            if(nt.tt > main_file.tf || last_file) {
+            if(nt.tt > main_file.tf || last_file)
+            {
                 assert(nt.from == 0 && nt.off == 0);
                 static const uint64_t buf_size = message_size * 1024 * 1024;
                 read_buf.resize(buf_size / message_size);
@@ -356,7 +379,8 @@ struct ifile
                 last_used_c<fmap<uint32_t/*security_id*/, uint64_t /*off*/> > tickers;
                 uint64_t off = nt.off;
 
-                while(!nt.from && off) {
+                while(!nt.from && off)
+                {
                     nt.from = off < buf_size ? 0 : off - buf_size;
                     cur_file.seekg(nt.from);
                     cur_file.read((char*)&read_buf[0], off - nt.from);
@@ -393,10 +417,12 @@ struct ifile
 
     ttime_t add_file(const mstring& fname)
     {
-        try {
+        try
+        {
             return add_file_impl(fname);
         }
-        catch(exception& e) {
+        catch(exception& e)
+        {
             mlog() << "ifile::add_file(" << fname << ") skipped, " << e;
         }
         return ttime_t();
@@ -411,12 +437,15 @@ struct ifile
             throw_system_failure(es() % "scandir error " % dir);
 
         uint32_t f_size = f.size();
-        for(int i = 0; i != n; ++i) {
+        for(int i = 0; i != n; ++i)
+        {
             dirent *e = ee[i];
             str_holder fname(_str_holder(e->d_name));
-            if(fname.size() > f_size + 10 && equal(fname.begin(), fname.begin() + f_size, f.begin())) {
+            if(fname.size() > f_size + 10 && equal(fname.begin(), fname.begin() + f_size, f.begin()))
+            {
                 uint32_t t = 0;
-                if(fname.size() > f_size) {
+                if(fname.size() > f_size)
+                {
                     if(fname[f_size] != '_')
                         continue;
                     t = my_cvt::atoi<uint32_t>(fname.begin() + f_size + 1, 10);
@@ -485,7 +514,8 @@ struct ifile
         if(nt.tt > main_file.tt)
             return false;
 
-        while(can_run && !dir_files.empty()) {
+        while(can_run && !dir_files.empty())
+        {
             ttime_t t = add_file(dir_files.front());
             dir_files.pop_front();
             if(!!t)
@@ -510,9 +540,11 @@ struct ifile
         int f = ::open(main_file.name.c_str(), O_RDONLY);
         if(f < 0)
             return false;
+
         uint64_t sz = 0;
         ino_t c = file_ino(f, &sz);
         ::close(f);
+
         if(c != last_file_ino && sz >= message_size)
         {
             mlog() << main_file.name << " probably moved";
@@ -528,7 +560,8 @@ struct ifile
     {
         if(buf_size % message_size) [[unlikely]]
             throw mexception(es() % "ifile::read(): inapropriate size: " % buf_size);
-        else {
+        else
+        {
             if(!cb.book.empty())
             {
                 uint32_t read_size = min<uint32_t>(buf_size, cb.book.size() - cb.book_off);
@@ -568,7 +601,8 @@ struct ifile
                         cur_file.close();
                     else if(history)
                         return ret;
-                    else {
+                    else
+                    {
                         ping.time = cur_ttime();
                         if(ping.time + check_time > last_file_check_time)
                         {
@@ -608,6 +642,7 @@ struct ifiles_replay
     {
         for(str_holder f: files)
             this->files.emplace_back(can_run, f, tf, tt, true);
+
         start_time = cur_ttime();
         b2.resize(files.size());
     }
@@ -617,7 +652,8 @@ struct ifiles_replay
         for(uint32_t i = 0; i != files.size(); ++i)
         {
             queue<char>& b2_ = b2[i];
-            if(b2_.size() < buf_size) {
+            if(b2_.size() < buf_size)
+            {
                 b2_.reserve(b2_.buf_size() + 10 * buf_size);
                 uint32_t r = files[i].read(b2_.end(), buf_size);
                 b2_.add_size(r);
@@ -661,7 +697,8 @@ struct ifiles_replay
         ttime_t dt = {int64_t((t - start_time).value * speed)};
         ttime_t f_to = files_time + dt;
 
-        for(; mi != me; ++mi) {
+        for(; mi != me; ++mi)
+        {
             if(mi->t.time > f_to)
                 break;
         }
@@ -669,6 +706,7 @@ struct ifiles_replay
         uint32_t ret = mi - mb;
         copy((char_cit)mb, (char_cit)mi, buf);
         b.pop_front(ret);
+
         if(!ret && !b.empty())
         {
             if(!can_run)

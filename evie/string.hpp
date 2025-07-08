@@ -60,14 +60,14 @@ struct buf_stream : ios_base
     }
     void write(char_cit v, uint64_t s)
     {
-        if(cur + s > to) [[unlikely]]
+        if(s > uint64_t(to - cur)) [[unlikely]]
             throw str_exception("buf_stream::write() overloaded");
         memcpy(cur, v, s);
         cur += s;
     }
     void check_size(uint64_t delta) const
     {
-        if(cur + delta > to) [[unlikely]]
+        if(delta > uint64_t(to - cur)) [[unlikely]]
             throw str_exception("buf_stream::check_size() overloaded");
     }
     template<typename type>

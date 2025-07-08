@@ -19,6 +19,7 @@ config::config(char_cit fname)
     export_threads = get_config_param<uint32_t>(cs, "export_threads");
 
     pooling = get_config_param<bool>(cs, "pooling");
+    set_engine_time = get_config_param<bool>(cs, "set_engine_time");
 }
 
 void config::print()
@@ -33,6 +34,6 @@ void config::print()
     for(auto v: exports)
         ml << "      " << v << "\n";
     ml << "  export_threads: " << export_threads << "\n"
-        << "  pooling: " << pooling << "\n";
+        << "  pooling: " << pooling << ", set_engine_time: " << set_engine_time << "\n";
 }
 

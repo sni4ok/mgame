@@ -34,7 +34,8 @@ struct message_id
     char _[16];
     uint8_t id;
 
-    bool operator==(uint8_t i) const {
+    bool operator==(uint8_t i) const
+    {
         return id == i;
     }
 };
