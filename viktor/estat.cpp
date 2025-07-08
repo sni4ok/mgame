@@ -33,7 +33,7 @@ namespace
 
             void add(ttime_t f, ttime_t t)
             {
-                if(!(f || t))
+                if(!f || !t)
                     return;
 
                 int64_t delta = t.value - f.value;
