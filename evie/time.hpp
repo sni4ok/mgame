@@ -64,10 +64,5 @@ inline ttime_t cur_ttime_seconds()
     return seconds(time(NULL));
 }
 
-struct print_t
-{
-    ttime_t value;
-};
-
 #endif
 

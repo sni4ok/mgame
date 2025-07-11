@@ -13,10 +13,12 @@
 #include "../evie/fmap.hpp"
 #include "../evie/mlog.hpp"
 
-#include <sys/stat.h>
-#include <unistd.h>
 #include <dlfcn.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 
 volatile bool* can_run_impl = nullptr;
 exports_factory* efactory = nullptr;
@@ -105,7 +107,8 @@ namespace
 {
     void log_message(void*, const message* m, uint32_t count)
     {
-        for(uint32_t i = 0; i != count; ++i, ++m) {
+        for(uint32_t i = 0; i != count; ++i, ++m)
+        {
             if(m->id == msg_book)
                 mlog() << "<" << m->mb;
             else if(m->id == msg_trade)
@@ -274,6 +277,7 @@ namespace
             pthread_cond_signal(&(s->condition));
             pthread_timedwait(s->condition, s->mutex, 1);
         }
+
         mlog() << "mmap_init() successfully opened: " << _str_holder(params);
         return ptr.release();
     }
@@ -303,11 +307,14 @@ namespace
                 cur_count = 255;
 
             uint8_t nf = mmap_load(i);
-            if(nf) {
+            if(nf)
+            {
                 //reader not exists or overloaded
                 time_t tf = time(NULL);
                 flub = true;
-                while(nf && tf + 5 >= time(NULL)){
+
+                while(nf && tf + 5 >= time(NULL))
+                {
                     usleep(10);
                     nf = mmap_load(i);
                 }
@@ -321,11 +328,14 @@ namespace
             //    << "," << uint32_t(*f) << "," << uint32_t(*(f + 1)) << ")";
             p += 255;
             ++i;
+
             if(i == e)
                 i = f + 2;
+
             if(!mmap_compare_exchange(f, w, i - f))
                 throw mexception(es() % "mmap_proceed() set w error, w: " % *f
                     % ", from: " % uint32_t(w) % ", to: " % uint32_t(i - f));
+
             w = i - f;
             c += cur_count;
         }
@@ -341,6 +351,44 @@ namespace
             pthread_mutex_unlock(&(s->mutex));
         }
     }
+
+    struct udp
+    {
+        int socket;
+        sockaddr_in sa;
+
+        udp(uint16_t port)
+        {
+            socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+            if(socket < 0)
+                throw_system_failure("Open udp socket error");
+
+            sa.sin_family = AF_INET;
+            sa.sin_port = htons(port);
+            sa.sin_addr.s_addr = htonl(INADDR_ANY);
+        }
+        ~udp()
+        {
+            ::close(socket);
+        }
+    };
+
+    void* udp_init(char_cit params)
+    {
+        return new udp(lexical_cast<uint16_t>(_str_holder(params)));
+    }
+    void udp_destroy(void* p)
+    {
+        delete (udp*)p;
+    }
+    void udp_proceed(void* p, const message* m, uint32_t count)
+    {
+        udp* u = (udp*)p;
+        ssize_t sz = sizeof(message) * count;
+        ssize_t ret = sendto(u->socket, m, sz, 0, (struct sockaddr*)(&u->sa), sizeof(u->sa));
+        if(ret != sz) [[unlikely]]
+            throw_system_failure(es() % "udp::write, sz: " % sz  % ", ret: " % ret);
+    }
 }
 
 exporter::exporter(const mstring& params)
@@ -348,9 +396,11 @@ exporter::exporter(const mstring& params)
     mvector<str_holder> exports = split(params.str(), ';');
     if(params.empty())
         throw str_exception("create_exporter() with empty params");
+
     if(exports.size() == 1)
         (*this) = create_impl(exports[0]);
-    else {
+    else
+    {
         unique_ptr<exports_chain> ec(new exports_chain);
         this->p = ec.get();
         this->he.destroy = &chain_destroy;
@@ -389,6 +439,7 @@ exports_factory::exports_factory()
 {
     exporters["log_messages"] = {hole_no_init, hole_no_destroy, log_message};
     exporters["tyra"] = {tyra_create, tyra_destroy, tyra_proceed};
+    exporters["udp"] = {udp_init, udp_destroy, udp_proceed};
     exporters["pipe"] = {pipe_init, pipe_destroy, pipe_proceed};
     exporters["crc"] = {crc_init, crc_destroy, crc_proceed};
     exporters["mmap_cp"] = {mmap_init, mmap_destroy, mmap_proceed};

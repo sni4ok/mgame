@@ -25,7 +25,8 @@ class profilerinfo : public stack_singleton<profilerinfo>
 
     struct info
     {
-        uint64_t time, time_max, time_min, count;
+        ttime_t time, time_max, time_min;
+        int64_t count;
         const char* name;
 
         info();
@@ -41,7 +42,7 @@ class profilerinfo : public stack_singleton<profilerinfo>
 public:
 
     uint64_t register_counter(const char* id);
-    void add_info(uint64_t counter_id, uint64_t time);
+    void add_info(uint64_t counter_id, ttime_t time);
     void print(long mlog_params);
     ~profilerinfo();
 };
@@ -54,11 +55,6 @@ struct mprofiler
     mprofiler(uint64_t counter_id);
     mprofiler(const mprofiler&) = delete;
     ~mprofiler();
-};
-
-struct write_time
-{
-    uint64_t time;
 };
 
 #endif

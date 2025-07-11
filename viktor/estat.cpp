@@ -11,8 +11,6 @@
 #include "../evie/math.hpp"
 #include "../evie/mlog.hpp"
 
-mlog& operator<<(mlog& m, print_t t);
-
 namespace
 {
     struct estat
@@ -23,11 +21,11 @@ namespace
 
         struct stat
         {
-            int64_t min, max;
-            int128_t sum;
-            uint64_t d2, count;
+            ttime_t min, max;
+            int128_t sum, d2;
+            uint64_t count;
 
-            stat() : min(limits<int64_t>::max), max(limits<int64_t>::min), sum(), d2(), count()
+            stat() : min(limits<ttime_t>::max), max(limits<ttime_t>::min), sum(), d2(), count()
             {
             }
 
@@ -36,18 +34,11 @@ namespace
                 if(!f || !t)
                     return;
 
-                int64_t delta = t.value - f.value;
+                ttime_t delta = t - f;
                 min = ::min(min, delta);
                 max = ::max(max, delta);
-                sum += delta;
-
-                if(abs(delta) > 1000000)
-                {
-                    delta /= 1000;
-                    d2 += (delta * delta);
-                }
-                else
-                    d2 += (delta * delta) / 1000000;
+                sum += delta.value;
+                d2 += delta.value * delta.value / 1000000;
                 ++count;
             }
             void print(mlog& ml, mstring name) const

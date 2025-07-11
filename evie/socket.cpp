@@ -344,3 +344,36 @@ void socket_stream::read(char_it s, uint32_t sz)
     }
 }
 
+udp_socket::udp_socket(const mstring& src_ip, const mstring& ma, uint16_t port)
+{
+    socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(socket < 0)
+        throw_system_failure("Open udp socket error");
+
+    sockaddr_in sa;
+
+    sa.sin_family = AF_INET;
+    sa.sin_port = htons(port);
+    sa.sin_addr.s_addr = htonl(INADDR_ANY);
+    if(bind(socket, (struct sockaddr*)&sa, sizeof(sa)) < 0)
+    {
+        ::close(socket);
+        throw_system_failure("bind() udp socket error");
+    }
+
+    ip_mreq_source imr;
+    imr.imr_sourceaddr.s_addr = inet_addr(src_ip.c_str());
+    imr.imr_multiaddr.s_addr = inet_addr(ma.c_str());
+    imr.imr_interface.s_addr = INADDR_ANY;
+    if(setsockopt(socket, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, (char*)&imr, sizeof(imr)) < 0)
+    {
+        ::close(socket);
+        throw_system_failure("set socket IP_ADD_SOURCE_MEMBERSHIP, error");
+    }
+}
+
+udp_socket::~udp_socket()
+{
+    ::close(socket);
+}
+

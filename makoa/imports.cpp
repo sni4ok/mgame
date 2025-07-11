@@ -94,7 +94,7 @@ uint32_t mmap_cp_read(void *v, char_it buf, uint32_t buf_size)
     uint8_t r = mmap_load(f + 1);
 
     if(w < 2 || w >= message_size || r < 2 || r >= message_size) [[unlikely]]
-        throw mexception(es() % "mmap_cp_read() internal error, wp: " % uint32_t(w) % ", rp: " % uint32_t(r));
+        throw mexception(es() % "mmap_cp_read, internal error, wp: " % uint32_t(w) % ", rp: " % uint32_t(r));
 
     i += r;
     const message* p = (((const message*)v) + 1) + (r - 2) * 255;
@@ -103,7 +103,7 @@ uint32_t mmap_cp_read(void *v, char_it buf, uint32_t buf_size)
     if(cur_count)
     {
         if(buf_size < cur_count) [[unlikely]]
-            throw mexception(es() % "mmap_cp_read() buf_size too small, wp: " % uint32_t(w) %
+            throw mexception(es() % "mmap_cp_read, buf_size too small, wp: " % uint32_t(w) %
                 ", rp: " % uint32_t(r) % ", buf_size: " % buf_size % ", cur_count: " % cur_count);
         memcpy(buf, p, uint32_t(cur_count) * message_size);
         mmap_store(i, 0);
@@ -122,12 +122,12 @@ struct import_mmap_cp
     mvector<mstring> params;
     bool pooling_mode;
 
-    import_mmap_cp(volatile bool& can_run, const mstring& params) : can_run(can_run)
+    import_mmap_cp(volatile bool& can_run, const mstring& p) : can_run(can_run)
     {
-        this->params = split_s(params.str(), ' ');
-        if(this->params.size() != 2)
-            throw mexception(es() % " import_mmap_cp() required 2 params (fname,pooling_mode): " % params);
-        pooling_mode = lexical_cast<bool>(this->params[1]);
+        params = split_s(p.str(), ' ');
+        if(params.size() != 2)
+            throw mexception(es() % "import_mmap_cp, required 2 params (fname,pooling_mode): " % p);
+        pooling_mode = lexical_cast<bool>(params[1]);
     }
     unique_ptr<void, mmap_close> init() const
     {
@@ -319,6 +319,50 @@ void import_tcp_start(void* c, void* p)
     }
 }
 
+struct import_udp
+{
+    volatile bool& can_run;
+    mstring src_ip, ma;
+    uint16_t port;
+
+    import_udp(volatile bool& can_run, const mstring& params) : can_run(can_run)
+    {
+        auto p = split(params.str(), ' ');
+        if(p.size() != 3)
+            throw mexception(es() % "import_udp, required 2 params (src_ip multiaddr port): " % params);
+
+        src_ip = p[0];
+        ma = p[1];
+        port = lexical_cast<uint16_t>(p[2]);
+    }
+};
+
+uint32_t udp_read(int socket, char_it buf, uint32_t buf_size)
+{
+    int ret = recvfrom(socket, buf, buf_size, 0, nullptr, nullptr);
+    if(ret == -1)
+    {
+        MPROFILE("import_udp::EAGAIN")
+        if(errno == EAGAIN || errno == EWOULDBLOCK)
+            return 0;
+        else
+            throw_system_failure("import_udp::recvfrom error");
+    }
+    else if(!ret)
+        throw_system_failure("import_udp, socket closed");
+    else if(ret < 0)
+        throw_system_failure("import_udp, recvfrom error");
+    return ret;
+}
+
+void import_udp_start(void* c, void* p)
+{
+    import_udp& i = *((import_udp*)(c));
+    udp_socket udp(i.src_ip, i.ma, i.port);
+    reader<int> r(p, udp.socket, &udp_read);
+    work_thread_reader(r, i.can_run, timeout);
+}
+
 template<void* (*fcreate)(const char* params, volatile bool& can_run), void (*fdestroy)(void *v)>
 struct import_ifile_impl
 {
@@ -383,6 +427,9 @@ static const int _import_pipe = register_importer("pipe",
 );
 static const int _import_tcp = register_importer("tyra",
     {importer_init<import_tcp>, importer_destroy<import_tcp>, import_tcp_start, nullptr}
+);
+static const int _import_udp = register_importer("udp",
+    {importer_init<import_udp>, importer_destroy<import_udp>, import_udp_start, nullptr}
 );
 static const int _import_file = register_importer("file",
     {importer_init<import_ifile>, importer_destroy<import_ifile>, import_ifile_start<import_ifile, ifile_read>, nullptr}

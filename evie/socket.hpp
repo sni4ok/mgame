@@ -52,3 +52,12 @@ struct socket_stream
     void read(char_it s, uint32_t sz);
 };
 
+struct udp_socket
+{
+    int socket;
+
+    udp_socket(const udp_socket&) = delete;
+    udp_socket(const mstring& src_ip, const mstring& ma, uint16_t port);
+    ~udp_socket();
+};
+

@@ -84,5 +84,12 @@ void log_set(simple_log* sl);
 uint32_t& log_params();
 void log_test(size_t thread_count, size_t log_count);
 
+struct print_t
+{
+    ttime_t value;
+};
+
+mlog& operator<<(mlog& m, print_t t);
+
 #endif
 
