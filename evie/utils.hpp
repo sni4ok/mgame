@@ -15,36 +15,36 @@
 
 struct uint_fix
 {
-   uint64_t value;
-   uint32_t size;
-   bool zeros;
+    uint64_t value;
+    uint32_t size;
+    bool zeros;
 
-   constexpr str_holder str() const
-   {
-      uint64_t v = value;
-      uint32_t idx = size - 1;
+    constexpr str_holder str() const
+    {
+        assert(size);
+        uint64_t v = value;
+        uint32_t idx = size - 1;
 
-      while(v > 9 && idx)
-      {
-         v /= 10;
-         --idx;
-      }
+        while(v > 9 && idx)
+        {
+            v /= 10;
+            --idx;
+        }
 
-      if(zeros)
-          return str_holder("0000000000000", idx);
-      else
-          return str_holder("             ", idx);
-   }
+        if(zeros)
+            return str_holder("0000000000000", idx);
+        else
+            return str_holder("             ", idx);
+    }
 };
-
 
 template<uint32_t sz, bool zero = true>
 struct uint_fixed : uint_fix
 {
-   uint_fixed(uint64_t value) : uint_fix(value, sz, zero)
-   {
-      static_assert(sz <= 13, "out of range");
-   }
+    uint_fixed(uint64_t value) : uint_fix(value, sz, zero)
+    {
+        static_assert(sz > 0 && sz <= 13, "out of range");
+    }
 };
 
 template<typename stream>

@@ -87,7 +87,7 @@ void test_io(type c)
     str << c;
     type v = lexical_cast<type>(str.str());
     assert(v == c);
-    my_unused(v);
+    unused(v);
 }
 
 void test_impl(str_holder a1, str_holder a2)
@@ -97,7 +97,7 @@ void test_impl(str_holder a1, str_holder a2)
     test_io(v1);
     assert(v1.value == v2.value);
     test_io(v1);
-    my_unused(v1, v2);
+    unused(v1, v2);
 }
 
 void amount_test()
@@ -114,7 +114,7 @@ void amount_test()
 
     str_holder v = "9.79380846343861E-4";
     count_t c = lexical_cast<count_t>(v);
-    my_unused(c);
+    unused(c);
 
     test_io(price_t({limits<int64_t>::max}));
     test_io(price_t({limits<int64_t>::min}));

@@ -77,7 +77,7 @@ struct lws_i : lws_impl, read_time_impl
             }
             skip_fixed(it, "],\"time\":\"");
             ttime_t etime = read_time<6>(it);
-            my_unused(etime);
+            unused(etime);
             skip_fixed(it, "Z\"}");
             if(it != ie) [[unlikely]]
                 throw mexception(es() % "parsing message error: " % str_holder(in, ie - in));

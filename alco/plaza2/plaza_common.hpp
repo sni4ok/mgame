@@ -71,10 +71,9 @@ struct cg_decimal
         if(!ds) {
         }
         else if(ds > 0) {
-            ret.value /= my_cvt::decimal_pow[ds];
-        }
-        else {
-            ret.value *= my_cvt::decimal_pow[-ds];
+            ret.value /= my_cvt::pow[ds];
+        } else {
+            ret.value *= my_cvt::pow[-ds];
         }
         return ret;
     }

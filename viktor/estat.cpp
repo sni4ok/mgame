@@ -37,20 +37,20 @@ namespace
                 ttime_t delta = t - f;
                 min = ::min(min, delta);
                 max = ::max(max, delta);
-                sum += delta.value;
-                d2 += delta.value * delta.value / 1000000;
+                sum += int128_t(delta.value);
+                d2 += int128_t(delta.value) * delta.value / 1000000;
                 ++count;
             }
             void print(mlog& ml, mstring name) const
             {
                 if(count)
                 {
-                    int64_t mean = sum / count;
-                    double dm = double(mean) / 1000.;
-                    double var = double(d2 / count) - dm * dm;
+                    int128_t mean = sum / count;
+                    double dm = to_double(mean) / 1000.;
+                    double var = to_double(d2) / count - dm * dm;
                     int64_t stddev = int64_t(sqrt(abs(var)) * 1000);
                     ml << "\n    " << name << " count: " << count << ", mean: "
-                        << print_t({mean}) << ", std: " << print_t({stddev}) <<
+                        << print_t({to_int(mean)}) << ", std: " << print_t({stddev}) <<
                         ", min: " << print_t({min}) << ", max: " << print_t({max});
                 }
             }

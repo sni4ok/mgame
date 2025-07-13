@@ -196,7 +196,7 @@ namespace
     void* pipe_init(char_cit params)
     {
         int r = mkfifo(params, 0666);
-        my_unused(r);
+        unused(r);
         int64_t h = ::open(params, O_WRONLY);
         if(h <= 0)
             throw_system_failure(es() % "open " % _str_holder(params) % " error");

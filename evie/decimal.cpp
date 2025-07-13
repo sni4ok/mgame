@@ -43,3 +43,105 @@ void test_print_t()
     test_print_t_impl(m, v, v2, v3, v4, v5, v6, v7);
 }
 
+template<typename stream>
+stream& operator<<(stream& s, int128d v)
+{
+    if(v < int128d())
+    {
+        s << "-";
+        v = -v;
+    }
+    auto f = [](double v)
+    {
+        int p = 0;
+        while(v >= 10.)
+        {
+            v /= 10;
+            ++p;
+        }
+        return pair<int32_t, int32_t>(int32_t(v), p);
+    };
+
+    auto decimal_pow = [](double v, uint32_t e)
+    {
+        while(e > 19)
+        {
+            v = v * my_cvt::pow[19];
+            e -= 19;
+        }
+        v = v * my_cvt::pow[e];
+        return v;
+    };
+
+    int32_t sz = 0;
+rep:
+    while(v >= int128d(int64_t(10)))
+    {
+        auto p = f(v.value);
+        double d = v.value - decimal_pow(p.first, p.second);
+        assert(d >= double());
+
+        s << uint_fix(p.first, sz ? sz - p.second : 1, true);
+        v = int128d(d);
+        sz = p.second;
+        goto rep;
+    }
+    s << uint_fix(v.value, sz ? sz : 1, true);
+    return s;
+}
+
+mlog& operator<<(mlog& s, int128d v)
+{
+    return operator<< <mlog>(s, v);
+}
+
+mstring to_string(int128d v)
+{
+    buf_stream_fixed<80> s;
+    s << v;
+    return s.str();
+}
+
+template<>
+int128d lexical_cast(char_cit f, char_cit t)
+{
+    if(t - f <= 18)
+        return int128d(lexical_cast<int64_t>(f, t));
+
+    int128d r;
+rep:
+    int64_t sz = min<int64_t>(t - f, 18);
+    int64_t v = lexical_cast<int64_t>(f, f + sz);
+    if(!r)
+        r = int128d(v);
+    else
+    {
+        r = mul_int(r, my_cvt::pow[sz]);
+        r += int128d(v);
+    }
+    f += sz;
+    if(f != t)
+        goto rep;
+
+    return r;
+}
+
+void test_int128d()
+{
+    auto f = []<typename type>(type v)
+    {
+        mstring str = to_string(v);
+        type v2 = lexical_cast<type>(str);
+        double d = abs(v2.value - v.value);
+        assert(d <= abs(v.value) * limits<double>::epsilon);
+    };
+
+    f(int128d());
+    f(int128d(limits<int64_t>::max));
+
+#ifdef USE_INT128_EXT
+    f(int128d(double(limits<int128_t>::min)));
+    f(int128d(double(limits<uint128_t>::max)));
+#endif
+}
+

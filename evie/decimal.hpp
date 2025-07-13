@@ -106,13 +106,18 @@ inline constexpr type operator-(type v)
 }
 
 template<typename to, typename from>
-requires(is_decimal<to> && is_decimal<from>)
+requires(is_decimal<to>)
 inline constexpr to to_decimal(from v)
 {
-    if constexpr(to::frac >= from::frac)
-        return {v.value * (to::frac / from::frac)};
+    if constexpr(is_decimal<from>)
+    {
+        if constexpr(to::frac >= from::frac)
+            return {v.value * (to::frac / from::frac)};
+        else
+            return {v.value / (from::frac / to::frac)};
+    }
     else
-        return {v.value / (from::frac / to::frac)};
+        return {v * to::frac};
 }
 
 template<typename type>
@@ -127,6 +132,24 @@ requires(is_decimal<type>)
 inline constexpr type mul_int(type p, int64_t value)
 {
     return {p.value * value};
+}
+
+template<typename type>
+inline constexpr double to_double(type p)
+{
+    if constexpr(is_decimal<type>)
+        return double(p.value) / type::frac;
+    else
+        return double(p);
+}
+
+template<typename type>
+inline constexpr int64_t to_int(type p)
+{
+    if constexpr(is_decimal<type>)
+        return p.value / type::frac;
+    else
+        return p;
 }
 
 struct p2 

@@ -86,11 +86,52 @@ struct make_signed<t> \
   __VA_OPT__(FOR_EACH_AGAIN PP (macro, __VA_ARGS__))
 #define FOR_EACH_AGAIN() FOR_EACH_HELPER
 
+struct int128d
+{
+    double value;
+
+    static const int64_t frac = 1;
+    static const int64_t exponent = 0;
+
+    int128d(double v) : value(v)
+    {
+    }
+    int128d(int64_t v = 0) : value(v)
+    {
+    }
+    int128d(uint64_t v) : value(v)
+    {
+    }
+    template<typename type>
+    int128d operator*(type v) const
+    {
+        return {value * v};
+    }
+    template<typename type>
+    int128d operator/(type v) const
+    {
+        return {value / v};
+    }
+};
+
+#ifdef __x86_64
+    #define USE_INT128_EXT
+#endif
+
+#ifdef USE_INT128_EXT
 __extension__ typedef __int128 int128_t;
 __extension__ typedef  __uint128_t uint128_t;
 
-FOR_EACH(SET_INTEGRAL_TYPE_E, char, short, int, long, long long)
 SET_INTEGRAL_TYPE(int128_t, uint128_t)
+
+#else
+    typedef int128d int128_t;
+    typedef int128d uint128_t;
+#endif
+
+SET_INTEGRAL(int128d)
+SET_UNSIGNED(int128d, int128d, int128d)
+FOR_EACH(SET_INTEGRAL_TYPE_E, char, short, int, long, long long)
 FOR_EACH(SET_INTEGRAL, char, wchar_t, bool)
 
 template<typename t>

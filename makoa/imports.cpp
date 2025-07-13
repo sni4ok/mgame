@@ -235,7 +235,7 @@ void import_pipe_start(void* c, void* p)
 {
     import_pipe& ip = *((import_pipe*)(c));
     int m = mkfifo(ip.params.c_str(), 0666);
-    my_unused(m);
+    unused(m);
     int64_t h = open(ip.params.c_str(), O_RDONLY | O_NONBLOCK);
     if(h <= 0)
         throw_system_failure(es() % "open " % ip.params % " error");

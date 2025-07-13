@@ -244,7 +244,7 @@ inline uint64_t get_decimal_pow(uint32_t e)
     if(e > 19)
         return limits<uint64_t>::max;
     else
-        return my_cvt::decimal_pow[e];
+        return my_cvt::pow[e];
 }
 
 int64_t read_decimal_impl(char_cit it, char_cit ie, int exponent)

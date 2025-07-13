@@ -59,7 +59,7 @@ void* mmap_create(char_cit params, bool create)
             {
                 int h = ::open(params, O_WRONLY, 0666);
                 ssize_t res = write(h, "", 1);
-                my_unused(res);
+                unused(res);
                 ::close(h);
             }
             remove_file(params);
