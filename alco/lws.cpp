@@ -12,7 +12,8 @@
 mstring join_tickers(const mvector<mstring>& tickers, bool quotes)
 {
     my_stream s;
-    for(uint32_t i = 0; i != tickers.size(); ++i) {
+    for(uint32_t i = 0; i != tickers.size(); ++i)
+    {
         if(i)
             s << ",";
         if(quotes)
@@ -31,14 +32,16 @@ lws_dump::lws_dump() : hfile(), lws_not_fake(true), lws_dump_en(), dump_buf("\n 
     if(dump && fake)
         throw str_exception("lws_dump and lws_fake not works together");
 
-    if(dump) {
+    if(dump)
+    {
         lws_dump_en = true;
         hfile = ::open(dump, O_WRONLY | O_CREAT | O_TRUNC, S_IWRITE | S_IREAD | S_IRGRP | S_IWGRP);
         if(hfile < 0)
             throw_system_failure(es() % "lws_dump() open file " % _str_holder(dump) % " error");
         mlog() << "lws_dump to " << _str_holder(dump) << " enabled";
     }
-    if(fake) {
+    if(fake)
+    {
         lws_not_fake = false;
         hfile = ::open(fake, O_RDONLY);
         if(hfile < 0)
@@ -57,7 +60,7 @@ void lws_dump::dump(char_cit p, uint32_t sz)
         memcpy(dump_buf + 1, &sz, sizeof(sz));
         if(::write(hfile, dump_buf, 6) != 6)
             throw_system_failure("lws_dump writing error");
-        if(::write(hfile, p, sz) != sz)
+        if(::write(hfile, p, sz) != ssize_t(sz))
             throw_system_failure("lws_dump writing error");
     }
 }
@@ -71,7 +74,7 @@ str_holder lws_dump::read_dump()
         uint32_t sz;
         memcpy(&sz, dump_buf + 1, sizeof(sz));
         read_buf.resize(sz);
-        if(dump_buf[0] != '\n' || dump_buf[5] != '\n' || ::read(hfile, &read_buf[0], sz) != sz)
+        if(dump_buf[0] != '\n' || dump_buf[5] != '\n' || ::read(hfile, &read_buf[0], sz) != ssize_t(sz))
             throw_system_failure("lws_dump reading error");
         dump_readed += (sz + 6);
         return str_holder(&read_buf[0], sz);

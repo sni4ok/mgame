@@ -133,6 +133,7 @@ void test_int128d()
         mstring str = to_string(v);
         type v2 = lexical_cast<type>(str);
         double d = abs(v2.value - v.value);
+        (void) d;
         assert(d <= abs(v.value) * limits<double>::epsilon);
     };
 

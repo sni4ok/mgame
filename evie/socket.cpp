@@ -335,7 +335,7 @@ void socket_stream::read(char_it s, uint32_t sz)
     }
     else
     {
-        while(cur - readed < sz)
+        while(cur < readed + sz)
             recv();
 
         memcpy(s, readed, sz);

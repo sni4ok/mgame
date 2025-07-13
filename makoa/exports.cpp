@@ -209,9 +209,9 @@ namespace
     }
     void pipe_proceed(void* p, const message* m, uint32_t count)
     {
-        uint32_t wsize = sizeof(message) * count;
+        size_t wsize = sizeof(message) * count;
         ssize_t ret = ::write(int((int64_t)p), (const void*)m, wsize);
-        if(ret != wsize) [[unlikely]]
+        if(ret != ssize_t(wsize)) [[unlikely]]
             throw_system_failure(es() % "pipe::write, wsize: " % wsize  % ", ret: " % ret);
     }
 
@@ -357,15 +357,20 @@ namespace
         int socket;
         sockaddr_in sa;
 
-        udp(uint16_t port)
+        udp(char_cit params)
         {
+            auto p = split_s(_str_holder(params), ' ');
+            if(p.size() != 2)
+                throw mexception(es() % "export_udp, required 2 params (server_ip port): " % _str_holder(params));
+
             socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
             if(socket < 0)
-                throw_system_failure("Open udp socket error");
+                throw_system_failure("export_udp, open udp socket error");
 
             sa.sin_family = AF_INET;
-            sa.sin_port = htons(port);
-            sa.sin_addr.s_addr = htonl(INADDR_ANY);
+            sa.sin_port = htons(lexical_cast<uint16_t>(p[1]));
+            if(inet_pton(AF_INET, p[0].c_str(), &sa.sin_addr) <= 0)
+                throw_system_failure("export_udp, int_pton error");
         }
         ~udp()
         {
@@ -375,7 +380,7 @@ namespace
 
     void* udp_init(char_cit params)
     {
-        return new udp(lexical_cast<uint16_t>(_str_holder(params)));
+        return new udp(params);
     }
     void udp_destroy(void* p)
     {

@@ -204,7 +204,7 @@ struct import_pipe
     }
 };
 
-void work_thread_reader(reader<int>& r, volatile bool& can_run, uint32_t timeout/*in seconds*/)
+void work_thread_reader(reader<int>& r, volatile bool& can_run, int32_t timeout/*in seconds*/)
 {
     pollfd pfd = pollfd();
     pfd.events = POLLIN;
@@ -229,7 +229,7 @@ void work_thread_reader(reader<int>& r, volatile bool& can_run, uint32_t timeout
 }
 
 static const uint32_t max_connections = 32;
-static const uint32_t timeout = 30; //in seconds
+static const int32_t timeout = 30; //in seconds
 
 void import_pipe_start(void* c, void* p)
 {
@@ -329,7 +329,7 @@ struct import_udp
     {
         auto p = split(params.str(), ' ');
         if(p.size() != 3)
-            throw mexception(es() % "import_udp, required 2 params (src_ip multiaddr port): " % params);
+            throw mexception(es() % "import_udp, required 3 params (src_ip multiaddr port): " % params);
 
         src_ip = p[0];
         ma = p[1];

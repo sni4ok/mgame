@@ -92,7 +92,7 @@ struct efile
     }
     void write(char_cit buf, uint32_t count)
     {
-        if(::write(hfile, buf, count) != count)
+        if(::write(hfile, buf, count) != ssize_t(count))
             throw_system_failure(es() % "efile " % fname % " writing error");
     }
     void flush()
