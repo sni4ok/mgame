@@ -9,17 +9,17 @@ mlog& operator<<(mlog& m, print_t t)
 {
     ttime_t ta = abs(t.value);
 
-    if(ta > seconds(year_s))
+    if(ta >= seconds(year_s))
         m << div_int(to_decimal<p2>(t.value), year_s) << "years";
-    else if(ta > seconds(day_s))
+    else if(ta >= seconds(day_s))
         m << div_int(to_decimal<p2>(t.value), day_s) << "days";
-    else if(ta > seconds(3600))
+    else if(ta >= seconds(3600))
         m << div_int(to_decimal<p2>(t.value), 3600) << "hours";
-    else if(ta > seconds(10))
+    else if(ta >= seconds(1))
         m << to_decimal<p2>(t.value) << "sec";
-    else if(ta > milliseconds(10))
+    else if(ta >= milliseconds(1))
         m << div_int(p2(to_us(t.value)), 10) << "ms";
-    else if(ta > microseconds(10))
+    else if(ta >= microseconds(1))
         m << to_decimal<p2>(milliseconds(t.value.value)) << "us";
     else
         m << t.value.value << "ns";

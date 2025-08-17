@@ -283,7 +283,7 @@ class engine::impl : public stack_singleton<engine::impl>
         imple(const imple&) = delete;
     };
 
-    cas_array<imple, 50> ies;
+    rbuffer_list<imple, 50> ies;
     mvector<jthread> threads;
 
     void work_thread()
@@ -344,7 +344,7 @@ public:
             ies.push(i);*/
     }
     impl(volatile bool& can_run, bool set_engine_time) : can_run(can_run), set_engine_time(set_engine_time),
-        can_exit(false), ies("exporters_queue")
+        can_exit(false)
     {
     }
     str_holder alloc()
@@ -361,7 +361,7 @@ public:
     {
         consumers = exports.size();
         for(const auto& e: exports)
-            ies.emplace(can_run, ll, e);
+            ies.push_back(new imple(can_run, ll, e));
 
         for(uint32_t i = 0; i != export_threads; ++i)
             threads.push_back({&impl::work_thread, this});

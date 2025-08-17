@@ -22,12 +22,14 @@ class follower
 public:
     typedef type value_type;
 
-    follower() : num_elems(), ptr() {
+    follower() : num_elems(), ptr()
+    {
         if constexpr(enable_run_once)
             run_once();
     }
     follower(const follower&) = delete;
-    ~follower() {
+    ~follower()
+    {
         uint32_t elems = atomic_load(num_elems);
         uint32_t end_bulk = elems / block_size;
         uint32_t end_element = elems % block_size;
@@ -38,7 +40,8 @@ public:
         if(ptr)
             delete[] ptr;
     }
-    bool run_once() requires(enable_run_once) {
+    bool run_once() requires(enable_run_once)
+    {
         if(!ptr)
         {
             type* p = new type[block_size];
@@ -52,15 +55,18 @@ public:
         }
         return false;
     }
-    void push_back(type&& value) {
+    void push_back(type&& value)
+    {
         uint32_t elems = atomic_load(num_elems);
         uint32_t end_bulk = elems / block_size;
         uint32_t end_element = elems % block_size;
 
-        if(!end_element) {
+        if(!end_element)
+        {
             type* p = nullptr;
             if constexpr(enable_run_once)
                 p = atomic_exchange(&ptr, (type*)nullptr);
+
             if(p)
             {
                 MPROFILE("follower::new_atomic")
@@ -76,7 +82,8 @@ public:
         (bulks[end_bulk])[end_element] = move(value);
         atomic_add(num_elems, 1);
     }
-    void push_back(const type& value) {
+    void push_back(const type& value)
+    {
         push_back(type(value));
     }
     class const_iterator
@@ -86,69 +93,88 @@ public:
 
         friend class follower;
 
-        const type& dereference() const { 
+        const type& dereference() const
+        {
             uint32_t end_bulk = element / block_size;
             uint32_t end_element = element % block_size;
             return ((*bulks)[end_bulk])[end_element];
         }
-        const_iterator(const bulks_type& bulks, uint32_t element) : bulks(&bulks), element(element){
+        const_iterator(const bulks_type& bulks, uint32_t element) : bulks(&bulks), element(element)
+        {
         }
-    public:
 
-        const_iterator(){}
-        bool operator==(const const_iterator& r) const {
+    public:
+        const_iterator()
+        {
+        }
+        bool operator==(const const_iterator& r) const
+        {
             return element == r.element;
         }
-        bool operator!=(const const_iterator& r) const {
+        bool operator!=(const const_iterator& r) const
+        {
             return element != r.element;
         }
-        const_iterator& operator++() {
+        const_iterator& operator++()
+        {
             ++element;
             return *this;
         }
-        const_iterator& operator--() {
+        const_iterator& operator--()
+        {
             --element;
             return *this;
         }
-        const_iterator operator-(int32_t diff) const {
+        const_iterator operator-(int32_t diff) const
+        {
             const_iterator ret(*bulks, element);
             ret -= diff;
             return ret;
         }
-        const_iterator operator+(int32_t diff) const {
+        const_iterator operator+(int32_t diff) const
+        {
             const_iterator ret(*bulks, element);
             ret += diff;
             return ret;
         }
-        const_iterator& operator-=(int32_t diff) {
+        const_iterator& operator-=(int32_t diff)
+        {
             element -= diff;
             return *this;
         }
-        const_iterator& operator+=(int32_t diff) {
+        const_iterator& operator+=(int32_t diff)
+        {
             element += diff;
             return *this;
         }
-        int32_t operator-(const const_iterator& r) const {
+        int32_t operator-(const const_iterator& r) const
+        {
             return element - r.element;
         }
-        const type& operator*() const {
+        const type& operator*() const
+        {
             return dereference();
         }
-        const type* operator->() const {
+        const type* operator->() const
+        {
             const type& t = dereference();
             return &t;
         }
     };
-    const_iterator begin() const {
+    const_iterator begin() const
+    {
         return const_iterator(bulks, 0);
     }
-    const_iterator end() const {
+    const_iterator end() const
+    {
         return const_iterator(bulks, atomic_load(num_elems));
     }
-    const type& operator[](uint32_t idx) const {
+    const type& operator[](uint32_t idx) const
+    {
         return *(begin() + idx);
     }
-    uint32_t size() const {
+    uint32_t size() const
+    {
         return atomic_load(num_elems);
     }
 };
@@ -179,9 +205,11 @@ struct emplace_decl
     }
 };
 
-template<typename type, uint32_t max_size, bool blist = true>
-struct cas_array : emplace_decl<type, cas_array<type, max_size, blist> >
+template<typename type, uint32_t max_size>
+struct cas_forward : emplace_decl<type, cas_forward<type, max_size> >
 {
+    static const bool use_blist = false;
+
     struct node_type
     {
         char value_buf[sizeof(type)];
@@ -189,15 +217,15 @@ struct cas_array : emplace_decl<type, cas_array<type, max_size, blist> >
 
     struct id_type
     {
-        union {
+        union
+        {
             uint64_t id;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
-            struct {
-                uint16_t prev, next;
-                uint16_t a_next;
-                uint16_t salt;
+            struct
+            {
+                uint16_t next, a_next, salt;
             };
 #pragma GCC diagnostic pop
         };
@@ -209,33 +237,38 @@ struct cas_array : emplace_decl<type, cas_array<type, max_size, blist> >
 
     node nodes[max_size + 1];
 
-    static const uint64_t push_lock = -1, pop_lock = -2, locks_from = -2;
-
-    cas_array() : nodes() {
+    cas_forward() : nodes()
+    {
         static_assert(max_size && max_size < limits<uint16_t>::max);
         static_assert(sizeof(node) == 8 + sizeof(type) + ((sizeof(type) % 8) ? (8 - sizeof(type) % 8) : 0));
         for(uint32_t i = 1; i != max_size + 1; ++i)
             free_impl(to_type(nodes + i));
     }
-    cas_array(str_holder) : cas_array() {
+    cas_forward(str_holder) : cas_forward()
+    {
     }
-    ~cas_array() {
-        for(type& t: (*this))
+    ~cas_forward()
+    {
+        for(const type& t: (*this))
             t.~type();
     }
-    type* to_type(node* n) {
+    type* to_type(node* n)
+    {
         assert(n > nodes && n < nodes + max_size + 1);
         return (type*)n->value_buf;
     }
-    node* to_node(type* p) {
+    node* to_node(type* p)
+    {
         assert(p);
         node* n = (node*)(p);
         assert(n > nodes && n < nodes + max_size + 1);
         return n;
     }
-    void free_impl(type* p) {
+    void free_impl(type* p)
+    {
         node* n = to_node(p);
-        for(;;) {
+        for(;;)
+        {
             uint64_t from = atomic_load(nodes->id);
             id_type to = {from};
             to.a_next = n - nodes;
@@ -245,77 +278,31 @@ struct cas_array : emplace_decl<type, cas_array<type, max_size, blist> >
                 break;
         }
     }
-    void free(type* p) {
+    void free(type* p)
+    {
         p->~type();
         free_impl(p);
     }
-    void push_front(type* p) requires(!blist){
+    void push_front(type* p)
+    {
         node* n = to_node(p);
-        for(;;) {
-            uint64_t from = atomic_load(nodes->id);
+        for(;;)
+        {
+            uint64_t from = atomic_load(nodes->id, __ATOMIC_ACQUIRE);
             id_type to = {from};
-            //uint16_t next = to.next;
             to.next = n - nodes;
 
-            //if constexpr(blist) {
-            //    if(!next)
-            //        to.prev = to.next;
-            //}
             n->id = from;
-            //if constexpr(blist)
-            //    n->prev = 0;
             ++to.salt;
-            if(atomic_compare_exchange(nodes->id, from, to.id))
-            {
-                /*if constexpr(blist) {
-                    if(next) {
-                        if(!atomic_compare_exchange((nodes + next)->prev, uint16_t(), to.next)) {
-                            //assert(false);
-                            MPROFILE("cas_array::push_front() race");
-                        }
-                    }
-                }*/
-                break;
-            }
-        }
-    }
-    void push_back(type* p) requires(blist) {
-        node* n = to_node(p);
-        for(;;) {
-            uint64_t from = atomic_load(nodes->id);
-            id_type to = {from};
-            uint16_t prev = to.prev;
-
-            id_type prev_to;
-            if(prev) {
-                prev_to.id = atomic_load((nodes + prev)->id);
-                if(prev_to.next || prev_to.id >= locks_from)
-                    continue;
-                if(!atomic_compare_exchange((nodes + prev)->id, prev_to.id, push_lock))
-                    continue;
-            }
-            {
-                id_type f = {from};
-                f.next = 0;
-                atomic_store(n->id, f.id);
-            }
-            to.prev = n - nodes;
-            if(to.next == 0)
-                to.next = to.prev;
-            ++to.salt;
-            bool succ = (atomic_compare_exchange(nodes->id, from, to.id));
-            if(prev) {
-                if(succ)
-                    prev_to.next = to.prev;
-                atomic_store((nodes + prev)->id, prev_to.id);
-            }
-            if(succ)
+            if(atomic_compare_exchange(nodes->id, from, to.id, __ATOMIC_RELEASE))
                 break;
         }
     }
-    type* alloc() {
-        for(;;) {
-            uint64_t from = atomic_load(nodes->id);
+    type* alloc()
+    {
+        for(;;)
+        {
+            uint64_t from = atomic_load(nodes->id, __ATOMIC_ACQUIRE);
             id_type to = {from};
             if(!to.a_next)
                 throw mexception(es() % "cas_array<type," % max_size % "> bad_alloc");
@@ -324,108 +311,202 @@ struct cas_array : emplace_decl<type, cas_array<type, max_size, blist> >
             uint16_t nn = to.a_next;
             to.a_next = n.a_next;
             ++to.salt;
-            if(atomic_compare_exchange(nodes->id, from, to.id))
+            if(atomic_compare_exchange(nodes->id, from, to.id, __ATOMIC_RELEASE))
                 return to_type(nodes + nn);
         }
     }
-    type* alloc_new() {
+    type* alloc_new()
+    {
         type* p = alloc();
         new (p)type();
         return p;
     }
-    type* pop_front() {
-        for(;;) {
-            uint64_t from = atomic_load(nodes->id);
+    type* pop_front()
+    {
+        for(;;)
+        {
+            uint64_t from = atomic_load(nodes->id, __ATOMIC_ACQUIRE);
             id_type to = {from};
             if(!to.next)
                 return nullptr;
+
             uint16_t nn = to.next;
             uint64_t next = atomic_load((nodes + nn)->id);
-            if constexpr(blist)
-                if(next >= locks_from)
-                    continue;
+
             id_type n = {next};
-            id_type next_next_to;
-            if constexpr(blist) {
-                if(!n.next)
-                    to.prev = 0;
-                else {
-                    next_next_to.id = atomic_load((nodes + n.next)->id);
-                    if(next_next_to.prev != nn || next_next_to.id >= locks_from)
-                        continue;
-                    if(!atomic_compare_exchange((nodes + n.next)->id, next_next_to.id, pop_lock))
-                        continue;
-                }
-            }
+
             to.next = n.next;
             ++to.salt;
-            bool succ = (atomic_compare_exchange(nodes->id, from, to.id));
-            if constexpr(blist) {
-                if(to.next) {
-                    if(succ)
-                        next_next_to.prev = uint16_t();
-                    atomic_store((nodes + n.next)->id, next_next_to.id);
-                }
-            }
+            bool succ = atomic_compare_exchange(nodes->id, from, to.id, __ATOMIC_RELEASE);
             if(succ)
                 return to_type(nodes + nn);
         }
     }
-    void push(type* p) {
-        if constexpr(blist)
-            push_back(p);
-        else
-            push_front(p);
+    void push(type* p)
+    {
+        push_front(p);
     }
-    type* pop() {
+    type* pop()
+    {
         return pop_front();
     }
-    static constexpr uint32_t run_once() {
+    static constexpr uint32_t run_once()
+    {
         return 0;
     }
 
-    template<typename node>
-    struct iter : list_iterator<node, blist>
+    struct const_iterator : list_iterator<const node, false>
     {
-        node* nodes;
+        const node* nodes;
 
-        iter(node* nodes) : list_iterator<node, blist>(nodes, true), nodes(nodes) {
+        const_iterator(const node* nodes) : list_iterator<const node, false>(nodes, true), nodes(nodes)
+        {
         }
-        iter(node* nodes, node* n) : list_iterator<node, blist>(n), nodes(nodes) {
+        const_iterator(const node* nodes, node* n) : list_iterator<const node, false>(n), nodes(nodes)
+        {
         }
-        iter& operator++() {
+        const_iterator& operator++()
+        {
             if(!this->n->next)
                 this->n = nullptr;
             else
                 this->n = nodes + this->n->next;
             return *this;
         }
-        iter& operator--() requires(blist) {
-            this->n = nodes + this->n->prev;
-            return *this;
-        }
-        auto& operator*() {
+        const type& operator*() const
+        {
             return *((type*)this->n->value_buf);
         }
-        auto* operator->() {
+        const type* operator->() const
+        {
             return (type*)this->n->value_buf;
         }
     };
 
-    typedef iter<const node> const_iterator;
-    typedef iter<node> iterator;
-
-    iterator begin() {
-        return iterator(nodes, nodes + nodes->next);
+    const_iterator begin() const
+    {
+        return const_iterator(nodes, (node*)nodes + nodes->next);
     }
-    const_iterator begin() const {
-        return const_iterator(nodes, nodes + nodes->next);
-    }
-    iterator end() {
-        return iterator(nodes);
-    }
-    const_iterator end() const {
+    const_iterator end() const
+    {
         return const_iterator(nodes);
+    }
+};
+
+template<typename type, uint16_t capacity_v, type empty_v = type(), bool use_mt = true>
+struct rbuffer
+{
+    mutable critical_section cs;
+
+    uint16_t f, t;
+    type values[capacity_v];
+
+    rbuffer() : f(), t()
+    {
+        fill(values, values + capacity_v, empty_v);
+    }
+
+    void push_back(type v)
+    {
+        critical_section::mt_lock<use_mt> lock(cs);
+
+        uint16_t tf;
+        if(t == capacity_v)
+        {
+            tf = 0;
+            t = 0;
+        }
+        else
+        {
+            if(t >= f)
+                tf = t;
+            else
+                tf = t + 1;
+            t = t + 1;
+        }
+
+        assert(t != f && "rbuffer::push_back overloaded");
+        values[tf] = v;
+    }
+    type pop_front()
+    {
+        critical_section::mt_lock<use_mt> lock(cs);
+
+        if(f == t)
+            return empty_v;
+
+        type v = values[f];
+
+        values[f] = empty_v;
+        if(f == capacity_v - 1)
+        {
+            f = 0;
+            if(t == capacity_v)
+                t = 0;
+            else
+                ++t;
+        }
+        else
+            f = f + 1;
+
+        return v;
+    }
+    void push(type v)
+    {
+        push_back(v);
+    }
+    type pop()
+    {
+        return pop_front();
+    }
+    uint16_t __size() const
+    {
+        if(t != capacity_v)
+        {
+            if(t > f)
+                return t - f;
+            if(t < f)
+                return capacity_v - f + t + 1;
+        }
+        else
+            return t - f;
+
+        return 0;
+    }
+    uint16_t size() const
+    {
+        critical_section ::scoped_lock lock(cs);
+        return __size();
+    }
+    static constexpr uint16_t capacity()
+    {
+        return capacity_v;
+    }
+};
+
+template<typename type, uint32_t capacity_v, bool use_mt = true>
+struct rbuffer_list : rbuffer<type*, capacity_v, nullptr, use_mt>
+{
+    static const bool use_blist = false;
+    typedef rbuffer<type*, capacity_v, nullptr, use_mt> base;
+
+    type* alloc()
+    {
+        return new type();
+    }
+    void free(type* v)
+    {
+        delete v;
+    }
+    ~rbuffer_list()
+    {
+        type* p;
+        while((p = this->pop()))
+            free(p);
+    }
+    static constexpr uint32_t run_once()
+    {
+        return 0;
     }
 };
 
@@ -453,16 +534,20 @@ namespace alloc_params
         int cont_type = 2; //tss_pvector 0, forward_list 1, blist 2
         int allocator_cont = 1;
 
-        const constexpr fast_alloc_params operator()(uint32_t pre_alloc, uint32_t max_size = 0) const {
+        const constexpr fast_alloc_params operator()(uint32_t pre_alloc, uint32_t max_size = 0) const
+        {
             return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size, use_malloc, cont_type, allocator_cont);
         }
-        const constexpr fast_alloc_params malloc(bool use_malloc = true) const {
+        const constexpr fast_alloc_params malloc(bool use_malloc = true) const
+        {
             return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size, use_malloc, cont_type, allocator_cont);
         }
-        const constexpr fast_alloc_params operator()(container_tag cont, container_tag ac = forward_list_t) const {
+        const constexpr fast_alloc_params operator()(container_tag cont, container_tag ac = forward_list_t) const
+        {
             return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size, use_malloc, cont.value, ac.value);
         }
-        constexpr int node_type() const {
+        constexpr int node_type() const
+        {
             return max(cont_type, allocator_cont);
         }
     };
@@ -480,7 +565,8 @@ static inline void count_slow()
 }
 
 template<typename type, fast_alloc_params params = mt_tss,
-    template<typename, bool, bool, bool, typename> typename nodes_type_ = forward_list, typename node = forward_list_node<type, params.use_tss> >
+    template<typename, bool, bool, bool, typename> typename nodes_type_ = forward_list,
+    typename node = forward_list_node<type, params.use_tss> >
 struct fast_alloc
 {
     static const bool use_mt = params.use_mt;
@@ -492,15 +578,19 @@ struct fast_alloc
     nodes_type nodes;
     uint32_t size;
 
-    type* alloc_impl() {
+    type* alloc_impl()
+    {
         node* n = fast_alloc_alloc<node>();
         if constexpr(use_tss)
             nodes.set_tss_ptr(n);
         return nodes_type::to_type(n);
     }
-    fast_alloc() : size() {
-        if constexpr(pre_alloc) {
-            for(uint32_t i = 0; i != pre_alloc; ++i) {
+    fast_alloc() : size()
+    {
+        if constexpr(pre_alloc)
+        {
+            for(uint32_t i = 0; i != pre_alloc; ++i)
+            {
                 type* p = alloc_impl();
                 new(p)type();
                 nodes.push(p);
@@ -509,41 +599,50 @@ struct fast_alloc
         if constexpr(max_size)
             size += pre_alloc;
     }
-    type* alloc_new() {
+    type* alloc_new()
+    {
         type* p = nodes.pop();
-        if(p) {
+        if(p)
+        {
             if constexpr(max_size)
                 atomic_sub(size, 1);
         }
-        else {
+        else
+        {
             count_slow();
             p = alloc_impl();
             new (p)type;
         }
         return p;
     }
-    type* alloc() {
+    type* alloc()
+    {
         type* p = nodes.pop();
-        if(p) {
+        if(p)
+        {
             p->~type();
             if constexpr(max_size)
                 atomic_sub(size, 1);
         }
-        else {
+        else
+        {
             count_slow();
             p = alloc_impl();
         }
         return p;
     }
-    void free(type* p) {
+    void free(type* p)
+    {
         if constexpr(max_size)
         {
             uint32_t size_ = atomic_load(size);
-            if(size_ < max_size) {
+            if(size_ < max_size)
+            {
                 nodes.push(p);
                 atomic_add(size, 1);
             }
-            else {
+            else
+            {
                 MPROFILE("fast_alloc::free() slow")
                 fast_alloc_delete(nodes_type::to_node(p));
                 return;
@@ -552,21 +651,26 @@ struct fast_alloc
         else
             nodes.push(p);
     }
-    uint32_t run_once() {
+    uint32_t run_once()
+    {
         if constexpr(max_size == 0)
             return 0;
+
         MPROFILE("fast_alloc::run_once()")
         uint32_t ret = 0;
+
         while(atomic_load(size) > max_size)
         {
             MPROFILE("fast_alloc::run_once() pop")
             type* p = nodes.pop();
-            if(p) {
+            if(p)
+            {
                 atomic_sub(size, 1);
                 fast_alloc_delete(nodes_type::to_node(p));
                 ++ret;
             }
-            else {
+            else
+            {
                 MPROFILE("fast_alloc::run_once() pop race")
                 return ret;
             }
@@ -585,18 +689,22 @@ struct fast_alloc
 template<typename type, typename node_type>
 struct malloc_alloc
 {
-    type* alloc_new() {
+    type* alloc_new()
+    {
         type* p = (type*)fast_alloc_alloc<node_type>();
         new (p)type;
         return p;
     }
-    type* alloc() {
+    type* alloc()
+    {
         return (type*)fast_alloc_alloc<node_type>();
     }
-    void free(type* n) {
+    void free(type* n)
+    {
         fast_alloc_delete((node_type*)n);
     }
-    static constexpr uint32_t run_once() {
+    static constexpr uint32_t run_once()
+    {
         return 0;
     }
 };
@@ -644,7 +752,7 @@ template<typename type_, typename node, fast_alloc_params params>
 struct allocator_type
 {
     typedef
-    conditional_t<params.use_malloc, malloc_alloc<type_, node> ,
+    conditional_t<params.use_malloc, malloc_alloc<type_, node>,
         conditional_multi_t<params.allocator_cont,
             fast_alloc<type_, params, tss_pvector, node>,
             fast_alloc<type_, params, forward_list, node>,
@@ -658,9 +766,11 @@ struct fast_alloc_list :
     container_type<type, node, params>::type,
     emplace_decl<type, fast_alloc_list<type, params, node> >
 {
-    fast_alloc_list() {
+    fast_alloc_list()
+    {
     }
-    fast_alloc_list(str_holder) {
+    fast_alloc_list(str_holder)
+    {
     }
 };
 

@@ -26,7 +26,8 @@ struct data_tss<node, false>
 {
     mutable node ptr;
 
-    node& get_data() const {
+    node& get_data() const
+    {
         return ptr;
     }
 };
@@ -39,31 +40,35 @@ struct list_iterator
     node* n;
     bool e;
 
-    list_iterator() : n() {
+    list_iterator() : n()
+    {
     }
-    list_iterator(node* n, bool e = false) : n(n), e(e) {
+    list_iterator(node* n, bool e = false) : n(n), e(e)
+    {
     }
-    list_iterator& operator++() {
+    list_iterator& operator++()
+    {
         n = n->next;
         return *this;
     }
-    list_iterator& operator--() requires(blist) {
+    list_iterator& operator--() requires(blist)
+    {
         n = n->prev;
         return *this;
     }
-    auto& operator*() {
+    auto& operator*()
+    {
         return n->value;
     }
-    auto* operator->() {
+    auto* operator->()
+    {
         return &n->value;
     }
-    bool operator==(const list_iterator& r) const {
+    bool operator==(const list_iterator& r) const
+    {
         if(e != r.e && (!n || !r.n))
             return true;
         return n->next == r.n->next;
-    }
-    bool operator!=(const list_iterator& r) const {
-        return !(*this == r);
     }
 };
 
@@ -98,8 +103,10 @@ struct list_base : data_tss<node_type*, use_tss>
 
     critical_section cs;
 
-    list_base() {
-        auto m = []() {
+    list_base()
+    {
+        auto m = []()
+        {
             node* n = fast_alloc_alloc<node>();
             memset((void*)n, 0, sizeof(node));
             return n;
@@ -110,30 +117,36 @@ struct list_base : data_tss<node_type*, use_tss>
         else
             this->ptr = m();
     }
-    static type* to_type(node* n) {
+    static type* to_type(node* n)
+    {
         return &n->value;
     }
-    static node* to_node(type* p) {
+    static node* to_node(type* p)
+    {
         return (node*)p;
     }
-    node* get_data_impl(node* n) {
+    node* get_data_impl(node* n)
+    {
         if constexpr(use_tss)
             return n->ptr;
 
         return this->get_data();
     }
-    void set_tss_ptr(node *n) requires(use_tss){
+    void set_tss_ptr(node *n) requires(use_tss)
+    {
         n->ptr = this->get_data();
     }
 
     template<typename ... params>
-    static type* alloc_node(params&& ... args) {
+    static type* alloc_node(params&& ... args)
+    {
         node* n = fast_alloc_alloc<node>();
         type* p = to_type(n);
         new(p)type(args...);
         return p;
     }
-    bool erase(type* p) { //liniar complexity
+    bool erase(type* p) //liniar complexity
+    {
         node* n = to_node(p);
 
         bool free_lock;
@@ -149,8 +162,10 @@ struct list_base : data_tss<node_type*, use_tss>
 
         node* ne = prev->next;
 
-        while(ne) {
-            if(ne == n) {
+        while(ne)
+        {
+            if(ne == n)
+            {
                 if(prev)
                     prev->next = n->next;
 
@@ -180,23 +195,31 @@ struct list_base : data_tss<node_type*, use_tss>
     typedef list_iterator<const node, blist> const_iterator;
     typedef list_iterator<node, blist> iterator;
 
-    iterator begin() {
+    iterator begin()
+    {
         return iterator(this->get_data()->next);
     }
-    const_iterator begin() const {
+    const_iterator begin() const
+    {
         return const_iterator(this->get_data()->next);
     }
-    iterator end() {
+    iterator end()
+    {
         return iterator(this->get_data(), true);
     }
-    const_iterator end() const {
+    const_iterator end() const
+    {
         return const_iterator(this->get_data(), true);
     }
-    ~list_base() {
-        if constexpr(delete_on_exit) {
-            auto del_func = [&](node* ptr) {
+    ~list_base()
+    {
+        if constexpr(delete_on_exit)
+        {
+            auto del_func = [&](node* ptr)
+            {
                 iterator i(ptr->next), t = i, e = iterator(ptr, true);
-                while(i != e) {
+                while(i != e)
+                {
                     ++t;
                     fast_alloc_delete(to_node(&(*i)));
                     i = t;
@@ -230,13 +253,15 @@ struct forward_list_node<type, true>
     forward_list_node* ptr;
 };
 
-template<typename type, bool use_mt = true, bool use_tss = false, bool delete_on_exit = true, typename node_type = forward_list_node<type, use_tss> >
+template<typename type, bool use_mt = true, bool use_tss = false, bool delete_on_exit = true,
+    typename node_type = forward_list_node<type, use_tss> >
 struct forward_list : list_base<type, use_mt, use_tss, delete_on_exit, node_type> 
 {
     typedef list_base<type, use_mt, use_tss, delete_on_exit, node_type> base;
     typedef node_type node;
 
-    void push_front(type* p) {
+    void push_front(type* p)
+    {
         node* n = base::to_node(p);
         node* ptr = this->get_data_impl(n);
 
@@ -251,7 +276,8 @@ struct forward_list : list_base<type, use_mt, use_tss, delete_on_exit, node_type
         if constexpr(use_mt)
             this->cs.unlock(free_lock);
     }
-    type* pop_front() {
+    type* pop_front()
+    {
         node* ptr = this->get_data();
 
         bool free_lock;
@@ -272,11 +298,13 @@ struct forward_list : list_base<type, use_mt, use_tss, delete_on_exit, node_type
 
         return base::to_type(n);
     }
-    void push(type* p) {
+    void push(type* p)
+    {
         push_front(p);
     }
-    type* pop() {
-        return this->pop_front();
+    type* pop()
+    {
+        return pop_front();
     }
 };
 
@@ -304,7 +332,8 @@ struct blist : list_base<type, use_mt, use_tss, delete_on_exit, node_type, true>
     typedef list_base<type, use_mt, use_tss, delete_on_exit, node_type, true> base;
     typedef node_type node;
 
-    void push_front(type* p) {
+    void push_front(type* p)
+    {
         node* n = base::to_node(p);
         node* ptr = this->get_data_impl(n);
 
@@ -325,7 +354,8 @@ struct blist : list_base<type, use_mt, use_tss, delete_on_exit, node_type, true>
         if constexpr(use_mt)
             this->cs.unlock(free_lock);
     }
-    void push_back(type* p) {
+    void push_back(type* p)
+    {
         node* n = base::to_node(p);
         node* ptr = this->get_data_impl(n);
 
@@ -346,7 +376,8 @@ struct blist : list_base<type, use_mt, use_tss, delete_on_exit, node_type, true>
         if constexpr(use_mt)
             this->cs.unlock(free_lock);
     }
-    type* pop_front() {
+    type* pop_front()
+    {
         node* ptr = this->get_data();
 
         bool free_lock;
@@ -372,7 +403,8 @@ struct blist : list_base<type, use_mt, use_tss, delete_on_exit, node_type, true>
 
         return base::to_type(n);
     }
-    type* pop_back() {
+    type* pop_back()
+    {
         node* ptr = this->get_data();
 
         bool free_lock;
@@ -381,7 +413,8 @@ struct blist : list_base<type, use_mt, use_tss, delete_on_exit, node_type, true>
             free_lock = this->cs.lock();
 
         node* n = ptr->prev;
-        if(n) {
+        if(n)
+        {
             ptr->prev = n->prev;
             if(ptr->prev)
                 ptr->prev->next = nullptr;
@@ -398,13 +431,13 @@ struct blist : list_base<type, use_mt, use_tss, delete_on_exit, node_type, true>
 
         return base::to_type(n);
     }
-    void push(type* p) {
+    void push(type* p)
+    {
         this->push_back(p);
-        //this->push_front(p);
     }
-    type* pop() {
+    type* pop()
+    {
         return this->pop_front();
-        //return this->pop_back();
     }
 };
 
@@ -416,16 +449,20 @@ struct tss_pvector : data_tss<mvector<type*>, use_tss>
     tss_pvector() {
         //static_assert(!use_mt && "todo");
     }
-    static type* to_type(type* p) {
+    static type* to_type(type* p)
+    {
         return p;
     }
-    static type* to_node(type* p) {
+    static type* to_node(type* p)
+    {
         return p;
     }
-    void push(type* p) {
+    void push(type* p)
+    {
         this->get_data().push_back(p);
     }
-    type* pop() {
+    type* pop()
+    {
         auto& v = this->get_data();
         if(v.empty())
             return nullptr;
@@ -433,27 +470,35 @@ struct tss_pvector : data_tss<mvector<type*>, use_tss>
         v.pop_back();
         return p;
     }
-    void set_tss_ptr(node*) requires(use_tss){
+    void set_tss_ptr(node*) requires(use_tss)
+    {
     }
 
     typedef pvector<type>::iterator iterator;
     typedef pvector<type>::const_iterator const_iterator;
 
-    iterator begin() {
+    iterator begin()
+    {
         return iterator(this->get_data().begin());
     }
-    const_iterator begin() const {
+    const_iterator begin() const
+    {
         return const_iterator(this->get_data().begin());
     }
-    iterator end() {
+    iterator end()
+    {
         return iterator(this->get_data().end());
     }
-    const_iterator end() const {
+    const_iterator end() const
+    {
         return const_iterator(this->get_data().end());
     }
-    ~tss_pvector() {
-        if constexpr(delete_on_exit) {
-            auto del_func = [&](mvector<type*>& data) {
+    ~tss_pvector()
+    {
+        if constexpr(delete_on_exit)
+        {
+            auto del_func = [&](mvector<type*>& data)
+            {
                 for(type* p: data)
                     fast_alloc_delete(to_node(p));
             };

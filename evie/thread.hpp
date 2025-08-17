@@ -44,7 +44,7 @@ struct critical_section
     }
     bool try_lock()
     {
-        return !__atomic_test_and_set(&flag, __ATOMIC_RELAXED);
+        return !__atomic_test_and_set(&flag, __ATOMIC_ACQUIRE);
     }
     [[nodiscard]] bool lock()
     {
@@ -63,7 +63,7 @@ struct critical_section
     }
     void unlock(bool free_lock)
     {
-        __atomic_clear(&flag, __ATOMIC_RELAXED);
+        __atomic_clear(&flag, __ATOMIC_RELEASE);
 
         if(!free_lock) [[unlikely]]
             mutex.unlock();
@@ -83,6 +83,23 @@ struct critical_section
             cs.unlock(free_lock);
         }
     };
+
+    template<bool use_mt>
+    struct mt_lock;
+};
+
+template<>
+struct critical_section::mt_lock<true> : critical_section::scoped_lock
+{
+    using scoped_lock::scoped_lock;
+};
+
+template<>
+struct critical_section::mt_lock<false>
+{
+    mt_lock(critical_section&)
+    {
+    }
 };
 
 struct my_condition
