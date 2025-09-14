@@ -14,7 +14,8 @@ struct stream_file : b_stream
 {
     mstring fname;
 
-    stream_file(str_holder f, bool trunc) : fname(f) {
+    stream_file(str_holder f, bool trunc) : fname(f)
+    {
         write_file(fname.c_str(), begin(), size(), trunc);
     }
     void flush(bool force)
@@ -25,7 +26,8 @@ struct stream_file : b_stream
             clear();
         }
     }
-    ~stream_file() {
+    ~stream_file()
+    {
         write_file(fname.c_str(), begin(), size(), false);
     }
 };
@@ -52,18 +54,15 @@ struct csv_file : stream_file
     csv_file(str_holder fname, bool trunc, char sep = ',') : stream_file(fname, trunc), sep(sep)
     {
     }
-    
     void write_args()
     {
     }
-
     template<typename type, typename ... types>
     void write_args(const type& t, types ... args)
     {
         (*this) << sep << t;
         write_args(args...);
     }
-
     template<typename type, typename ... types>
     void operator()(const type& t, types ... args)
     {

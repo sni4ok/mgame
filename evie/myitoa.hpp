@@ -132,7 +132,8 @@ namespace my_cvt
         return pow10<v>::result;
     }
     
-    static constexpr uint64_t pow[] = {
+    static constexpr uint64_t pow[] = 
+    {
         1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000,
         p10<9>(), p10<10>(), p10<11>(), p10<12>(), p10<13>(),
         p10<14>(), p10<15>(), p10<16>(), p10<17>(), p10<18>(),
@@ -219,13 +220,18 @@ struct ios_base
 };
 
 template<typename type>
-concept __derived_from_ios_base = is_class_v<type> && (!is_same_v<type, ios_base>) && requires(type* t, ios_base* b)
+concept __derived_from_ios_base = is_class_v<type> && (!is_same_v<type, ios_base>)
+&& requires(type* t, ios_base* b)
 {
     b = t;
 };
 
 template<typename stream, typename type>
-requires __derived_from_ios_base<stream> && requires(stream& s, const type& t) { s << t; }
+requires __derived_from_ios_base<stream> && requires(stream& s, const type& t)
+{
+    s << t;
+}
+
 using __rvalue_stream_insertion_t = stream&&;
 
 template<typename stream, typename type>

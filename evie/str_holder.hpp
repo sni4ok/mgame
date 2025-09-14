@@ -15,10 +15,11 @@ extern "C"
     extern void* memcpy(void*, const void*, size_t) __THROW __nonnull ((1, 2));
     extern void* memmove(void*, const void*, size_t) __THROW __nonnull ((1, 2));
     extern int memcmp(const void*, const void*, size_t) __THROW __attribute_pure__ __nonnull ((1, 2));
-    extern int strcmp(const char *__s1, const char *__s2) noexcept (true) __attribute__ ((__pure__)) __attribute__ ((__nonnull__ (1, 2)));
-
+    extern int strcmp(const char *__s1, const char *__s2) noexcept (true)
+        __attribute__ ((__pure__)) __attribute__ ((__nonnull__ (1, 2)));
     extern void *malloc (size_t __size) __THROW __attribute_malloc__ __attribute_alloc_size__ ((1)) __wur;
-    extern void *realloc(void*, size_t) __THROW __attribute_warn_unused_result__ __attribute_alloc_size__ ((2));
+    extern void *realloc(void*, size_t) __THROW __attribute_warn_unused_result__
+        __attribute_alloc_size__ ((2));
     extern void free(void*) __THROW;
     extern char *getenv(const char*) __THROW __nonnull ((1)) __wur;
     extern int usleep(__useconds_t __useconds);
@@ -75,14 +76,17 @@ public:
     {
         return size_;
     }
-    constexpr bool empty() const {
+    constexpr bool empty() const
+    {
         return !size_;
     }
-    constexpr void resize(uint64_t size) {
+    constexpr void resize(uint64_t size)
+    {
         assert(size <= size_);
         size_ = size;
     }
-    constexpr void pop_back() {
+    constexpr void pop_back()
+    {
         assert(size_);
         --size_;
     }

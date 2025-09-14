@@ -35,10 +35,6 @@ struct rational
     {
         return int64_t(num) * v.den == int64_t(v.num) * den;
     }
-    bool operator!=(rational v) const
-    {
-        return !(*this == v);
-    }
 };
 
 template<typename stream>

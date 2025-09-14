@@ -16,7 +16,8 @@
 
 #define MPROFILE(id) static const uint64_t CLINE(counter_id) = profilerinfo::instance().register_counter(id); \
     mprofiler CLINE(profile_me)(CLINE(counter_id));
-#define MPROFILE_USER(id, time) static const uint64_t CLINE(counter_id) = profilerinfo::instance().register_counter(id); \
+#define MPROFILE_USER(id, time) static const uint64_t CLINE(counter_id) = \
+    profilerinfo::instance().register_counter(id); \
     profilerinfo::instance().add_info(CLINE(counter_id), time);
 
 class profilerinfo : public stack_singleton<profilerinfo>

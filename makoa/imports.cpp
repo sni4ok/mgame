@@ -111,7 +111,6 @@ uint32_t mmap_cp_read(void *v, char_it buf, uint32_t buf_size)
         if(i == e)
             i = f + 2;
         *(f + 1) = uint8_t(i - f);
-        //mlog() << "mmap_cp_read(" << w << "," << r << "," << cur_count << "," << uint32_t(*(f)) << "," << uint32_t(*(f + 1)) << ")";
     }
     return cur_count * message_size;
 }
@@ -307,7 +306,8 @@ void import_tcp_start(void* c, void* p)
             it.cond.timed_uwait(lock, 50 * 1000);
 
         lock.unlock();
-        int socket = socket_accept_async(it.port, false/*local*/, false/*sync*/, &client, &it.can_run, it.params.c_str());
+        int socket = socket_accept_async(it.port, false/*local*/, false/*sync*/,
+            &client, &it.can_run, it.params.c_str());
         volatile bool initialized = false;
         thread thrd(&import_tcp_thread, &it, socket, client, ref(initialized), p);
         lock.lock();
@@ -322,18 +322,23 @@ void import_tcp_start(void* c, void* p)
 struct import_udp
 {
     volatile bool& can_run;
-    mstring src_ip, ma;
+    mstring host, src_ip, ma;
     uint16_t port;
 
     import_udp(volatile bool& can_run, const mstring& params) : can_run(can_run)
     {
         auto p = split(params.str(), ' ');
-        if(p.size() != 3)
+        if(p.size() != 2 && p.size() != 4)
             throw mexception(es() % "import_udp, required 3 params (src_ip multiaddr port): " % params);
 
-        src_ip = p[0];
-        ma = p[1];
-        port = lexical_cast<uint16_t>(p[2]);
+        host = p[0];
+        port = lexical_cast<uint16_t>(p[1]);
+
+        if(p.size() == 4)
+        {
+            src_ip = p[2];
+            ma = p[3];
+        }
     }
 };
 
@@ -358,7 +363,7 @@ uint32_t udp_read(int socket, char_it buf, uint32_t buf_size)
 void import_udp_start(void* c, void* p)
 {
     import_udp& i = *((import_udp*)(c));
-    udp_socket udp(i.src_ip, i.ma, i.port);
+    udp_socket udp(i.host, i.port, i.src_ip, i.ma);
     reader<int> r(p, udp.socket, &udp_read);
     work_thread_reader(r, i.can_run, timeout);
 }
@@ -432,7 +437,8 @@ static const int _import_udp = register_importer("udp",
     {importer_init<import_udp>, importer_destroy<import_udp>, import_udp_start, nullptr}
 );
 static const int _import_file = register_importer("file",
-    {importer_init<import_ifile>, importer_destroy<import_ifile>, import_ifile_start<import_ifile, ifile_read>, nullptr}
+    {importer_init<import_ifile>, importer_destroy<import_ifile>,
+    import_ifile_start<import_ifile, ifile_read>, nullptr}
 );
 static const int _import_files_replay = register_importer("files_replay",
     {importer_init<import_files_replay>, importer_destroy<import_files_replay>,

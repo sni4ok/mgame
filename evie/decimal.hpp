@@ -28,13 +28,6 @@ inline constexpr bool operator>(type l, type r)
 
 template<typename type>
 requires(is_decimal<type>)
-inline constexpr bool operator!=(type l, type r)
-{
-    return l.value != r.value;
-}
-
-template<typename type>
-requires(is_decimal<type>)
 inline constexpr bool operator==(type l, type r)
 {
     return l.value == r.value;

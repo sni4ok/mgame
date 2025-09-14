@@ -58,7 +58,7 @@ public:
     }
     void release_node(linked_node* n)
     {
-        uint32_t consumers_left = atomic_sub(n->cnt, 1);
+        uint32_t consumers_left = atomic_sub(n->cnt, 1u);
         if(!consumers_left)
         {
             n->next = nullptr;

@@ -80,7 +80,7 @@ public:
         }
 
         (bulks[end_bulk])[end_element] = move(value);
-        atomic_add(num_elems, 1);
+        atomic_add(num_elems, 1u);
     }
     void push_back(const type& value)
     {
@@ -110,10 +110,6 @@ public:
         bool operator==(const const_iterator& r) const
         {
             return element == r.element;
-        }
-        bool operator!=(const const_iterator& r) const
-        {
-            return element != r.element;
         }
         const_iterator& operator++()
         {
@@ -459,6 +455,15 @@ struct rbuffer
     {
         return pop_front();
     }
+    type front() const
+    {
+        critical_section::mt_lock<use_mt> lock(cs);
+
+        if(f == t)
+            return empty_v;
+
+        return values[f];
+    }
     uint16_t __size() const
     {
         if(t != capacity_v)
@@ -475,8 +480,12 @@ struct rbuffer
     }
     uint16_t size() const
     {
-        critical_section ::scoped_lock lock(cs);
+        critical_section::mt_lock<use_mt> lock(cs);
         return __size();
+    }
+    bool empty() const
+    {
+        return !size();
     }
     static constexpr uint16_t capacity()
     {
@@ -536,15 +545,19 @@ namespace alloc_params
 
         const constexpr fast_alloc_params operator()(uint32_t pre_alloc, uint32_t max_size = 0) const
         {
-            return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size, use_malloc, cont_type, allocator_cont);
+            return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size,
+                use_malloc, cont_type, allocator_cont);
         }
         const constexpr fast_alloc_params malloc(bool use_malloc = true) const
         {
-            return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size, use_malloc, cont_type, allocator_cont);
+            return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size,
+                use_malloc, cont_type, allocator_cont);
         }
-        const constexpr fast_alloc_params operator()(container_tag cont, container_tag ac = forward_list_t) const
+        const constexpr fast_alloc_params operator()(container_tag cont,
+            container_tag ac = forward_list_t) const
         {
-            return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size, use_malloc, cont.value, ac.value);
+            return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size,
+                use_malloc, cont.value, ac.value);
         }
         constexpr int node_type() const
         {
@@ -605,7 +618,7 @@ struct fast_alloc
         if(p)
         {
             if constexpr(max_size)
-                atomic_sub(size, 1);
+                atomic_sub(size, 1u);
         }
         else
         {
@@ -622,7 +635,7 @@ struct fast_alloc
         {
             p->~type();
             if constexpr(max_size)
-                atomic_sub(size, 1);
+                atomic_sub(size, 1u);
         }
         else
         {
@@ -639,7 +652,7 @@ struct fast_alloc
             if(size_ < max_size)
             {
                 nodes.push(p);
-                atomic_add(size, 1);
+                atomic_add(size, 1u);
             }
             else
             {
@@ -665,7 +678,7 @@ struct fast_alloc
             type* p = nodes.pop();
             if(p)
             {
-                atomic_sub(size, 1);
+                atomic_sub(size, 1u);
                 fast_alloc_delete(nodes_type::to_node(p));
                 ++ret;
             }
@@ -679,7 +692,7 @@ struct fast_alloc
         {
             MPROFILE("fast_alloc::run_once() push")
             nodes.push(alloc_impl());
-            atomic_add(size, 1);
+            atomic_add(size, 1u);
             ++ret;
         }
         return ret;
@@ -760,7 +773,8 @@ struct allocator_type
     > > type;
 };
 
-template<typename type, fast_alloc_params params = mt_tss, typename node = node_type<type, params.use_tss, params.node_type()>::node>
+template<typename type, fast_alloc_params params = mt_tss,
+    typename node = node_type<type, params.use_tss, params.node_type()>::node>
 struct fast_alloc_list :
     allocator_type<type, node, params>::type,
     container_type<type, node, params>::type,

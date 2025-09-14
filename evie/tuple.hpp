@@ -12,16 +12,13 @@ struct tuple;
 template<>
 struct tuple<>
 {
-    static constexpr size_t tuple_size() {
+    static constexpr size_t tuple_size()
+    {
         return 0;
     }
     bool operator==(const tuple&) const
     {
         return true;
-    }
-    bool operator!=(const tuple&) const
-    {
-        return false;
     }
     bool operator<(const tuple&) const
     {
@@ -38,14 +35,17 @@ struct tuple<type>
     type v;
 
     template<size_t i>
-    type& get() requires(!i) {
+    type& get() requires(!i)
+    {
         return v;
     }
     template<size_t i>
-    const type& get() const requires(!i) {
+    const type& get() const requires(!i)
+    {
         return v;
     }
-    static constexpr size_t tuple_size() {
+    static constexpr size_t tuple_size()
+    {
         return 1;
     }
     template<typename tuple2>
@@ -56,10 +56,6 @@ struct tuple<type>
     bool operator==(const tuple& r) const
     {
         return v == r.v;
-    }
-    bool operator!=(const tuple& r) const
-    {
-        return v != r.v;
     }
     bool operator<(const tuple& r) const
     {
@@ -77,17 +73,20 @@ struct tuple<type, types...>
     tuple<types...> values;
 
     template<size_t i>
-    auto& get() {
+    auto& get()
+    {
         if constexpr(!i)
             return v;
         else
             return values.template get<i - 1>();
     }
     template<size_t i>
-    const auto& get() const {
+    const auto& get() const
+    {
         return const_cast<tuple<type, types...>* >(this)->template get<i>();
     }
-    static constexpr size_t tuple_size() {
+    static constexpr size_t tuple_size()
+    {
         return 1 + tuple<types...>::tuple_size();
     }
     template<typename tuple2>
@@ -165,17 +164,20 @@ auto tuple_cat(const tuple1& t1, const tuple2& t2)
 {
     if constexpr(tuple_size_v<tuple2> == 0)
         return t1;
-    else {
+    else
+    {
         static const size_t sz = tuple_size_v<tuple1>;
         if constexpr(sz == 0)
             return t2;
         else if constexpr(sz == 1)
             return t2.add_front(t1);
-        else if constexpr(sz == 2) {
+        else if constexpr(sz == 2)
+        {
             auto r = t2.add_front(t1.values);
             return r.add_front(t1);
         }
-        else if constexpr(sz == 3) {
+        else if constexpr(sz == 3)
+        {
             auto r = t2.add_front(t1.values.values);
             auto w = r.add_front(t1.values);
             return w.add_front(t1);

@@ -16,7 +16,8 @@ struct data_tss<node, true>
 {
     mutable carray<node, max_threads_count> nodes;
 
-    node& get_data() const {
+    node& get_data() const
+    {
         return nodes[get_thread_id()];
     }
 };

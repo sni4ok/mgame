@@ -82,19 +82,11 @@ struct optional
         }
         return false;
     }
-    bool operator!=(const optional& v) const
-    {
-        return !((*this) == v);
-    }
     bool operator==(const type& v) const
     {
         if(!initialized)
             return false;
         return value == v;
-    }
-    bool operator!=(const type& v) const
-    {
-        return !((*this) == v);
     }
     bool operator!() const
     {

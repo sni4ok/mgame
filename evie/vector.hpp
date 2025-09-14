@@ -83,39 +83,48 @@ public:
     typedef type value_type;
     typedef type& reference;
 
-    mvector() {
+    mvector()
+    {
         __clear();
     }
-    explicit mvector(uint64_t size) {
+    explicit mvector(uint64_t size)
+    {
         __clear();
         resize(size);
     }
-    mvector(mvector&& r) {
+    mvector(mvector&& r)
+    {
         __clear();
         swap(r);
     }
-    mvector(span<type> str) {
+    mvector(span<type> str)
+    {
         __clear();
         insert(str.begin(), str.end());
     }
-    mvector(const type* from, const type* to) {
+    mvector(const type* from, const type* to)
+    {
         __clear();
         insert(from, to);
     }
-    mvector(const mvector& r) {
+    mvector(const mvector& r)
+    {
         __clear();
         insert(r.begin(), r.end());
     }
-    mvector(std::initializer_list<type> r) {
+    mvector(std::initializer_list<type> r)
+    {
         __clear();
         insert(r.begin(), r.end());
     }
-    mvector& operator=(mvector&& r) {
+    mvector& operator=(mvector&& r)
+    {
         clear();
         swap(r);
         return *this;
     }
-    mvector& operator=(span<type> r) {
+    mvector& operator=(span<type> r)
+    {
         clear();
         insert(r.begin(), r.end());
         return *this;
@@ -125,17 +134,15 @@ public:
         insert(r.begin(), r.end());
         return *this;
     }
-    mvector& operator=(std::initializer_list<type> r) {
-        clear();
-        insert(r.begin(), r.end());
-        return *this;
-    }
     template<bool fill_zero>
-    void __resize(uint64_t new_size) {
-        if(new_size <= capacity_) {
+    void __resize(uint64_t new_size)
+    {
+        if(new_size <= capacity_)
+        {
             if(new_size < size_)
                 __destroy(begin() + new_size, begin() + size_);
-            else if(new_size > size_) {
+            else if(new_size > size_)
+            {
                 if constexpr(fill_zero)
                     memset((void*)(buf + size_), 0, (new_size - size_) * sizeof(type));
             }
@@ -156,22 +163,26 @@ public:
         }
         size_ = new_size;
     }
-    void resize(uint64_t new_size) {
+    void resize(uint64_t new_size)
+    {
         __resize<true>(new_size);
     }
-    void compact() {
+    void compact()
+    {
         if constexpr(tss_allocator)
             buf = (type*)tss_realloc((void*)buf, capacity_ * sizeof(type), size_ * sizeof(type));
         else
             buf = (type*)realloc((void*)buf, size_ * sizeof(type));
         capacity_ = size_;
     }
-    void swap(mvector& r) {
+    void swap(mvector& r)
+    {
         simple_swap(buf, r.buf);
         simple_swap(size_, r.size_);
         simple_swap(capacity_, r.capacity_);
     }
-    void reserve(uint64_t new_capacity) {
+    void reserve(uint64_t new_capacity)
+    {
         if(new_capacity <= capacity_)
             return;
         void *new_ptr;
@@ -184,38 +195,49 @@ public:
         buf = (type*)new_ptr;
         capacity_ = new_capacity;
     }
-    void clear() {
+    void clear()
+    {
         __destroy(begin(), end());
         size_ = 0;
     }
-    uint64_t size() const {
+    uint64_t size() const
+    {
         return size_;
     }
-    bool empty() const {
+    bool empty() const
+    {
         return !size_;
     }
-    uint64_t capacity() const {
+    uint64_t capacity() const
+    {
         return capacity_;
     }
-    const_iterator begin() const {
+    const_iterator begin() const
+    {
         return buf;
     }
-    const_iterator cbegin() const {
+    const_iterator cbegin() const
+    {
         return buf;
     }
-    iterator begin() {
+    iterator begin()
+    {
         return buf;
     }
-    const_iterator end() const {
+    const_iterator end() const
+    {
         return buf + size_;
     }
-    const_iterator cend() const {
+    const_iterator cend() const
+    {
         return buf + size_;
     }
-    iterator end() {
+    iterator end()
+    {
         return buf + size_;
     }
-    span<type> str() const {
+    span<type> str() const
+    {
         return {begin(), end()};
     }
 
@@ -249,7 +271,7 @@ public:
         {
             return ptr;
         }
-        bool operator!=(const reverse_iter& r) const
+        bool operator==(const reverse_iter& r) const
         {
             return ptr != r.ptr;
         }
@@ -258,54 +280,68 @@ public:
     typedef reverse_iter<const type> const_reverse_iterator;
     typedef reverse_iter<type> reverse_iterator;
 
-    reverse_iterator rbegin() {
+    reverse_iterator rbegin()
+    {
         return {end() - 1};
     }
-    reverse_iterator rend() {
+    reverse_iterator rend()
+    {
         return {begin() - 1};
     }
-    const_reverse_iterator rbegin() const {
+    const_reverse_iterator rbegin() const
+    {
         return {end() - 1};
     }
-    const_reverse_iterator rend() const {
+    const_reverse_iterator rend() const
+    {
         return {begin() - 1};
     }
-    pair<const_reverse_iterator, const_reverse_iterator> rstr() const {
+    pair<const_reverse_iterator, const_reverse_iterator> rstr() const
+    {
         return {rbegin(), rend()};
     }
-    ~mvector() {
+    ~mvector()
+    {
         __destroy(begin(), end());
         if constexpr(tss_allocator)
             tss_free(buf, capacity_ * sizeof(type));
         else
             free(buf);
     }
-    type& operator[](uint64_t elem) {
+    type& operator[](uint64_t elem)
+    {
         assert(elem < size_);
         return buf[elem];
     }
-    const type& operator[](uint64_t elem) const {
+    const type& operator[](uint64_t elem) const
+    {
         assert(elem < size_);
         return buf[elem];
     }
-    type& at(uint64_t elem) {
+    type& at(uint64_t elem)
+    {
         if(elem >= size_)
             throw str_exception("mvector<>::at()");
         return buf[elem];
     }
-    const type& at(uint64_t elem) const{
+    const type& at(uint64_t elem) const
+    {
         if(elem >= size_)
             throw str_exception("mvector<>::at()");
         return buf[elem];
     }
-    type& back() {
+    type& back()
+    {
         return buf[size_ - 1];
     }
-    const type& back() const {
+    const type& back() const
+    {
         return buf[size_ - 1];
     }
-    void __insert_impl(iterator& it) {
-        if(size_ == capacity_) {
+    void __insert_impl(iterator& it)
+    {
+        if(size_ == capacity_)
+        {
             uint64_t pos = it - buf;
             reserve(capacity_ ? capacity_ * 2 : 32);
             it = buf + pos;
@@ -315,24 +351,28 @@ public:
         if constexpr(have_destructor)
             memset((void*)it, 0, sizeof(type));
     }
-    iterator insert(iterator it, type&& v) {
+    iterator insert(iterator it, type&& v)
+    {
         __insert_impl(it);
         *it = ::move(v);
         ++size_;
         return it;
     }
-    iterator insert(iterator it, const type& v) {
+    iterator insert(iterator it, const type& v)
+    {
         __insert_impl(it);
         *it = v;
         ++size_;
         return it;
     }
-    void insert(const type* from, const type* to) {
+    void insert(const type* from, const type* to)
+    {
         uint64_t size = size_;
         __resize<have_destructor>(to + size_ - from);
         copy(from, to, buf + size);
     }
-    void insert(iterator it, const type* from, const type* to) {
+    void insert(iterator it, const type* from, const type* to)
+    {
         uint64_t size = size_;
         uint64_t pos = it - buf;
         __resize<have_destructor>(to + size_ - from);
@@ -340,24 +380,28 @@ public:
         copy_backward(it, buf + size, it + (to - from));
         copy(from, to, it);
     }
-    void __push_back_impl() {
+    void __push_back_impl()
+    {
         if(size_ == capacity_)
             reserve(capacity_ ? capacity_ * 2 : 32);
         if constexpr(have_destructor)
             memset((void*)(buf + size_), 0, sizeof(type));
     }
-    void push_back(type&& v) {
+    void push_back(type&& v)
+    {
         __push_back_impl();
         buf[size_] = ::move(v);
         ++size_;
     }
-    void push_back(const type& v) {
+    void push_back(const type& v)
+    {
         __push_back_impl();
         buf[size_] = v;
         ++size_;
     }
     template<typename ... params>
-    reference emplace_back(params&&... args) {
+    reference emplace_back(params&&... args)
+    {
         __push_back_impl();
         new(&buf[size_])type(args...);
         ++size_;
@@ -395,12 +439,6 @@ template<typename type>
 void pvector_free(type* ptr)
 {
     delete ptr;
-}
-
-template<typename type>
-void pvector_free_array(type* ptr)
-{
-    delete[] ptr;
 }
 
 template<typename type, void (*free)(type*) = pvector_free<type> >
@@ -451,10 +489,6 @@ struct pvector : mvector<type*>
         {
             return *it;
         }
-        bool operator!=(const iterator& r) const
-        {
-            return it != r.it;
-        }
         bool operator==(const iterator& r) const
         {
             return it == r.it;
@@ -465,16 +499,20 @@ struct pvector : mvector<type*>
     typedef type* value_type;
     typedef iterator const_iterator;
 
-    const_iterator begin() const {
+    const_iterator begin() const
+    {
         return {base::begin()};
     }
-    iterator begin() {
+    iterator begin()
+    {
         return {base::begin()};
     }
-    const_iterator end() const {
+    const_iterator end() const
+    {
         return {base::end()};
     }
-    iterator end() {
+    iterator end()
+    {
         return {base::end()};
     }
 
@@ -482,49 +520,61 @@ struct pvector : mvector<type*>
     pvector(const pvector&) = delete;
     pvector& operator=(const pvector&) = delete;
 
-    pvector(pvector&& r) {
+    pvector(pvector&& r)
+    {
         base::__clear();
         base::swap(r);
     }
-    pvector& operator=(pvector&& r) {
+    pvector& operator=(pvector&& r)
+    {
         clear();
         static_cast<base&>(*this) = move(r);
         return *this;
     }
-    type& operator[](uint64_t elem) {
+    type& operator[](uint64_t elem)
+    {
         return *(base::begin()[elem]);
     }
-    const type& operator[](uint64_t elem) const {
+    const type& operator[](uint64_t elem) const
+    {
         return *(base::begin()[elem]);
     }
-    iterator insert(iterator it, type* v) {
+    iterator insert(iterator it, type* v)
+    {
         assert(v);
         return {base::insert(it.it, v)};
     }
-    void splice(pvector& r) {
+    void splice(pvector& r)
+    {
         base::insert(r.begin().it, r.end().it);
         r.base::clear();
     }
-    type& back() {
+    type& back()
+    {
         return *(*(base::end() - 1));
     }
-    void clear() {
+    void clear()
+    {
         erase(begin(), end());
     }
-    iterator erase(iterator from, iterator to) {
+    iterator erase(iterator from, iterator to)
+    {
         for(auto it = from.it; it != to.it; ++it)
             free(*it);
         base::erase(from.it, to.it);
         return from;
     }
-    iterator erase(iterator it) {
+    iterator erase(iterator it)
+    {
         erase(it, it + 1);
         return it;
     }
-    ~pvector() {
+    ~pvector()
+    {
         clear();
     }
-    type** array() {
+    type** array()
+    {
         return this->buf;
     }
 
@@ -534,16 +584,6 @@ private:
 
 template<typename type>
 using ppvector = pvector<type>;
-
-template<typename type>
-struct pavector : pvector<type, pvector_free_array>
-{
-    typedef pvector<type, pvector_free_array> base;
-
-    type* operator[](uint64_t elem) {
-        return &(static_cast<base&>(*this))[elem];
-    }
-};
 
 struct mexception : exception
 {

@@ -88,24 +88,19 @@ struct time_duration
             return seconds < r.seconds;
         return nanos < r.nanos;
     }
-    constexpr bool operator!=(time_duration r) const
+    constexpr bool operator==(time_duration r) const
     {
-        return nanos != r.nanos || seconds != r.seconds || minutes != r.minutes || hours != r.hours;
+        return nanos == r.nanos && seconds == r.seconds && minutes == r.minutes && hours == r.hours;
     }
     constexpr uint32_t total_seconds() const
     {
         return uint32_t(hours) * 3600 + minutes * 60 + seconds;
     }
-    constexpr uint64_t total_ns() const
+    constexpr operator ttime_t() const
     {
-        return uint64_t(total_seconds()) * ttime_t::frac + nanos;
+        return ::seconds(total_seconds()) + ttime_t(nanos);
     }
 };
-
-constexpr inline ttime_t time_from(uint32_t day_seconds, time_duration td)
-{
-    return {(int64_t(day_seconds) + td.total_seconds()) * ttime_t::frac + td.nanos};
-}
 
 struct time_parsed
 {

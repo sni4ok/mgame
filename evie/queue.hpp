@@ -14,7 +14,8 @@ class queue
     uint64_t from;
 
 public:
-    explicit queue(uint32_t prealloc_size = 32) : from() {
+    explicit queue(uint32_t prealloc_size = 32) : from()
+    {
         data.reserve(prealloc_size);
     }
 
@@ -23,13 +24,16 @@ public:
     typedef type value_type;
     typedef data_type::reverse_iterator reverse_iterator;
 
-    type& front() {
+    type& front()
+    {
         return data[from];
     }
-    type& back() {
+    type& back()
+    {
         return data.back();
     }
-    void __pop_front_impl() {
+    void __pop_front_impl()
+    {
         if(from == data.size())
         {
             data.clear();
@@ -43,65 +47,82 @@ public:
             from = 0;
         }
     }
-    void pop_front(uint64_t count) {
+    void pop_front(uint64_t count)
+    {
         assert(from + count <= data.size());
         from += count;
         __pop_front_impl();
     }
-    void pop_front() {
+    void pop_front()
+    {
         assert(from < data.size());
         ++from;
         __pop_front_impl();
     }
-    void pop_back() {
+    void pop_back()
+    {
         data.pop_back();
     }
-    void push_back(type&& v) {
+    void push_back(type&& v)
+    {
         data.emplace_back(move(v));
     }
-    void push_back(const type& v) {
+    void push_back(const type& v)
+    {
         data.push_back(v);
     }
     void insert(const type* from, const type* to)
     {
         data.insert(data.end(), from, to);
     }
-    void clear() {
+    void clear()
+    {
         data.clear();
         from = 0;
     }
-    void swap(queue& r) {
+    void swap(queue& r)
+    {
         data.swap(r.data);
         simple_swap(from, r.from);
     }
-    const_iterator begin() const {
+    const_iterator begin() const
+    {
         return data.begin() + from;
     }
-    iterator begin() {
+    iterator begin()
+    {
         return data.begin() + from;
     }
-    const_iterator end() const {
+    const_iterator end() const
+    {
         return data.end();
     }
-    iterator end() {
+    iterator end()
+    {
         return data.end();
     }
-    reverse_iterator rbegin() {
+    reverse_iterator rbegin()
+    {
         return data.rbegin();
     }
-    reverse_iterator rend() {
+    reverse_iterator rend()
+    {
         return data.rend() - from;
     }
-    bool empty() const {
+    bool empty() const
+    {
         return from == data.size();
     }
-    uint64_t size() const {
+    uint64_t size() const
+    {
         return data.size() - from;
     }
-    uint64_t buf_size() const {
+    uint64_t buf_size() const
+    {
         return data.size();
     }
-    iterator erase(iterator it) {
+    iterator erase(iterator it)
+    {
         return data.erase(it);
     }
     void reserve(uint64_t size)

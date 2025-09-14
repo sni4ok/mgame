@@ -29,6 +29,16 @@ inline ttime_t cur_ttime()
     return ttime_t{int64_t(t.tv_sec) * ttime_t::frac + int64_t(t.tv_nsec)};
 }
 
+inline constexpr ttime_t hours(int64_t s)
+{
+    return {s * 3600 * ttime_t::frac};
+}
+
+inline constexpr ttime_t minutes(int64_t s)
+{
+    return {s * 60 * ttime_t::frac};
+}
+
 inline constexpr ttime_t seconds(int64_t s)
 {
     return {s * ttime_t::frac};

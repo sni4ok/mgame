@@ -59,7 +59,8 @@ template<uint32_t m, uint32_t e>
 struct cg_decimal
 {
     char buf[2 + (m >> 1) + ((m | e) & 1)];
-    cg_decimal() {
+    cg_decimal()
+    {
         memset(buf, 0, sizeof(buf));
     }
     price_t operator*() const
@@ -68,16 +69,18 @@ struct cg_decimal
         int8_t s;
         cg_bcd_get((void*)buf, &ret.value, &s);
         int8_t ds = s + price_t::exponent;
-        if(!ds) {
+        if(!ds)
+        {
         }
-        else if(ds > 0) {
+        else if(ds > 0)
             ret.value /= my_cvt::pow[ds];
-        } else {
+        else
             ret.value *= my_cvt::pow[-ds];
-        }
         return ret;
     }
 };
+
+#pragma pack(pop)
 
 template<uint32_t m, uint32_t e>
 mlog& operator<<(mlog& ml, const cg_decimal<m, e>& d)
@@ -100,11 +103,10 @@ inline mlog& operator<<(mlog& ml, const cg_time_t& t)
     return ml;
 }
 
-#pragma pack(pop)
-
 inline void check_plaza_fail(uint32_t res, str_holder msg)
 {
-    if(res != CG_ERR_OK) [[unlikely]] {
+    if(res != CG_ERR_OK) [[unlikely]]
+    {
         mlog(mlog::critical) << "Client gate error (" << msg << "): " << res;
         throw mexception(es() % "Client gate error (" % msg % "): " % res);
     }
@@ -125,7 +127,8 @@ struct cg_conn_h
     }
     void wait_active(volatile bool& can_run)
     {
-        for(;can_run;) {
+        for(;can_run;)
+        {
             uint32_t state = 0;
             check_plaza_fail(cg_conn_getstate(cli, &state), "conn_getstate");
             if(state == CG_STATE_ERROR)
@@ -140,19 +143,22 @@ struct cg_conn_h
         if(cli)
             throw mexception("cg_conn_h cli already initialized");
         mlog() << "cg_conn_new: " << cli_conn;
-        try {
+        try
+        {
             check_plaza_fail(cg_conn_new(cli_conn.c_str(), &cli), "conn_new");
             check_plaza_fail(cg_conn_open(cli, 0), "conn_open");
             wait_active(can_run);
         }
-        catch(exception& e) {
+        catch(exception& e)
+        {
             disconnect();
             throw;
         }
     }
     void disconnect()
     {
-        if(cli) {
+        if(cli)
+        {
             warn_plaza_fail(cg_conn_close(cli), "conn_close");
             warn_plaza_fail(cg_conn_destroy(cli), "conn_destroy");
             cli = 0;
@@ -180,9 +186,10 @@ struct cg_listener_h
     {
         last_call_time = time(NULL);
     }
-    cg_listener_h(cg_conn_h& conn, char_cit name, char_cit cli_listener, plaza_func func, void* func_state = 0, mstring def_state = mstring())
-        : listener(), conn(conn), closed(true), name(_str_holder(name)), cli_listener(_str_holder(cli_listener)),
-            func(func), func_state(func_state), def_state(def_state)
+    cg_listener_h(cg_conn_h& conn, char_cit name, char_cit cli_listener, plaza_func func,
+        void* func_state = 0, mstring def_state = mstring())
+        : listener(), conn(conn), closed(true), name(_str_holder(name)),
+        cli_listener(_str_holder(cli_listener)), func(func), func_state(func_state), def_state(def_state)
     {
         set_call();
     }
@@ -199,7 +206,8 @@ struct cg_listener_h
     }
     void destroy()
     {
-        if(listener){
+        if(listener)
+        {
             uint32_t res = cg_lsn_destroy(listener);
             listener = 0;
             if(res != CG_ERR_OK)
@@ -211,7 +219,8 @@ struct cg_listener_h
     }
     char_cit get_state() const
     {
-        if(rev.empty()) {
+        if(rev.empty())
+        {
             if(def_state.empty())
                 return 0;
             return def_state.c_str();
@@ -230,7 +239,8 @@ struct cg_listener_h
         {
             uint32_t state = 0;
             uint32_t r = cg_lsn_getstate(listener, &state);
-            if(r != CG_ERR_OK || (state != CG_STATE_ACTIVE && state != CG_STATE_OPENING)) {
+            if(r != CG_ERR_OK || (state != CG_STATE_ACTIVE && state != CG_STATE_OPENING))
+            {
                 mlog(mlog::critical) << "stream: " << name << ", bad state: " << state;
                 throw mexception("open stream error");
             }
@@ -248,13 +258,16 @@ struct cg_listener_h
     {
         if(!listener) [[unlikely]]
             open();
-        else{
+        else
+        {
             time_t t = time(NULL);
-            if(t > last_call_time + 5){
+            if(t > last_call_time + 5)
+            {
                 uint32_t state = 0;
                 uint32_t r = cg_lsn_getstate(listener, &state);
                 if(r != CG_ERR_OK || state != CG_STATE_ACTIVE){
-                    mlog(mlog::critical) << "stream: " << name << " unactive, cg_lsn_getstate returned: " << r << ", state: " << state;
+                    mlog(mlog::critical) << "stream: " << name <<
+                        " unactive, cg_lsn_getstate returned: " << r << ", state: " << state;
                     open();
                 }
             }
@@ -277,18 +290,22 @@ struct heartbeat_check
     }
     bool proceed(const cg_time_t& server_time)
     {
-        int64_t day_ms = get_time_duration(cur_mtime()).total_ns() / 1000000;
-        int64_t server_ms = (server_time.hour * 3600 + server_time.minute * 60 + server_time.second) * 1000 + server_time.msec;
+        int64_t day_ms = to_ms(get_time_duration(cur_mtime()));
+        int64_t server_ms = (server_time.hour * 3600 + server_time.minute * 60
+            + server_time.second) * 1000 + server_time.msec;
         int64_t delta_ms = day_ms - server_ms;
-        min_delta_ms++;
+        ++min_delta_ms;
         //Forts somethimes change time by hand for 5 or 42 seconds at a time
-        if(delta_ms > min_delta_ms + possible_delay_ms + 50) {
+        if(delta_ms > min_delta_ms + possible_delay_ms + 50)
+        {
             int64_t set_to = min_delta_ms + 50;
-            mlog(mlog::critical) << "heartbeat_check force reset, min_delta_ms: " << min_delta_ms << ", delta_ms: " << delta_ms
+            mlog(mlog::critical) << "heartbeat_check force reset, min_delta_ms: "
+                << min_delta_ms << ", delta_ms: " << delta_ms
                 << ", set to: " << set_to;
             min_delta_ms = set_to;
         }
-        if(delta_ms < min_delta_ms) {
+        if(delta_ms < min_delta_ms)
+        {
             mlog() << "heartbeat_check min_delta_ms set to: " << delta_ms;
             min_delta_ms = delta_ms;
         }

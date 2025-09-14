@@ -140,10 +140,6 @@ struct counting_iterator
     {
         return value == r.value;
     }
-    bool operator!=(counting_iterator r) const
-    {
-        return value != r.value;
-    }
     int64_t operator*() const
     {
         return value;

@@ -200,7 +200,8 @@ public:
     uint32_t params;
 
     simple_log(char_cit file_name, uint32_t params, bool set_instance)
-        : can_run(true), all_size(), nodes("mlog::nodes"), free_threads(), profiler(), no_cout(), params(params)
+        : can_run(true), all_size(), nodes("mlog::nodes"), free_threads(),
+        profiler(), no_cout(), params(params)
     {
         if(set_instance)
         {
@@ -260,7 +261,7 @@ public:
     void write(mlog::data* buf)
     {
         nodes.push_back(buf);
-        atomic_add(all_size, 1);
+        atomic_add(all_size, 1u);
     }
 };
 

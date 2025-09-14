@@ -15,18 +15,22 @@ inline char_cit find_tag(char_cit it_b, char_cit ie, str_holder tag_)
     mstring tag = tag_ + " = ";
     char_cit it = it_b;
 
-    for(;;) {
+    for(;;)
+    {
         it = ::search(it, ie, tag.begin(), tag.end());
         if(it == ie)
             return ie;
         bool found = true;
 
-        if(it != it_b) {
+        if(it != it_b)
+        {
             char_cit it_tmp = it - 1;
             if(!is_endl(*it_tmp) && *it_tmp != ' ' && *it_tmp != '\t')
                 found = false;
-            else for(; it_tmp != it_b && !is_endl(*it_tmp); --it_tmp) {
-                if(*it_tmp != ' ' && *it_tmp != '\t') {
+            else for(; it_tmp != it_b && !is_endl(*it_tmp); --it_tmp)
+            {
+                if(*it_tmp != ' ' && *it_tmp != '\t')
+                {
                     found = false;
                     break;
                 }
@@ -57,7 +61,8 @@ mstring get_log_name(str_holder fname)
 void print_init(int argc, char** argv)
 {
     mlog l(mlog::no_cout);
-    for(int i = 0; i != argc; ++i) {
+    for(int i = 0; i != argc; ++i)
+    {
         if(i)
             l << " ";
         l << _str_holder(argv[i]);
@@ -78,7 +83,8 @@ str_holder get_config_param_str(char_cit it, char_cit ie, str_holder tag, bool c
 {
     it = find_tag(it, ie, tag);
     char_cit to = ::find_if(it, ie, &is_endl);
-    if(it == ie) {
+    if(it == ie)
+    {
         if(can_empty)
             return str_holder();
         throw mexception(es() % "Load config: \"" % tag % "\" not found in config");
@@ -97,9 +103,11 @@ mvector<mstring> get_config_params(const mvector<char>& cfg, str_holder tag)
 {
     mvector<mstring> ret;
     char_cit it = cfg.begin(), ie = cfg.end(), ii;
-    while(it != ie) {
+    while(it != ie)
+    {
         it = find_tag(it, ie, tag);
-        if(it != ie) {
+        if(it != ie)
+        {
             ii = ::find_if(it, ie, &is_endl);
             ret.push_back(mstring(it, ii));
             it = ii;

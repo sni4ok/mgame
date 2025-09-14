@@ -152,7 +152,8 @@ template ttime_t read_time_impl::read_time<9>(char_cit&);
 inline time_parsed parse_time_impl(ttime_t time)
 {
     time_t ti = time.value / ttime_t::frac;
-    struct tm* t = gmtime(&ti);
+    tm *t, r;
+    t = gmtime_r(&ti, &r);
     return {{uint16_t(t->tm_year + 1900), uint8_t(t->tm_mon + 1), uint8_t(t->tm_mday)},
         {uint8_t(t->tm_hour), uint8_t(t->tm_min), uint8_t(t->tm_sec), uint32_t(time.value % ttime_t::frac)}};
 }

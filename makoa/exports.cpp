@@ -390,7 +390,7 @@ namespace
     {
         udp* u = (udp*)p;
         ssize_t sz = sizeof(message) * count;
-        ssize_t ret = sendto(u->socket, m, sz, 0, (struct sockaddr*)(&u->sa), sizeof(u->sa));
+        ssize_t ret = sendto(u->socket, m, sz, 0, (sockaddr*)(&u->sa), sizeof(u->sa));
         if(ret != sz) [[unlikely]]
             throw_system_failure(es() % "udp::write, sz: " % sz  % ", ret: " % ret);
     }

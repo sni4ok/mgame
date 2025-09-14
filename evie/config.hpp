@@ -15,7 +15,8 @@ str_holder get_config_param_str(char_cit it, char_cit ie, str_holder tag, bool c
 mvector<mstring> get_config_params(const mvector<char>& cfg, str_holder tag);
 
 template<typename type>
-type get_config_param(char_cit it, char_cit ie, str_holder tag, bool can_empty = false, type empty_value = type())
+type get_config_param(char_cit it, char_cit ie, str_holder tag,
+    bool can_empty = false, type empty_value = type())
 {
     str_holder s = get_config_param_str(it, ie, tag, can_empty);
     if(can_empty && s.empty())
@@ -24,7 +25,8 @@ type get_config_param(char_cit it, char_cit ie, str_holder tag, bool can_empty =
 }
 
 template<typename type>
-type get_config_param(const mvector<char>& cfg, str_holder tag, bool can_empty = false, type empty_value = type())
+type get_config_param(const mvector<char>& cfg, str_holder tag,
+    bool can_empty = false, type empty_value = type())
 {
     return get_config_param<type>(cfg.begin(), cfg.end(), tag, can_empty, empty_value);
 }

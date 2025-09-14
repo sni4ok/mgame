@@ -54,9 +54,9 @@ uint64_t profilerinfo::register_counter(char_cit id)
         if(c == max_counters)
             throw mexception("profilerinfo::register_counter() overloaded");
 
-        if(atomic_compare_exchange(counters[c].name, nullptr, id))
+        if(atomic_compare_exchange(counters[c].name, (char_cit)nullptr, id))
         {
-            atomic_add(cur_counters, 1);
+            atomic_add(cur_counters, 1ul);
             return c;
         }
     }
@@ -87,7 +87,7 @@ void profilerinfo::add_info(uint64_t counter_id, ttime_t time)
     }
     while(!atomic_compare_exchange(i.time_min, t, time));
 
-    atomic_add(i.count, 1);
+    atomic_add(i.count, 1l);
 }
 
 void profilerinfo::print(long mlog_params)
