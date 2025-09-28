@@ -151,7 +151,8 @@ public:
         {
             void *new_ptr;
             if constexpr(tss_allocator)
-                new_ptr = tss_realloc((void*)buf, capacity_ * sizeof(type), new_size * sizeof(type));
+                new_ptr = tss_realloc((void*)buf, capacity_ * sizeof(type),
+                    new_size * sizeof(type));
             else
                new_ptr = realloc((void*)buf, new_size * sizeof(type));
             if(!new_ptr)
@@ -170,7 +171,8 @@ public:
     void compact()
     {
         if constexpr(tss_allocator)
-            buf = (type*)tss_realloc((void*)buf, capacity_ * sizeof(type), size_ * sizeof(type));
+            buf = (type*)tss_realloc((void*)buf, capacity_ * sizeof(type),
+                size_ * sizeof(type));
         else
             buf = (type*)realloc((void*)buf, size_ * sizeof(type));
         capacity_ = size_;
@@ -187,7 +189,8 @@ public:
             return;
         void *new_ptr;
         if constexpr(tss_allocator)
-            new_ptr = tss_realloc((void*)buf, capacity_ * sizeof(type), new_capacity * sizeof(type));
+            new_ptr = tss_realloc((void*)buf, capacity_ * sizeof(type),
+                new_capacity * sizeof(type));
         else
             new_ptr = realloc((void*)buf, new_capacity * sizeof(type));
         if(!new_ptr)
@@ -273,7 +276,7 @@ public:
         }
         bool operator==(const reverse_iter& r) const
         {
-            return ptr != r.ptr;
+            return ptr == r.ptr;
         }
     };
 
@@ -412,20 +415,28 @@ public:
         __destroy(begin() + size_ - 1);
         --size_;
     }
-    iterator erase(iterator it) {
+    iterator erase(iterator it)
+    {
         __check_iterator(it);
         __destroy(it);
         memmove((void*)it, it + 1, ((end() - it) - 1) * sizeof(type));
         --size_;
         return it;
     }
-    iterator erase(iterator from, iterator to) {
+    iterator erase(iterator from, iterator to)
+    {
         __check_iterator(from);
         __check_iterator(to);
         __destroy(from, to);
         memmove((void*)from, to, (end() - to) * sizeof(type));
         size_ -= to - from;
         return from;
+    }
+    reverse_iterator erase(reverse_iterator it)
+    {
+        erase(it.ptr);
+        --it.ptr;
+        return it;
     }
 };
 

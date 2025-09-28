@@ -129,12 +129,12 @@ struct fset
     }
     iterator insert(const type& k)
     {
-        iterator it = ::lower_bound(data.begin(), data.end(), k, comp());
+        iterator it = lower_bound(k);
         return insert(it, k);
     }
     iterator insert(type&& k)
     {
-        iterator it = ::lower_bound(data.begin(), data.end(), k, comp());
+        iterator it = lower_bound(k);
         return insert(it, move(k));
     }
     iterator erase(const type& k)
