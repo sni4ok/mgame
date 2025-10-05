@@ -10,9 +10,9 @@
 ttime_t read_time(char_cit it, char_cit ie)
 {
     char_cit ne = find(it, ie, '.');
-    uint32_t time = cvt::atoi<uint32_t>(it, ne - it);
+    u32 time = cvt::atoi<u32>(it, ne - it);
     it = ne + 1;
-    uint32_t time_us = cvt::atoi<uint32_t>(it, 6);
+    u32 time_us = cvt::atoi<u32>(it, 6);
     return seconds(time) + microseconds(time_us);
 }
 
@@ -21,14 +21,14 @@ struct lws_i : sec_id_by_name<lws_impl>
     config& cfg;
     
     struct impl;
-    typedef void (lws_i::*func)(uint32_t security_id, ttime_t time, char_cit& it, char_cit ie);
+    typedef void (lws_i::*func)(u32 security_id, ttime_t time, char_cit& it, char_cit ie);
     struct impl
     {
-        uint32_t security_id;
+        u32 security_id;
         func f;
     };
 
-    fmap<uint32_t, impl> parsers; //channel, impl
+    fmap<u32, impl> parsers; //channel, impl
     price_t t_price;
     count_t t_count;
     ttime_t t_time;
@@ -59,7 +59,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         t_count = read_value(it, ie, read_count, false);
         t_time = read_value(it, ie, read_time, true);
     }
-    void parse_spread(uint32_t security_id, ttime_t time, char_cit& it, char_cit ie)
+    void parse_spread(u32 security_id, ttime_t time, char_cit& it, char_cit ie)
     {
         char_cit f = it;
         skip_fixed(it, "[");
@@ -79,7 +79,7 @@ struct lws_i : sec_id_by_name<lws_impl>
        
         send_messages();
     }
-    void parse_book(uint32_t security_id, ttime_t time, char_cit& it, char_cit ie)
+    void parse_book(u32 security_id, ttime_t time, char_cit& it, char_cit ie)
     {
         bool snapshot = false;
         char_cit f = it;
@@ -145,7 +145,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         it = ie;
         send_messages();
     }
-    void parse_trade(uint32_t security_id, ttime_t time, char_cit& it, char_cit ie)
+    void parse_trade(u32 security_id, ttime_t time, char_cit& it, char_cit ie)
     {
         char_cit f = it;
         skip_fixed(it, "[");
@@ -194,7 +194,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         {
             ++it;
             char_cit ne = find(it, ie, ',');
-            uint32_t channel = cvt::atoi<uint32_t>(it, ne - it);
+            u32 channel = cvt::atoi<u32>(it, ne - it);
             impl& i = parsers.at(channel);
             it = ne + 1;
             ((this)->*(i.f))(i.security_id, time, it, ie);
@@ -204,12 +204,12 @@ struct lws_i : sec_id_by_name<lws_impl>
             if(!cfg.log_lws)
                 mlog() << "" << str_holder(it, ie - it);
             char_cit ne = find(it, ie, ',');
-            uint32_t channel = cvt::atoi<uint32_t>(it, ne - it);
+            u32 channel = cvt::atoi<u32>(it, ne - it);
             it = ne + 1;
             skip_fixed(it, "\"channelName\":\"");
             search_and_skip_fixed(it, ie, "\"pair\":\"");
             ne = find(it, ie, '\"');
-            uint32_t security_id = get_security_id(it, ne, time);
+            u32 security_id = get_security_id(it, ne, time);
             it = ne + 1;
             search_and_skip_fixed(it, ie, "\"name\":\"");
             ne = find(it, ie, '\"');

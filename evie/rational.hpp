@@ -8,12 +8,12 @@
 
 struct rational
 {
-    int32_t num;
-    uint32_t den = 1;
+    i32 num;
+    u32 den = 1;
 
     bool operator<(rational v) const
     {
-        return int64_t(num) * v.den < int64_t(v.num) * den;
+        return i64(num) * v.den < i64(v.num) * den;
     }
     rational& operator+=(rational v);
     rational operator+(rational v) const
@@ -33,7 +33,7 @@ struct rational
     }
     bool operator==(rational v) const
     {
-        return int64_t(num) * v.den == int64_t(v.num) * den;
+        return i64(num) * v.den == i64(v.num) * den;
     }
 };
 

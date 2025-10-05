@@ -35,12 +35,12 @@ inline void init_smc(void* ptr)
     }
 }
 
-uint8_t mmap_nusers(char_cit params)
+u8 mmap_nusers(char_cit params)
 {
     int h = ::open(params, O_RDONLY, 0666);
     if(h <= 0)
         throw_system_failure(es() % "mmap open " % _str_holder(params) % " error");
-    uint8_t c;
+    u8 c;
     bool r = lseek(h, mmap_alloc_size, SEEK_SET) >= 0;
     r &= (read(h, &c, 1) == 1);
     ::close(h);
@@ -88,7 +88,7 @@ void* mmap_create(char_cit params, bool create)
             if(res)
                 throw_system_failure(es() % "fstat() error for " % _str_holder(params));
             else
-                throw mexception(es() % "mmap_create error for " % _str_holder(params) % ", file_sz: " % int64_t(st.st_size));
+                throw mexception(es() % "mmap_create error for " % _str_holder(params) % ", file_sz: " % i64(st.st_size));
         }
     }
 
@@ -134,7 +134,7 @@ void pthread_lock::unlock()
     mlock = false;
 }
 
-void pthread_timedwait(pthread_cond_t& condition, pthread_mutex_t& mutex, uint32_t sec)
+void pthread_timedwait(pthread_cond_t& condition, pthread_mutex_t& mutex, u32 sec)
 {
     timespec t;
     clock_gettime(CLOCK_REALTIME, &t);

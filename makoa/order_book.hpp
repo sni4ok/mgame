@@ -66,7 +66,7 @@ struct order_book
             throw mexception(es() % "order_book::proceed() unsupported message type: " % m.id.id);
     }
 
-    std::map<int64_t, message_book> orders_l;
+    std::map<i64, message_book> orders_l;
     std::map<price_t, message_book> orders_p;
     typedef std::map<price_t, message_book>::const_iterator price_iterator;
 };
@@ -186,7 +186,7 @@ struct order_book_ba
     {
     }
 
-    std::unordered_map<int64_t, message_book, std::hash<int64_t>, std::equal_to<int64_t> > orders_l;
+    std::unordered_map<i64, message_book, std::hash<i64>, std::equal_to<i64> > orders_l;
     fmap<price_t, book, std::less<price_t> > asks;
     fmap<price_t, book, std::greater<price_t> > bids;
 };

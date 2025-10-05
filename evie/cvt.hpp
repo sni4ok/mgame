@@ -35,22 +35,22 @@ stream& operator<<(stream& s, const exception& e)
 
 namespace cvt
 {
-    uint32_t itoa(char_it buf, bool t);
-    uint32_t itoa(char_it buf, char v);
-    uint32_t itoa(char_it buf, int8_t v);
-    uint32_t itoa(char_it buf, uint8_t v);
-    uint32_t itoa(char_it buf, uint16_t v);
-    uint32_t itoa(char_it buf, int16_t v);
-    uint32_t itoa(char_it buf, uint32_t v);
-    uint32_t itoa(char_it buf, int32_t v);
-    uint32_t itoa(char_it buf, uint64_t v);
-    uint32_t itoa(char_it buf, int64_t v);
-    uint32_t itoa(char_it buf, double v);
-    uint32_t log10(uint32_t i);
+    u32 itoa(char_it buf, bool t);
+    u32 itoa(char_it buf, char v);
+    u32 itoa(char_it buf, i8 v);
+    u32 itoa(char_it buf, u8 v);
+    u32 itoa(char_it buf, u16 v);
+    u32 itoa(char_it buf, i16 v);
+    u32 itoa(char_it buf, u32 v);
+    u32 itoa(char_it buf, i32 v);
+    u32 itoa(char_it buf, u64 v);
+    u32 itoa(char_it buf, i64 v);
+    u32 itoa(char_it buf, double v);
+    u32 log10(u32 i);
 
 #ifdef USE_INT128_EXT
-    uint32_t itoa(char_it buf, uint128_t v);
-    uint32_t itoa(char_it buf, int128_t v);
+    u32 itoa(char_it buf, u128 v);
+    u32 itoa(char_it buf, i128 v);
 #endif
 
     struct exception : ::exception
@@ -62,13 +62,13 @@ namespace cvt
     };
 
     template<typename type>
-    type atoi_u(char_cit buf, uint32_t size)
+    type atoi_u(char_cit buf, u32 size)
     {
         static_assert(is_unsigned_v<type>);
         type ret = 0;
         static const type mm = limits<type>::max / 10;
 
-        for(uint32_t i = 0; i != size; ++i)
+        for(u32 i = 0; i != size; ++i)
         {
             if(ret > mm) [[unlikely]]
                 throw exception("atoi() max possible size exceed for: ", {buf, size});
@@ -84,7 +84,7 @@ namespace cvt
     }
 
     template<typename type>
-    type atoi(char_cit buf, uint32_t size)
+    type atoi(char_cit buf, u32 size)
     {
         static_assert(is_integral_v<type>);
         typedef make_unsigned_t<type> type_u;
@@ -99,7 +99,7 @@ namespace cvt
     }
 
     template<>
-    inline char atoi<char>(char_cit buf, uint32_t size)
+    inline char atoi<char>(char_cit buf, u32 size)
     {
         if(size != 1) [[unlikely]]
             throw exception("atoi() bad char size: ", {buf, size});
@@ -107,32 +107,32 @@ namespace cvt
     }
 
     template<>
-    inline bool atoi<bool>(char_cit buf, uint32_t size)
+    inline bool atoi<bool>(char_cit buf, u32 size)
     {
         if(size != 1 || (buf[0] != '0' && buf[0] != '1')) [[unlikely]]
             throw exception("atoi() bad bool number: ", {buf, size});
         return(buf[0] == '1');
     }
 
-    template<uint32_t v>
+    template<u32 v>
     struct pow10
     {
-        static constexpr uint64_t result = pow10<v - 1>::result * 10;
+        static constexpr u64 result = pow10<v - 1>::result * 10;
     };
 
     template<>
     struct pow10<0>
     {
-        static constexpr uint64_t result = 1;
+        static constexpr u64 result = 1;
     };
 
-    template<uint32_t v>
-    constexpr uint64_t p10()
+    template<u32 v>
+    constexpr u64 p10()
     {
         return pow10<v>::result;
     }
     
-    static constexpr uint64_t pow[] = 
+    static constexpr u64 pow[] = 
     {
         1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000,
         p10<9>(), p10<10>(), p10<11>(), p10<12>(), p10<13>(),
@@ -140,39 +140,39 @@ namespace cvt
         p10<19>()
     };
 
-    static constexpr uint32_t atoi_u_ps[] = {3, 5, 10, 0, 20, 0, 0, 0, 39};
-    static constexpr uint32_t atoi_s_ps[] = {4, 6, 11, 0, 21, 0, 0, 0, 40};
+    static constexpr u32 atoi_u_ps[] = {3, 5, 10, 0, 20, 0, 0, 0, 39};
+    static constexpr u32 atoi_s_ps[] = {4, 6, 11, 0, 21, 0, 0, 0, 40};
 
     template<typename type>
     struct atoi_size
     {
-        static const uint32_t value = (is_unsigned_v<type> ? atoi_u_ps : atoi_s_ps)
+        static const u32 value = (is_unsigned_v<type> ? atoi_u_ps : atoi_s_ps)
             [sizeof(type) / 2];
     };
 
     template<>
     struct atoi_size<double>
     {
-        static const uint32_t value = 30;
+        static const u32 value = 30;
     };
 
     template<>
     struct atoi_size<char>
     {
-        static const uint32_t value = 1;
+        static const u32 value = 1;
     };
 
     template<>
     struct atoi_size<bool>
     {
-        static const uint32_t value = 1;
+        static const u32 value = 1;
     };
 
     template<typename type>
-    inline constexpr uint32_t atoi_size_v = atoi_size<type>::value;
+    inline constexpr u32 atoi_size_v = atoi_size<type>::value;
 }
 
-int64_t read_decimal_impl(char_cit it, char_cit ie, int exponent);
+i64 read_decimal_impl(char_cit it, char_cit ie, int exponent);
 
 template<typename decimal>
 inline decimal lexical_cast(char_cit it, char_cit ie)

@@ -18,8 +18,8 @@ struct messages
 {
     message _;
     message m[255];
-    uint32_t count;
-    uint32_t cnt; //atomic
+    u32 count;
+    u32 cnt; //atomic
 };
 
 struct linked_node : messages
@@ -58,7 +58,7 @@ public:
     }
     void release_node(linked_node* n)
     {
-        uint32_t consumers_left = atomic_sub(n->cnt, 1u);
+        u32 consumers_left = atomic_sub(n->cnt, 1u);
         if(!consumers_left)
         {
             n->next = nullptr;
@@ -109,7 +109,7 @@ struct actives
 {
     struct type
     {
-        uint32_t security_id;
+        u32 security_id;
         ttime_t time; //last parser time for current security_id
         bool disconnected;
 
@@ -130,7 +130,7 @@ public:
     actives() : last_value()
     {
     }
-    type& insert(uint32_t security_id)
+    type& insert(u32 security_id)
     {
         tmp = {security_id, ttime_t(), false};
         auto it = lower_bound(data.begin(), data.end(), tmp);
@@ -149,7 +149,7 @@ public:
         last_value = &(*it);
         return *last_value;
     }
-    type& get(uint32_t security_id)
+    type& get(u32 security_id)
     {
         if(last_value && last_value->security_id == security_id)
             return *last_value;
@@ -169,16 +169,16 @@ public:
 struct context
 {
     actives acs;
-    uint32_t buf_delta;
+    u32 buf_delta;
 
     context() : buf_delta()
     {
     }
-    void insert(uint32_t security_id, ttime_t time)
+    void insert(u32 security_id, ttime_t time)
     {
         acs.insert(security_id).time = time;
     }
-    actives::type& check(uint32_t security_id, ttime_t time)
+    actives::type& check(u32 security_id, ttime_t time)
     {
         auto& m = acs.get(security_id);
 
@@ -216,7 +216,7 @@ class engine::impl : public stack_singleton<engine::impl>
     ::mutex mutex;
     condition cond;
     linked_list ll;
-    uint32_t consumers;
+    u32 consumers;
 
     void notify()
     {
@@ -317,9 +317,9 @@ class engine::impl : public stack_singleton<engine::impl>
             mlog(mlog::error) << "exports: " << " " << e;
         }
     }
-    static void log_and_throw_error(char_cit data, uint32_t size, str_holder reason)
+    static void log_and_throw_error(char_cit data, u32 size, str_holder reason)
     {
-        mlog() << "bad message (" << reason << "!): " << print_binary({data, min<uint32_t>(32, size)});
+        mlog() << "bad message (" << reason << "!): " << print_binary({data, min<u32>(32, size)});
         throw mexception(reason);
     }
 
@@ -327,7 +327,7 @@ public:
     void loop_one()
     {
         /*imple* i = nullptr;
-        for(uint32_t c = 0; c != ies.capacity && can_run; ++c)
+        for(u32 c = 0; c != ies.capacity && can_run; ++c)
         {
             bool res = false;
             ies.pop_weak(i);
@@ -357,21 +357,21 @@ public:
         char_cit m = (buf.begin() - ctx->buf_delta - sizeof(messages::_));
         ll.free((linked_node*)m);
     }
-    void init(const mvector<mstring>& exports, uint32_t export_threads)
+    void init(const mvector<mstring>& exports, u32 export_threads)
     {
         consumers = exports.size();
         for(const auto& e: exports)
             ies.push_back(new imple(can_run, ll, e));
 
-        for(uint32_t i = 0; i != export_threads; ++i)
+        for(u32 i = 0; i != export_threads; ++i)
             threads.push_back({&impl::work_thread, this});
     }
     bool proceed(str_holder& buf, context* ctx)
     {
         //MPROFILE("engine::proceed()")
-        uint32_t full_size = buf.size() + ctx->buf_delta;
-        uint32_t count = full_size / message_size;
-        uint32_t cur_delta = full_size % message_size;
+        u32 full_size = buf.size() + ctx->buf_delta;
+        u32 count = full_size / message_size;
+        u32 cur_delta = full_size % message_size;
 
         char_cit ptr = buf.begin() - ctx->buf_delta;
         message* m = (message*)(ptr);
@@ -379,7 +379,7 @@ public:
         if(set_engine_time)
         {
             ttime_t ct = cur_ttime();
-            for(uint32_t i = 0; i != count; ++i)
+            for(u32 i = 0; i != count; ++i)
                 m[i].t.time = ct;
         }
 
@@ -401,7 +401,7 @@ public:
         //if(!cur_delta)
         //    loop_one();
 
-        for(uint32_t i = 0; i != count; ++i, ++m)
+        for(u32 i = 0; i != count; ++i, ++m)
         {
             switch(m->id.id)
             {
@@ -418,7 +418,7 @@ public:
                     break;
                 }
                 case(msg_instr) : {
-                    uint32_t security_id = calc_crc(m->mi);
+                    u32 security_id = calc_crc(m->mi);
                     if(security_id != m->mi.security_id)
                         throw mexception(es() % "instrument crc mismatch, in: "
                             % m->mi.security_id % ", calculated: " % security_id);
@@ -445,15 +445,15 @@ public:
     }
     void push_clean(const mvector<actives::type>& secs) //when parser disconnected all OrdersBooks cleans
     {
-        uint32_t count = secs.size();
-        for(uint32_t ci = 0; ci != count;)
+        u32 count = secs.size();
+        for(u32 ci = 0; ci != count;)
         {
-            uint32_t cur_c = min<uint32_t>(count - ci, sizeof(messages::m) / message_size);
+            u32 cur_c = min<u32>(count - ci, sizeof(messages::m) / message_size);
             linked_node* n = ll.alloc();
             set_export_mtime(n->m);
             n->count = cur_c;
             n->cnt = consumers;
-            for(uint32_t i = 0; i != cur_c; ++i, ++ci)
+            for(u32 i = 0; i != cur_c; ++i, ++ci)
                 n->m[i].mc = message_clean{{secs[ci].time, ttime_t()}, msg_clean, "",
                     secs[ci].security_id, 1/*source*/};
             ll.push(n);
@@ -462,7 +462,7 @@ public:
     }
 };
 
-engine::engine(volatile bool& can_run, bool pooling, const mvector<mstring>& exports, uint32_t export_threads,
+engine::engine(volatile bool& can_run, bool pooling, const mvector<mstring>& exports, u32 export_threads,
     bool set_engine_time) : pimpl()
 {
     set_can_run(&can_run);

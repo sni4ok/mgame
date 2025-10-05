@@ -19,14 +19,14 @@ void zlib_free_func(voidpf, voidpf)
 struct zlib_alloc
 {
     mvector<char> buf;
-    uint32_t allocated;
+    u32 allocated;
 
     zlib_alloc() : buf(4 * 1024 * 1024), allocated()
     {
     }
     void* alloc(uInt items, uInt size)
     {
-        uint32_t req = items * size;
+        u32 req = items * size;
         if(allocated + req > buf.size()) [[unlikely]]
             throw str_exception("zlibe::alloc() bad alloc");
         char_it ret = &buf[allocated];
@@ -58,7 +58,7 @@ struct zlib_impl : conditional_t<z_alloc, zlib_alloc, zlib_alloc_base>
         }
         strm.opaque = this;
     }
-    str_holder decompress(char_cit p, uint32_t size)
+    str_holder decompress(char_cit p, u32 size)
     {
         if constexpr(z_alloc)
             this->decompress_pre();

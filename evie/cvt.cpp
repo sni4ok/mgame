@@ -12,7 +12,7 @@ namespace cvt
     exception::exception(str_holder h, str_holder m)
     {
         memcpy(buf, h.begin(), h.size());
-        uint32_t sz = sizeof(buf) - 1 - h.size();
+        u32 sz = sizeof(buf) - 1 - h.size();
         if(sz > m.size())
             sz = m.size();
         memcpy(buf + h.size(), m.begin(), sz);
@@ -24,11 +24,11 @@ namespace cvt
         return buf;
     }
 
-    template<uint32_t digits_s>
+    template<u32 digits_s>
     struct itoa_prealloc
     {
-        static const uint32_t digits = digits_s;
-        static const uint32_t values = pow10<digits>::result;
+        static const u32 digits = digits_s;
+        static const u32 values = pow10<digits>::result;
         char data[values * digits + 1];
 
         itoa_prealloc()
@@ -36,7 +36,7 @@ namespace cvt
             char tmp[digits];
             memset(tmp, '0', digits);
             char_it ptr = data;
-            for(uint32_t i = 0; i != values; ++i)
+            for(u32 i = 0; i != values; ++i)
             {
                 memcpy(ptr, tmp, digits);
                 ptr += digits;
@@ -44,7 +44,7 @@ namespace cvt
                 if(i == values - 1)
                     break;
 
-                uint32_t cur_idx = digits - 1;
+                u32 cur_idx = digits - 1;
 
                 for(;;)
                 {
@@ -65,7 +65,7 @@ namespace cvt
         itoa_prealloc(const itoa_prealloc&) = delete;
 
         template<typename type>
-        uint32_t write(type value, char_it buf) const
+        u32 write(type value, char_it buf) const
         {
             assert(value < values);
             memcpy(buf, &data[value * digits], digits);
@@ -78,15 +78,15 @@ namespace cvt
     {
         const first& f;
         const second& s;
-        static const uint32_t digits = first::digits + second::digits;
-        static const uint64_t values = pow10<digits>::result;
+        static const u32 digits = first::digits + second::digits;
+        static const u64 values = pow10<digits>::result;
 
         itoa_combined(const first& f, const second& s) : f(f), s(s)
         {
         }
 
         template<typename type>
-        uint32_t write(type value, char_it buf) const
+        u32 write(type value, char_it buf) const
         {
             assert(value < values);
             buf += f.write(value / s.values, buf);
@@ -109,7 +109,7 @@ namespace cvt
     const pit9 ita9(ita5, ita4); const pit10 ita10(ita5, ita5);
     const pit19 ita19(ita10, ita9);
 
-    uint32_t log10(uint32_t i)
+    u32 log10(u32 i)
     {
         if(i <= 9999)
         {
@@ -137,19 +137,19 @@ namespace cvt
         }
     }
 
-    uint32_t itoa(char_it buf, bool t)
+    u32 itoa(char_it buf, bool t)
     {
         buf[0] = (t ? '1' : '0');
         return 1;
     }
 
-    uint32_t itoa(char *buf, char v)
+    u32 itoa(char *buf, char v)
     {
         *buf = v;
         return 1;
     }
 
-    uint32_t itoa(char_it buf, uint8_t i)
+    u32 itoa(char_it buf, u8 i)
     {
         return
             (i < ita2.values ?
@@ -158,7 +158,7 @@ namespace cvt
             );
     }
 
-    uint32_t itoa(char_it buf, uint16_t i)
+    u32 itoa(char_it buf, u16 i)
     {
         return
             (i < ita2.values ?
@@ -170,10 +170,10 @@ namespace cvt
             );
     }
 
-    uint32_t itoa(char_it buf, uint32_t i)
+    u32 itoa(char_it buf, u32 i)
     {
-        if(i <= limits<uint16_t>::max)
-            return itoa(buf, uint16_t(i));
+        if(i <= limits<u16>::max)
+            return itoa(buf, u16(i));
 
         //i > 65536 here
         return
@@ -186,94 +186,94 @@ namespace cvt
             );
     }
 
-    uint32_t itoa(char_it buf, uint64_t i)
+    u32 itoa(char_it buf, u64 i)
     {
-        if(i <= limits<uint32_t>::max)
-            return itoa(buf, uint32_t(i));
+        if(i <= limits<u32>::max)
+            return itoa(buf, u32(i));
 
         //i > 4294967296 here :D
-        uint32_t ret = itoa(buf, i / ita8.values);
+        u32 ret = itoa(buf, i / ita8.values);
         buf += ret;
         ita8.write(i % ita8.values, buf);
         buf += ita8.digits;
         return ret + ita8.digits;
     }
 
-    uint32_t itoa(char_it buf, int8_t i)
+    u32 itoa(char_it buf, i8 i)
     {
         if(i < 0)
         {
             *buf++ = '-';
-            return itoa(buf, uint8_t(-i)) + 1;
+            return itoa(buf, u8(-i)) + 1;
         }
         else
-            return itoa(buf, uint8_t(i));
+            return itoa(buf, u8(i));
     }
 
-    uint32_t itoa(char_it buf, int16_t i)
+    u32 itoa(char_it buf, i16 i)
     {
         if(i < 0)
         {
             *buf++ = '-';
-            return itoa(buf, uint16_t(-i)) + 1;
+            return itoa(buf, u16(-i)) + 1;
         }
         else
-            return itoa(buf, uint16_t(i));
+            return itoa(buf, u16(i));
     }
 
-    uint32_t itoa(char_it buf, int32_t i)
+    u32 itoa(char_it buf, i32 i)
     {
         if(i < 0)
         {
             *buf++ = '-';
-            return itoa(buf, uint32_t(-i)) + 1;
+            return itoa(buf, u32(-i)) + 1;
         }
         else
-            return itoa(buf, uint32_t(i));
+            return itoa(buf, u32(i));
     }
 
-    uint32_t itoa(char_it buf, int64_t i)
+    u32 itoa(char_it buf, i64 i)
     {
         if(i < 0)
         {
             *buf++ = '-';
-            return itoa(buf, uint64_t(-i)) + 1;
+            return itoa(buf, u64(-i)) + 1;
         }
         else
-            return itoa(buf, uint64_t(i));
+            return itoa(buf, u64(i));
     }
 
 #ifdef USE_INT128_EXT
 
-    uint32_t itoa(char *buf, uint128_t i)
+    u32 itoa(char *buf, u128 i)
     {
-        if(i <= limits<uint64_t>::max)
-            return itoa(buf, uint64_t(i));
+        if(i <= limits<u64>::max)
+            return itoa(buf, u64(i));
 
         //i > 18446744073709551615
-        uint32_t ret = itoa(buf, i / ita19.values);
+        u32 ret = itoa(buf, i / ita19.values);
         buf += ret;
         ita19.write(i % ita19.values, buf);
         buf += ita19.digits;
         return ret + ita19.digits;
     }
 
-    uint32_t itoa(char_it buf, int128_t i)
+    u32 itoa(char_it buf, i128 i)
     {
         if(i < 0)
         {
             *buf++ = '-';
-            return itoa(buf, uint128_t(-i)) + 1;
+            return itoa(buf, u128(-i)) + 1;
         }
         else
-            return itoa(buf, uint128_t(i));
+            return itoa(buf, u128(i));
     }
 
 #endif
 
-    const double d_max_d = static_cast<double>(uint64_t(1) << 62);
+    const double d_max_d = static_cast<double>(u64(1) << 62);
 
-    uint32_t itoa(char_it buf, double v) 
+    u32 itoa(char_it buf, double v) 
     {
         if(v != v)
         {
@@ -299,8 +299,8 @@ namespace cvt
         }
         if(abs(v) > d_max_d)
         {
-            uint32_t sz = 0;
-            uint32_t exp = 0;
+            u32 sz = 0;
+            u32 exp = 0;
 
             if(v < 0.)
             {
@@ -314,7 +314,7 @@ namespace cvt
                 ++exp;
             }
 
-            uint32_t cur_sz = itoa(buf, v);
+            u32 cur_sz = itoa(buf, v);
             buf += cur_sz;
             sz += cur_sz;
             *buf++ = 'e';
@@ -326,19 +326,19 @@ namespace cvt
         {
             double intp = 0.0;
             double frac = modf(v, &intp);
-            int64_t iv = int64_t(intp);
+            i64 iv = i64(intp);
 
             if(iv < 0)
                 iv = -iv;
 
-            uint32_t sz = 0;
+            u32 sz = 0;
             if(v < -limits<double>::epsilon)
             {
                 *buf++ = '-';
                 ++sz;
             }
 
-            uint32_t i_sz = itoa(buf, iv);
+            u32 i_sz = itoa(buf, iv);
             sz += i_sz;
             buf += i_sz;
 
@@ -348,15 +348,15 @@ namespace cvt
             {
                 *buf++ = '.';
                 ++sz;
-                static const uint32_t biggest_mantissa = ita9.values;
+                static const u32 biggest_mantissa = ita9.values;
                 double dmantissa = biggest_mantissa * (frac + .5 / biggest_mantissa);
-                uint32_t mantissa = uint32_t(dmantissa);
+                u32 mantissa = u32(dmantissa);
                 if(mantissa == biggest_mantissa)
                     --mantissa;
-                uint32_t is = log10(mantissa);
+                u32 is = log10(mantissa);
                 if(is)
                 {
-                    for(uint32_t i = is; i != 9; ++i)
+                    for(u32 i = is; i != 9; ++i)
                     {
                         *buf++ = '0';
                         ++sz;
@@ -379,7 +379,7 @@ namespace cvt
     {
         char buf[1024];
 
-        uint32_t sz = itoa(buf, true);
+        u32 sz = itoa(buf, true);
         unused(sz);
 
         auto check = [&](str_holder s)
@@ -389,32 +389,32 @@ namespace cvt
         };
 
         check("1");
-        sz = itoa(buf, uint16_t(1267));
+        sz = itoa(buf, u16(1267));
         check("1267");
-        sz = itoa(buf, uint16_t(52346));
+        sz = itoa(buf, u16(52346));
         check("52346");
-        assert(atoi<uint16_t>(buf, sz) == 52346);
-        sz = itoa(buf, uint32_t(44));
+        assert(atoi<u16>(buf, sz) == 52346);
+        sz = itoa(buf, u32(44));
         check("44");
-        assert(atoi<uint32_t>(buf, sz) == 44);
-        sz = itoa(buf, uint32_t(60701));
+        assert(atoi<u32>(buf, sz) == 44);
+        sz = itoa(buf, u32(60701));
         check("60701");
-        assert(atoi<uint32_t>(buf, sz) == 60701);
-        sz = itoa(buf, uint32_t(1486666));
+        assert(atoi<u32>(buf, sz) == 60701);
+        sz = itoa(buf, u32(1486666));
         check("1486666");
-        assert(atoi<uint32_t>(buf, sz) == 1486666);
-        sz = itoa(buf, int16_t(-2346));
+        assert(atoi<u32>(buf, sz) == 1486666);
+        sz = itoa(buf, i16(-2346));
         check("-2346");
-        assert(atoi<int16_t>(buf, sz) == -2346);
+        assert(atoi<i16>(buf, sz) == -2346);
         sz = itoa(buf, -52578631);
         check("-52578631");
-        assert(atoi<int32_t>(buf, sz) == -52578631);
-        sz = itoa(buf, int64_t(-947593471239506712LL));
+        assert(atoi<i32>(buf, sz) == -52578631);
+        sz = itoa(buf, i64(-947593471239506712LL));
         check("-947593471239506712");
-        assert(atoi<int64_t>(buf, sz) == -947593471239506712);
-        sz = itoa(buf, uint64_t(9475934712395012ULL));
+        assert(atoi<i64>(buf, sz) == -947593471239506712);
+        sz = itoa(buf, u64(9475934712395012ULL));
         check("9475934712395012");
-        assert(atoi<uint64_t>(buf, sz) == 9475934712395012);
+        assert(atoi<u64>(buf, sz) == 9475934712395012);
 
         auto check_double = [&buf, &sz](double v, str_holder s)
         {
@@ -450,7 +450,7 @@ namespace cvt
         {
             auto c = [&]<typename t>(t i)
             {
-                uint32_t sz = itoa(buf, i);
+                u32 sz = itoa(buf, i);
                 type v = atoi<t>(buf, sz);
                 assert(v == i);
                 unused(sz, v);
@@ -472,13 +472,13 @@ namespace cvt
             check_i(make_unsigned_t<type>());
         };
 
-        check_itoa(int8_t());
-        check_itoa(int16_t());
-        check_itoa(int32_t());
-        check_itoa(int64_t());
+        check_itoa(i8());
+        check_itoa(i16());
+        check_itoa(i32());
+        check_itoa(i64());
 
 #ifdef USE_INT128_EXT
-        check_itoa(int128_t());
+        check_itoa(i128());
 #endif
     }
 }
@@ -488,7 +488,7 @@ double lexical_cast<double>(char_cit from, char_cit to)
 {
     try
     {
-        uint32_t size = to - from;
+        u32 size = to - from;
         if(!size)
             throw str_exception("lexical_cast<double>() from == to");
 
@@ -513,13 +513,13 @@ double lexical_cast<double>(char_cit from, char_cit to)
         bool m = *from == '-';
         if(p)
         {
-            int64_t v = cvt::atoi<int64_t>(from, d - from);
-            uint32_t frac_sz = to - (d + 1);
+            i64 v = cvt::atoi<i64>(from, d - from);
+            u32 frac_sz = to - (d + 1);
 
             if(frac_sz > 19)
                 throw str_exception("lexical_cast<double>() frac_sz overflow");
 
-            uint64_t frac = cvt::atoi<uint64_t>(d + 1, frac_sz);
+            u64 frac = cvt::atoi<u64>(d + 1, frac_sz);
             double f = double(frac);
             if(m)
                 f = -f;
@@ -527,8 +527,8 @@ double lexical_cast<double>(char_cit from, char_cit to)
         }
         if(e)
         {
-            int64_t mantissa = cvt::atoi<int64_t>(from, d - from);
-            uint64_t exponent = cvt::atoi<uint64_t>(d + 1, to - (d + 1));
+            i64 mantissa = cvt::atoi<i64>(from, d - from);
+            u64 exponent = cvt::atoi<u64>(d + 1, to - (d + 1));
             return double(mantissa) * exp10(double(exponent));
         }
 
@@ -542,7 +542,7 @@ double lexical_cast<double>(char_cit from, char_cit to)
         if(size == 4 && m && *(from + 1) == 'I' && *(from + 2) == 'N' && *(from + 3) == 'F')
             return -limits<double>::infinity;
 
-        int64_t v = cvt::atoi<int64_t>(from, size);
+        i64 v = cvt::atoi<i64>(from, size);
         return double(v);
     }
     catch(exception& e)

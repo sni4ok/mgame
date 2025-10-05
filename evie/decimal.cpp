@@ -3,7 +3,7 @@
 #include "utils.hpp"
 #include "math.hpp"
 
-static const int64_t day_s = 24 * 3600, year_s = day_s * 365;
+static const i64 day_s = 24 * 3600, year_s = day_s * 365;
 
 mlog& operator<<(mlog& m, print_t t)
 {
@@ -44,9 +44,9 @@ void test_print_t()
 }
 
 template<typename stream>
-stream& operator<<(stream& s, int128d v)
+stream& operator<<(stream& s, i128d v)
 {
-    if(v < int128d())
+    if(v < i128d())
     {
         s << "-";
         v = -v;
@@ -59,10 +59,10 @@ stream& operator<<(stream& s, int128d v)
             v /= 10;
             ++p;
         }
-        return pair<int32_t, int32_t>(int32_t(v), p);
+        return pair<i32, i32>(i32(v), p);
     };
 
-    auto decimal_pow = [](double v, uint32_t e)
+    auto decimal_pow = [](double v, u32 e)
     {
         while(e > 19)
         {
@@ -73,16 +73,16 @@ stream& operator<<(stream& s, int128d v)
         return v;
     };
 
-    int32_t sz = 0;
+    i32 sz = 0;
 rep:
-    while(v >= int128d(int64_t(10)))
+    while(v >= i128d(i64(10)))
     {
         auto p = f(v.value);
         double d = v.value - decimal_pow(p.first, p.second);
         assert(d >= double());
 
         s << uint_fix(p.first, sz ? sz - p.second : 1, true);
-        v = int128d(d);
+        v = i128d(d);
         sz = p.second;
         goto rep;
     }
@@ -90,12 +90,12 @@ rep:
     return s;
 }
 
-mlog& operator<<(mlog& s, int128d v)
+mlog& operator<<(mlog& s, i128d v)
 {
     return operator<< <mlog>(s, v);
 }
 
-mstring to_string(int128d v)
+mstring to_string(i128d v)
 {
     buf_stream_fixed<80> s;
     s << v;
@@ -103,21 +103,21 @@ mstring to_string(int128d v)
 }
 
 template<>
-int128d lexical_cast(char_cit f, char_cit t)
+i128d lexical_cast(char_cit f, char_cit t)
 {
     if(t - f <= 18)
-        return int128d(lexical_cast<int64_t>(f, t));
+        return i128d(lexical_cast<i64>(f, t));
 
-    int128d r;
+    i128d r;
 rep:
-    int64_t sz = min<int64_t>(t - f, 18);
-    int64_t v = lexical_cast<int64_t>(f, f + sz);
+    i64 sz = min<i64>(t - f, 18);
+    i64 v = lexical_cast<i64>(f, f + sz);
     if(!r)
-        r = int128d(v);
+        r = i128d(v);
     else
     {
         r = mul_int(r, cvt::pow[sz]);
-        r += int128d(v);
+        r += i128d(v);
     }
     f += sz;
     if(f != t)
@@ -126,7 +126,7 @@ rep:
     return r;
 }
 
-void test_int128d()
+void test_i128d()
 {
     auto f = []<typename type>(type v)
     {
@@ -137,12 +137,12 @@ void test_int128d()
         assert(d <= abs(v.value) * limits<double>::epsilon);
     };
 
-    f(int128d());
-    f(int128d(limits<int64_t>::max));
+    f(i128d());
+    f(i128d(limits<i64>::max));
 
 #ifdef USE_INT128_EXT
-    f(int128d(double(limits<int128_t>::min)));
-    f(int128d(double(limits<uint128_t>::max)));
+    f(i128d(double(limits<i128>::min)));
+    f(i128d(double(limits<u128>::max)));
 #endif
 }
 

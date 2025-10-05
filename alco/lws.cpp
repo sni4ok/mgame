@@ -12,7 +12,7 @@
 mstring join_tickers(const mvector<mstring>& tickers, bool quotes)
 {
     mstream s;
-    for(uint32_t i = 0; i != tickers.size(); ++i)
+    for(u32 i = 0; i != tickers.size(); ++i)
     {
         if(i)
             s << ",";
@@ -57,7 +57,7 @@ lws_dump::lws_dump() : hfile(), lws_not_fake(true), lws_dump_en(), dump_buf("\n 
     }
 }
 
-void lws_dump::dump(char_cit p, uint32_t sz)
+void lws_dump::dump(char_cit p, u32 sz)
 {
     if(sz) {
         memcpy(dump_buf + 1, &sz, sizeof(sz));
@@ -74,7 +74,7 @@ str_holder lws_dump::read_dump()
     {
         if(::read(hfile, dump_buf, 6) != 6)
             throw_system_failure("lws_dump reading error");
-        uint32_t sz;
+        u32 sz;
         memcpy(&sz, dump_buf + 1, sizeof(sz));
         read_buf.resize(sz);
         if(dump_buf[0] != '\n' || dump_buf[5] != '\n'
@@ -219,7 +219,7 @@ int lws_impl::service()
     return lws_service(context, 0);
 }
 
-void lws_connect(lws_impl& ls, char_cit host, uint32_t port, char_cit path)
+void lws_connect(lws_impl& ls, char_cit host, u32 port, char_cit path)
 {
     lws_client_connect_info ccinfo = lws_client_connect_info();
     ccinfo.context = ls.context;

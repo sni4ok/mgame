@@ -17,13 +17,13 @@ namespace
     {
         bool brief;
         mstring name;
-        uint32_t count;
+        u32 count;
 
         struct stat
         {
             ttime_t min, max;
-            int128_t sum, d2;
-            uint64_t count;
+            i128 sum, d2;
+            u64 count;
 
             stat() : min(limits<ttime_t>::max), max(limits<ttime_t>::min), sum(), d2(), count()
             {
@@ -37,18 +37,18 @@ namespace
                 ttime_t delta = t - f;
                 min = ::min(min, delta);
                 max = ::max(max, delta);
-                sum += int128_t(delta.value);
-                d2 += int128_t(delta.value) * delta.value / 1000000;
+                sum += i128(delta.value);
+                d2 += i128(delta.value) * delta.value / 1000000;
                 ++count;
             }
             void print(mlog& ml, mstring name) const
             {
                 if(count)
                 {
-                    int128_t mean = sum / count;
+                    i128 mean = sum / count;
                     double dm = to_double(mean) / 1000.;
                     double var = to_double(d2) / count - dm * dm;
-                    int64_t stddev = int64_t(sqrt(abs(var)) * 1000);
+                    i64 stddev = i64(sqrt(abs(var)) * 1000);
                     ml << "\n    " << name << " count: " << count << ", mean: "
                         << print_t({to_int(mean)}) << ", std: " << print_t({stddev}) <<
                         ", min: " << print_t({min}) << ", max: " << print_t({max});
@@ -112,12 +112,12 @@ namespace
 
             mlog() << "stat " << params << "initialized";
         }
-        void proceed(const message* mes, uint32_t count)
+        void proceed(const message* mes, u32 count)
         {
             this->count += count;
             if(brief)
             {
-                for(uint32_t i = 0; i != count; ++i, ++mes)
+                for(u32 i = 0; i != count; ++i, ++mes)
                 {
                     const message& m = *mes;
                     if(m.id == msg_book)
@@ -129,7 +129,7 @@ namespace
             else
             {
                 ttime_t mtime = get_export_mtime(mes);
-                for(uint32_t i = 0; i != count; ++i, ++mes)
+                for(u32 i = 0; i != count; ++i, ++mes)
                 {
                     const message& m = *mes;
                     ttime_t ctime = cur_ttime();
@@ -159,7 +159,7 @@ namespace
     {
         delete (estat*)(v);
     }
-    void estat_proceed(void* v, const message* m, uint32_t count)
+    void estat_proceed(void* v, const message* m, u32 count)
     {
         ((estat*)(v))->proceed(m, count);
     }

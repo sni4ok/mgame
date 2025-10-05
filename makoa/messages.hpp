@@ -3,7 +3,7 @@
     
     ttime_t time;  //parser in time
     ttime_t etime; //exchange time
-    uint8_t msg_id;
+    u8 msg_id;
 
     author: Ilya Andronov <sni4ok@yandex.ru>
 */
@@ -12,7 +12,7 @@
 
 #include "messages_t.hpp"
 
-static const uint8_t 
+static const u8 
                           msg_ping  = 69
                         , msg_hello = 42
                         , msg_trade = 10
@@ -21,7 +21,7 @@ static const uint8_t
                         , msg_book  = 13
 ;
 
-static const uint32_t message_size = 48, message_bsize = message_size - 17;
+static const u32 message_size = 48, message_bsize = message_size - 17;
 
 struct message_times
 {
@@ -32,9 +32,9 @@ struct message_times
 struct message_id
 {
     char _[16];
-    uint8_t id;
+    u8 id;
 
-    bool operator==(uint8_t i) const
+    bool operator==(u8 i) const
     {
         return id == i;
     }
@@ -42,73 +42,73 @@ struct message_id
 
 struct message_ping : message_times
 {
-    uint8_t id;
-    uint8_t unused[message_bsize];
+    u8 id;
+    u8 unused[message_bsize];
 
-    static const uint32_t msg_id = msg_ping;
+    static const u32 msg_id = msg_ping;
 };
 static_assert(sizeof(message_ping) == message_size, "protocol agreement");
 
 struct message_hello : message_times
 {
-    uint8_t id;
-    uint8_t unused[message_bsize - 16];
+    u8 id;
+    u8 unused[message_bsize - 16];
 
     char name[16];
-    static const uint32_t msg_id = msg_hello;
+    static const u32 msg_id = msg_hello;
 };
 static_assert(sizeof(message_hello) == message_size, "protocol agreement");
 
 struct message_trade : message_times
 {
-    uint8_t id;
-    uint8_t unused;
+    u8 id;
+    u8 unused;
 
     //enum direction{unknown = 0, buy = 1, sell = 2};
-    uint16_t direction;
-    uint32_t security_id;
-	int64_t unused_;
+    u16 direction;
+    u32 security_id;
+	i64 unused_;
     price_t price;
     count_t count;
-    static const uint32_t msg_id = msg_trade;
+    static const u32 msg_id = msg_trade;
 };
 static_assert(sizeof(message_trade) == message_size, "protocol agreement");
 
 //message_instr clean OrderBook for instrument
 struct message_instr : message_times
 {
-    uint8_t id;
+    u8 id;
     char exchange_id[8];
     char feed_id[4];
     char security[15];
     
-    uint32_t security_id; // = crc32(exchange_id, feed_id, security) now
+    u32 security_id; // = crc32(exchange_id, feed_id, security) now
 
-    static const uint32_t msg_id = msg_instr;
+    static const u32 msg_id = msg_instr;
 };
 static_assert(sizeof(message_instr) == message_size, "protocol agreement");
 
 struct message_clean : message_times
 {
-    uint8_t id;
-    uint8_t unused[message_bsize - 8];
+    u8 id;
+    u8 unused[message_bsize - 8];
 
-    uint32_t security_id;
-    uint32_t source; //0 from parsers, 1 from disconnect events
-    static const uint32_t msg_id = msg_clean;
+    u32 security_id;
+    u32 source; //0 from parsers, 1 from disconnect events
+    static const u32 msg_id = msg_clean;
 };
 static_assert(sizeof(message_clean) == message_size, "protocol agreement");
 
 struct message_book : message_times
 {
-    uint8_t id;
-    uint8_t unused[3];
+    u8 id;
+    u8 unused[3];
 
-    uint32_t security_id;
-	int64_t level_id;
+    u32 security_id;
+	i64 level_id;
     price_t price; 
     count_t count; //this new counts for level_id
-    static const uint32_t msg_id = msg_book;
+    static const u32 msg_id = msg_book;
 };
 static_assert(sizeof(message_book) == message_size, "protocol agreement");
 

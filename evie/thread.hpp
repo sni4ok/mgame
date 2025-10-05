@@ -45,7 +45,7 @@ struct critical_section
 {
     bool flag;
     ::mutex mutex;
-    static const uint32_t free_lock_count = 10;
+    static const u32 free_lock_count = 10;
 
     critical_section() : flag()
     {
@@ -58,7 +58,7 @@ struct critical_section
     {
         if(try_lock()) [[likely]]
             return true;
-        for(uint32_t i = 0; i != free_lock_count; ++i)
+        for(u32 i = 0; i != free_lock_count; ++i)
             if(try_lock())
                 return true;
 
@@ -119,20 +119,20 @@ struct condition
     condition(const condition&) = delete;
 
     void wait(mutex::scoped_lock& lock);
-    void timed_wait(mutex::scoped_lock& lock, uint32_t sec);
-    void timed_uwait(mutex::scoped_lock& lock, uint32_t usec);
+    void timed_wait(mutex::scoped_lock& lock, u32 sec);
+    void timed_uwait(mutex::scoped_lock& lock, u32 usec);
     void notify_one();
     void notify_all();
 };
 
-static const uint32_t max_threads_count = 100;
+static const u32 max_threads_count = 100;
 
 void* init_free_threads();
 void delete_free_threads(void* ptr);
 void set_free_threads(void* ptr);
 void set_thread_id();
-uint32_t get_thread_id();
-void set_affinity_thread(uint32_t thrd);
+u32 get_thread_id();
+void set_affinity_thread(u32 thrd);
 void set_trash_thread();
 void set_significant_thread();
 
@@ -161,11 +161,11 @@ struct t_func : thread_func
     }
 };
 
-uint64_t thread_create(thread_func* p);
+u64 thread_create(thread_func* p);
 
 struct thread
 {
-    uint64_t tid;
+    u64 tid;
 
     thread();
     thread(thread&& r);

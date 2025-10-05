@@ -16,7 +16,7 @@ struct config : stack_singleton<config>
     mstring frequency; //Frequency of updates (F0, F1). F0 = realtime / F1=2sec
     mstring length;    //Number of price points ("25", "100")
 
-    uint32_t ping; //bitfinex close connection without auto pings from websocket, this param set force pings
+    u32 ping; //bitfinex close connection without auto pings from websocket, this param set force pings
                    //in seconds, 0 for disable
 
     mstring exchange_id, feed_id;

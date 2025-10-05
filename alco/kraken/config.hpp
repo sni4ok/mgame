@@ -11,7 +11,7 @@ struct config : stack_singleton<config>
 {
     mvector<mstring> tickers;
     bool trades, orders, bba;
-    uint32_t depth; //orders depth 10, 25, 100, 500, 1000
+    u32 depth; //orders depth 10, 25, 100, 500, 1000
 
     mstring exchange_id, feed_id;
     mstring push;

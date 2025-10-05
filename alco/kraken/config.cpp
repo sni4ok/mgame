@@ -16,7 +16,7 @@ config::config(char_cit fname)
     tickers = split_s(smb);
     trades = get_config_param<bool>(cs, "trades");
     orders = get_config_param<bool>(cs, "orders");
-    depth = get_config_param<uint32_t>(cs, "depth", true);
+    depth = get_config_param<u32>(cs, "depth", true);
     bba = get_config_param<bool>(cs, "bba");
 
     if((!orders && !trades && !bba) || tickers.empty())

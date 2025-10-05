@@ -27,7 +27,7 @@ bool import_proceed_data(str_holder& buf, void* ctx);
 template<typename reader_state>
 struct reader
 {
-    typedef uint32_t (*func)(reader_state socket, char_it buf, uint32_t buf_size);
+    typedef u32 (*func)(reader_state socket, char_it buf, u32 buf_size);
 
     reader_state socket;
     func read;
@@ -36,7 +36,7 @@ struct reader
 
     bool proceed()
     {
-        uint32_t readed = read(socket, const_cast<char_it>(ctx.second.begin()),
+        u32 readed = read(socket, const_cast<char_it>(ctx.second.begin()),
             ctx.second.size());
         if(!readed) [[unlikely]]
             return false;
@@ -57,7 +57,7 @@ struct reader
     reader(const reader&) = delete;
 };
 
-uint32_t socket_read(int socket, char_it buf, uint32_t buf_size)
+u32 socket_read(int socket, char_it buf, u32 buf_size)
 {
     int ret = ::recv(socket, buf, buf_size, 0);
     if(ret <= 0) [[unlikely]]
@@ -80,41 +80,41 @@ uint32_t socket_read(int socket, char_it buf, uint32_t buf_size)
     return ret;
 }
 
-uint32_t pipe_read(int hfile, char_it buf, uint32_t buf_size)
+u32 pipe_read(int hfile, char_it buf, u32 buf_size)
 {
-    uint32_t read_bytes = ::read(hfile, buf, buf_size);
+    u32 read_bytes = ::read(hfile, buf, buf_size);
     if(!read_bytes) [[unlikely]]
         throw_system_failure("read() from pipe error");
     return read_bytes;
 }
 
-uint32_t mmap_cp_read(void *v, char_it buf, uint32_t buf_size)
+u32 mmap_cp_read(void *v, char_it buf, u32 buf_size)
 {
-    uint8_t* f = (uint8_t*)v, *e = f + message_size, *i = f;
-    uint8_t w = mmap_load(f);
-    uint8_t r = mmap_load(f + 1);
+    u8* f = (u8*)v, *e = f + message_size, *i = f;
+    u8 w = mmap_load(f);
+    u8 r = mmap_load(f + 1);
 
     if(w < 2 || w >= message_size || r < 2 || r >= message_size) [[unlikely]]
         throw mexception(es() % "mmap_cp_read, internal error, wp: "
-            % uint32_t(w) % ", rp: " % uint32_t(r));
+            % u32(w) % ", rp: " % u32(r));
 
     i += r;
     const message* p = (((const message*)v) + 1) + (r - 2) * 255;
-    uint8_t cur_count = mmap_load(i);
+    u8 cur_count = mmap_load(i);
 
     if(cur_count)
     {
         if(buf_size < cur_count) [[unlikely]]
-            throw mexception(es() % "mmap_cp_read, buf_size too small, wp: " % uint32_t(w) %
-                ", rp: " % uint32_t(r) % ", buf_size: " % buf_size % ", cur_count: "
+            throw mexception(es() % "mmap_cp_read, buf_size too small, wp: " % u32(w) %
+                ", rp: " % u32(r) % ", buf_size: " % buf_size % ", cur_count: "
                 % cur_count);
 
-        memcpy(buf, p, uint32_t(cur_count) * message_size);
+        memcpy(buf, p, u32(cur_count) * message_size);
         mmap_store(i, 0);
         ++i;
         if(i == e)
             i = f + 2;
-        *(f + 1) = uint8_t(i - f);
+        *(f + 1) = u8(i - f);
     }
     return cur_count * message_size;
 }
@@ -141,14 +141,14 @@ struct import_mmap_cp
         shared_memory_sync* s = get_smc(p);
         mmap_store(&s->pooling_mode, pooling_mode ? 1 : 2);
 
-        uint8_t* w = (uint8_t*)p, *r = w + 1;
+        u8* w = (u8*)p, *r = w + 1;
         bool initialized = false;
 
         pthread_lock lock(s->mutex);
         while(!initialized && can_run)
         {
-            uint8_t wc = mmap_load(w);
-            uint8_t rc = mmap_load(r);
+            u8 wc = mmap_load(w);
+            u8 rc = mmap_load(r);
             if((rc != 1 && rc != 0) || wc == 1)
             {
                 mmap_store(w, 0);
@@ -173,7 +173,7 @@ void import_mmap_cp_start(void* imc, void* params)
     void* p = ptr.get();
     reader<void*> rr(params, p, mmap_cp_read);
     shared_memory_sync* s = get_smc(p);
-    uint8_t* w = (uint8_t*)p, *r = w + 1;
+    u8* w = (u8*)p, *r = w + 1;
 
     while(ic.can_run)
     {
@@ -183,13 +183,13 @@ void import_mmap_cp_start(void* imc, void* params)
             {
                 if(!pthread_mutex_trylock(&(s->mutex)))
                 {
-                    uint8_t rc = *r;
+                    u8 rc = *r;
                     if(rc < 2)
                     {
                         pthread_mutex_unlock(&(s->mutex));
                         throw mexception(es() % "mmap inconsistence 2, rp: " % rc);
                     }
-                    uint8_t count = mmap_load(w + rc);
+                    u8 count = mmap_load(w + rc);
                     if(!count)
                         pthread_timedwait(s->condition, s->mutex, 1);
                     pthread_mutex_unlock(&(s->mutex));
@@ -210,7 +210,7 @@ struct import_pipe
     }
 };
 
-void work_thread_reader(reader<int>& r, volatile bool& can_run, int32_t timeout/*in seconds*/)
+void work_thread_reader(reader<int>& r, volatile bool& can_run, i32 timeout/*in seconds*/)
 {
     pollfd pfd = pollfd();
     pfd.events = POLLIN;
@@ -234,15 +234,15 @@ void work_thread_reader(reader<int>& r, volatile bool& can_run, int32_t timeout/
     }
 }
 
-static const uint32_t max_connections = 32;
-static const int32_t timeout = 30; //in seconds
+static const u32 max_connections = 32;
+static const i32 timeout = 30; //in seconds
 
 void import_pipe_start(void* c, void* p)
 {
     import_pipe& ip = *((import_pipe*)(c));
     int m = mkfifo(ip.params.c_str(), 0666);
     unused(m);
-    int64_t h = open(ip.params.c_str(), O_RDONLY | O_NONBLOCK);
+    i64 h = open(ip.params.c_str(), O_RDONLY | O_NONBLOCK);
     if(h <= 0)
         throw_system_failure(es() % "open " % ip.params % " error");
     mlog() << "import from " << ip.params << " started";
@@ -255,14 +255,14 @@ struct import_tcp
 {
     volatile bool& can_run;
     mstring params;
-    uint16_t port;
-    uint32_t count;
+    u16 port;
+    u32 count;
     ::mutex mutex;
     condition cond;
 
     import_tcp(volatile bool& can_run, const mstring& params)
         : can_run(can_run), params(params),
-        port(lexical_cast<uint16_t>(params)), count()
+        port(lexical_cast<u16>(params)), count()
     {
     }
     ~import_tcp()
@@ -333,7 +333,7 @@ struct import_udp
 {
     volatile bool& can_run;
     mstring host, src_ip, ma;
-    uint16_t port;
+    u16 port;
 
     import_udp(volatile bool& can_run, const mstring& params) : can_run(can_run)
     {
@@ -343,7 +343,7 @@ struct import_udp
                 % params);
 
         host = p[0];
-        port = lexical_cast<uint16_t>(p[1]);
+        port = lexical_cast<u16>(p[1]);
 
         if(p.size() == 4)
         {
@@ -353,7 +353,7 @@ struct import_udp
     }
 };
 
-uint32_t udp_read(int socket, char_it buf, uint32_t buf_size)
+u32 udp_read(int socket, char_it buf, u32 buf_size)
 {
     int ret = recvfrom(socket, buf, buf_size, 0, nullptr, nullptr);
     if(ret == -1)
@@ -399,7 +399,7 @@ struct import_ifile_impl
 typedef import_ifile_impl<ifile_create, ifile_destroy> import_ifile;
 typedef import_ifile_impl<files_replay_create, files_replay_destroy> import_files_replay;
 
-template<typename fimport, uint32_t (*fread)(void *v, char* buf, uint32_t buf_size)>
+template<typename fimport, u32 (*fread)(void *v, char* buf, u32 buf_size)>
 void import_ifile_start(void* c, void* p)
 {
     fimport& f = *((fimport*)(c));

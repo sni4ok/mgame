@@ -100,10 +100,10 @@ struct greater
 template<typename iterator, typename type, typename compare = less<type> >
 iterator lower_bound(iterator from, iterator to, const type& val, compare cmp = compare())
 {
-    int64_t count = to - from;
+    i64 count = to - from;
     while(count > 0)
     {
-        int64_t step = count / 2;
+        i64 step = count / 2;
         iterator mid = from + step;
         if(cmp(*mid, val))
             from = ++mid, count -= step + 1;
@@ -116,10 +116,10 @@ iterator lower_bound(iterator from, iterator to, const type& val, compare cmp = 
 template<typename iterator, typename type, typename compare = less<type> >
 iterator upper_bound(iterator from, iterator to, const type& val, compare cmp = compare())
 {
-  int64_t count = to - from;
+  i64 count = to - from;
   while(count > 0)
   {
-    int64_t step = count / 2;
+    i64 step = count / 2;
     iterator mid = from + step;
     if(!cmp(val, *mid))
         from = ++mid, count -= step + 1;
@@ -157,7 +157,7 @@ struct any_of
     }
 };
 
-template<uint64_t size>
+template<u64 size>
 any_of is_any_of(const char (&str)[size])
 {
     return any_of(str, str + size - 1);
@@ -378,15 +378,15 @@ struct ref
 
 template<typename iterator>
 requires requires { is_same_v<typename iterator::iterator_category, forward_iterator_tag>; }
-iterator advance(iterator it, uint64_t size)
+iterator advance(iterator it, u64 size)
 {
-    for(uint32_t i = 0; i != size; ++i, ++it)
+    for(u32 i = 0; i != size; ++i, ++it)
         ;
     return it;
 }
 
 template<typename iterator>
-iterator advance(iterator it, uint64_t size)
+iterator advance(iterator it, u64 size)
 {
     it += size;
     return it;

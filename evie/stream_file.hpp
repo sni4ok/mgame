@@ -7,7 +7,7 @@
 #include "string.hpp"
 #include "mfile.hpp"
 
-static const uint32_t b_stream_size = 1024 * 1024;
+static const u32 b_stream_size = 1024 * 1024;
 typedef buf_stream_fixed<b_stream_size> b_stream;
 
 struct stream_file : b_stream

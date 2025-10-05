@@ -115,14 +115,14 @@ inline constexpr to to_decimal(from v)
 
 template<typename type>
 requires(is_decimal<type>)
-inline constexpr type div_int(type p, int64_t value)
+inline constexpr type div_int(type p, i64 value)
 {
     return {p.value / value};
 }
 
 template<typename type>
 requires(is_decimal<type>)
-inline constexpr type mul_int(type p, int64_t value)
+inline constexpr type mul_int(type p, i64 value)
 {
     return {p.value * value};
 }
@@ -137,7 +137,7 @@ inline constexpr double to_double(type p)
 }
 
 template<typename type>
-inline constexpr int64_t to_int(type p)
+inline constexpr i64 to_int(type p)
 {
     if constexpr(is_decimal<type>)
         return p.value / type::frac;
@@ -147,9 +147,9 @@ inline constexpr int64_t to_int(type p)
 
 struct p2 
 {
-    static const int64_t exponent = -2;
-    static const int64_t frac = 100;
-    int64_t value;
+    static const i64 exponent = -2;
+    static const i64 frac = 100;
+    i64 value;
 };
 
 #endif

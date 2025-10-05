@@ -16,24 +16,24 @@ struct mstring : mvector<char>
     using base::base;
     using base::operator=;
 
-    template<uint64_t sz>
+    template<u64 sz>
     mstring(const char (&buf)[sz]) : base(buf, buf + sz - 1)
     {
     }
-    template<uint64_t sz>
+    template<u64 sz>
     mstring& operator=(const char (&buf)[sz])
     {
         clear();
         insert(buf, buf + sz - 1);
         return *this;
     }
-    template<uint64_t sz>
+    template<u64 sz>
     mstring& operator+=(const char (&buf)[sz])
     {
         insert(buf, buf + sz - 1);
         return *this;
     }
-    template<uint64_t sz>
+    template<u64 sz>
     mstring operator+(const char (&buf)[sz]) const
     {
         mstring ret(*this);
@@ -62,7 +62,7 @@ requires(is_numeric_v<type>)
 mstring to_string(type value)
 {
     char buf[cvt::atoi_size_v<type>];
-    uint32_t size = cvt::itoa(buf, value);
+    u32 size = cvt::itoa(buf, value);
     return mstring(buf, buf + size);
 }
 

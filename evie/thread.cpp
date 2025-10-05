@@ -101,7 +101,7 @@ void condition::wait(mutex::scoped_lock& lock)
         throw str_exception("condition::wait() error");
 }
 
-void condition::timed_wait(mutex::scoped_lock& lock, uint32_t sec)
+void condition::timed_wait(mutex::scoped_lock& lock, u32 sec)
 {
     timespec t;
     clock_gettime(CLOCK_REALTIME, &t);
@@ -111,12 +111,12 @@ void condition::timed_wait(mutex::scoped_lock& lock, uint32_t sec)
         throw str_exception("condition::timed_wait() error");
 }
 
-void condition::timed_uwait(mutex::scoped_lock& lock, uint32_t usec)
+void condition::timed_uwait(mutex::scoped_lock& lock, u32 usec)
 {
     timespec t;
     clock_gettime(CLOCK_REALTIME, &t);
     t.tv_nsec += usec * 1000;
-    if(t.tv_nsec >= int32_t(ttime_t::frac))
+    if(t.tv_nsec >= i32(ttime_t::frac))
     {
         t.tv_sec += t.tv_nsec / ttime_t::frac;
         t.tv_nsec %= ttime_t::frac;
@@ -138,16 +138,16 @@ void condition::notify_all()
         throw str_exception("condition::notify_all() error");
 }
 
-thread_local uint32_t cur_tid = 0;
+thread_local u32 cur_tid = 0;
 
 struct free_threads
 {
-    queue<uint32_t> ids;
+    queue<u32> ids;
     mutex __mutex;
 
     free_threads()
     {
-        for(uint32_t i = 1; i != max_threads_count; ++i)
+        for(u32 i = 1; i != max_threads_count; ++i)
             ids.push_back(i);
     }
     void set()
@@ -194,12 +194,12 @@ void set_thread_id()
     free_threads_ptr->set();
 }
 
-uint32_t get_thread_id()
+u32 get_thread_id()
 {
     return cur_tid;
 }
 
-void set_affinity_thread(uint32_t thrd)
+void set_affinity_thread(u32 thrd)
 {
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
@@ -208,7 +208,7 @@ void set_affinity_thread(uint32_t thrd)
         mlog(mlog::critical) << "pthread_setaffinity_np() error";
 }
 
-static const uint32_t trash_t1 = 3, trash_t2 = 9;
+static const u32 trash_t1 = 3, trash_t2 = 9;
 
 void set_trash_thread()
 {
@@ -224,7 +224,7 @@ void set_significant_thread()
 {
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
-    for(uint32_t i = 0; i != 11; ++i)
+    for(u32 i = 0; i != 11; ++i)
     {
         if(i != trash_t1 && i != trash_t2)
             CPU_SET(i, &cpuset);
@@ -242,7 +242,7 @@ void* thread_f(void *p)
     return nullptr;
 }
 
-uint64_t thread_create(thread_func* p)
+u64 thread_create(thread_func* p)
 {
     pthread_t tid = 0;
     int ret = pthread_create(&tid, nullptr, &thread_f, p);

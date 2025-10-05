@@ -14,7 +14,7 @@ struct config : stack_singleton<config>
 
     mvector<mstring> imports;
     mvector<mstring> exports;
-    uint32_t export_threads;
+    u32 export_threads;
 
     bool pooling;
     bool set_engine_time;

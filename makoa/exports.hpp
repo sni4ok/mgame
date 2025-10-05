@@ -15,7 +15,7 @@ struct hole_exporter
 {
     void* (*init)(char_cit params) = 0;
     void (*destroy)(void*) = 0;
-    void (*proceed)(void* v, const message* m, uint32_t count) = 0;
+    void (*proceed)(void* v, const message* m, u32 count) = 0;
 };
 
 struct exporter
@@ -31,7 +31,7 @@ struct exporter
     void operator=(exporter&& r);
     ~exporter();
 
-    void proceed(const message* m, uint32_t count) {
+    void proceed(const message* m, u32 count) {
         he.proceed(p, m, count);
     }
 };

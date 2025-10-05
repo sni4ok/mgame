@@ -15,7 +15,7 @@ template<typename base>
 struct sec_id_by_name : base
 {
     typedef basic_string<sizeof(message_instr::security) + 1> ticker;
-    uint32_t get_security_id(char_cit i, char_cit ie, ttime_t time)
+    u32 get_security_id(char_cit i, char_cit ie, ttime_t time)
     {
         assert(i != ie);
         ticker symbol(i, ie);
@@ -33,7 +33,7 @@ struct sec_id_by_name : base
     using base::base;
 
 private:
-    fmap<ticker, uint32_t> securities;
+    fmap<ticker, u32> securities;
     security tmp;
 };
 

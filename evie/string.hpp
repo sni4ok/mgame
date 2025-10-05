@@ -17,7 +17,7 @@ struct buf_stream : ios_base
     {
     }
 
-    template<uint64_t size>
+    template<u64 size>
     buf_stream(char (&v)[size]) : from(v), cur(from), to(from + size)
     {
     }
@@ -29,7 +29,7 @@ struct buf_stream : ios_base
     {
         return cur;
     }
-    uint64_t size() const
+    u64 size() const
     {
         return cur - from;
     }
@@ -51,23 +51,23 @@ struct buf_stream : ios_base
     {
         cur = from;
     }
-    void resize(uint64_t new_sz)
+    void resize(u64 new_sz)
     {
-        uint64_t cur_sz = size();
+        u64 cur_sz = size();
         if(new_sz > cur_sz)
             check_size(new_sz - cur_sz);
         cur = from + new_sz;
     }
-    void write(char_cit v, uint64_t s)
+    void write(char_cit v, u64 s)
     {
-        if(s > uint64_t(to - cur)) [[unlikely]]
+        if(s > u64(to - cur)) [[unlikely]]
             throw str_exception("buf_stream::write() overloaded");
         memcpy(cur, v, s);
         cur += s;
     }
-    void check_size(uint64_t delta) const
+    void check_size(u64 delta) const
     {
-        if(delta > uint64_t(to - cur)) [[unlikely]]
+        if(delta > u64(to - cur)) [[unlikely]]
             throw str_exception("buf_stream::check_size() overloaded");
     }
     template<typename type>
@@ -78,7 +78,7 @@ struct buf_stream : ios_base
     }
 };
 
-template<uint32_t stack_sz>
+template<u32 stack_sz>
 struct buf_stream_fixed : buf_stream
 {
     char buf[stack_sz];
@@ -148,7 +148,7 @@ struct conditional_stream : ios_base
         else
             ((s1*)(buf))->~s1();
     }
-    void write(char_cit v, uint64_t s)
+    void write(char_cit v, u64 s)
     {
         if(__s2)
             ((s2*)(buf))->write(v, s);

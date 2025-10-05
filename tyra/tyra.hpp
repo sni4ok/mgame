@@ -8,7 +8,7 @@
 
 class tyra
 {
-    uint64_t send_from_call, send_from_buffer;
+    u64 send_from_call, send_from_buffer;
 
     int socket;
     char buf[32 * 1024];
@@ -21,7 +21,7 @@ public:
     tyra(const char* host);
 
     void send(const message& m);
-    void send(const message* m, uint32_t count);
+    void send(const message* m, u32 count);
 
     template<typename message_type>
     void send(const message_type& m)

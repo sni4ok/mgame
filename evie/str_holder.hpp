@@ -31,12 +31,13 @@ static const char endl = '\n';
 
 typedef char* char_it;
 typedef const char* char_cit;
+typedef uint64_t u64;
 
 template<typename type>
 class span
 {
     const type* data;
-    uint64_t size_;
+    u64 size_;
 
 public:
     typedef const type* iterator;
@@ -44,14 +45,14 @@ public:
     constexpr span() : data(), size_()
     {
     }
-    constexpr span(iterator data, uint64_t size) : data(data), size_(size)
+    constexpr span(iterator data, u64 size) : data(data), size_(size)
     {
     }
     constexpr span(iterator from, iterator to) : data(from), size_(to - from)
     {
     }
 
-    template<uint64_t sz>
+    template<u64 sz>
     constexpr span(const type (&buf)[sz]) : data(buf), size_(sz - 1)
     {
     }
@@ -63,7 +64,7 @@ public:
     {
         return data + size_;
     }
-    constexpr auto& operator[](uint32_t idx) const
+    constexpr auto& operator[](u64 idx) const
     {
         return *(data + idx);
     }
@@ -72,7 +73,7 @@ public:
         assert(size_);
         return *(end() - 1);
     }
-    constexpr uint64_t size() const
+    constexpr u64 size() const
     {
         return size_;
     }
@@ -80,7 +81,7 @@ public:
     {
         return !size_;
     }
-    constexpr void resize(uint64_t size)
+    constexpr void resize(u64 size)
     {
         assert(size <= size_);
         size_ = size;
@@ -96,10 +97,10 @@ typedef span<char> str_holder;
 
 str_holder _str_holder(char_cit str);
 
-template<uint64_t sz>
+template<u64 sz>
 constexpr str_holder from_array(const char (&str)[sz])
 {
-    uint64_t size = sz;
+    u64 size = sz;
     while(size && str[size - 1] == char())
         --size;
     return {str, str + size};

@@ -42,7 +42,7 @@ socket_holder::~socket_holder()
         close(s);
 }
 
-int socket_connect(const mstring& host, uint16_t port, uint32_t timeout)
+int socket_connect(const mstring& host, u16 port, u32 timeout)
 {
     bool local = (host == "127.0.0.1") || (host == "localhost");
     int socket = ::socket(AF_INET, local ? AF_LOCAL : SOCK_STREAM /*| SOCK_NONBLOCK*/, IPPROTO_TCP);
@@ -109,7 +109,7 @@ int socket_connect(const mstring& host, uint16_t port, uint32_t timeout)
     return sh.release();
 }
 
-void socket_send(int socket, char_cit ptr, uint32_t sz)
+void socket_send(int socket, char_cit ptr, u32 sz)
 {
     while(sz)
     {
@@ -121,9 +121,9 @@ void socket_send(int socket, char_cit ptr, uint32_t sz)
     }
 }
 
-uint32_t try_socket_send(int socket, char_cit ptr, uint32_t sz)
+u32 try_socket_send(int socket, char_cit ptr, u32 sz)
 {
-    uint32_t sended = 0;
+    u32 sended = 0;
     while(sz)
     {
         int ret = ::send(socket, ptr, sz, 0);
@@ -143,7 +143,7 @@ uint32_t try_socket_send(int socket, char_cit ptr, uint32_t sz)
     return sended;
 }
 
-void socket_send_async(int socket, char_cit ptr, uint32_t sz)
+void socket_send_async(int socket, char_cit ptr, u32 sz)
 {
     while(sz)
     {
@@ -175,7 +175,7 @@ void socket_send_async(int socket, char_cit ptr, uint32_t sz)
     }
 }
 
-int socket_accept_async(uint32_t port, bool local, bool sync, mstring* client_ip_ptr,
+int socket_accept_async(u32 port, bool local, bool sync, mstring* client_ip_ptr,
     volatile bool* can_run, char_cit name)
 {
     int socket = ::socket(AF_INET, local ? AF_LOCAL : SOCK_STREAM /*| SOCK_NONBLOCK*/,
@@ -245,7 +245,7 @@ int socket_accept_async(uint32_t port, bool local, bool sync, mstring* client_ip
     return sc.release();
 }
 
-int socket_accept_async(uint32_t port, const mstring& possible_client_ip, bool sync,
+int socket_accept_async(u32 port, const mstring& possible_client_ip, bool sync,
     mstring* client_ip_ptr, volatile bool* can_run, char_cit name)
 {
     mstring client_ip;
@@ -300,15 +300,15 @@ int socket_stream::recv()
     return ret;
 }
 
-socket_stream::socket_stream(uint32_t timeout, char_it buf, uint32_t buf_size,
+socket_stream::socket_stream(u32 timeout, char_it buf, u32 buf_size,
     int s, socket_stream_op* op) :
     op(op), cur(buf), readed(cur), beg(cur), all_sz(buf_size),
     timeout(timeout), socket(s)
 {
 }
 
-socket_stream::socket_stream(uint32_t timeout, char_it buf, uint32_t buf_size,
-    const mstring& host, uint16_t port, socket_stream_op* op)
+socket_stream::socket_stream(u32 timeout, char_it buf, u32 buf_size,
+    const mstring& host, u16 port, socket_stream_op* op)
     : op(op), cur(buf), readed(cur), beg(cur), all_sz(buf_size),
     timeout(timeout), socket()
 {
@@ -342,12 +342,12 @@ bool socket_stream::get(char& c)
     return true;
 }
 
-void socket_stream::read(char_it s, uint32_t sz)
+void socket_stream::read(char_it s, u32 sz)
 {
     if(all_sz - (readed - beg) < sz)
     {
         MPROFILE("socket_stream_page_fault")
-        for(uint32_t i = 0; i != sz; ++i)
+        for(u32 i = 0; i != sz; ++i)
             get(s[i]);
     }
     else
@@ -361,7 +361,7 @@ void socket_stream::read(char_it s, uint32_t sz)
     }
 }
 
-udp_socket::udp_socket(const mstring& host, uint16_t port, const mstring& src_ip,
+udp_socket::udp_socket(const mstring& host, u16 port, const mstring& src_ip,
     const mstring& ma)
 {
     socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);

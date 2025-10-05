@@ -20,7 +20,7 @@ tyra::tyra(char_cit h) : send_from_call(), send_from_buffer(), bf(buf), bt(buf +
     if(i == ie || i + 1 == ie)
         throw mexception(es() % "tyra::tyra() bad host: " % host);
 
-    socket = socket_connect({host.begin(), i}, lexical_cast<uint16_t>(i + 1, host.end()));
+    socket = socket_connect({host.begin(), i}, lexical_cast<u16>(i + 1, host.end()));
     mlog() << "tyra() connected to socket " << socket;
 }
 
@@ -33,7 +33,7 @@ tyra::~tyra()
 void tyra::send(const message& m)
 {
     char_cit ptr = (char_cit)(&m);
-    uint32_t sz = message_size;
+    u32 sz = message_size;
     if(c != e)
     {
         if(bt > e + sz) [[unlikely]]
@@ -41,7 +41,7 @@ void tyra::send(const message& m)
         copy(ptr, ptr + sz, e);
         e += sz;
 
-        uint32_t s = try_socket_send(socket, c, e - c);
+        u32 s = try_socket_send(socket, c, e - c);
         send_from_buffer += s;
         if(c + s == e)
         {
@@ -53,7 +53,7 @@ void tyra::send(const message& m)
     }
     else
     {
-        uint32_t s = try_socket_send(socket, ptr, sz);
+        u32 s = try_socket_send(socket, ptr, sz);
         send_from_call += s;
         if(s != sz)
         {
@@ -63,10 +63,10 @@ void tyra::send(const message& m)
     }
 }
 
-void tyra::send(const message* m, uint32_t count)
+void tyra::send(const message* m, u32 count)
 {
     char_cit ptr = (char_cit)(m);
-    uint32_t sz = count * message_size;
+    u32 sz = count * message_size;
     if(c != e)
     {
         if(bt > e + sz) [[unlikely]]
@@ -77,7 +77,7 @@ void tyra::send(const message* m, uint32_t count)
     }
     else
     {
-        uint32_t s = try_socket_send(socket, ptr, sz);
+        u32 s = try_socket_send(socket, ptr, sz);
         send_from_call += s;
         if(s != sz)
         {

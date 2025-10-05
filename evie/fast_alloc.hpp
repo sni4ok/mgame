@@ -10,14 +10,14 @@
 #include "list.hpp"
 
 //with follower can work one writer and many readers without synchronization
-template<typename type, uint32_t block_size = 65536, uint32_t num_blocks = 16384,
+template<typename type, u32 block_size = 65536, u32 num_blocks = 16384,
     bool enable_run_once = true>
 class follower
 {
     typedef type* bulks_type[num_blocks];
 
     bulks_type bulks;
-    mutable uint32_t num_elems;
+    mutable u32 num_elems;
     type* ptr;
 
 public:
@@ -31,12 +31,12 @@ public:
     follower(const follower&) = delete;
     ~follower()
     {
-        uint32_t elems = atomic_load(num_elems);
-        uint32_t end_bulk = elems / block_size;
-        uint32_t end_element = elems % block_size;
+        u32 elems = atomic_load(num_elems);
+        u32 end_bulk = elems / block_size;
+        u32 end_element = elems % block_size;
         if(end_element)
             ++end_bulk;
-        for(uint32_t i = 0; i != end_bulk; ++i)
+        for(u32 i = 0; i != end_bulk; ++i)
             delete[] bulks[i];
         if(ptr)
             delete[] ptr;
@@ -58,9 +58,9 @@ public:
     }
     void push_back(type&& value)
     {
-        uint32_t elems = atomic_load(num_elems);
-        uint32_t end_bulk = elems / block_size;
-        uint32_t end_element = elems % block_size;
+        u32 elems = atomic_load(num_elems);
+        u32 end_bulk = elems / block_size;
+        u32 end_element = elems % block_size;
 
         if(!end_element)
         {
@@ -90,17 +90,17 @@ public:
     class const_iterator
     {
         const bulks_type* bulks;
-        uint32_t element;
+        u32 element;
 
         friend class follower;
 
         const type& dereference() const
         {
-            uint32_t end_bulk = element / block_size;
-            uint32_t end_element = element % block_size;
+            u32 end_bulk = element / block_size;
+            u32 end_element = element % block_size;
             return ((*bulks)[end_bulk])[end_element];
         }
-        const_iterator(const bulks_type& bulks, uint32_t element)
+        const_iterator(const bulks_type& bulks, u32 element)
             : bulks(&bulks), element(element)
         {
         }
@@ -123,29 +123,29 @@ public:
             --element;
             return *this;
         }
-        const_iterator operator-(int32_t diff) const
+        const_iterator operator-(i32 diff) const
         {
             const_iterator ret(*bulks, element);
             ret -= diff;
             return ret;
         }
-        const_iterator operator+(int32_t diff) const
+        const_iterator operator+(i32 diff) const
         {
             const_iterator ret(*bulks, element);
             ret += diff;
             return ret;
         }
-        const_iterator& operator-=(int32_t diff)
+        const_iterator& operator-=(i32 diff)
         {
             element -= diff;
             return *this;
         }
-        const_iterator& operator+=(int32_t diff)
+        const_iterator& operator+=(i32 diff)
         {
             element += diff;
             return *this;
         }
-        int32_t operator-(const const_iterator& r) const
+        i32 operator-(const const_iterator& r) const
         {
             return element - r.element;
         }
@@ -167,11 +167,11 @@ public:
     {
         return const_iterator(bulks, atomic_load(num_elems));
     }
-    const type& operator[](uint32_t idx) const
+    const type& operator[](u32 idx) const
     {
         return *(begin() + idx);
     }
-    uint32_t size() const
+    u32 size() const
     {
         return atomic_load(num_elems);
     }
@@ -203,7 +203,7 @@ struct emplace_decl
     }
 };
 
-template<typename type, uint32_t max_size>
+template<typename type, u32 max_size>
 struct cas_forward : emplace_decl<type, cas_forward<type, max_size> >
 {
     static const bool use_blist = false;
@@ -217,13 +217,13 @@ struct cas_forward : emplace_decl<type, cas_forward<type, max_size> >
     {
         union
         {
-            uint64_t id;
+            u64 id;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
             struct
             {
-                uint16_t next, a_next, salt;
+                u16 next, a_next, salt;
             };
 #pragma GCC diagnostic pop
         };
@@ -237,10 +237,10 @@ struct cas_forward : emplace_decl<type, cas_forward<type, max_size> >
 
     cas_forward() : nodes()
     {
-        static_assert(max_size && max_size < limits<uint16_t>::max);
+        static_assert(max_size && max_size < limits<u16>::max);
         static_assert(sizeof(node) == 8 + sizeof(type) +
             ((sizeof(type) % 8) ? (8 - sizeof(type) % 8) : 0));
-        for(uint32_t i = 1; i != max_size + 1; ++i)
+        for(u32 i = 1; i != max_size + 1; ++i)
             free_impl(to_type(nodes + i));
     }
     cas_forward(str_holder) : cas_forward()
@@ -268,7 +268,7 @@ struct cas_forward : emplace_decl<type, cas_forward<type, max_size> >
         node* n = to_node(p);
         for(;;)
         {
-            uint64_t from = atomic_load(nodes->id);
+            u64 from = atomic_load(nodes->id);
             id_type to = {from};
             to.a_next = n - nodes;
             n->id = from; //
@@ -287,7 +287,7 @@ struct cas_forward : emplace_decl<type, cas_forward<type, max_size> >
         node* n = to_node(p);
         for(;;)
         {
-            uint64_t from = atomic_load(nodes->id, __ATOMIC_ACQUIRE);
+            u64 from = atomic_load(nodes->id, __ATOMIC_ACQUIRE);
             id_type to = {from};
             to.next = n - nodes;
 
@@ -301,13 +301,13 @@ struct cas_forward : emplace_decl<type, cas_forward<type, max_size> >
     {
         for(;;)
         {
-            uint64_t from = atomic_load(nodes->id, __ATOMIC_ACQUIRE);
+            u64 from = atomic_load(nodes->id, __ATOMIC_ACQUIRE);
             id_type to = {from};
             if(!to.a_next)
                 throw mexception(es() % "cas_array<type," % max_size % "> bad_alloc");
-            uint64_t a_next = atomic_load((nodes + to.a_next)->id);
+            u64 a_next = atomic_load((nodes + to.a_next)->id);
             id_type n = {a_next};
-            uint16_t nn = to.a_next;
+            u16 nn = to.a_next;
             to.a_next = n.a_next;
             ++to.salt;
             if(atomic_compare_exchange(nodes->id, from, to.id, __ATOMIC_RELEASE))
@@ -324,13 +324,13 @@ struct cas_forward : emplace_decl<type, cas_forward<type, max_size> >
     {
         for(;;)
         {
-            uint64_t from = atomic_load(nodes->id, __ATOMIC_ACQUIRE);
+            u64 from = atomic_load(nodes->id, __ATOMIC_ACQUIRE);
             id_type to = {from};
             if(!to.next)
                 return nullptr;
 
-            uint16_t nn = to.next;
-            uint64_t next = atomic_load((nodes + nn)->id);
+            u16 nn = to.next;
+            u64 next = atomic_load((nodes + nn)->id);
 
             id_type n = {next};
 
@@ -349,7 +349,7 @@ struct cas_forward : emplace_decl<type, cas_forward<type, max_size> >
     {
         return pop_front();
     }
-    static constexpr uint32_t run_once()
+    static constexpr u32 run_once()
     {
         return 0;
     }
@@ -394,12 +394,12 @@ struct cas_forward : emplace_decl<type, cas_forward<type, max_size> >
     }
 };
 
-template<typename type, uint16_t capacity_v, type empty_v = type(), bool use_mt = true>
+template<typename type, u16 capacity_v, type empty_v = type(), bool use_mt = true>
 struct rbuffer
 {
     mutable critical_section cs;
 
-    uint16_t f, t;
+    u16 f, t;
     type values[capacity_v];
 
     rbuffer() : f(), t()
@@ -411,7 +411,7 @@ struct rbuffer
     {
         critical_section::mt_lock<use_mt> lock(cs);
 
-        uint16_t tf;
+        u16 tf;
         if(t == capacity_v)
         {
             tf = 0;
@@ -469,7 +469,7 @@ struct rbuffer
 
         return values[f];
     }
-    uint16_t __size() const
+    u16 __size() const
     {
         if(t != capacity_v)
         {
@@ -483,7 +483,7 @@ struct rbuffer
 
         return 0;
     }
-    uint16_t size() const
+    u16 size() const
     {
         critical_section::mt_lock<use_mt> lock(cs);
         return __size();
@@ -492,13 +492,13 @@ struct rbuffer
     {
         return !size();
     }
-    static constexpr uint16_t capacity()
+    static constexpr u16 capacity()
     {
         return capacity_v;
     }
 };
 
-template<typename type, uint32_t capacity_v, bool use_mt = true>
+template<typename type, u32 capacity_v, bool use_mt = true>
 struct rbuffer_list : rbuffer<type*, capacity_v, nullptr, use_mt>
 {
     static const bool use_blist = false;
@@ -518,7 +518,7 @@ struct rbuffer_list : rbuffer<type*, capacity_v, nullptr, use_mt>
         while((p = this->pop()))
             free(p);
     }
-    static constexpr uint32_t run_once()
+    static constexpr u32 run_once()
     {
         return 0;
     }
@@ -540,16 +540,16 @@ namespace alloc_params
         bool use_mt;
         bool use_tss;
 
-        uint32_t pre_alloc = 0;
-        uint32_t max_size = 0;
+        u32 pre_alloc = 0;
+        u32 max_size = 0;
 
         bool use_malloc = false;
 
         int cont_type = 2; //tss_pvector 0, forward_list 1, blist 2
         int allocator_cont = 1;
 
-        const constexpr fast_alloc_params operator()(uint32_t pre_alloc,
-            uint32_t max_size = 0) const
+        const constexpr fast_alloc_params operator()(u32 pre_alloc,
+            u32 max_size = 0) const
         {
             return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size,
                 use_malloc, cont_type, allocator_cont);
@@ -590,12 +590,12 @@ struct fast_alloc
 {
     static const bool use_mt = params.use_mt;
     static const bool use_tss = params.use_tss;
-    static const uint32_t pre_alloc = use_tss ? 0 : params.pre_alloc;
-    static const uint32_t max_size = use_tss ? 0 : params.max_size;
+    static const u32 pre_alloc = use_tss ? 0 : params.pre_alloc;
+    static const u32 max_size = use_tss ? 0 : params.max_size;
 
     typedef nodes_type_<type, use_mt, use_tss, true, node> nodes_type;
     nodes_type nodes;
-    uint32_t size;
+    u32 size;
 
     type* alloc_impl()
     {
@@ -608,7 +608,7 @@ struct fast_alloc
     {
         if constexpr(pre_alloc)
         {
-            for(uint32_t i = 0; i != pre_alloc; ++i)
+            for(u32 i = 0; i != pre_alloc; ++i)
             {
                 type* p = alloc_impl();
                 new(p)type();
@@ -654,7 +654,7 @@ struct fast_alloc
     {
         if constexpr(max_size)
         {
-            uint32_t size_ = atomic_load(size);
+            u32 size_ = atomic_load(size);
             if(size_ < max_size)
             {
                 nodes.push(p);
@@ -670,13 +670,13 @@ struct fast_alloc
         else
             nodes.push(p);
     }
-    uint32_t run_once()
+    u32 run_once()
     {
         if constexpr(max_size == 0)
             return 0;
 
         MPROFILE("fast_alloc::run_once()")
-        uint32_t ret = 0;
+        u32 ret = 0;
 
         while(atomic_load(size) > max_size)
         {
@@ -722,7 +722,7 @@ struct malloc_alloc
     {
         fast_alloc_delete((node_type*)n);
     }
-    static constexpr uint32_t run_once()
+    static constexpr u32 run_once()
     {
         return 0;
     }

@@ -48,7 +48,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         {
         }
         ticker security;
-        uint32_t security_id;
+        u32 security_id;
         func f;
     };
     fmap<string, impl> parsers;
@@ -155,7 +155,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             it = find(ne, ie, ',');
             price_t p = lexical_cast<price_t>(ne, it);
             skip_fixed(it, direction);
-            uint32_t dir;
+            u32 dir;
             if(*it == 's') {
                 skip_fixed(it, sell);
                 dir = 2;
@@ -247,7 +247,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                     i->second.security.end(), time);
             ++ne;
             skip_fixed(ne, ts);
-            ttime_t etime = milliseconds(cvt::atoi<int64_t>(ne, 13));
+            ttime_t etime = milliseconds(cvt::atoi<i64>(ne, 13));
             ne += 13;
             skip_fixed(ne, tick);
             ((this)->*(i->second.f))(i->second, etime, time, ne, ie);

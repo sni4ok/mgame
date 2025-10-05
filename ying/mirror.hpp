@@ -14,7 +14,7 @@ struct mirror
                                //  or "tBTCUSD[ 100]"
                                //  or "$0[ 100]"
 
-    void proceed(const message* m, uint32_t count);
+    void proceed(const message* m, u32 count);
     ~mirror();
 
 private:

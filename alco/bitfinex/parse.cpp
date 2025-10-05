@@ -22,9 +22,9 @@ struct lws_i : sec_id_by_name<lws_impl>
     typedef void (lws_i::*func)(impl& i, ttime_t time, char_cit& it, char_cit ie);
     struct impl
     {
-        uint32_t security_id;
+        u32 security_id;
         func f;
-        uint32_t high;
+        u32 high;
         impl() : high()
         {
         }
@@ -32,7 +32,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     const ttime_t ping;
     ttime_t ping_t;
 
-    fmap<uint32_t, impl> parsers; //channel, impl
+    fmap<u32, impl> parsers; //channel, impl
     lws_i() : sec_id_by_name<lws_impl>(config::instance().push, config::instance().log_lws),
         cfg(config::instance()),
         subscribed("\"subscribed\",\"channel\":"),
@@ -65,9 +65,9 @@ struct lws_i : sec_id_by_name<lws_impl>
         }
         skip_fixed(it, "[");
         char_cit ne = find(it, ie, ',');
-        uint32_t id = cvt::atoi<uint32_t>(it, ne - it);
+        u32 id = cvt::atoi<u32>(it, ne - it);
         ++ne;
-        ttime_t etime = milliseconds(cvt::atoi<int64_t>(ne, 13));
+        ttime_t etime = milliseconds(cvt::atoi<i64>(ne, 13));
         ne += 13;
         skip_fixed(ne, ",");
         it = find(ne, ie, ',');
@@ -105,7 +105,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             ne = find(it, ie, ',');
             if(prec_R0)
             {
-                int64_t level_id = cvt::atoi<int64_t>(it, ne - it);
+                i64 level_id = cvt::atoi<i64>(it, ne - it);
                 ++ne;
                 it = find(ne, ie, ',');
                 price_t price = lexical_cast<price_t>(ne, it);
@@ -122,7 +122,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                 price_t price = lexical_cast<price_t>(it, ne);
                 ++ne;
                 it = find(ne, ie, ',');
-                uint32_t count = cvt::atoi<uint32_t>(ne, it - ne);
+                u32 count = cvt::atoi<u32>(ne, it - ne);
                 ++it;
                 ne = find(it, ie, ']');
                 count_t amount = lexical_cast<count_t>(it, ne);
@@ -143,7 +143,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             skip_fixed(it, "]]");
         send_messages();
     }
-    void add_channel(uint32_t channel, str_holder ticker, bool is_trades, ttime_t time)
+    void add_channel(u32 channel, str_holder ticker, bool is_trades, ttime_t time)
     {
         mlog() << "add_channel: " << channel << ", ticker: " << ticker << ", is_trades: " << is_trades;
         impl& i = parsers[channel];
@@ -164,7 +164,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         {
             ++it;
             char_cit ne = find(it, ie, ',');
-            uint32_t channel = cvt::atoi<uint32_t>(it, ne - it);
+            u32 channel = cvt::atoi<u32>(it, ne - it);
             skip_fixed(ne, ",");
             ne = find(ne, ie, '[');
 
@@ -192,7 +192,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                     else
                         skip_fixed(it, book);
                     char_cit ne = find(it, ie, ',');
-                    uint32_t channel = cvt::atoi<uint32_t>(it, ne - it);
+                    u32 channel = cvt::atoi<u32>(it, ne - it);
                     ++ne;
                     skip_fixed(ne, symbol);
                     it = find(ne, ie, '\"');

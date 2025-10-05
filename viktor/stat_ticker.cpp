@@ -20,16 +20,16 @@ namespace
     struct stat
     {
         template<typename key>
-        uint64_t sum(const std::map<key, uint64_t>& map)
+        u64 sum(const std::map<key, u64>& map)
         {
-            uint64_t ret = 0;
+            u64 ret = 0;
             for(auto& v: map)
                 ret += v.second;
             return ret;
         }
         template<typename key>
-        void advance_impl(std::map<key, uint64_t>::iterator& it,
-            std::map<key, uint64_t>::iterator ie, uint64_t count)
+        void advance_impl(std::map<key, u64>::iterator& it,
+            std::map<key, u64>::iterator ie, u64 count)
         {
             while(it != ie)
             {
@@ -50,19 +50,19 @@ namespace
         struct info
         {
             optional<price_t> min_trade, max_trade, min_ask, max_ask, min_bid, max_bid;
-            uint64_t asks, bids;
+            u64 asks, bids;
             std::set<price_t> trades_p, asks_p, bids_p;
-            std::map<count_t, uint64_t> trades;
+            std::map<count_t, u64> trades;
 
             order_book_ba ob;
             ttime_t first_ob_time, last_ob_time;
-            std::map<price_t, uint64_t> spreads;
+            std::map<price_t, u64> spreads;
 
             info() : asks(), bids(), first_ob_time(), last_ob_time()
             {
             }
         };
-        std::map<uint32_t, pair<message_instr, info> > data;
+        std::map<u32, pair<message_instr, info> > data;
 
         void proceed(const message* m)
         {
@@ -110,9 +110,9 @@ namespace
                 v.second.ob.proceed(*m);
             }
         }
-        void proceed(const message* m, uint32_t count)
+        void proceed(const message* m, u32 count)
         {
-            for(uint32_t i = 0; i != count; ++i, ++m)
+            for(u32 i = 0; i != count; ++i, ++m)
               proceed(m);
         }
         ~stat()
@@ -154,7 +154,7 @@ namespace
                     }
                     return min_price;
                 };
-                uint64_t trades = sum(i.trades);
+                u64 trades = sum(i.trades);
                 ml << "\n  trades: " << trades << "(min price step " << get_pips(i.trades_p)  << ") bids: "
                     << i.bids << "(min price step " << get_pips(i.bids_p) << ") asks: "
                     << i.asks << "(min price step " << get_pips(i.asks_p) << ")";
@@ -170,7 +170,7 @@ namespace
                     ml << " 90%_trades_count: " << it->first
                        << " max_trade_count: " << i.trades.rbegin()->first;
                 }
-                uint64_t spreads = sum(i.spreads);
+                u64 spreads = sum(i.spreads);
                 ml << "\n  spreads: " << spreads;
                 if(!i.spreads.empty()) {
                     auto it = i.spreads.begin(), ie = i.spreads.end();
@@ -200,7 +200,7 @@ namespace
     {
         delete (stat*)(v);
     }
-    void stat_proceed(void* v, const message* m, uint32_t count)
+    void stat_proceed(void* v, const message* m, u32 count)
     {
         ((stat*)(v))->proceed(m, count);
     }

@@ -15,7 +15,7 @@ profilerinfo::info::info() : time(), time_max(), time_min(limits<ttime_t>::max),
 
 void profilerinfo::print_impl(long mlog_params)
 {
-    uint64_t ncounters = atomic_load(cur_counters);
+    u64 ncounters = atomic_load(cur_counters);
     if(!ncounters)
         return;
 
@@ -28,7 +28,7 @@ void profilerinfo::print_impl(long mlog_params)
     mlog log(mlog_params);
     log << "profiler: \n";
 
-    for(uint64_t c = 0; c != ncounters; ++c)
+    for(u64 c = 0; c != ncounters; ++c)
     {
         const info i = counters_cpy[c];
         if(!i.count)
@@ -45,11 +45,11 @@ profilerinfo::profilerinfo() : cur_counters()
 {
 }
 
-uint64_t profilerinfo::register_counter(char_cit id)
+u64 profilerinfo::register_counter(char_cit id)
 {
     for(;;)
     {
-        uint64_t c = atomic_load(cur_counters);
+        u64 c = atomic_load(cur_counters);
 
         if(c == max_counters)
             throw mexception("profilerinfo::register_counter() overloaded");
@@ -62,7 +62,7 @@ uint64_t profilerinfo::register_counter(char_cit id)
     }
 }
 
-void profilerinfo::add_info(uint64_t counter_id, ttime_t time)
+void profilerinfo::add_info(u64 counter_id, ttime_t time)
 {
     if(!time) [[unlikely]]
         time = {1};
@@ -99,7 +99,7 @@ profilerinfo::~profilerinfo()
 {
 }
 
-mprofiler::mprofiler(uint64_t counter_id) : counter_id(counter_id), time(cur_ttime())
+mprofiler::mprofiler(u64 counter_id) : counter_id(counter_id), time(cur_ttime())
 {
 }
 

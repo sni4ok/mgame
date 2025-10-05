@@ -44,7 +44,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             it = find(it + 1, ie, ',');
             skip_fixed(it, ",\"s\":\"");
             char_cit ne = find(it, ie, '\"');
-            uint32_t security_id = get_security_id(it, ne, time);
+            u32 security_id = get_security_id(it, ne, time);
             it = ne + 1;
             skip_fixed(it, ",\"b\":\"");
             ne = find(it, ie, '\"');
@@ -79,7 +79,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             it = it + 14;
             skip_fixed(it, "\"s\":\"");
             char_cit ne = find(it, ie, '\"');
-            uint32_t security_id = get_security_id(it, ne, time);
+            u32 security_id = get_security_id(it, ne, time);
             it = ne + 1;
             skip_fixed(it, ",\"t\":");
             it = find(it, ie, ',');
@@ -95,7 +95,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             ne = find(it, ie, 'T');
             it = ne + 1;
             skip_fixed(it, "\":");
-            ttime_t etime = milliseconds(cvt::atoi<int64_t>(it, 13));
+            ttime_t etime = milliseconds(cvt::atoi<i64>(it, 13));
             it = it + 14;
             skip_fixed(it, "\"m\":");
             int direction;

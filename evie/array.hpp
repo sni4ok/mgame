@@ -7,7 +7,7 @@
 #include "string.hpp"
 #include "algorithm.hpp"
 
-template<typename type, uint32_t size_>
+template<typename type, u32 size_>
 struct carray
 {
     type buf[size_];
@@ -33,7 +33,7 @@ struct carray
     typedef const type* const_iterator;
     typedef type value_type;
 
-    static constexpr uint32_t size()
+    static constexpr u32 size()
     {
         return size_;
     }
@@ -57,12 +57,12 @@ struct carray
     {
         return buf + size_;
     }
-    constexpr const type& operator[](uint32_t elem) const
+    constexpr const type& operator[](u32 elem) const
     {
         assert(elem < size_);
         return buf[elem];
     }
-    constexpr type& operator[](uint32_t elem)
+    constexpr type& operator[](u32 elem)
     {
         assert(elem < size_);
         return buf[elem];
@@ -76,37 +76,37 @@ struct carray
     }
     constexpr carray& operator+=(const carray& r)
     {
-        for(uint32_t i = 0; i != size_; ++i)
+        for(u32 i = 0; i != size_; ++i)
             buf[i] += r.buf[i];
         return *this;
     }
     constexpr carray operator+(const carray& r) const
     {
         carray ret;
-        for(uint32_t i = 0; i != size_; ++i)
+        for(u32 i = 0; i != size_; ++i)
             ret.buf[i] = buf[i] + r.buf[i];
         return ret;
     }
     constexpr carray& operator-=(const carray& r)
     {
-        for(uint32_t i = 0; i != size_; ++i)
+        for(u32 i = 0; i != size_; ++i)
             buf[i] -= r.buf[i];
         return *this;
     }
     constexpr carray operator-(const carray& r) const
     {
         carray ret;
-        for(uint32_t i = 0; i != size_; ++i)
+        for(u32 i = 0; i != size_; ++i)
             ret.buf[i] = buf[i] - r.buf[i];
         return ret;
     }
 };
 
-template<typename type, uint32_t capacity_>
+template<typename type, u32 capacity_>
 class array
 {
     type buf[capacity_];
-    uint32_t size_;
+    u32 size_;
 
 public:
     typedef type* iterator;
@@ -117,7 +117,7 @@ public:
     array() : size_()
     {
     }
-    explicit array(uint32_t size) : size_(size)
+    explicit array(u32 size) : size_(size)
     {
         assert(size_ <= capacity_);
     }
@@ -136,7 +136,7 @@ public:
         assert(size_ <= capacity_);
         copy(f, t, buf);
     }
-    template<uint32_t sz>
+    template<u32 sz>
     array(const type (&str)[sz]) : size_(sz - 1)
     {
         static_assert(sz - 1 <= capacity_);
@@ -153,7 +153,7 @@ public:
         copy(r.begin(), r.end(), buf);
         return *this;
     }
-    uint32_t size() const
+    u32 size() const
     {
         return size_;
     }
@@ -161,7 +161,7 @@ public:
     {
         return !size_;
     }
-    static constexpr uint32_t capacity()
+    static constexpr u32 capacity()
     {
         return capacity_;
     }
@@ -169,12 +169,12 @@ public:
     {
         resize(0);
     }
-    void resize(uint32_t new_size)
+    void resize(u32 new_size)
     {
         if(new_size < size_)
             size_ = new_size;
         else if(new_size <= capacity_) {
-            //for(uint32_t i = size_; i != new_size; ++i)
+            //for(u32 i = size_; i != new_size; ++i)
             //    buf[i] = type();
             size_ = new_size;
         }
@@ -217,12 +217,12 @@ public:
     {
         return {begin() - 1};
     }
-    const type& operator[](uint32_t elem) const
+    const type& operator[](u32 elem) const
     {
         assert(elem < size_);
         return buf[elem];
     }
-    type& operator[](uint32_t elem)
+    type& operator[](u32 elem)
     {
         assert(elem < size_);
         return buf[elem];
@@ -246,7 +246,7 @@ public:
     }
     void insert(iterator it, const type* from, const type* to)
     {
-        uint32_t size = size_;
+        u32 size = size_;
         resize(size_ + (to - from));
         copy_backward(it, buf + size, it + (to - from));
         copy(from, to, it);
@@ -266,26 +266,26 @@ public:
     {
         return erase(it, it + 1);
     }
-    void reserve(uint32_t sz)
+    void reserve(u32 sz)
     {
         if(sz > capacity_)
             throw str_exception("array::reserve() sz > capacity");
     }
 };
 
-template<uint32_t stack_sz = 252>
+template<u32 stack_sz = 252>
 using basic_string = array<char, stack_sz>;
 
 typedef basic_string<> fstring;
 
-template<typename stream, uint32_t stack_sz>
+template<typename stream, u32 stack_sz>
 stream& operator<<(stream& str, const basic_string<stack_sz>& v)
 {
     str.write(v.begin(), v.size());
     return str;
 }
 
-template<typename type, uint32_t size>
+template<typename type, u32 size>
 constexpr auto fill_carray(type v = type())
 {
     carray<type, size> ret;
@@ -293,7 +293,7 @@ constexpr auto fill_carray(type v = type())
     return ret;
 }
 
-template<uint32_t sz>
+template<u32 sz>
 constexpr auto make_carray(const char (&str)[sz])
 {
     return carray<char, sz - 1>(str_holder(str));

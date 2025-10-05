@@ -105,9 +105,9 @@ hole_exporter exports_factory::get(const mstring& module)
 
 namespace
 {
-    void log_message(void*, const message* m, uint32_t count)
+    void log_message(void*, const message* m, u32 count)
     {
-        for(uint32_t i = 0; i != count; ++i, ++m)
+        for(u32 i = 0; i != count; ++i, ++m)
         {
             if(m->id == msg_book)
                 mlog() << "<" << m->mb;
@@ -131,7 +131,7 @@ namespace
     void hole_no_destroy(void*)
     {
     }
-    void hole_no_proceed(void*, const message*, uint32_t)
+    void hole_no_proceed(void*, const message*, u32)
     {
     }
     void* tyra_create(char_cit params)
@@ -142,15 +142,15 @@ namespace
     {
         delete (tyra*)t;
     }
-    void tyra_proceed(void* t, const message* m, uint32_t count)
+    void tyra_proceed(void* t, const message* m, u32 count)
     {
         return ((tyra*)t)->send(m, count);
     }
     struct exports_chain
     {
-        static const uint32_t max_size = 20;
+        static const u32 max_size = 20;
         exporter exporters[max_size];
-        uint32_t size;
+        u32 size;
 
         exports_chain() : size()
         {
@@ -158,9 +158,9 @@ namespace
         ~exports_chain()
         {
         }
-        void proceed(const message* m, uint32_t count)
+        void proceed(const message* m, u32 count)
         {
-            for(uint32_t i = 0; i != size; ++i)
+            for(u32 i = 0; i != size; ++i)
                 exporters[i].proceed(m, count);
         }
         void add(exporter&& e)
@@ -174,7 +174,7 @@ namespace
     {
         delete (exports_chain*)ptr;
     }
-    void chain_proceed(void* ec, const message* m, uint32_t count)
+    void chain_proceed(void* ec, const message* m, u32 count)
     {
         ((exports_chain*)ec)->proceed(m, count);
     }
@@ -197,7 +197,7 @@ namespace
     {
         int r = mkfifo(params, 0666);
         unused(r);
-        int64_t h = ::open(params, O_WRONLY);
+        i64 h = ::open(params, O_WRONLY);
         if(h <= 0)
             throw_system_failure(es() % "open " % _str_holder(params) % " error");
 
@@ -205,19 +205,19 @@ namespace
     }
     void pipe_destroy(void* p)
     {
-        ::close(int((int64_t)p));
+        ::close(int((i64)p));
     }
-    void pipe_proceed(void* p, const message* m, uint32_t count)
+    void pipe_proceed(void* p, const message* m, u32 count)
     {
         size_t wsize = sizeof(message) * count;
-        ssize_t ret = ::write(int((int64_t)p), (const void*)m, wsize);
+        ssize_t ret = ::write(int((i64)p), (const void*)m, wsize);
         if(ret != ssize_t(wsize)) [[unlikely]]
             throw_system_failure(es() % "pipe::write, wsize: " % wsize  % ", ret: " % ret);
     }
 
     struct crc_check
     {
-        uint32_t count;
+        u32 count;
         crc32 crc;
 
         crc_check() : count(), crc(0)
@@ -237,7 +237,7 @@ namespace
     {
         delete (crc_check*)p;
     }
-    void crc_proceed(void* p, const message* m, uint32_t count)
+    void crc_proceed(void* p, const message* m, u32 count)
     {
         crc_check* c = (crc_check*)p;
         c->count += count;
@@ -250,7 +250,7 @@ namespace
         unique_ptr<void, mmap_close> ptr(p);
         shared_memory_sync* s = get_smc(p);
 
-        uint8_t* c = (uint8_t*)p;
+        u8* c = (u8*)p;
         {
             char& s = *((char_it)p + mmap_alloc_size);
             if(s != '1')
@@ -262,7 +262,7 @@ namespace
             ++s;
         }
         pthread_lock lock(s->mutex);
-        for(uint8_t* s = c; s != c + mmap_alloc_size_base; ++s)
+        for(u8* s = c; s != c + mmap_alloc_size_base; ++s)
         {
             if(*s)
                 throw mexception(es() % "mmap_init() mmap already filled: " % _str_holder(params));
@@ -285,28 +285,28 @@ namespace
     {
         mmap_close(p);
     }
-    void mmap_proceed(void* v, const message* m, uint32_t count)
+    void mmap_proceed(void* v, const message* m, u32 count)
     {
         bool flub = false;
-        uint8_t* f = (uint8_t*)v, *e = f + message_size, *i = f;
+        u8* f = (u8*)v, *e = f + message_size, *i = f;
 
-        uint8_t w = *f;
-        uint8_t r = *(f + 1);
+        u8 w = *f;
+        u8 r = *(f + 1);
         if(w < 2 || w >= message_size || !r || r >= message_size) [[unlikely]]
             throw mexception(es() % "mmap_proceed() internal error, wp: "
-                % uint32_t(w) % ", rp: " % uint32_t(r));
+                % u32(w) % ", rp: " % u32(r));
 
         i += w;
         message* p = (((message*)v) + 1) + (w - 2) * 255;
 
-        uint32_t c = 0;
+        u32 c = 0;
         while(c != count)
         {
-            uint32_t cur_count = (count - c);
+            u32 cur_count = (count - c);
             if(cur_count > 255)
                 cur_count = 255;
 
-            uint8_t nf = mmap_load(i);
+            u8 nf = mmap_load(i);
             if(nf)
             {
                 //reader not exists or overloaded
@@ -320,12 +320,12 @@ namespace
                 }
                 if(nf)
                     throw mexception(es() % "mmap_proceed() map overload, wp: "
-                        % uint32_t(*f) % ", rp: " % uint32_t(*(f + 1)));
+                        % u32(*f) % ", rp: " % u32(*(f + 1)));
             }
             memcpy(p, m + c, cur_count * message_size);
             mmap_store(i, cur_count);
-            //mlog() << "mmap_proceed(" << uint64_t(v) << "," << uint64_t(p) << "," << c << "," << cur_count
-            //    << "," << uint32_t(*f) << "," << uint32_t(*(f + 1)) << ")";
+            //mlog() << "mmap_proceed(" << u64(v) << "," << u64(p) << "," << c << "," << cur_count
+            //    << "," << u32(*f) << "," << u32(*(f + 1)) << ")";
             p += 255;
             ++i;
 
@@ -334,7 +334,7 @@ namespace
 
             if(!mmap_compare_exchange(f, w, i - f))
                 throw mexception(es() % "mmap_proceed() set w error, w: " % *f
-                    % ", from: " % uint32_t(w) % ", to: " % uint32_t(i - f));
+                    % ", from: " % u32(w) % ", to: " % u32(i - f));
 
             w = i - f;
             c += cur_count;
@@ -368,7 +368,7 @@ namespace
                 throw_system_failure("export_udp, open udp socket error");
 
             sa.sin_family = AF_INET;
-            sa.sin_port = htons(lexical_cast<uint16_t>(p[1]));
+            sa.sin_port = htons(lexical_cast<u16>(p[1]));
             if(inet_pton(AF_INET, p[0].c_str(), &sa.sin_addr) <= 0)
                 throw_system_failure("export_udp, int_pton error");
         }
@@ -386,7 +386,7 @@ namespace
     {
         delete (udp*)p;
     }
-    void udp_proceed(void* p, const message* m, uint32_t count)
+    void udp_proceed(void* p, const message* m, u32 count)
     {
         udp* u = (udp*)p;
         ssize_t sz = sizeof(message) * count;

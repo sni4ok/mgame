@@ -15,15 +15,15 @@
 
 struct uint_fix
 {
-    uint64_t value;
-    uint32_t size;
+    u64 value;
+    u32 size;
     bool zeros;
 
     constexpr str_holder str() const
     {
         assert(size);
-        uint64_t v = value;
-        uint32_t idx = size - 1;
+        u64 v = value;
+        u32 idx = size - 1;
 
         while(v > 9 && idx)
         {
@@ -38,10 +38,10 @@ struct uint_fix
     }
 };
 
-template<uint32_t sz, bool zero = true>
+template<u32 sz, bool zero = true>
 struct uint_fixed : uint_fix
 {
-    uint_fixed(uint64_t value) : uint_fix(value, sz, zero)
+    uint_fixed(u64 value) : uint_fix(value, sz, zero)
     {
         static_assert(sz > 0 && sz <= 13, "out of range");
     }
@@ -82,19 +82,19 @@ mstring join(const mvector<mstring>& s, char sep = ',');
 
 struct crc32
 {
-    uint32_t *crc_table, crc;
+    u32 *crc_table, crc;
 
-    crc32(uint32_t init);
-    void process_bytes(char_cit p, uint32_t len);
-    uint32_t checksum() const;
+    crc32(u32 init);
+    void process_bytes(char_cit p, u32 len);
+    u32 checksum() const;
 };
 
 struct read_time_impl
 {
     carray<char, 10> cur_date;
-    uint64_t cur_date_time;
+    u64 cur_date_time;
 
-    template<uint32_t frac_size>
+    template<u32 frac_size>
     ttime_t read_time(char_cit& it);
 };
 
@@ -118,12 +118,12 @@ stream& operator<<(stream& s, decimal d)
 
 struct counting_iterator
 {
-    int64_t value;
+    i64 value;
 
-    counting_iterator(int64_t value) : value(value)
+    counting_iterator(i64 value) : value(value)
     {
     }
-    int64_t operator-(counting_iterator r) const
+    i64 operator-(counting_iterator r) const
     {
         return value - r.value;
     }
@@ -132,7 +132,7 @@ struct counting_iterator
         ++value;
         return *this;
     }
-    counting_iterator operator+(int64_t v) const
+    counting_iterator operator+(i64 v) const
     {
         return counting_iterator(value + v);
     }
@@ -140,7 +140,7 @@ struct counting_iterator
     {
         return value == r.value;
     }
-    int64_t operator*() const
+    i64 operator*() const
     {
         return value;
     }
@@ -150,7 +150,7 @@ typedef pair<counting_iterator, counting_iterator> pcc;
 
 struct zpcc : pcc
 {
-    zpcc(int64_t value) : pcc(0, value)
+    zpcc(i64 value) : pcc(0, value)
     {
     }
 };
@@ -243,13 +243,13 @@ stream& operator<<(stream& s, ttime_t v)
     return s << parse_time(v);
 }
 
-str_holder itoa_hex(uint8_t ch);
+str_holder itoa_hex(u8 ch);
 
 inline auto print_binary(str_holder str)
 {
     auto f = [](auto& s, char c)
     {
-        s << itoa_hex((uint8_t)c);
+        s << itoa_hex((u8)c);
     };
 
     return print<' '>(str, f);

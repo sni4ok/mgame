@@ -16,7 +16,7 @@ config::config(char_cit fname)
 
     imports = get_config_params(cs, "import");
     exports = get_config_params(cs, "export");
-    export_threads = get_config_param<uint32_t>(cs, "export_threads");
+    export_threads = get_config_param<u32>(cs, "export_threads");
 
     pooling = get_config_param<bool>(cs, "pooling");
     set_engine_time = get_config_param<bool>(cs, "set_engine_time");

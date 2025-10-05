@@ -10,8 +10,8 @@
 
 #include <initializer_list>
 
-void* tss_realloc(void* ptr, uint64_t old_size, uint64_t new_size);
-void tss_free(void* ptr, uint64_t size);
+void* tss_realloc(void* ptr, u64 old_size, u64 new_size);
+void tss_free(void* ptr, u64 size);
 
 template<typename ifrom, typename ito>
 constexpr void copy(ifrom from, ifrom to, ito out)
@@ -47,7 +47,7 @@ class mvector
 {
 protected:
     type* buf;
-    uint64_t size_, capacity_;
+    u64 size_, capacity_;
 
     void __clear()
     {
@@ -87,7 +87,7 @@ public:
     {
         __clear();
     }
-    explicit mvector(uint64_t size)
+    explicit mvector(u64 size)
     {
         __clear();
         resize(size);
@@ -135,7 +135,7 @@ public:
         return *this;
     }
     template<bool fill_zero>
-    void __resize(uint64_t new_size)
+    void __resize(u64 new_size)
     {
         if(new_size <= capacity_)
         {
@@ -164,7 +164,7 @@ public:
         }
         size_ = new_size;
     }
-    void resize(uint64_t new_size)
+    void resize(u64 new_size)
     {
         __resize<true>(new_size);
     }
@@ -183,7 +183,7 @@ public:
         simple_swap(size_, r.size_);
         simple_swap(capacity_, r.capacity_);
     }
-    void reserve(uint64_t new_capacity)
+    void reserve(u64 new_capacity)
     {
         if(new_capacity <= capacity_)
             return;
@@ -203,7 +203,7 @@ public:
         __destroy(begin(), end());
         size_ = 0;
     }
-    uint64_t size() const
+    u64 size() const
     {
         return size_;
     }
@@ -211,7 +211,7 @@ public:
     {
         return !size_;
     }
-    uint64_t capacity() const
+    u64 capacity() const
     {
         return capacity_;
     }
@@ -254,15 +254,15 @@ public:
             --ptr;
             return *this;
         }
-        reverse_iter operator+(int64_t c) const
+        reverse_iter operator+(i64 c) const
         {
             return {ptr - c};
         }
-        reverse_iter operator-(int64_t c) const
+        reverse_iter operator-(i64 c) const
         {
             return {ptr + c};
         }
-        int64_t operator-(const reverse_iter& r) const
+        i64 operator-(const reverse_iter& r) const
         {
             return r.ptr - ptr;
         }
@@ -311,23 +311,23 @@ public:
         else
             free(buf);
     }
-    type& operator[](uint64_t elem)
+    type& operator[](u64 elem)
     {
         assert(elem < size_);
         return buf[elem];
     }
-    const type& operator[](uint64_t elem) const
+    const type& operator[](u64 elem) const
     {
         assert(elem < size_);
         return buf[elem];
     }
-    type& at(uint64_t elem)
+    type& at(u64 elem)
     {
         if(elem >= size_)
             throw str_exception("mvector<>::at()");
         return buf[elem];
     }
-    const type& at(uint64_t elem) const
+    const type& at(u64 elem) const
     {
         if(elem >= size_)
             throw str_exception("mvector<>::at()");
@@ -345,7 +345,7 @@ public:
     {
         if(size_ == capacity_)
         {
-            uint64_t pos = it - buf;
+            u64 pos = it - buf;
             reserve(capacity_ ? capacity_ * 2 : 32);
             it = buf + pos;
         }
@@ -370,14 +370,14 @@ public:
     }
     void insert(const type* from, const type* to)
     {
-        uint64_t size = size_;
+        u64 size = size_;
         __resize<have_destructor>(to + size_ - from);
         copy(from, to, buf + size);
     }
     void insert(iterator it, const type* from, const type* to)
     {
-        uint64_t size = size_;
-        uint64_t pos = it - buf;
+        u64 size = size_;
+        u64 pos = it - buf;
         __resize<have_destructor>(to + size_ - from);
         it = buf + pos;
         copy_backward(it, buf + size, it + (to - from));
@@ -475,20 +475,20 @@ struct pvector : mvector<type*>
             --it;
             return *this;
         }
-        iterator& operator+=(int64_t c)
+        iterator& operator+=(i64 c)
         {
             it += c;
             return *this;
         }
-        iterator operator+(int64_t c) const
+        iterator operator+(i64 c) const
         {
             return iterator({it + c});
         }
-        iterator operator-(int64_t c) const
+        iterator operator-(i64 c) const
         {
             return iterator({it - c});
         }
-        int64_t operator-(const iterator& r) const
+        i64 operator-(const iterator& r) const
         {
             return it - r.it;
         }
@@ -542,11 +542,11 @@ struct pvector : mvector<type*>
         static_cast<base&>(*this) = move(r);
         return *this;
     }
-    type& operator[](uint64_t elem)
+    type& operator[](u64 elem)
     {
         return *(base::begin()[elem]);
     }
-    const type& operator[](uint64_t elem) const
+    const type& operator[](u64 elem) const
     {
         return *(base::begin()[elem]);
     }
@@ -590,7 +590,7 @@ struct pvector : mvector<type*>
     }
 
 private:
-    void resize(uint64_t new_size);
+    void resize(u64 new_size);
 };
 
 template<typename type>

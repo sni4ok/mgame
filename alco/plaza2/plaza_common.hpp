@@ -15,7 +15,7 @@
 #include <unistd.h>
 
 #pragma pack(push, 4)
-template<uint32_t sz>
+template<u32 sz>
 struct cg_string
 {
     char buf[sz + 1];
@@ -23,7 +23,7 @@ struct cg_string
     {
         memset(buf, 0, sizeof(buf));
     }
-	cg_string(char_cit str, uint32_t size)
+	cg_string(char_cit str, u32 size)
     {
         if(size > sz)
             throw mexception("cg_string::operator= size overflow");
@@ -48,14 +48,14 @@ struct cg_string
     }
 };
 
-template<uint32_t sz>
+template<u32 sz>
 mlog& operator<<(mlog& ml, const cg_string<sz>& str)
 {
     ml << str_holder(str.buf);
     return ml;
 }
 
-template<uint32_t m, uint32_t e>
+template<u32 m, u32 e>
 struct cg_decimal
 {
     char buf[2 + (m >> 1) + ((m | e) & 1)];
@@ -66,9 +66,9 @@ struct cg_decimal
     price_t operator*() const
     {
         price_t ret;
-        int8_t s;
+        i8 s;
         cg_bcd_get((void*)buf, &ret.value, &s);
-        int8_t ds = s + price_t::exponent;
+        i8 ds = s + price_t::exponent;
         if(!ds)
         {
         }
@@ -82,7 +82,7 @@ struct cg_decimal
 
 #pragma pack(pop)
 
-template<uint32_t m, uint32_t e>
+template<u32 m, u32 e>
 mlog& operator<<(mlog& ml, const cg_decimal<m, e>& d)
 {
     ml << *d;
@@ -103,7 +103,7 @@ inline mlog& operator<<(mlog& ml, const cg_time_t& t)
     return ml;
 }
 
-inline void check_plaza_fail(uint32_t res, str_holder msg)
+inline void check_plaza_fail(u32 res, str_holder msg)
 {
     if(res != CG_ERR_OK) [[unlikely]]
     {
@@ -112,7 +112,7 @@ inline void check_plaza_fail(uint32_t res, str_holder msg)
     }
 }
 
-inline void warn_plaza_fail(uint32_t res, char_cit msg)
+inline void warn_plaza_fail(u32 res, char_cit msg)
 {
     if(res != CG_ERR_OK) [[unlikely]]
         mlog(mlog::critical) << "Client gate warning (" << _str_holder(msg) << "): " << res;
@@ -129,7 +129,7 @@ struct cg_conn_h
     {
         for(;can_run;)
         {
-            uint32_t state = 0;
+            u32 state = 0;
             check_plaza_fail(cg_conn_getstate(cli, &state), "conn_getstate");
             if(state == CG_STATE_ERROR)
                 throw mexception("Failed to open plaza2 connection");
@@ -208,7 +208,7 @@ struct cg_listener_h
     {
         if(listener)
         {
-            uint32_t res = cg_lsn_destroy(listener);
+            u32 res = cg_lsn_destroy(listener);
             listener = 0;
             if(res != CG_ERR_OK)
                 mlog(mlog::critical) << "Client gate listener destroy " << name << " error: " << res;
@@ -237,8 +237,8 @@ struct cg_listener_h
         mlog() << "stream: " << name << " opened";
         mlog() << "state: " << _str_holder(get_state() ? get_state() : "");
         {
-            uint32_t state = 0;
-            uint32_t r = cg_lsn_getstate(listener, &state);
+            u32 state = 0;
+            u32 r = cg_lsn_getstate(listener, &state);
             if(r != CG_ERR_OK || (state != CG_STATE_ACTIVE && state != CG_STATE_OPENING))
             {
                 mlog(mlog::critical) << "stream: " << name << ", bad state: " << state;
@@ -263,8 +263,8 @@ struct cg_listener_h
             time_t t = time(NULL);
             if(t > last_call_time + 5)
             {
-                uint32_t state = 0;
-                uint32_t r = cg_lsn_getstate(listener, &state);
+                u32 state = 0;
+                u32 r = cg_lsn_getstate(listener, &state);
                 if(r != CG_ERR_OK || state != CG_STATE_ACTIVE){
                     mlog(mlog::critical) << "stream: " << name <<
                         " unactive, cg_lsn_getstate returned: " << r << ", state: " << state;
@@ -281,24 +281,24 @@ struct cg_listener_h
 
 struct heartbeat_check
 {
-    int64_t min_delta_ms;
-    uint32_t possible_delay_ms;
+    i64 min_delta_ms;
+    u32 possible_delay_ms;
 
-    heartbeat_check(uint32_t possible_delay_ms)
+    heartbeat_check(u32 possible_delay_ms)
     : min_delta_ms(10000000), possible_delay_ms(possible_delay_ms)
     {
     }
     bool proceed(const cg_time_t& server_time)
     {
-        int64_t day_ms = to_ms(get_time_duration(cur_mtime()));
-        int64_t server_ms = (server_time.hour * 3600 + server_time.minute * 60
+        i64 day_ms = to_ms(get_time_duration(cur_mtime()));
+        i64 server_ms = (server_time.hour * 3600 + server_time.minute * 60
             + server_time.second) * 1000 + server_time.msec;
-        int64_t delta_ms = day_ms - server_ms;
+        i64 delta_ms = day_ms - server_ms;
         ++min_delta_ms;
         //Forts somethimes change time by hand for 5 or 42 seconds at a time
         if(delta_ms > min_delta_ms + possible_delay_ms + 50)
         {
-            int64_t set_to = min_delta_ms + 50;
+            i64 set_to = min_delta_ms + 50;
             mlog(mlog::critical) << "heartbeat_check force reset, min_delta_ms: "
                 << min_delta_ms << ", delta_ms: " << delta_ms
                 << ", set to: " << set_to;

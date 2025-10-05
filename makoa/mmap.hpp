@@ -13,7 +13,7 @@ struct shared_memory_sync
 {
     pthread_mutex_t mutex;
     pthread_cond_t condition;
-    uint8_t pooling_mode; //0 unitialized, 1 pooling mode on, 2 pooling mode off
+    u8 pooling_mode; //0 unitialized, 1 pooling mode on, 2 pooling mode off
 };
 
 struct pthread_lock
@@ -28,31 +28,31 @@ struct pthread_lock
     void unlock();
 };
 
-void pthread_timedwait(pthread_cond_t& condition, pthread_mutex_t& mutex, uint32_t sec);
+void pthread_timedwait(pthread_cond_t& condition, pthread_mutex_t& mutex, u32 sec);
 
-static const uint32_t mmap_alloc_size_base = message_size + (message_size - 2) * 255 * message_size;
-static const uint32_t mmap_alloc_size = mmap_alloc_size_base + sizeof(shared_memory_sync);
+static const u32 mmap_alloc_size_base = message_size + (message_size - 2) * 255 * message_size;
+static const u32 mmap_alloc_size = mmap_alloc_size_base + sizeof(shared_memory_sync);
 
 inline shared_memory_sync* get_smc(void* ptr)
 {
-    return (shared_memory_sync*)(((uint8_t*)ptr) + mmap_alloc_size_base);
+    return (shared_memory_sync*)(((u8*)ptr) + mmap_alloc_size_base);
 }
 
 void* mmap_create(const char* params, bool create);
 void mmap_close(void* ptr);
-uint8_t mmap_nusers(const char* params);
+u8 mmap_nusers(const char* params);
 
-inline void mmap_store(uint8_t* ptr, uint8_t value)
+inline void mmap_store(u8* ptr, u8 value)
 {
     __atomic_store_n(ptr, value, __ATOMIC_RELAXED);
 }
 
-inline uint8_t mmap_load(uint8_t* ptr)
+inline u8 mmap_load(u8* ptr)
 {
     return __atomic_load_n(ptr, __ATOMIC_RELAXED);
 }
 
-inline bool mmap_compare_exchange(uint8_t* ptr, uint8_t from, uint8_t to)
+inline bool mmap_compare_exchange(u8* ptr, u8 from, u8 to)
 {
     return __atomic_compare_exchange_n(ptr, &from, to, false/*weak*/, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
 }

@@ -53,7 +53,7 @@ struct lws_i: sec_id_by_name<lws_impl>
         {
             bool book = false;
             ne = find(it, ie, '\"');
-            uint32_t security_id = get_security_id(it, ne, time);
+            u32 security_id = get_security_id(it, ne, time);
             it = ne + 1;
             skip_fixed(it, ",\"subscription\":\"");
             if(skip_if_fixed(it, "book"))
@@ -69,7 +69,7 @@ struct lws_i: sec_id_by_name<lws_impl>
                 {
                     ne = ie - 80;
                     search_and_skip_fixed(ne, ie, "\"t\":");
-                    etime.value = lexical_cast<uint64_t>(ne, find(ne, ie, ','))
+                    etime.value = lexical_cast<u64>(ne, find(ne, ie, ','))
                         * (ttime_t::frac / 1000);
                 }
                 else
@@ -143,7 +143,7 @@ struct lws_i: sec_id_by_name<lws_impl>
                     search_and_skip_fixed(it, ie, "\",\"t\":");
                     ne = find(it, ie, ',');
                     ttime_t etime;
-                    etime.value = lexical_cast<uint64_t>(it, ne) * (ttime_t::frac / 1000);
+                    etime.value = lexical_cast<u64>(it, ne) * (ttime_t::frac / 1000);
                     skip_fixed(ne, ",\"p\":\"");
                     it = find(ne, ie, '\"');
                     price_t price = lexical_cast<price_t>(ne, it);
@@ -153,7 +153,7 @@ struct lws_i: sec_id_by_name<lws_impl>
                     count_t count = lexical_cast<count_t>(it, ne);
                     it = ne + 2;
                     skip_fixed(it, "\"s\":\"");
-                    uint32_t direction;
+                    u32 direction;
                     if(skip_if_fixed(it, "BUY"))
                         direction = 1;
                     else {
@@ -177,7 +177,7 @@ struct lws_i: sec_id_by_name<lws_impl>
         }
         else if(skip_if_fixed(it, ",\"method\":\"public/heartbeat\",\"code\":0}"))
         {
-            int64_t id = lexical_cast<int64_t>(ne, find(ne, it, ','));
+            i64 id = lexical_cast<i64>(ne, find(ne, it, ','));
             bs << "{\"id\":" << id << ",\"method\":\"public/respond-heartbeat\"}";
             send(wsi);
         }

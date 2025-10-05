@@ -27,7 +27,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                 subscribes.push_back(sb + "trade" + ":" + v + se);
         }
     }
-    void parse_ticks(char_cit& it, char_cit ie, uint32_t security_id, ttime_t time, bool ask)
+    void parse_ticks(char_cit& it, char_cit ie, u32 security_id, ttime_t time, bool ask)
     {
         if(this->m_s == 0)
             add_clean(security_id, ttime_t(), time);
@@ -73,14 +73,14 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                 {
                     skip_fixed(it, "\"symbol\":\"");
                     ne = find(it, ie, '\"');
-                    uint32_t security_id = get_security_id(it, ne, time);
+                    u32 security_id = get_security_id(it, ne, time);
                     it = ne + 1;
                     skip_fixed(it, ",\"");
 
                     if(skip_if_fixed(it, "id\":"))
                     {
                         ne = find(it, ie, ',');
-                        uint64_t id  = cvt::atoi<uint64_t>(it, ne - it);
+                        u64 id  = cvt::atoi<u64>(it, ne - it);
                         it = ne + 1;
                         skip_fixed(it, "\"side\":\"");
                         bool ask;
@@ -171,7 +171,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                     etime = read_time<3>(it);
                     skip_fixed(it, "Z\",\"symbol\":\"");
                     ne = find(it, ie, '\"');
-                    uint32_t security_id = get_security_id(it, ne, time);
+                    u32 security_id = get_security_id(it, ne, time);
                     it = ne + 1;
                     str_holder side = read_named_value(",\"side\":\"", it, ie, '\"', read_str);
                     int direction;

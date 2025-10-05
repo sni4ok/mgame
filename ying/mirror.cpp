@@ -15,7 +15,7 @@
 
 ncurses_err e;
 
-uint32_t get_security_id(const message& m)
+u32 get_security_id(const message& m)
 {
     if(m.id == msg_book)
         return m.mb.security_id;
@@ -31,16 +31,16 @@ uint32_t get_security_id(const message& m)
 struct security_filter
 {
     mstring security;
-    uint32_t security_id;
+    u32 security_id;
 
     security_filter(const mstring& s) : security(s), security_id()
     {
-        uint32_t sid = atoi(s.c_str());
+        u32 sid = atoi(s.c_str());
         mstring sec = to_string(sid);
         if(sec == s)
             security_id = sid;
     }
-    bool equal(const message& m, uint32_t sec_id)
+    bool equal(const message& m, u32 sec_id)
     {
         if(security_id == sec_id)
             return true;
@@ -54,7 +54,7 @@ struct security_filter
     }
 };
 
-char get_direction(uint32_t direction)
+char get_direction(u32 direction)
 {
     if(direction == 0)
         return 'U';
@@ -67,9 +67,9 @@ char get_direction(uint32_t direction)
 
 struct print_dt
 {
-    int64_t value;
+    i64 value;
 
-    explicit print_dt(int64_t value) :  value(value)
+    explicit print_dt(i64 value) :  value(value)
     {
     }
 };
@@ -98,7 +98,7 @@ template<typename type>
 struct decimal_fixed
 {
     type min_v, max_v;
-    uint32_t digits;
+    u32 digits;
 
     decimal_fixed() : min_v(limits<type>::max), max_v(limits<type>::min), digits()
     {
@@ -114,8 +114,8 @@ struct decimal_fixed
 
         type p = abs(v);
 
-        int64_t m = p.value / p.frac;
-        uint32_t d = cvt::log10(m);
+        i64 m = p.value / p.frac;
+        u32 d = cvt::log10(m);
 
         if(v < type())
             ++d;
@@ -134,11 +134,11 @@ struct decimal_fixed
 
 struct mirror::impl
 {
-    fmap<uint32_t, message_instr> all_securities;
-    std::unordered_map<uint32_t, pair<order_book_ba, queue<message_trade> > > all_books;
+    fmap<u32, message_instr> all_securities;
+    std::unordered_map<u32, pair<order_book_ba, queue<message_trade> > > all_books;
 
     security_filter sec;
-    uint32_t refresh_rate;
+    u32 refresh_rate;
     
     order_book_ba* ob;
 
@@ -163,7 +163,7 @@ struct mirror::impl
 
     bool auto_scroll;
     price_t top_order_p;
-    uint32_t trades_from, trades_width;
+    u32 trades_from, trades_width;
     book last_printed_trade;
 
     mstream bs;
@@ -179,7 +179,7 @@ struct mirror::impl
 
     jthread refresh_thrd;
 
-    impl(const mstring& sec, uint32_t refresh_rate_ms) :
+    impl(const mstring& sec, u32 refresh_rate_ms) :
         sec(sec), refresh_rate(refresh_rate_ms * 1000), ob(),
         auto_scroll(true), top_order_p(), trades_from(40), trades_width(),
         dE(), dP(), can_run(true),
@@ -203,15 +203,15 @@ struct mirror::impl
             + "/" + from_array(mi.security);
         set_auto_scroll();
     }
-    int32_t get_top_order(window& w)
+    i32 get_top_order(window& w)
     {
         if(auto_scroll || !top_order_p.value)
-            return -min<int32_t>(ob->bids.size(), w.rows / 2);
+            return -min<i32>(ob->bids.size(), w.rows / 2);
         {
             if(!ob->bids.empty() && top_order_p.value <= ob->bids.begin()->first.value)
             {
                 auto it = ob->bids.lower_bound(top_order_p);
-                return - int32_t((it - ob->bids.begin()));
+                return - i32((it - ob->bids.begin()));
             }
         }
         {
@@ -230,8 +230,8 @@ struct mirror::impl
         if(tr == last_printed_trade)
             return;
 
-        uint32_t i = 0;
-        uint32_t trades_width_limit = w.cols - trades_from;
+        u32 i = 0;
+        u32 trades_width_limit = w.cols - trades_from;
 
         for(auto& v : *trades)
         {
@@ -243,7 +243,7 @@ struct mirror::impl
             else if(bs.size() > trades_width_limit)
                 bs.resize(trades_width_limit);
             else
-                trades_width = max<uint32_t>(trades_width, bs.size());
+                trades_width = max<u32>(trades_width, bs.size());
             e = wstr(w, i++, trades_from, bs.begin(), bs.size());
             bs.clear();
         }
@@ -254,7 +254,7 @@ struct mirror::impl
         last_printed_trade = std::move(tr);
     }
     void print_book(bool bids, price_t price, const order_book_ba::book& b,
-        window& w, uint32_t& row)
+        window& w, u32& row)
     {
         count_t c(bids ? b.count.value : - b.count.value);
         book bo{c, b.time, price};
@@ -285,9 +285,9 @@ struct mirror::impl
     }
     void print_order_book(window& w)
     {
-        int32_t it = get_top_order(w);
+        i32 it = get_top_order(w);
         e = attron(A_BOLD);
-        uint32_t row = 0;
+        u32 row = 0;
 
         if(it < 0)
         {
@@ -354,9 +354,9 @@ struct mirror::impl
     }
     void wait_input(window& w)
     {
-        uint32_t c = refresh_rate / 20000;
+        u32 c = refresh_rate / 20000;
         int key = -1;
-        for(uint32_t i = 0; i != c; ++i)
+        for(u32 i = 0; i != c; ++i)
         {
             key = getch();
             if(key == -1)
@@ -413,7 +413,7 @@ struct mirror::impl
                 // arrow up or page up or arrow down or page down
                 else if(key == 259 || key == 339 || key == 258 || key == 338)
                 {
-                    int32_t it = get_top_order(w);
+                    i32 it = get_top_order(w);
                     if(key == 259)
                         --it;
                     else if(key == 339)
@@ -428,7 +428,7 @@ struct mirror::impl
                             top_order_p = price_t();
                         else
                         {
-                            if(uint32_t(-it) >= ob->bids.size())
+                            if(u32(-it) >= ob->bids.size())
                                 top_order_p = ob->bids.rbegin()->first;
                             else
                                 top_order_p = (ob->bids.begin() - it)->first;
@@ -440,7 +440,7 @@ struct mirror::impl
                             top_order_p = price_t();
                         else
                         {
-                            if(uint32_t(it) >= ob->asks.size())
+                            if(u32(it) >= ob->asks.size())
                                 top_order_p = ob->asks.rbegin()->first;
                             else
                                 top_order_p = (ob->asks.begin() + it)->first;
@@ -479,7 +479,7 @@ struct mirror::impl
         if(m.id == msg_ping)
             return;
 
-        uint32_t security_id = get_security_id(m);
+        u32 security_id = get_security_id(m);
         scoped_lock lock(mutex);
         if(m.id == msg_instr)
             all_securities[security_id] = m.mi;
@@ -515,9 +515,9 @@ struct mirror::impl
             }
         }
     }
-    void proceed(const message* m, uint32_t count)
+    void proceed(const message* m, u32 count)
     {
-        for(uint32_t i = 0; i != count; ++i, ++m)
+        for(u32 i = 0; i != count; ++i, ++m)
             proceed(*m);
     }
 };
@@ -528,7 +528,7 @@ mirror::impl* create_mirror(str_holder params)
     if(p.size() > 2)
         throw mexception(es() % "mirror::mirror() bad params: " % params);
 
-    uint32_t refresh_rate = p.size() == 2 ? lexical_cast<uint32_t>(p[1]) : 100;
+    u32 refresh_rate = p.size() == 2 ? lexical_cast<u32>(p[1]) : 100;
     if(!refresh_rate)
         throw mexception(es() % "mirror::mirror() bad params: "
             % params % ", refresh_rate should be at least 1");
@@ -545,7 +545,7 @@ mirror::~mirror()
     delete pimpl;
 }
 
-void mirror::proceed(const message* m, uint32_t count)
+void mirror::proceed(const message* m, u32 count)
 {
     pimpl->proceed(m, count);
 }
@@ -561,7 +561,7 @@ void ying_destroy(void* w)
     delete ((mirror::impl*)(w));
 }
 
-void ying_proceed(void* w, const message* m, uint32_t count)
+void ying_proceed(void* w, const message* m, u32 count)
 {
     ((mirror::impl*)(w))->proceed(m, count);
 }

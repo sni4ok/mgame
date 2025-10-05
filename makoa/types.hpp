@@ -22,8 +22,8 @@ stream& operator<<(stream& s, const brief_time& t)
 {
     time_t tt = t.value / ttime_t::frac;
     tt = tt % (3600 * 24);
-    uint32_t h = tt / 3600;
-    uint32_t m = (tt - h * 3600) / 60;
+    u32 h = tt / 3600;
+    u32 m = (tt - h * 3600) / 60;
     s << print2chars(h) << ':' << print2chars(m) << ':' << print2chars(tt % 60);
     if(t.show_frac)
         s << '.' << uint_fixed<9>(t.value % ttime_t::frac);
@@ -79,7 +79,7 @@ stream& operator<<(stream& s, const message_hello& h)
     return s;
 }
 
-inline uint32_t calc_crc(const message_instr& i)
+inline u32 calc_crc(const message_instr& i)
 {
     crc32 crc(0);
     crc.process_bytes(i.exchange_id, sizeof(i.exchange_id) - 1);

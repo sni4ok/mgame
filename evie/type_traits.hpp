@@ -86,29 +86,38 @@ struct make_signed<t> \
   __VA_OPT__(FOR_EACH_AGAIN PP (macro, __VA_ARGS__))
 #define FOR_EACH_AGAIN() FOR_EACH_HELPER
 
-struct int128d
+typedef int8_t i8;
+typedef uint8_t u8;
+typedef int16_t i16;
+typedef uint16_t u16;
+typedef int32_t i32;
+typedef uint32_t u32;
+typedef int64_t i64;
+typedef uint64_t u64;
+
+struct i128d
 {
     double value;
 
-    static const int64_t frac = 1;
-    static const int64_t exponent = 0;
+    static const i64 frac = 1;
+    static const i64 exponent = 0;
 
-    int128d(double v) : value(v)
+    i128d(double v) : value(v)
     {
     }
-    int128d(int64_t v = 0) : value(v)
+    i128d(i64 v = 0) : value(v)
     {
     }
-    int128d(uint64_t v) : value(v)
+    i128d(u64 v) : value(v)
     {
     }
     template<typename type>
-    int128d operator*(type v) const
+    i128d operator*(type v) const
     {
         return {value * v};
     }
     template<typename type>
-    int128d operator/(type v) const
+    i128d operator/(type v) const
     {
         return {value / v};
     }
@@ -119,18 +128,18 @@ struct int128d
 #endif
 
 #ifdef USE_INT128_EXT
-__extension__ typedef __int128 int128_t;
-__extension__ typedef  __uint128_t uint128_t;
+__extension__ typedef __int128 i128;
+__extension__ typedef __uint128_t u128;
 
-SET_INTEGRAL_TYPE(int128_t, uint128_t)
+SET_INTEGRAL_TYPE(i128, u128)
 
 #else
-    typedef int128d int128_t;
-    typedef int128d uint128_t;
+    typedef i128d i128;
+    typedef i128d u128;
 #endif
 
-SET_INTEGRAL(int128d)
-SET_UNSIGNED(int128d, int128d, int128d)
+SET_INTEGRAL(i128d)
+SET_UNSIGNED(i128d, i128d, i128d)
 FOR_EACH(SET_INTEGRAL_TYPE_E, char, short, int, long, long long)
 FOR_EACH(SET_INTEGRAL, char, wchar_t, bool)
 
@@ -226,7 +235,7 @@ template<typename type>
 inline constexpr bool is_array_v = false;
 template<typename type>
 inline constexpr bool is_array_v<type[]> = true;
-template<typename type, uint64_t count>
+template<typename type, u64 count>
 inline constexpr bool is_array_v<type[count]> = true;
 
 template<typename type>

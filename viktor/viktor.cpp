@@ -17,28 +17,28 @@
 struct viktor
 {
     mvector<message_instr> instrs;
-    pmap<uint32_t, std::deque<message_book> > messages;
+    pmap<u32, std::deque<message_book> > messages;
     message_times last_times;
 
     mstring params;
     unique_ptr<exporter> e;
     time_t last_connect;
 
-    typedef std::map<int64_t/*level_id*/, message_book> snapshot;
-    std::map<uint32_t, snapshot> snapshots;
+    typedef std::map<i64/*level_id*/, message_book> snapshot;
+    std::map<u32, snapshot> snapshots;
     mvector<message> s;
 
     viktor(char_cit params) : last_times(), params(_str_holder(params)), last_connect()
     {
     }
-    void clear(uint32_t security_id)
+    void clear(u32 security_id)
     {
         messages[security_id].clear();
         snapshots[security_id].clear();
     }
-    void save(const message* m, uint32_t count)
+    void save(const message* m, u32 count)
     {
-        for(uint32_t i = 0; i != count; ++i, ++m)
+        for(u32 i = 0; i != count; ++i, ++m)
         {
             if(m->id == msg_book)
             {
@@ -116,7 +116,7 @@ struct viktor
             send_snapshots();
         }
     }
-    void proceed(const message* m, uint32_t count)
+    void proceed(const message* m, u32 count)
     {
         try
         {
@@ -147,7 +147,7 @@ extern "C"
         delete (viktor*)(v);
     }
 
-    void viktor_proceed(void* v, const message* m, uint32_t count)
+    void viktor_proceed(void* v, const message* m, u32 count)
     {
         ((viktor*)(v))->proceed(m, count);
     }

@@ -62,7 +62,7 @@ struct context
     }
 };
 
-uint32_t cg_decimal_size(uint32_t m, uint32_t e) {
+u32 cg_decimal_size(u32 m, u32 e) {
     return 2 + (m >> 1) + ((m | e) & 1); 
 }
 
@@ -92,23 +92,23 @@ struct optional
 
 struct skelet
 {
-    optional<uint32_t> msgid;
+    optional<u32> msgid;
     optional<bool> request, reply;
-    mvector<uint32_t> replies;
+    mvector<u32> replies;
     mvector<tuple<mstring, mstring, optional<mstring> > > types;
-    uint32_t structure_size;
+    u32 structure_size;
     bool have_alignment;
     mstring nullable; //WTF IS THIS ?????
-    void add_size(uint32_t sz, uint32_t granularity) {
-        granularity = min(uint32_t(4), granularity);
-        uint32_t st_from = structure_size % granularity;
+    void add_size(u32 sz, u32 granularity) {
+        granularity = min(u32(4), granularity);
+        u32 st_from = structure_size % granularity;
         if(st_from)
             structure_size += (granularity - st_from);
         structure_size += sz;
     }
     std::set<str_holder> c_types;
     void close_structure_size() {
-        uint32_t st_from = structure_size % 4;
+        u32 st_from = structure_size % 4;
         if(st_from && c_types.size() > 1)
             structure_size += (4 - st_from);
     }
@@ -118,7 +118,7 @@ struct skelet
         nullable = data;
     }
     void clear() {
-        msgid = optional<uint32_t>();
+        msgid = optional<u32>();
         request = optional<bool>();
         reply = optional<bool>();
         replies.clear();
@@ -132,33 +132,33 @@ struct skelet
             throw mexception("empty ini_type!");
         if(ini_type == "i8") {
             add_size(8, 8);
-            c_types.insert("int64_t");
-            return "int64_t";
+            c_types.insert("i64");
+            return "i64";
         }
         if(ini_type == "u8") {
             add_size(8, 8);
-            c_types.insert("uint64_t");
-            return "uint64_t";
+            c_types.insert("u64");
+            return "u64";
         }
         if(ini_type == "i4") {
             add_size(4, 4);
-            c_types.insert("int32_t");
-            return "int32_t";
+            c_types.insert("i32");
+            return "i32";
         }
         if(ini_type == "i2") {
             add_size(2, 2);
-            c_types.insert("int16_t");
-            return "int16_t";
+            c_types.insert("i16");
+            return "i16";
         }
         if(ini_type == "i1") {
             add_size(1, 1);
-            c_types.insert("int8_t");
-            return "int8_t";
+            c_types.insert("i8");
+            return "i8";
         }
         if(ini_type == "u1") {
             add_size(1, 1);
-            c_types.insert("uint8_t");
-            return "uint8_t";
+            c_types.insert("u8");
+            return "u8";
         }
         if(ini_type == "f") {
             add_size(8, 8);
@@ -167,13 +167,13 @@ struct skelet
         }
         if(ini_type == "t") {
             add_size(10, 2);
-            c_types.insert("uint8_t");
-            c_types.insert("uint16_t");
+            c_types.insert("u8");
+            c_types.insert("u16");
             return "cg_time_t";
         }
         if(ini_type[0] == 'c') {
             mstring v(ini_type.begin() + 1, ini_type.end());
-            uint32_t vs = lexical_cast<uint32_t>(v);
+            u32 vs = lexical_cast<u32>(v);
             add_size(vs + 1, 1);
             tmp_str = "cg_string<" + v + ">";
             c_types.insert("char");
@@ -182,9 +182,9 @@ struct skelet
         if(ini_type[0] == 'd') {
             char_cit p = find(ini_type.begin() + 1, ini_type.end(), '.');
             str_holder ms = {ini_type.begin() + 1, p};
-            uint32_t m = lexical_cast<uint32_t>(ms);
+            u32 m = lexical_cast<u32>(ms);
             str_holder es = {p + 1, ini_type.end()};
-            uint32_t e = lexical_cast<uint32_t>(p + 1, ini_type.end());
+            u32 e = lexical_cast<u32>(p + 1, ini_type.end());
             add_size(cg_decimal_size(m, e), 1);
             tmp_str = "cg_decimal<" + ms + "," + es + ">";
             c_types.insert("char");
@@ -211,7 +211,7 @@ struct skelet
         if(!replies.empty())
             throw mexception("replies already exists");
         for(const auto& s: split(data.str(), ','))
-            replies.push_back(lexical_cast<uint32_t>(s));
+            replies.push_back(lexical_cast<u32>(s));
     }
     template<typename value>
     static void write_body_value(b_stream& of, str_holder type, const value& v) {
@@ -253,16 +253,16 @@ struct skelet
         }
         b_stream str;
         str << "    struct " << ctx.table_name << endl << "    {" << endl;
-        write_body_value(str, "static constexpr uint32_t plaza_size =", structure_size);
+        write_body_value(str, "static constexpr u32 plaza_size =", structure_size);
         if(msgid)
-            write_body_value(str, "static constexpr uint32_t msgid =", *msgid);
+            write_body_value(str, "static constexpr u32 msgid =", *msgid);
         if(request)
             write_body_value(str, "static constexpr bool request =", *request);
         if(reply)
             write_body_value(str, "static constexpr bool reply =", *reply);
         if(!replies.empty()) {
             b_stream type;
-            type << "//typedef mpl::vector_c<uint32_t";
+            type << "//typedef mpl::vector_c<u32";
             for(auto s: replies)
                 type << ", " << s;
             type << ">";
@@ -283,7 +283,7 @@ struct skelet
         {
 
             str << "        void print_brief() {" << endl <<  "            mlog() << \"" << ctx.table_name << "|\"";
-            uint32_t cur_i = 0;
+            u32 cur_i = 0;
             for(const auto& v: types) {
                 if(cur_i && !(cur_i % 5)) {
                     str << endl << "              ";
@@ -304,7 +304,7 @@ struct skelet
             if(have_init) {
                 //write constructor
                 str << "        " << ctx.table_name << "() :";
-                uint32_t cur_i = 0;
+                u32 cur_i = 0;
                 for(const auto& v: types) {
                     if(get<2>(v)) {
                         if(cur_i)
@@ -442,7 +442,7 @@ void parse_file(context& ctx, const mvector<char>& data)
             else if(type == "LocalTimeField") {
             }
             else if(type == "msgid") {
-                sk.msgid = lexical_cast<uint32_t>(data);
+                sk.msgid = lexical_cast<u32>(data);
             }
             else if(type == "request") {
                 sk.request = lexical_cast<bool>(data);
@@ -620,7 +620,7 @@ void proceed_selected(const mstring& ini_folder, const mstring& scheme, const ms
     }
 
     b_stream str;
-    for(uint32_t i = 0; i != sources.size(); ++i) {
+    for(u32 i = 0; i != sources.size(); ++i) {
         source& s = *sources[i];
         if(i)
             str << ",";

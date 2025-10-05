@@ -18,7 +18,7 @@ config::config(char_cit fname)
     orders = get_config_param<bool>(cs, "orders");
     if((!orders && !trades) || tickers.empty())
         throw str_exception("config::config() nothing to import");
-    depth = get_config_param<uint32_t>(cs, "depth");
+    depth = get_config_param<u32>(cs, "depth");
     
     push = get_config_param<str_holder>(cs, "push");
     exchange_id = get_config_param<str_holder>(cs, "exchange_id");

@@ -19,10 +19,10 @@ namespace {
 
 struct mysql
 {
-    static const uint32_t prealloc = 1024 * 1024;
+    static const u32 prealloc = 1024 * 1024;
     char bufi[prealloc], bufo[prealloc], buft[prealloc];
     buf_stream bsi, bso, bst;
-    uint32_t si, so, st;
+    u32 si, so, st;
 
     unique_ptr<MYSQL, mysql_close> sql;
     bool truncate, rename_new;
@@ -45,7 +45,7 @@ struct mysql
         else
             throw mexception(es() % "mysql() bad open_mode: " % params);
 
-        if(!mysql_real_connect(sql.get(), p[1].c_str(), p[4].c_str(), p[5].c_str(), p[3].c_str(), lexical_cast<uint16_t>(p[2]), NULL, 0))
+        if(!mysql_real_connect(sql.get(), p[1].c_str(), p[4].c_str(), p[5].c_str(), p[3].c_str(), lexical_cast<u16>(p[2]), NULL, 0))
             throw_error();
 
         init_tables();
@@ -70,7 +70,7 @@ struct mysql
         }
         if(rename_new)
         {
-            uint64_t tt = time(NULL);
+            u64 tt = time(NULL);
             mlog() << "rename tables instruments, orders, trades to "
                 << "instruments_" << tt << ", orders_" << tt << ", trades_" << tt;
             bsi << "rename table instruments to instruments_" << tt;
@@ -137,7 +137,7 @@ struct mysql
     {
         throw mexception(es() % _str_holder(mysql_error(sql.get())) % ", query: " % bs.str());
     }
-    void flush_stream(buf_stream& bs, uint32_t s)
+    void flush_stream(buf_stream& bs, u32 s)
     {
         if(bs.size() != s) {
             if(mysql_real_query(sql.get(), bs.begin(), bs.size()))
@@ -151,15 +151,15 @@ struct mysql
         flush_stream(bso, so);
         flush_stream(bst, st);
     }
-    void clean(uint32_t security_id, ttime_t time, ttime_t etime)
+    void clean(u32 security_id, ttime_t time, ttime_t etime)
     {
         if(bso.size() != so)
             bso << ',';
         bso << '(' << time.value << "," << etime.value << "," << security_id << ",NULL,0,0" << ')';
     }
-    void proceed(const message* m, uint32_t count)
+    void proceed(const message* m, u32 count)
     {
-        for(uint32_t i = 0; i != count; ++i, ++m) {
+        for(u32 i = 0; i != count; ++i, ++m) {
             if(m->id == msg_book) {
                 message_book &v = (message_book&)*m;
                 if(bso.size() != so)
@@ -198,7 +198,7 @@ void mysql_destroy(void* v)
     delete (mysql*)(v);
 }
 
-void mysql_proceed(void* v, const message* m, uint32_t count)
+void mysql_proceed(void* v, const message* m, u32 count)
 {
     ((mysql*)(v))->proceed(m, count);
 }

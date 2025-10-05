@@ -17,9 +17,9 @@ void fix_zero_tail(char_cit fname)
 {
     cout() << "fix_zero_tail(" << _str_holder(fname) << "):";
     mfile f(fname);
-    uint64_t fsz = f.size();
+    u64 fsz = f.size();
     mvector<char> m(message_size), mc(message_size);
-    int64_t nsz = fsz - fsz % message_size;
+    i64 nsz = fsz - fsz % message_size;
     while(nsz > 0) {
         f.seekg(nsz - message_size);
         f.read(m.begin(), message_size);
@@ -67,7 +67,7 @@ void sort_data_by_folders(str_holder folder)
         char_cit f = find(fname.begin(), e, '_');
         if(f == e || (e - f) != 11)
             throw mexception(es() % "sort_data_by_folders() unsupported file: " % fname);
-        uint32_t t = lexical_cast<uint32_t>(f + 1, e);
+        u32 t = lexical_cast<u32>(f + 1, e);
         date d = parse_time(seconds(t)).date;
         mstring nf = folder + to_string(d.year) + "/" + to_string(d.month) + "/";
         if(created_dirs.find(nf) == created_dirs.end())
@@ -118,11 +118,11 @@ void amount_test()
     count_t c = lexical_cast<count_t>(v);
     unused(c);
 
-    test_io(price_t({limits<int64_t>::max}));
-    test_io(price_t({limits<int64_t>::min}));
+    test_io(price_t({limits<i64>::max}));
+    test_io(price_t({limits<i64>::min}));
 
-    test_io(count_t({limits<int64_t>::max}));
-    test_io(count_t({limits<int64_t>::min}));
+    test_io(count_t({limits<i64>::max}));
+    test_io(count_t({limits<i64>::min}));
 
     cout() << "amount_test successfully ended";
 }
@@ -141,8 +141,8 @@ void parsers_stat(str_holder f)
     struct st
     {
         ttime_t from;
-        uint64_t from_size;
-        uint64_t size;
+        u64 from_size;
+        u64 size;
     };
 
     mvector<st> stats(files.size());
@@ -150,10 +150,10 @@ void parsers_stat(str_holder f)
 
     auto update_stat = [&]()
     {
-        for(uint32_t i = 0; i != files.size(); ++i)
+        for(u32 i = 0; i != files.size(); ++i)
         {
             st& s = stats[i];
-            uint64_t sz;
+            u64 sz;
 
             if(is_file_exist(files[i].c_str(), &sz))
             {
@@ -177,15 +177,15 @@ void parsers_stat(str_holder f)
         ct = cur_mtime();
         clear_screen();
 
-        for(uint32_t i = 0; i != files.size(); ++i)
+        for(u32 i = 0; i != files.size(); ++i)
         {
             st& s = stats[i];
             ttime_t d = ct - s.from;
 
             if(!!s.from)
             {
-                uint64_t sz = (s.size - s.from_size) / message_size;
-                uint64_t mps = sz * ttime_t::frac / d.value;
+                u64 sz = (s.size - s.from_size) / message_size;
+                u64 mps = sz * ttime_t::frac / d.value;
                 cout(false) << uint_fixed<7, false>(mps) << "/s " << files[i];
             }
             else

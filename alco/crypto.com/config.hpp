@@ -11,7 +11,7 @@ struct config : stack_singleton<config>
 {
     mvector<mstring> tickers;
     bool trades, orders;
-    uint32_t depth; //for book channel, Number of bids and asks to return. Allowed values: 10 or 150
+    u32 depth; //for book channel, Number of bids and asks to return. Allowed values: 10 or 150
 
     mstring exchange_id, feed_id;
     mstring push;

@@ -20,7 +20,7 @@ CG_RESULT trades_callback(cg_conn_t* conn, cg_listener_t* listener, struct cg_ms
 struct parser : emessages, stack_singleton<parser>
 {
     //isin_id, security
-    typedef fmap<int32_t, security> tickers_type;
+    typedef fmap<i32, security> tickers_type;
     tickers_type tickers;
 
     ttime_t ptime;
@@ -32,12 +32,12 @@ struct parser : emessages, stack_singleton<parser>
     {
         send_messages();
     }
-    void set_order(tickers_type::iterator it, int64_t replID, price_t price, count_t count, ttime_t etime)
+    void set_order(tickers_type::iterator it, i64 replID, price_t price, count_t count, ttime_t etime)
     {
         security& s = it->second;
         add_order(s.mi.security_id, replID, price, count, etime, ptime);
     }
-    void set_trade(tickers_type::iterator it, price_t price, count_t count, uint32_t direction, ttime_t etime)
+    void set_trade(tickers_type::iterator it, price_t price, count_t count, u32 direction, ttime_t etime)
     {
         add_trade(it->second.mi.security_id, price, count, direction, etime, ptime);
     }
@@ -49,8 +49,8 @@ struct parser : emessages, stack_singleton<parser>
     
     void proceed_ping(const cg_time_t& server_time)
     {
-        int64_t server_ms = (server_time.hour * 3600 + server_time.minute * 60 + server_time.second) * 1000 + server_time.msec;
-        uint64_t ct = time(NULL) + cur_utc_time_delta.value / ttime_t::frac;
+        i64 server_ms = (server_time.hour * 3600 + server_time.minute * 60 + server_time.second) * 1000 + server_time.msec;
+        u64 ct = time(NULL) + cur_utc_time_delta.value / ttime_t::frac;
         ttime_t etime;
         etime.value = (ct - ct % (3600 * 24)) * ttime_t::frac + server_ms * (ttime_t::frac / 1000);
         ping(etime, cur_ttime());
@@ -241,7 +241,7 @@ CG_RESULT orders_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
             }
             price_t price = *o->price;
             count_t count = {o->volume * count_t::frac};
-            ttime_t etime = {int64_t(o->moment_ns)};
+            ttime_t etime = {i64(o->moment_ns)};
             if(o->dir == 2)
                 count.value = -count.value;
             else if(o->dir == 1)
@@ -337,14 +337,14 @@ CG_RESULT trades_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
                     if(it == tickers.end()) {
                         break;
                     }
-                    uint32_t direction = 0;
+                    u32 direction = 0;
                     if(d->public_order_id_buy > d->public_order_id_sell)
                         direction = 1;
                     else if(d->public_order_id_sell > d->public_order_id_buy)
                         direction = 2;
                     price_t price = *d->price;
                     count_t count = {d->xamount * count_t::frac};
-                    ttime_t etime = {int64_t(d->moment_ns)};
+                    ttime_t etime = {i64(d->moment_ns)};
                     parser::instance().set_trade(it, price, count, direction, etime);
                     if(config::instance().log_plaza)
                         d->print_brief();

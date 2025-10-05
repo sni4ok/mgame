@@ -8,15 +8,15 @@
 
 struct price_t
 {
-    static const int64_t exponent = -5;
-    static const int64_t frac = 100000;
-    int64_t value;
+    static const i64 exponent = -5;
+    static const i64 frac = 100000;
+    i64 value;
 };
 
 struct count_t
 {
-    static const int64_t exponent = -8;
-    static const int64_t frac = 100000000;
-    int64_t value;
+    static const i64 exponent = -8;
+    static const i64 frac = 100000000;
+    i64 value;
 };
 

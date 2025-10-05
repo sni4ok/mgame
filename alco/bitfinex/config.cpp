@@ -23,7 +23,7 @@ config::config(char_cit fname)
     frequency = get_config_param<str_holder>(cs, "frequency");
     length = get_config_param<str_holder>(cs, "length");
 
-    ping = get_config_param<uint32_t>(cs, "ping");
+    ping = get_config_param<u32>(cs, "ping");
 
     push = get_config_param<str_holder>(cs, "push");
     exchange_id = get_config_param<str_holder>(cs, "exchange_id");

@@ -30,7 +30,7 @@ void mfile::swap(mfile& r)
     simple_swap(hfile, r.hfile);
 }
 
-uint64_t mfile::size() const
+u64 mfile::size() const
 {
     struct stat st;
     if(::fstat(hfile, &st))
@@ -38,15 +38,15 @@ uint64_t mfile::size() const
     return st.st_size;
 }
 
-void mfile::seekg(uint64_t pos)
+void mfile::seekg(u64 pos)
 {
     if(::lseek(hfile, pos, SEEK_SET) < 0)
         throw_system_failure("lseek() error");
 }
 
-void mfile::read(char_it ptr, uint64_t size)
+void mfile::read(char_it ptr, u64 size)
 {
-    uint64_t read_bytes = 0;
+    u64 read_bytes = 0;
     while(read_bytes != size)
     {
         ssize_t r = ::read(hfile, ptr + read_bytes, size - read_bytes);
@@ -65,11 +65,11 @@ mfile::~mfile()
 inline bool read_file_impl(int hfile, bool trunc, mvector<char>& buf, char_cit fname, bool can_empty)
 {
     bool ret = false;
-    uint64_t buf_size = buf.size();
+    u64 buf_size = buf.size();
     if(hfile > 0)
     {
         mfile f(hfile);
-        uint64_t size = f.size();
+        u64 size = f.size();
         buf.resize(buf_size + size);
         f.read(buf.begin() + buf_size, size);
         ret = true;
@@ -105,7 +105,7 @@ mvector<char> read_file(char_cit fname, bool can_empty)
     return buf;
 }
 
-void write_file(char_cit fname, char_cit buf, uint64_t size, bool trunc)
+void write_file(char_cit fname, char_cit buf, u64 size, bool trunc)
 {
     int flags = O_CREAT | O_APPEND | O_RDWR;
     if(trunc)
@@ -114,7 +114,7 @@ void write_file(char_cit fname, char_cit buf, uint64_t size, bool trunc)
     if(hfile <= 0)
         throw_system_failure(es() % "open file " % _str_holder(fname) % " error");
 
-    uint64_t write_bytes = 0;
+    u64 write_bytes = 0;
     while(write_bytes != size)
     {
         ssize_t w = ::write(hfile, buf + write_bytes, size - write_bytes);
@@ -142,7 +142,7 @@ bool get_file_stat(char_cit fname, struct stat& st)
     return ret;
 }
 
-bool is_file_exist(char_cit fname, uint64_t* fsize)
+bool is_file_exist(char_cit fname, u64* fsize)
 {
     struct stat st;
     if(!get_file_stat(fname, st))
@@ -155,7 +155,7 @@ bool is_file_exist(char_cit fname, uint64_t* fsize)
     return ret;
 }
 
-uint64_t file_size(char_cit fname)
+u64 file_size(char_cit fname)
 {
     return mfile(fname).size();
 }
@@ -177,11 +177,11 @@ bool create_directory(char_cit fname)
     return !(mkdir(fname, 0777));
 }
 
-uint32_t create_directories(char_cit fname)
+u32 create_directories(char_cit fname)
 {
     mstring buf(_str_holder(fname));
     char_it it = (char_it)buf.c_str(), ie = buf.end();
-    uint32_t ret = 0;
+    u32 ret = 0;
     while(it != ie)
     {
         it = find(it, ie, '/');

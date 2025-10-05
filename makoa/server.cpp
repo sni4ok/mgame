@@ -30,7 +30,7 @@ struct server::impl
     {
         server_impl = this;
     }
-    void import_thread(uint32_t& count, mstring str)
+    void import_thread(u32& count, mstring str)
     {
         bool need_init = true;
         try
@@ -81,7 +81,7 @@ struct server::impl
     }
     void run(const mvector<mstring>& imports)
     {
-        uint32_t count = 0;
+        u32 count = 0;
 
         for(mstring i: imports)
         {

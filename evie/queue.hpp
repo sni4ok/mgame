@@ -11,10 +11,10 @@ class queue
 {
     typedef mvector<type> data_type;
     data_type data;
-    uint64_t from;
+    u64 from;
 
 public:
-    explicit queue(uint32_t prealloc_size = 32) : from()
+    explicit queue(u32 prealloc_size = 32) : from()
     {
         data.reserve(prealloc_size);
     }
@@ -41,13 +41,14 @@ public:
         }
         else if(from * 2 >= data.capacity())
         {
-            memmove((void*)data.begin(), data.begin() + from, (data.size() - from) * sizeof(type));
+            memmove((void*)data.begin(), data.begin() + from,
+                (data.size() - from) * sizeof(type));
             memset((void*)(data.end() - from), 0, from * sizeof(type));
             data.resize(data.size() - from);
             from = 0;
         }
     }
-    void pop_front(uint64_t count)
+    void pop_front(u64 count)
     {
         assert(from + count <= data.size());
         from += count;
@@ -113,11 +114,11 @@ public:
     {
         return from == data.size();
     }
-    uint64_t size() const
+    u64 size() const
     {
         return data.size() - from;
     }
-    uint64_t buf_size() const
+    u64 buf_size() const
     {
         return data.size();
     }
@@ -125,11 +126,11 @@ public:
     {
         return data.erase(it);
     }
-    void reserve(uint64_t size)
+    void reserve(u64 size)
     {
         data.reserve(size);
     }
-    void add_size(uint64_t size)
+    void add_size(u64 size)
     {
         data.template __resize<false>(data.size() + size);
     }

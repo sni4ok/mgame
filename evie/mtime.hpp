@@ -8,10 +8,10 @@
 
 const ttime_t cur_utc_time_delta = seconds(3 * 3600);
 
-constexpr inline uint32_t day_seconds(ttime_t t)
+constexpr inline u32 day_seconds(ttime_t t)
 {
-    uint64_t v = t.value / ttime_t::frac;
-    return uint32_t(v - v % (3600 * 24));
+    u64 v = t.value / ttime_t::frac;
+    return u32(v - v % (3600 * 24));
 }
 
 inline ttime_t cur_mtime()
@@ -26,13 +26,13 @@ inline ttime_t cur_mtime_seconds()
 
 struct date_duration
 {
-    int32_t days;
+    i32 days;
 };
 
 struct date
 {
-    uint16_t year;
-    uint8_t month, day;
+    u16 year;
+    u8 month, day;
 
     constexpr bool operator==(date r) const
     {
@@ -75,8 +75,8 @@ struct date
 
 struct time_duration
 {
-    uint8_t hours, minutes, seconds;
-    uint32_t nanos;
+    u8 hours, minutes, seconds;
+    u32 nanos;
 
     constexpr bool operator<(time_duration r) const
     {
@@ -92,9 +92,9 @@ struct time_duration
     {
         return nanos == r.nanos && seconds == r.seconds && minutes == r.minutes && hours == r.hours;
     }
-    constexpr uint32_t total_seconds() const
+    constexpr u32 total_seconds() const
     {
-        return uint32_t(hours) * 3600 + minutes * 60 + seconds;
+        return u32(hours) * 3600 + minutes * 60 + seconds;
     }
     constexpr operator ttime_t() const
     {

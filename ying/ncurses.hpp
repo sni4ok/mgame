@@ -46,7 +46,7 @@ class window
     window(const window&) = delete;
 
 public:
-    uint32_t rows, cols;
+    u32 rows, cols;
     mvector<char> blank_row;
 
     window() : w(initscr())

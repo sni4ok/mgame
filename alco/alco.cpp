@@ -17,7 +17,7 @@ void security::proceed_book(exporter& e, price_t price, count_t count, ttime_t e
     e.proceed((message*)(&mb), 1);
 }
 
-void security::proceed_trade(exporter& e, uint32_t direction, price_t price, count_t count, ttime_t etime, ttime_t time)
+void security::proceed_trade(exporter& e, u32 direction, price_t price, count_t count, ttime_t etime, ttime_t time)
 {
     mt.time = time;
     mt.etime = etime;
@@ -102,7 +102,7 @@ void emessages::ping(ttime_t etime, ttime_t time)
     send_messages();
 }
 
-void emessages::add_clean(uint32_t security_id, ttime_t etime, ttime_t time)
+void emessages::add_clean(u32 security_id, ttime_t etime, ttime_t time)
 {
     if(m_s == pre_alloc) [[unlikely]]
         send_messages();
@@ -115,7 +115,7 @@ void emessages::add_clean(uint32_t security_id, ttime_t etime, ttime_t time)
     c.source = 0;
 }
 
-void emessages::add_order(uint32_t security_id, int64_t level_id, price_t price, count_t count, ttime_t etime, ttime_t time)
+void emessages::add_order(u32 security_id, i64 level_id, price_t price, count_t count, ttime_t etime, ttime_t time)
 {
     if(m_s == pre_alloc) [[unlikely]]
         send_messages();
@@ -130,7 +130,7 @@ void emessages::add_order(uint32_t security_id, int64_t level_id, price_t price,
     m.count = count;
 }
 
-void emessages::add_trade(uint32_t security_id, price_t price, count_t count, uint32_t direction, ttime_t etime, ttime_t time)
+void emessages::add_trade(u32 security_id, price_t price, count_t count, u32 direction, ttime_t etime, ttime_t time)
 {
     if(m_s == pre_alloc) [[unlikely]]
         send_messages();

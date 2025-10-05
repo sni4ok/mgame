@@ -9,7 +9,7 @@
 
 void* ying_init(char_cit params);
 void ying_destroy(void* w);
-void ying_proceed(void* w, const message* m, uint32_t count);
+void ying_proceed(void* w, const message* m, u32 count);
 
 extern "C"
 {

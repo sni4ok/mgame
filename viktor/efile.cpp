@@ -49,7 +49,7 @@ struct efile
         }
         else if(p[1] == "rename_new")
         {
-            uint64_t fsz = 0;
+            u64 fsz = 0;
             int hfile = open(fname.c_str(), O_RDONLY);
             if(hfile > 0)
             {
@@ -61,7 +61,7 @@ struct efile
             }
             if(fsz)
             {
-                mstring backup = fname + "_" + to_string(uint64_t(time(NULL)));
+                mstring backup = fname + "_" + to_string(u64(time(NULL)));
                 int r = rename(fname.c_str(), backup.c_str());
                 if(r)
                     mlog(mlog::critical) << "rename file from " << fname << ", to " << backup
@@ -90,7 +90,7 @@ struct efile
         if(hfile < 0)
             throw_system_failure(es() % "open file " % fname % " error");
     }
-    void write(char_cit buf, uint32_t count)
+    void write(char_cit buf, u32 count)
     {
         if(::write(hfile, buf, count) != ssize_t(count))
             throw_system_failure(es() % "efile " % fname % " writing error");
@@ -120,9 +120,9 @@ struct efile
         bs << "i," <<  m.exchange_id << ',' << m.feed_id << "," << m.security
             << ',' << m.security_id << ',' << m.etime.value << ',' << m.time.value << '\n';
     }
-    void proceed_csv(const message* m, uint32_t count)
+    void proceed_csv(const message* m, u32 count)
     {
-        for(uint32_t i = 0; i != count; ++i, ++m)
+        for(u32 i = 0; i != count; ++i, ++m)
         {
             if(m->id == msg_book)
                 write_csv((message_book&)*m);
@@ -135,7 +135,7 @@ struct efile
         }
         flush();
     }
-    void proceed(const message* m, uint32_t count)
+    void proceed(const message* m, u32 count)
     {
         if(bin)
             write((char_cit)m, message_size * count);
@@ -158,7 +158,7 @@ void efile_destroy(void* v)
     delete (efile*)(v);
 }
 
-void efile_proceed(void* v, const message* m, uint32_t count)
+void efile_proceed(void* v, const message* m, u32 count)
 {
     ((efile*)(v))->proceed(m, count);
 }

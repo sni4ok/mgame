@@ -16,9 +16,9 @@
 struct ttime_t
 {
     //value equals (unix_time * 10^9 + nanoseconds)
-    static const int64_t exponent = -9;
-    static const int64_t frac = 1000000000;
-    int64_t value;
+    static const i64 exponent = -9;
+    static const i64 frac = 1000000000;
+    i64 value;
 };
 
 inline ttime_t cur_ttime()
@@ -26,45 +26,45 @@ inline ttime_t cur_ttime()
     timespec t;
 	clock_gettime(CLOCK_REALTIME, &t);
 
-    return ttime_t{int64_t(t.tv_sec) * ttime_t::frac + int64_t(t.tv_nsec)};
+    return ttime_t{i64(t.tv_sec) * ttime_t::frac + i64(t.tv_nsec)};
 }
 
-inline constexpr ttime_t hours(int64_t s)
+inline constexpr ttime_t hours(i64 s)
 {
     return {s * 3600 * ttime_t::frac};
 }
 
-inline constexpr ttime_t minutes(int64_t s)
+inline constexpr ttime_t minutes(i64 s)
 {
     return {s * 60 * ttime_t::frac};
 }
 
-inline constexpr ttime_t seconds(int64_t s)
+inline constexpr ttime_t seconds(i64 s)
 {
     return {s * ttime_t::frac};
 }
 
-inline constexpr ttime_t milliseconds(int64_t s)
+inline constexpr ttime_t milliseconds(i64 s)
 {
     return {s * (ttime_t::frac / 1000)};
 }
 
-inline constexpr ttime_t microseconds(int64_t s)
+inline constexpr ttime_t microseconds(i64 s)
 {
     return {s * 1000};
 }
 
-inline constexpr int64_t to_seconds(ttime_t time)
+inline constexpr i64 to_seconds(ttime_t time)
 {
     return time.value / ttime_t::frac;
 }
 
-inline constexpr int64_t to_ms(ttime_t time)
+inline constexpr i64 to_ms(ttime_t time)
 {
     return time.value / (ttime_t::frac / 1000);
 }
 
-inline constexpr int64_t to_us(ttime_t time)
+inline constexpr i64 to_us(ttime_t time)
 {
     return time.value / 1000;
 }

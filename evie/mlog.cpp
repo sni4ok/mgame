@@ -34,7 +34,7 @@ class simple_log
     {
         mstring name;
         int hfile;
-        static const uint32_t b_size = 1024 * 1024;
+        static const u32 b_size = 1024 * 1024;
         buf_stream_fixed<b_size> b_stream;
 
     public:
@@ -56,13 +56,13 @@ class simple_log
         {
             if(!b_stream.empty() && (force || (b_stream.size() > b_size / 2)))
             {
-                if(uint64_t(::write(hfile, b_stream.begin(), b_stream.size()))
+                if(u64(::write(hfile, b_stream.begin(), b_stream.size()))
                     != b_stream.size())
                         throw_system_failure(es() % "file " % name % " writing error");
                 b_stream.clear();
             }
         }
-        void write(char_cit buf, uint32_t size)
+        void write(char_cit buf, u32 size)
         {
             b_stream.write(buf, size);
             flush(false);
@@ -74,10 +74,10 @@ class simple_log
         }
     };
 
-    static const uint32_t log_no_cout_size = 10;
+    static const u32 log_no_cout_size = 10;
 
-    void write_impl(char_cit str, uint32_t size, uint32_t params,
-        uint32_t all_sz, bool& first)
+    void write_impl(char_cit str, u32 size, u32 params,
+        u32 all_sz, bool& first)
     {
         if(str)
         {
@@ -109,18 +109,18 @@ class simple_log
     void write_thred()
     {
         set_trash_thread();
-        uint32_t writed_sz = 0;
+        u32 writed_sz = 0;
         try
         {
             mlog::data* data;
-            static const uint32_t cntr_from = 128, cntr_to = 524288;
-            uint32_t cntr = 128;
+            static const u32 cntr_from = 128, cntr_to = 524288;
+            u32 cntr = 128;
             mstream str;
             for(;;)
             {
-                uint32_t all_sz = atomic_load(all_size) - writed_sz;
+                u32 all_sz = atomic_load(all_size) - writed_sz;
                 bool first = true;
-                for(uint32_t cur_i = 0; cur_i != all_sz; ++cur_i)
+                for(u32 cur_i = 0; cur_i != all_sz; ++cur_i)
                 {
                     data = nodes.pop();
 
@@ -131,7 +131,7 @@ class simple_log
                             str << "pid: " << data->pid << " ";
                         if(data->params & mlog::store_tid)
                         {
-                            uint32_t tid = data->tid;
+                            u32 tid = data->tid;
                             str << "tid: ";
                             if(tid < 10)
                                 str << ' ';
@@ -191,7 +191,7 @@ class simple_log
 
     unique_ptr<ofile> stream, stream_crit;
     volatile bool can_run;
-    uint32_t all_size;
+    u32 all_size;
     fast_alloc_list<mlog::data, mt> nodes;
     fast_alloc<mlog::node, mt> pool;
     jthread work_thread;
@@ -202,9 +202,9 @@ class simple_log
 
 public:
     volatile bool no_cout;
-    uint32_t params;
+    u32 params;
 
-    simple_log(char_cit file_name, uint32_t params, bool set_instance)
+    simple_log(char_cit file_name, u32 params, bool set_instance)
         : can_run(true), all_size(), nodes("mlog::nodes"),
         no_cout(), params(params)
     {
@@ -274,7 +274,7 @@ public:
 
 simple_log* simple_log::log = 0;
 
-void mlog::init(uint32_t extra_param)
+void mlog::init(u32 extra_param)
 {
     buf = log.alloc_buf();
     buf->params = log.params | extra_param;
@@ -289,7 +289,7 @@ void mlog::init(uint32_t extra_param)
         buf->tid = get_thread_id();
 }
 
-void mlog::check_size(uint32_t delta)
+void mlog::check_size(u32 delta)
 {
     if(buf->tail->size + delta > buf_size)
     {
@@ -301,12 +301,12 @@ void mlog::check_size(uint32_t delta)
     }
 }
 
-mlog::mlog(uint32_t extra_param) : log(simple_log::instance())
+mlog::mlog(u32 extra_param) : log(simple_log::instance())
 {
     init(extra_param);
 }
 
-mlog::mlog(simple_log* log, uint32_t extra_param) : log(*log)
+mlog::mlog(simple_log* log, u32 extra_param) : log(*log)
 {
     init(extra_param);
 }
@@ -316,11 +316,11 @@ mlog::~mlog()
     log.write(buf);
 }
 
-void mlog::write(char_cit it, uint32_t size)
+void mlog::write(char_cit it, u32 size)
 {
     while(size)
     {
-        uint32_t cur_write = min(size, buf_size - buf->tail->size);
+        u32 cur_write = min(size, buf_size - buf->tail->size);
         memcpy(&buf->tail->buf[buf->tail->size], it, cur_write);
         buf->tail->size += cur_write;
         it += cur_write;
@@ -345,7 +345,7 @@ void free_simple_log(simple_log* ptr)
 }
 
 unique_ptr<simple_log, free_simple_log> log_init(char_cit file_name,
-    uint32_t params, bool set_instance)
+    u32 params, bool set_instance)
 {
     return new simple_log(file_name, params, set_instance);
 }
@@ -360,7 +360,7 @@ simple_log* log_get()
     return &simple_log::instance();
 }
 
-uint32_t& log_params()
+u32& log_params()
 {
     return log_get()->params;
 }

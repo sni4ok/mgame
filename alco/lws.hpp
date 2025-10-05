@@ -18,10 +18,10 @@ struct lws_dump
     bool lws_not_fake, lws_dump_en;
     char dump_buf[8];
     mvector<char> read_buf;
-    uint64_t dump_readed, dump_size;
+    u64 dump_readed, dump_size;
 
     lws_dump();
-    void dump(char_cit p, uint32_t sz);
+    void dump(char_cit p, u32 sz);
     str_holder read_dump();
     ~lws_dump();
 };
@@ -89,7 +89,7 @@ void proceed_lws_parser(volatile bool& can_run)
                 {
                     i = 0;
                     if(ls.data_time + 10 < time(NULL))
-                        throw mexception(es() % " no data from " % uint64_t(ls.data_time));
+                        throw mexception(es() % " no data from " % u64(ls.data_time));
                 }
                 n = ls.service();
             }
@@ -104,5 +104,5 @@ void proceed_lws_parser(volatile bool& can_run)
     }
 }
 
-void lws_connect(lws_impl& ls, char_cit host, uint32_t port, char_cit path);
+void lws_connect(lws_impl& ls, char_cit host, u32 port, char_cit path);
 

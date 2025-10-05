@@ -47,7 +47,7 @@ struct fset
     {
         data.clear();
     }
-    uint64_t size() const
+    u64 size() const
     {
         return data.size();
     }
@@ -152,7 +152,7 @@ struct fset
     {
         return data.erase(from, to);
     }
-    void reserve(uint64_t new_capacity)
+    void reserve(u64 new_capacity)
     {
         data.reserve(new_capacity);
     }
