@@ -14,16 +14,19 @@ struct lws_i : sec_id_by_name<lws_impl>
     lws_i() : sec_id_by_name<lws_impl>(config::instance().push, config::instance().log_lws),
         cfg(config::instance())
     {
-        my_stream sub;
+        mstream sub;
         sub << "{\"op\":\"subscribe\",\"args\":[";
         int i = 0;
-        for(auto& v: cfg.tickers) {
-            if(cfg.trades) {
+        for(auto& v: cfg.tickers)
+        {
+            if(cfg.trades)
+            {
                 if(i++)
                     sub << ",";
                 sub << "\"publicTrade." << v << "\"";
             }
-            if(cfg.orders) {
+            if(cfg.orders)
+            {
                 if(i++)
                     sub << ",";
                 sub << "\"orderbook.1." << v << "\"";
@@ -49,7 +52,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                 uint32_t security_id = get_security_id(it, ne, time);
                 it = ne + 1;
                 skip_fixed(it, ",\"ts\":");
-                ttime_t etime = milliseconds(my_cvt::atoi<int64_t>(it, 13));
+                ttime_t etime = milliseconds(cvt::atoi<int64_t>(it, 13));
                 it += 13;
                 skip_fixed(it, ",\"type\":\"");
                 
@@ -71,9 +74,8 @@ struct lws_i : sec_id_by_name<lws_impl>
                     add_order(security_id, 1, bp, bc, etime, time);
                 }
                 else
-                {
                     skip_fixed(it, "],\"u\":");
-                }
+
                 skip_fixed(it, ",\"a\":[");
                 if(skip_if_fixed(it, "[\""))
                 {
@@ -89,12 +91,11 @@ struct lws_i : sec_id_by_name<lws_impl>
                     add_order(security_id, 2, ap, ac, etime, time);
                 }
                 else
-                {
                     skip_fixed(it, "],\"u\":");
-                }
                 
                 if(ie - it > 50) [[unlikely]]
-                    throw mexception(es() % "parsing message error: " % str_holder(in, ie - in));
+                    throw mexception(es() % "parsing message error: "
+                        % str_holder(in, ie - in));
                 
                 send_messages();
             }
@@ -104,7 +105,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                 uint32_t security_id = get_security_id(it, ne, time);
                 it = ne + 1;
                 skip_fixed(it, ",\"ts\":");
-                ttime_t etime = milliseconds(my_cvt::atoi<int64_t>(it, 13));
+                ttime_t etime = milliseconds(cvt::atoi<int64_t>(it, 13));
                 it += 13;
                 skip_fixed(it, ",\"type\":\"snapshot\",\"data\":[");
             rep:
@@ -122,7 +123,9 @@ struct lws_i : sec_id_by_name<lws_impl>
                 if(*it == 'S')
                     dir = 2;
                 else if(*it != 'B') [[unlikely]]
-                    throw mexception(es() % "unknown message type: " % str_holder(in, ie - in));
+                    throw mexception(es() % "unknown message type: "
+                        % str_holder(in, ie - in));
+
                 add_trade(security_id, p, c, dir, etime, time);
                 it = find(it, ie, '{');
                 if(it != ie)

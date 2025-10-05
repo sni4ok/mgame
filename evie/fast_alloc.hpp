@@ -10,7 +10,8 @@
 #include "list.hpp"
 
 //with follower can work one writer and many readers without synchronization
-template<typename type, uint32_t block_size = 65536, uint32_t num_blocks = 16384, bool enable_run_once = true>
+template<typename type, uint32_t block_size = 65536, uint32_t num_blocks = 16384,
+    bool enable_run_once = true>
 class follower
 {
     typedef type* bulks_type[num_blocks];
@@ -99,7 +100,8 @@ public:
             uint32_t end_element = element % block_size;
             return ((*bulks)[end_bulk])[end_element];
         }
-        const_iterator(const bulks_type& bulks, uint32_t element) : bulks(&bulks), element(element)
+        const_iterator(const bulks_type& bulks, uint32_t element)
+            : bulks(&bulks), element(element)
         {
         }
 
@@ -236,7 +238,8 @@ struct cas_forward : emplace_decl<type, cas_forward<type, max_size> >
     cas_forward() : nodes()
     {
         static_assert(max_size && max_size < limits<uint16_t>::max);
-        static_assert(sizeof(node) == 8 + sizeof(type) + ((sizeof(type) % 8) ? (8 - sizeof(type) % 8) : 0));
+        static_assert(sizeof(node) == 8 + sizeof(type) +
+            ((sizeof(type) % 8) ? (8 - sizeof(type) % 8) : 0));
         for(uint32_t i = 1; i != max_size + 1; ++i)
             free_impl(to_type(nodes + i));
     }
@@ -355,10 +358,12 @@ struct cas_forward : emplace_decl<type, cas_forward<type, max_size> >
     {
         const node* nodes;
 
-        const_iterator(const node* nodes) : list_iterator<const node, false>(nodes, true), nodes(nodes)
+        const_iterator(const node* nodes) : list_iterator<const node, false>(nodes, true),
+            nodes(nodes)
         {
         }
-        const_iterator(const node* nodes, node* n) : list_iterator<const node, false>(n), nodes(nodes)
+        const_iterator(const node* nodes, node* n) : list_iterator<const node, false>(n),
+            nodes(nodes)
         {
         }
         const_iterator& operator++()
@@ -543,7 +548,8 @@ namespace alloc_params
         int cont_type = 2; //tss_pvector 0, forward_list 1, blist 2
         int allocator_cont = 1;
 
-        const constexpr fast_alloc_params operator()(uint32_t pre_alloc, uint32_t max_size = 0) const
+        const constexpr fast_alloc_params operator()(uint32_t pre_alloc,
+            uint32_t max_size = 0) const
         {
             return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size,
                 use_malloc, cont_type, allocator_cont);
@@ -749,7 +755,8 @@ using conditional_multi_t = typename conditional_multi<index, param, params...>:
 template<typename type, bool use_tss, int t>
 struct node_type
 {
-    typedef conditional_multi_t<t, type, forward_list_node<type, use_tss>, blist_node<type, use_tss> > node;
+    typedef conditional_multi_t<t, type, forward_list_node<type, use_tss>,
+        blist_node<type, use_tss> > node;
 };
 
 template<typename type_, typename node, fast_alloc_params params>

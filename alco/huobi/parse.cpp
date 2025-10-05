@@ -34,9 +34,11 @@ struct lws_i : sec_id_by_name<lws_impl>
     char ping[7];
     char error[16];
 
-    typedef my_basic_string<64> string;
+    typedef basic_string<64> string;
     struct impl;
-    typedef void (lws_i::*func)(impl& i, ttime_t etime, ttime_t time, char_cit& it, char_cit ie);
+    typedef void (lws_i::*func)(impl& i, ttime_t etime, ttime_t time,
+        char_cit& it, char_cit ie);
+
     struct impl
     {
         impl() : security_id(), f()
@@ -78,7 +80,8 @@ struct lws_i : sec_id_by_name<lws_impl>
        
         send_messages();
     }
-    void parse_orders_impl(impl& i, ttime_t etime, ttime_t time, char_cit& it, char_cit ie, bool a)
+    void parse_orders_impl(impl& i, ttime_t etime, ttime_t time, char_cit& it,
+        char_cit ie, bool a)
     {
         if(*it != ']')
         {
@@ -191,22 +194,32 @@ struct lws_i : sec_id_by_name<lws_impl>
         error("status\":\"error\"")
     {
         config& c = config::instance();
-        for(auto& v: c.tickers) {
-            if(c.snapshot) {
-                parsers[(v + ".depth." + c.step).str()] = impl(v.str(), &lws_i::parse_snapshot);
-                subscribes.push_back("{\"sub\":\"market." + v + ".depth." + c.step + "\",\"id\":\"snapshot_" + v + "\"}");
+        for(auto& v: c.tickers)
+        {
+            if(c.snapshot)
+            {
+                parsers[(v + ".depth." + c.step).str()] = impl(v.str(),
+                    &lws_i::parse_snapshot);
+                subscribes.push_back("{\"sub\":\"market." + v + ".depth."
+                    + c.step + "\",\"id\":\"snapshot_" + v + "\"}");
             }
-            if(c.orders) {
+            if(c.orders)
+            {
                 parsers[(v + ".mbp." + c.levels).str()] = impl(v.str(), &lws_i::parse_orders);
-                subscribes.push_back("{\"sub\":\"market." + v + ".mbp." + c.levels + "\",\"id\":\"orders_" + v + "\"}");
+                subscribes.push_back("{\"sub\":\"market." + v + ".mbp."
+                    + c.levels + "\",\"id\":\"orders_" + v + "\"}");
             }
-            if(c.bbo) {
+            if(c.bbo)
+            {
                 parsers[(v + ".bbo").str()] = impl(v.str(), &lws_i::parse_bbo);
-                subscribes.push_back("{\"sub\":\"market." + v + ".bbo\",\"id\":\"bbo_" + v + "\"}");
+                subscribes.push_back("{\"sub\":\"market." + v
+                    + ".bbo\",\"id\":\"bbo_" + v + "\"}");
             }
-            if(c.trades) {
+            if(c.trades)
+            {
                 parsers[(v + ".trade.detail").str()] = impl(v.str(), &lws_i::parse_trades);
-                subscribes.push_back("{\"sub\":\"market." + v + ".trade.detail\",\"id\":\"trades_" + v + "\"}");
+                subscribes.push_back("{\"sub\":\"market." + v
+                    + ".trade.detail\",\"id\":\"trades_" + v + "\"}");
             }
         }
     }
@@ -230,10 +243,11 @@ struct lws_i : sec_id_by_name<lws_impl>
             if(i == parsers.end()) [[unlikely]]
                 throw mexception(es() % "unknown symbol in market message: " % str);
             if(!i->second.security_id) [[unlikely]]
-                i->second.security_id = get_security_id(i->second.security.begin(), i->second.security.end(), time);
+                i->second.security_id = get_security_id(i->second.security.begin(),
+                    i->second.security.end(), time);
             ++ne;
             skip_fixed(ne, ts);
-            ttime_t etime = milliseconds(my_cvt::atoi<int64_t>(ne, 13));
+            ttime_t etime = milliseconds(cvt::atoi<int64_t>(ne, 13));
             ne += 13;
             skip_fixed(ne, tick);
             ((this)->*(i->second.f))(i->second, etime, time, ne, ie);

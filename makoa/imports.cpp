@@ -36,7 +36,8 @@ struct reader
 
     bool proceed()
     {
-        uint32_t readed = read(socket, const_cast<char_it>(ctx.second.begin()), ctx.second.size());
+        uint32_t readed = read(socket, const_cast<char_it>(ctx.second.begin()),
+            ctx.second.size());
         if(!readed) [[unlikely]]
             return false;
 
@@ -94,7 +95,8 @@ uint32_t mmap_cp_read(void *v, char_it buf, uint32_t buf_size)
     uint8_t r = mmap_load(f + 1);
 
     if(w < 2 || w >= message_size || r < 2 || r >= message_size) [[unlikely]]
-        throw mexception(es() % "mmap_cp_read, internal error, wp: " % uint32_t(w) % ", rp: " % uint32_t(r));
+        throw mexception(es() % "mmap_cp_read, internal error, wp: "
+            % uint32_t(w) % ", rp: " % uint32_t(r));
 
     i += r;
     const message* p = (((const message*)v) + 1) + (r - 2) * 255;
@@ -104,7 +106,9 @@ uint32_t mmap_cp_read(void *v, char_it buf, uint32_t buf_size)
     {
         if(buf_size < cur_count) [[unlikely]]
             throw mexception(es() % "mmap_cp_read, buf_size too small, wp: " % uint32_t(w) %
-                ", rp: " % uint32_t(r) % ", buf_size: " % buf_size % ", cur_count: " % cur_count);
+                ", rp: " % uint32_t(r) % ", buf_size: " % buf_size % ", cur_count: "
+                % cur_count);
+
         memcpy(buf, p, uint32_t(cur_count) * message_size);
         mmap_store(i, 0);
         ++i;
@@ -125,7 +129,9 @@ struct import_mmap_cp
     {
         params = split_s(p.str(), ' ');
         if(params.size() != 2)
-            throw mexception(es() % "import_mmap_cp, required 2 params (fname,pooling_mode): " % p);
+            throw mexception(es()
+                % "import_mmap_cp, required 2 params (fname,pooling_mode): " % p);
+
         pooling_mode = lexical_cast<bool>(params[1]);
     }
     unique_ptr<void, mmap_close> init() const
@@ -198,7 +204,8 @@ struct import_pipe
     volatile bool& can_run;
     mstring params;
 
-    import_pipe(volatile bool& can_run, const mstring& params) : can_run(can_run), params(params)
+    import_pipe(volatile bool& can_run, const mstring& params)
+        : can_run(can_run), params(params)
     {
     }
 };
@@ -250,31 +257,34 @@ struct import_tcp
     mstring params;
     uint16_t port;
     uint32_t count;
-    my_mutex mutex;
-    my_condition cond;
+    ::mutex mutex;
+    condition cond;
 
-    import_tcp(volatile bool& can_run, const mstring& params) : can_run(can_run), params(params),
+    import_tcp(volatile bool& can_run, const mstring& params)
+        : can_run(can_run), params(params),
         port(lexical_cast<uint16_t>(params)), count()
     {
     }
     ~import_tcp()
     {
-        my_mutex::scoped_lock lock(mutex);
+        scoped_lock lock(mutex);
         while(count)
             cond.timed_uwait(lock, 50 * 1000);
     }
 };
 
-void import_tcp_thread(import_tcp* it, int socket, mstring client, volatile bool& initialized, void* p)
+void import_tcp_thread(import_tcp* it, int socket, mstring client,
+    volatile bool& initialized, void* p)
 {
     try
     {
         socket_holder ss(socket);
-        my_mutex::scoped_lock lock(it->mutex);
+        scoped_lock lock(it->mutex);
         ++(it->count);
         initialized = true;
         if(it->count == max_connections)
-            mlog(mlog::warning) << "server(" << it->params << ") max_connections exceed on client " << client;
+            mlog(mlog::warning) << "server("
+                << it->params << ") max_connections exceed on client " << client;
 
         if(it->count > max_connections)
             throw str_exception("limit connections exceed");
@@ -289,7 +299,7 @@ void import_tcp_thread(import_tcp* it, int socket, mstring client, volatile bool
     {
         mlog(mlog::error) << "server(" << it->params << ") client " << client << " " << e;
     }
-    my_mutex::scoped_lock lock(it->mutex);
+    scoped_lock lock(it->mutex);
     it->cond.notify_all();
     mlog() << "server(" << it->params << ") thread for " << client << " ended";
     --(it->count);
@@ -301,7 +311,7 @@ void import_tcp_start(void* c, void* p)
     while(it.can_run)
     {
         mstring client;
-        my_mutex::scoped_lock lock(it.mutex);
+        scoped_lock lock(it.mutex);
         while(it.can_run && it.count >= max_connections)
             it.cond.timed_uwait(lock, 50 * 1000);
 
@@ -329,7 +339,8 @@ struct import_udp
     {
         auto p = split(params.str(), ' ');
         if(p.size() != 2 && p.size() != 4)
-            throw mexception(es() % "import_udp, required 3 params (src_ip multiaddr port): " % params);
+            throw mexception(es() % "import_udp, required 3 params (src_ip multiaddr port): "
+                % params);
 
         host = p[0];
         port = lexical_cast<uint16_t>(p[1]);
@@ -368,7 +379,8 @@ void import_udp_start(void* c, void* p)
     work_thread_reader(r, i.can_run, timeout);
 }
 
-template<void* (*fcreate)(const char* params, volatile bool& can_run), void (*fdestroy)(void *v)>
+template<void* (*fcreate)(const char* params, volatile bool& can_run),
+    void (*fdestroy)(void *v)>
 struct import_ifile_impl
 {
     void* ptr;
@@ -425,7 +437,8 @@ int register_importer(char_cit s, hole_importer hi)
 }
 
 static const int _import_mmap_cp = register_importer("mmap_cp",
-    {importer_init<import_mmap_cp>, importer_destroy<import_mmap_cp>, import_mmap_cp_start, nullptr}
+    {importer_init<import_mmap_cp>, importer_destroy<import_mmap_cp>,
+    import_mmap_cp_start, nullptr}
 );
 static const int _import_pipe = register_importer("pipe",
     {importer_init<import_pipe>, importer_destroy<import_pipe>, import_pipe_start, nullptr}

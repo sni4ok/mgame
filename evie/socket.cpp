@@ -50,7 +50,7 @@ int socket_connect(const mstring& host, uint16_t port, uint32_t timeout)
         throw_system_failure("Open socket error");
     socket_holder sh(socket);
     int flag = 1;
-    int result = setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, (const char *)&flag, sizeof(int));
+    int result = setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, (char_cit)&flag, sizeof(int));
     if(result < 0)
         throw_system_failure("set socket TCP_NODELAY error");
 
@@ -73,7 +73,8 @@ int socket_connect(const mstring& host, uint16_t port, uint32_t timeout)
     
     result = ::connect(socket, (sockaddr*)&clientService, sizeof(clientService));
     if(errno != EINPROGRESS)
-        throw_system_failure(es() % "can't connect to host, err: " % result % ": " % host % ":" % port);
+        throw_system_failure(es() % "can't connect to host, err: "
+            % result % ": " % host % ":" % port);
 
     if(result)
     {
@@ -85,7 +86,8 @@ int socket_connect(const mstring& host, uint16_t port, uint32_t timeout)
 
         result = select(socket + 1, nullptr, &fdset, nullptr, &tv);
         if(result < 0)
-            throw_system_failure(es() % "socket_connect select, err: " % result % ": " % host % ":" % port);
+            throw_system_failure(es() % "socket_connect select, err: "
+                % result % ": " % host % ":" % port);
 
         if(!result)
             throw mexception("socket_connect timeout");
@@ -98,7 +100,8 @@ int socket_connect(const mstring& host, uint16_t port, uint32_t timeout)
             result = -1;
         
         if(result < 0 || error)
-            throw_system_failure(es() % "can't connect to host, err: " % result % ": " % host % ":" % port);
+            throw_system_failure(es() % "can't connect to host, err: "
+                % result % ": " % host % ":" % port);
     }
     if(fcntl(socket, F_SETFL, flags) < 0)
         throw_system_failure("set O_NONBLOCK_2 for socket error");
@@ -175,15 +178,16 @@ void socket_send_async(int socket, char_cit ptr, uint32_t sz)
 int socket_accept_async(uint32_t port, bool local, bool sync, mstring* client_ip_ptr,
     volatile bool* can_run, char_cit name)
 {
-    int socket = ::socket(AF_INET, local ? AF_LOCAL : SOCK_STREAM /*| SOCK_NONBLOCK*/, IPPROTO_TCP);
+    int socket = ::socket(AF_INET, local ? AF_LOCAL : SOCK_STREAM /*| SOCK_NONBLOCK*/,
+        IPPROTO_TCP);
     if(socket < 0) 
         throw_system_failure(es() % _str_holder(name) % ": Open socket error");
     socket_holder sh(socket);
 
     int flag = 1;
-    if(setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, (const char *)&flag, sizeof(int)) < 0)
+    if(setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, (char_cit)&flag, sizeof(int)) < 0)
         throw_system_failure("set socket TCP_NODELAY error");
-    if(setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, (const char *)&flag, sizeof(int)) < 0)
+    if(setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, (char_cit)&flag, sizeof(int)) < 0)
         throw_system_failure("set socket SO_REUSEADDR error");
 
     mlog() << "socket_sender waiting for connection";
@@ -210,7 +214,7 @@ int socket_accept_async(uint32_t port, bool local, bool sync, mstring* client_ip
         
             result = select(socket + 1, &fdset, nullptr, nullptr, &tv);
             if(result < 0)
-                throw_system_failure(es() % "my_accept_async select, err: " % result);
+                throw_system_failure(es() % "socket_accept_async select, err: " % result);
         }
         if(can_run && !*can_run)
             throw mexception("socket_sender can_run = false reached");
@@ -220,7 +224,7 @@ int socket_accept_async(uint32_t port, bool local, bool sync, mstring* client_ip
     if(socket_cl < 0)
         throw_system_failure("accept() error");
     socket_holder sc(socket_cl);
-    if(setsockopt(socket_cl, IPPROTO_TCP, TCP_NODELAY, (const char *)&flag, sizeof(int)) < 0)
+    if(setsockopt(socket_cl, IPPROTO_TCP, TCP_NODELAY, (char_cit)&flag, sizeof(int)) < 0)
         throw_system_failure("set socket TCP_NODELAY for client error");
     
     int clip = cli_addr.sin_addr.s_addr;
@@ -245,7 +249,8 @@ int socket_accept_async(uint32_t port, const mstring& possible_client_ip, bool s
     mstring* client_ip_ptr, volatile bool* can_run, char_cit name)
 {
     mstring client_ip;
-    int s = socket_accept_async(port, (possible_client_ip == "127.0.0.1"), sync, &client_ip, can_run, name);
+    int s = socket_accept_async(port, (possible_client_ip == "127.0.0.1"),
+        sync, &client_ip, can_run, name);
 
     if(possible_client_ip != "*" && client_ip != possible_client_ip)
     {
@@ -295,14 +300,16 @@ int socket_stream::recv()
     return ret;
 }
 
-socket_stream::socket_stream(uint32_t timeout, char_it buf, uint32_t buf_size, int s, socket_stream_op* op) :
+socket_stream::socket_stream(uint32_t timeout, char_it buf, uint32_t buf_size,
+    int s, socket_stream_op* op) :
     op(op), cur(buf), readed(cur), beg(cur), all_sz(buf_size),
     timeout(timeout), socket(s)
 {
 }
 
-socket_stream::socket_stream(uint32_t timeout, char_it buf, uint32_t buf_size, const mstring& host,
-    uint16_t port, socket_stream_op* op) : op(op), cur(buf), readed(cur), beg(cur), all_sz(buf_size),
+socket_stream::socket_stream(uint32_t timeout, char_it buf, uint32_t buf_size,
+    const mstring& host, uint16_t port, socket_stream_op* op)
+    : op(op), cur(buf), readed(cur), beg(cur), all_sz(buf_size),
     timeout(timeout), socket()
 {
     socket = socket_connect(host, port);
@@ -354,7 +361,8 @@ void socket_stream::read(char_it s, uint32_t sz)
     }
 }
 
-udp_socket::udp_socket(const mstring& host, uint16_t port, const mstring& src_ip, const mstring& ma)
+udp_socket::udp_socket(const mstring& host, uint16_t port, const mstring& src_ip,
+    const mstring& ma)
 {
     socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if(socket < 0)
@@ -377,8 +385,9 @@ udp_socket::udp_socket(const mstring& host, uint16_t port, const mstring& src_ip
         imr.imr_multiaddr.s_addr = inet_addr(ma.c_str());
         imr.imr_interface.s_addr = INADDR_ANY;
 
-        if(setsockopt(socket, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, (char*)&imr, sizeof(imr)) < 0)
-            throw_system_failure("set socket IP_ADD_SOURCE_MEMBERSHIP, error");
+        if(setsockopt(socket, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP,
+            (char_it)&imr, sizeof(imr)) < 0)
+                throw_system_failure("set socket IP_ADD_SOURCE_MEMBERSHIP, error");
     }
 
     s.release();

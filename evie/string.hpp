@@ -73,8 +73,8 @@ struct buf_stream : ios_base
     template<typename type>
     void write_numeric(type t)
     {
-        check_size(my_cvt::atoi_size<type>::value);
-        cur += my_cvt::itoa(cur, t);
+        check_size(cvt::atoi_size<type>::value);
+        cur += cvt::itoa(cur, t);
     }
 };
 
@@ -88,21 +88,19 @@ struct buf_stream_fixed : buf_stream
     }
 };
 
-typedef buf_stream_fixed<16 * 1024> my_stream;
+typedef buf_stream_fixed<16 * 1024> mstream;
 
-struct es
+struct es : mstream
 {
-    my_stream s;
-
     template<typename type>
     es& operator%(const type& t)
     {
-        s << t;
+        *this << t;
         return *this;
     }
     operator str_holder() const
     {
-        return s.str();
+        return str();
     }
 };
 
@@ -111,16 +109,61 @@ void cout_write(str_holder str, bool flush = true);
 void cerr_write(str_holder str, bool flush = true);
 
 template<void (*func)(str_holder, bool)>
-struct ostream : my_stream
+struct ostream : mstream
 {
+    bool print_endl;
+
+    ostream(bool print_endl = true) : print_endl(print_endl)
+    {
+    }
     ~ostream()
     {
+        if(print_endl)
+            *this << endl;
         func(str(), true);
     }
 };
 
 typedef ostream<cout_write> cout;
 typedef ostream<cerr_write> cerr;
+
+template<typename s1, typename s2>
+struct conditional_stream : ios_base
+{
+    bool __s2;
+    char buf[sizeof(s1) > sizeof(s2) ? sizeof(s1) : sizeof(s2)];
+
+    template<typename p1, typename p2>
+    conditional_stream(bool __s2, const p1& _p1, const p2& _p2) : __s2(__s2)
+    {
+        if(__s2)
+            new (buf) s2(_p2);
+        else
+            new (buf) s1(_p1);
+    }
+    ~conditional_stream()
+    {
+        if(__s2)
+            ((s2*)(buf))->~s2();
+        else
+            ((s1*)(buf))->~s1();
+    }
+    void write(char_cit v, uint64_t s)
+    {
+        if(__s2)
+            ((s2*)(buf))->write(v, s);
+        else
+            ((s1*)(buf))->write(v, s);
+    }
+    template<typename type>
+    void write_numeric(type v)
+    {
+        if(__s2)
+            ((s2*)(buf))->write_numeric(v);
+        else
+            ((s1*)(buf))->write_numeric(v);
+    }
+};
 
 #endif
 

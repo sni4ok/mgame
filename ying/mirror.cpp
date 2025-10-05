@@ -115,7 +115,7 @@ struct decimal_fixed
         type p = abs(v);
 
         int64_t m = p.value / p.frac;
-        uint32_t d = my_cvt::log10(m);
+        uint32_t d = cvt::log10(m);
 
         if(v < type())
             ++d;
@@ -123,7 +123,12 @@ struct decimal_fixed
         if(digits < d)
             digits = d;
 
-        s << uint_fix(m, digits, false) << "." << uint_fix(p.value % p.frac, -p.exponent, true);
+        if(digits)
+            s << uint_fix(m, digits, false);
+        else
+            s << "0";
+
+         s << "." << uint_fix(p.value % p.frac, -p.exponent, true);
     }
 };
 
@@ -145,7 +150,8 @@ struct mirror::impl
 
         bool operator==(const book& b) const
         {
-            return count.value == b.count.value && time.value == b.time.value && price.value == b.price.value;
+            return count.value == b.count.value && time.value == b.time.value
+                && price.value == b.price.value;
         }
     };
 
@@ -160,7 +166,7 @@ struct mirror::impl
     uint32_t trades_from, trades_width;
     book last_printed_trade;
 
-    my_stream bs;
+    mstream bs;
  
     ttime_t dE, dP;
     bool dEdP_printed = false;
@@ -169,7 +175,7 @@ struct mirror::impl
     decimal_fixed<count_t> print_c;
     
     volatile bool can_run;
-    my_mutex mutex;
+    ::mutex mutex;
 
     jthread refresh_thrd;
 
@@ -186,13 +192,15 @@ struct mirror::impl
     }
     void set_auto_scroll()
     {
-        head_msg_auto_scroll = head_msg + (auto_scroll ? str_holder("     auto_scroll on ") : str_holder("     auto_scroll off"));
+        head_msg_auto_scroll = head_msg + (auto_scroll ?
+            str_holder("     auto_scroll on ") : str_holder("     auto_scroll off"));
         head_msg_auto_scroll_printed = false;
     }
     void set_instrument(const message_instr& i)
     {
         mi = i;
-        head_msg = from_array(mi.exchange_id) + "/" + from_array(mi.feed_id) + "/" + from_array(mi.security);
+        head_msg = from_array(mi.exchange_id) + "/" + from_array(mi.feed_id)
+            + "/" + from_array(mi.security);
         set_auto_scroll();
     }
     int32_t get_top_order(window& w)
@@ -245,7 +253,8 @@ struct mirror::impl
 
         last_printed_trade = std::move(tr);
     }
-    void print_book(bool bids, price_t price, const order_book_ba::book& b, window& w, uint32_t& row)
+    void print_book(bool bids, price_t price, const order_book_ba::book& b,
+        window& w, uint32_t& row)
     {
         count_t c(bids ? b.count.value : - b.count.value);
         book bo{c, b.time, price};
@@ -316,7 +325,8 @@ struct mirror::impl
     {
         if(!head_msg_auto_scroll_printed)
         {
-            e = wstr(w, w.rows - 1, 0, head_msg_auto_scroll.begin(), head_msg_auto_scroll.size());
+            e = wstr(w, w.rows - 1, 0, head_msg_auto_scroll.begin(),
+                head_msg_auto_scroll.size());
             head_msg_auto_scroll_printed = true;
         }
         if(!dEdP_printed)
@@ -330,7 +340,7 @@ struct mirror::impl
     void refresh(window& w)
     {
         books_printed.resize(w.rows - 1);
-        my_mutex::scoped_lock lock(mutex);
+        scoped_lock lock(mutex);
 
         if(!sec.security_id)
             return;
@@ -361,7 +371,7 @@ struct mirror::impl
                 if(paused)
                     continue;
 
-                my_mutex::scoped_lock lock(mutex);
+                scoped_lock lock(mutex);
                 //mlog() << "key: " << key;
                 if(key == 97) // 'a'
                 {
@@ -400,7 +410,8 @@ struct mirror::impl
                         }
                     }
                 }
-                else if(key == 259 || key == 339 || key == 258 || key == 338) // arrow up or page up or arrow down or page down
+                // arrow up or page up or arrow down or page down
+                else if(key == 259 || key == 339 || key == 258 || key == 338)
                 {
                     int32_t it = get_top_order(w);
                     if(key == 259)
@@ -469,7 +480,7 @@ struct mirror::impl
             return;
 
         uint32_t security_id = get_security_id(m);
-        my_mutex::scoped_lock lock(mutex);
+        scoped_lock lock(mutex);
         if(m.id == msg_instr)
             all_securities[security_id] = m.mi;
         if(m.id != msg_trade)
@@ -519,8 +530,8 @@ mirror::impl* create_mirror(str_holder params)
 
     uint32_t refresh_rate = p.size() == 2 ? lexical_cast<uint32_t>(p[1]) : 100;
     if(!refresh_rate)
-        throw mexception(es() % "mirror::mirror() bad params: " % params % ", refresh_rate should be at least 1");
-
+        throw mexception(es() % "mirror::mirror() bad params: "
+            % params % ", refresh_rate should be at least 1");
     return new mirror::impl(p[0], refresh_rate);
 }
 

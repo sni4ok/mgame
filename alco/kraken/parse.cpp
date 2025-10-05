@@ -10,9 +10,9 @@
 ttime_t read_time(char_cit it, char_cit ie)
 {
     char_cit ne = find(it, ie, '.');
-    uint32_t time = my_cvt::atoi<uint32_t>(it, ne - it);
+    uint32_t time = cvt::atoi<uint32_t>(it, ne - it);
     it = ne + 1;
-    uint32_t time_us = my_cvt::atoi<uint32_t>(it, 6);
+    uint32_t time_us = cvt::atoi<uint32_t>(it, 6);
     return seconds(time) + microseconds(time_us);
 }
 
@@ -27,13 +27,21 @@ struct lws_i : sec_id_by_name<lws_impl>
         uint32_t security_id;
         func f;
     };
-    fmap<uint32_t, impl> parsers; //channel, impl
 
-    lws_i() : sec_id_by_name<lws_impl>(config::instance().push, config::instance().log_lws), cfg(config::instance())
+    fmap<uint32_t, impl> parsers; //channel, impl
+    price_t t_price;
+    count_t t_count;
+    ttime_t t_time;
+
+    lws_i() : sec_id_by_name<lws_impl>(config::instance().push,
+        config::instance().log_lws), cfg(config::instance())
     {
-        mstring s = "{\"event\":\"subscribe\",\"pair\":[" + join_tickers(cfg.tickers) + "],\"subscription\": {";
-        if(cfg.orders) {
-            my_stream sub;
+        mstring s = "{\"event\":\"subscribe\",\"pair\":["
+            + join_tickers(cfg.tickers) + "],\"subscription\": {";
+
+        if(cfg.orders)
+        {
+            mstream sub;
             sub << s;
             if(cfg.depth)
                 sub << "\"depth\":" << cfg.depth << ",";
@@ -45,10 +53,6 @@ struct lws_i : sec_id_by_name<lws_impl>
         if(cfg.bba)
             subscribes.push_back(s + "\"name\":\"spread\"}}");
     }
-    
-    price_t t_price;
-    count_t t_count;
-    ttime_t t_time;
     void parse_tick(char_cit& it, char_cit ie)
     {
         t_price = read_value(it, ie, read_price, false);
@@ -80,20 +84,28 @@ struct lws_i : sec_id_by_name<lws_impl>
         bool snapshot = false;
         char_cit f = it;
         skip_fixed(it, "{");
-        for(;;){
+
+        for(;;)
+        {
             skip_fixed(it, "\"");
             bool ask;
+
             if(*it == 'b')
                 ask = false;
             else if(*it == 'a')
                 ask = true;
-            else throw mstring(es() % "parsing book message error: " % str_holder(f, ie - f));
+            else
+                throw mstring(es() % "parsing book message error: " % str_holder(f, ie - f));
+
             ++it;
-            if(*it == 's') { //snapshot
+
+            if(*it == 's') //snapshot
+            {
                 ++it;
                 snapshot = true;
             }
             skip_fixed(it, "\":[");
+
             for(;;)
             {
                 skip_fixed(it, "[");
@@ -101,17 +113,20 @@ struct lws_i : sec_id_by_name<lws_impl>
                 if(ask)
                     t_count.value = -t_count.value;
                 bool rep = false;
-                if(*it == ',') {
+                if(*it == ',')
+                {
                     skip_fixed(it, ",\"r\"");
                     rep = true;
                 }
-                add_order(security_id, t_price.value, t_price, t_count, (snapshot || rep) ? ttime_t() : t_time, time);
+                add_order(security_id, t_price.value, t_price, t_count,
+                    (snapshot || rep) ? ttime_t() : t_time, time);
                 skip_fixed(it, "]");
                 if(*it == ',')
                     ++it;
                 else if(*it == ']')
                     break;
             }
+
             ++it;
             if(*it == ',')
                 ++it;
@@ -126,6 +141,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         }
         if(*(ie - 1) != ']' || ie - it > 35)
             throw mstring(es() % "parsing book message error: " % str_holder(f, ie - f));
+
         it = ie;
         send_messages();
     }
@@ -133,6 +149,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     {
         char_cit f = it;
         skip_fixed(it, "[");
+
         for(;;)
         {
             skip_fixed(it, "[");
@@ -143,7 +160,9 @@ struct lws_i : sec_id_by_name<lws_impl>
                 dir = 1;
             else if(*it == 's')
                 dir = 2;
-            else throw mstring(es() % "unsupported trade direction, " % str_holder(f, ie - f));
+            else
+                throw mstring(es() % "unsupported trade direction, " % str_holder(f, ie - f));
+
             add_trade(security_id, t_price, t_count, dir, t_time, time);
             ++it;
             skip_fixed(it, "\",\"");
@@ -175,7 +194,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         {
             ++it;
             char_cit ne = find(it, ie, ',');
-            uint32_t channel = my_cvt::atoi<uint32_t>(it, ne - it);
+            uint32_t channel = cvt::atoi<uint32_t>(it, ne - it);
             impl& i = parsers.at(channel);
             it = ne + 1;
             ((this)->*(i.f))(i.security_id, time, it, ie);
@@ -185,7 +204,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             if(!cfg.log_lws)
                 mlog() << "" << str_holder(it, ie - it);
             char_cit ne = find(it, ie, ',');
-            uint32_t channel = my_cvt::atoi<uint32_t>(it, ne - it);
+            uint32_t channel = cvt::atoi<uint32_t>(it, ne - it);
             it = ne + 1;
             skip_fixed(it, "\"channelName\":\"");
             search_and_skip_fixed(it, ie, "\"pair\":\"");
@@ -214,9 +233,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         {
         }
         if(it != ie) [[unlikely]]
-        {
             mlog(mlog::critical) << "unsupported message: " << str_holder(in, len);
-        }
     }
 };
 

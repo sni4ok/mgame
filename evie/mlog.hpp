@@ -7,7 +7,7 @@
 #ifndef EVIE_MLOG_HPP
 #define EVIE_MLOG_HPP
 
-#include "myitoa.hpp"
+#include "cvt.hpp"
 #include "smart_ptr.hpp"
 #include "time.hpp"
 
@@ -71,8 +71,8 @@ public:
     template<typename type>
     void write_numeric(type v)
     {
-        check_size(my_cvt::atoi_size<type>::value);
-        buf->tail->size += my_cvt::itoa(&buf->tail->buf[buf->tail->size], v);
+        check_size(cvt::atoi_size<type>::value);
+        buf->tail->size += cvt::itoa(&buf->tail->buf[buf->tail->size], v);
     }
 };
 

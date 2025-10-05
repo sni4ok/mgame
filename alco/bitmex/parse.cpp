@@ -80,7 +80,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                     if(skip_if_fixed(it, "id\":"))
                     {
                         ne = find(it, ie, ',');
-                        uint64_t id  = my_cvt::atoi<uint64_t>(it, ne - it);
+                        uint64_t id  = cvt::atoi<uint64_t>(it, ne - it);
                         it = ne + 1;
                         skip_fixed(it, "\"side\":\"");
                         bool ask;

@@ -11,7 +11,7 @@
 
 mstring join_tickers(const mvector<mstring>& tickers, bool quotes)
 {
-    my_stream s;
+    mstream s;
     for(uint32_t i = 0; i != tickers.size(); ++i)
     {
         if(i)
@@ -35,9 +35,11 @@ lws_dump::lws_dump() : hfile(), lws_not_fake(true), lws_dump_en(), dump_buf("\n 
     if(dump)
     {
         lws_dump_en = true;
-        hfile = ::open(dump, O_WRONLY | O_CREAT | O_TRUNC, S_IWRITE | S_IREAD | S_IRGRP | S_IWGRP);
+        hfile = ::open(dump, O_WRONLY | O_CREAT | O_TRUNC, S_IWRITE
+            | S_IREAD | S_IRGRP | S_IWGRP);
         if(hfile < 0)
-            throw_system_failure(es() % "lws_dump() open file " % _str_holder(dump) % " error");
+            throw_system_failure(es() % "lws_dump() open file "
+                % _str_holder(dump) % " error");
         mlog() << "lws_dump to " << _str_holder(dump) << " enabled";
     }
     if(fake)
@@ -45,7 +47,8 @@ lws_dump::lws_dump() : hfile(), lws_not_fake(true), lws_dump_en(), dump_buf("\n 
         lws_not_fake = false;
         hfile = ::open(fake, O_RDONLY);
         if(hfile < 0)
-            throw_system_failure(es() % "lws_fake() open file " % _str_holder(fake) % " error");
+            throw_system_failure(es() % "lws_fake() open file "
+                % _str_holder(fake) % " error");
         dump_readed = 0;
         struct stat st;
         if(::fstat(hfile, &st))
@@ -74,8 +77,9 @@ str_holder lws_dump::read_dump()
         uint32_t sz;
         memcpy(&sz, dump_buf + 1, sizeof(sz));
         read_buf.resize(sz);
-        if(dump_buf[0] != '\n' || dump_buf[5] != '\n' || ::read(hfile, &read_buf[0], sz) != ssize_t(sz))
-            throw_system_failure("lws_dump reading error");
+        if(dump_buf[0] != '\n' || dump_buf[5] != '\n'
+            || ::read(hfile, &read_buf[0], sz) != ssize_t(sz))
+                throw_system_failure("lws_dump reading error");
         dump_readed += (sz + 6);
         return str_holder(&read_buf[0], sz);
     }
@@ -98,7 +102,8 @@ void lws_impl::init(lws* wsi)
 {
     if(lws_not_fake)
     {
-        for(auto& s: subscribes) {
+        for(auto& s: subscribes)
+        {
             bs << s;
             send(wsi);
         }
@@ -123,10 +128,13 @@ void lws_impl::send(lws* wsi)
 
 lws_impl::~lws_impl()
 {
-    try {
+    try
+    {
         if(lws_not_fake)
             lws_context_destroy(context);
-    } catch (exception& e) {
+    }
+    catch (exception& e)
+    {
         mlog() << "~lws_impl() " << e;
     }
 }
@@ -161,7 +169,8 @@ int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user, void* i
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         {
             ((lws_impl*)user)->closed = true;
-            mlog() << "lws closed... " << (len ? str_holder((char_cit)in, len) : str_holder(""));
+            mlog() << "lws closed... " << (len ? str_holder((char_cit)in, len)
+                : str_holder(""));
             return 1;
         }
         case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
@@ -219,7 +228,8 @@ void lws_connect(lws_impl& ls, char_cit host, uint32_t port, char_cit path)
     ccinfo.path = path;
     ccinfo.userdata = (void*)&ls;
     ccinfo.host = ccinfo.address;
-    ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
+    ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED
+        | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
     lws_client_connect_via_info(&ccinfo);
 }
 

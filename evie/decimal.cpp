@@ -66,10 +66,10 @@ stream& operator<<(stream& s, int128d v)
     {
         while(e > 19)
         {
-            v = v * my_cvt::pow[19];
+            v = v * cvt::pow[19];
             e -= 19;
         }
-        v = v * my_cvt::pow[e];
+        v = v * cvt::pow[e];
         return v;
     };
 
@@ -116,7 +116,7 @@ rep:
         r = int128d(v);
     else
     {
-        r = mul_int(r, my_cvt::pow[sz]);
+        r = mul_int(r, cvt::pow[sz]);
         r += int128d(v);
     }
     f += sz;

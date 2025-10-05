@@ -11,9 +11,10 @@ struct lws_i : sec_id_by_name<lws_impl>
 {
     config& cfg;
     
-    lws_i() : sec_id_by_name<lws_impl>(config::instance().push, config::instance().log_lws), cfg(config::instance())
+    lws_i() : sec_id_by_name<lws_impl>(config::instance().push, config::instance().log_lws),
+        cfg(config::instance())
     {
-        my_stream sub;
+        mstream sub;
         sub << "{\"method\":\"SUBSCRIBE\",\"params\":[";
         int i = 0;
         for(auto& v: cfg.tickers) {
@@ -94,7 +95,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             ne = find(it, ie, 'T');
             it = ne + 1;
             skip_fixed(it, "\":");
-            ttime_t etime = milliseconds(my_cvt::atoi<int64_t>(it, 13));
+            ttime_t etime = milliseconds(cvt::atoi<int64_t>(it, 13));
             it = it + 14;
             skip_fixed(it, "\"m\":");
             int direction;

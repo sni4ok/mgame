@@ -65,9 +65,9 @@ struct lws_i : sec_id_by_name<lws_impl>
         }
         skip_fixed(it, "[");
         char_cit ne = find(it, ie, ',');
-        uint32_t id = my_cvt::atoi<uint32_t>(it, ne - it);
+        uint32_t id = cvt::atoi<uint32_t>(it, ne - it);
         ++ne;
-        ttime_t etime = milliseconds(my_cvt::atoi<int64_t>(ne, 13));
+        ttime_t etime = milliseconds(cvt::atoi<int64_t>(ne, 13));
         ne += 13;
         skip_fixed(ne, ",");
         it = find(ne, ie, ',');
@@ -105,7 +105,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             ne = find(it, ie, ',');
             if(prec_R0)
             {
-                int64_t level_id = my_cvt::atoi<int64_t>(it, ne - it);
+                int64_t level_id = cvt::atoi<int64_t>(it, ne - it);
                 ++ne;
                 it = find(ne, ie, ',');
                 price_t price = lexical_cast<price_t>(ne, it);
@@ -122,7 +122,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                 price_t price = lexical_cast<price_t>(it, ne);
                 ++ne;
                 it = find(ne, ie, ',');
-                uint32_t count = my_cvt::atoi<uint32_t>(ne, it - ne);
+                uint32_t count = cvt::atoi<uint32_t>(ne, it - ne);
                 ++it;
                 ne = find(it, ie, ']');
                 count_t amount = lexical_cast<count_t>(it, ne);
@@ -164,7 +164,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         {
             ++it;
             char_cit ne = find(it, ie, ',');
-            uint32_t channel = my_cvt::atoi<uint32_t>(it, ne - it);
+            uint32_t channel = cvt::atoi<uint32_t>(it, ne - it);
             skip_fixed(ne, ",");
             ne = find(ne, ie, '[');
 
@@ -192,7 +192,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                     else
                         skip_fixed(it, book);
                     char_cit ne = find(it, ie, ',');
-                    uint32_t channel = my_cvt::atoi<uint32_t>(it, ne - it);
+                    uint32_t channel = cvt::atoi<uint32_t>(it, ne - it);
                     ++ne;
                     skip_fixed(ne, symbol);
                     it = find(ne, ie, '\"');

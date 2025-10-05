@@ -21,11 +21,12 @@ struct server::impl
     volatile bool& can_run;
     bool quit_on_exit;
     fmap<int, pair<hole_importer, void*> > imports;
-    my_mutex mutex;
-    my_condition cond;
+    ::mutex mutex;
+    condition cond;
     mvector<jthread> threads;
 
-    impl(volatile bool& can_run, bool quit_on_exit) : can_run(can_run), quit_on_exit(quit_on_exit)
+    impl(volatile bool& can_run, bool quit_on_exit)
+        : can_run(can_run), quit_on_exit(quit_on_exit)
     {
         server_impl = this;
     }
@@ -41,20 +42,24 @@ struct server::impl
             hole_importer hi = create_importer(f);
             void* i = hi.init(can_run, c + 1);
             {
-                my_mutex::scoped_lock lock(mutex);
+                scoped_lock lock(mutex);
                 imports[get_thread_id()] = {hi, i};
                 ++count;
                 need_init = false;
                 cond.notify_all();
             }
-            while(can_run) {
-                try {
+            while(can_run)
+            {
+                try
+                {
                     hi.start(i, nullptr);
                     if(quit_on_exit)
                         break;
                     else
                         usleep(1000 * 1000);
-                } catch (exception& e) {
+                }
+                catch (exception& e)
+                {
                     mlog() << "import_thread " << str << " " << e;
                     for(int i = 0; can_run && i != 5; ++i)
                         sleep(1);
@@ -67,7 +72,7 @@ struct server::impl
             can_run = false;
             mlog() << "import_thread ended, " << str << " " << e;
         }
-        my_mutex::scoped_lock lock(mutex);
+        scoped_lock lock(mutex);
         if(need_init)
             ++count;
         else
@@ -87,14 +92,15 @@ struct server::impl
         }
         while(count != imports.size())
         {
-            my_mutex::scoped_lock lock(mutex);
+            scoped_lock lock(mutex);
             cond.wait(lock);
         }
     }
     void set_close()
     {
-        my_mutex::scoped_lock lock(mutex);
-        for(auto& i: imports) {
+        scoped_lock lock(mutex);
+        for(auto& i: imports)
+        {
             if(i.second.first.set_close)
                 i.second.first.set_close(i.second.second);
         }

@@ -15,7 +15,7 @@
 
 void fix_zero_tail(char_cit fname)
 {
-    cout() << "fix_zero_tail(" << _str_holder(fname) << "):" << endl;
+    cout() << "fix_zero_tail(" << _str_holder(fname) << "):";
     mfile f(fname);
     uint64_t fsz = f.size();
     mvector<char> m(message_size), mc(message_size);
@@ -27,7 +27,7 @@ void fix_zero_tail(char_cit fname)
             break;
         nsz -= message_size;
     }
-    cout() << "  orig_file_size: " << fsz << ", new_file_size: " << nsz << endl;
+    cout() << "  orig_file_size: " << fsz << ", new_file_size: " << nsz;
     if(truncate(fname, nsz))
         throw str_exception("truncate file error");
 }
@@ -37,7 +37,7 @@ void sort_data_by_folders(str_holder folder)
     if(folder[folder.size() - 1] != '/')
         throw mexception(es() % "sort_data_by_folders() bad folder name: " % folder);
 
-    cout() << "sort_data_by_folders(" << folder << "):" << endl;
+    cout() << "sort_data_by_folders(" << folder << "):";
     mvector<mstring> files_for_move;
     {
         dirent **ee;
@@ -50,7 +50,8 @@ void sort_data_by_folders(str_holder folder)
             {
                 str_holder fname(_str_holder(e->d_name));
                 if(fname.size() < 3 || str_holder(fname.end() - 3, fname.end()) != ".gz")
-                    throw mexception(es() % "sort_data_by_folders() unsupported file type: " % fname);
+                    throw mexception(es() %
+                        "sort_data_by_folders() unsupported file type: " % fname);
                 files_for_move.push_back(fname);
             }
         }
@@ -76,7 +77,8 @@ void sort_data_by_folders(str_holder folder)
         }
         rename_file((folder + fname).c_str(), (nf + fname).c_str());
     }
-    cout() << "sort_data_by_folders successfully ended, moved " << files_for_move.size() << " files" << endl;
+    cout() << "sort_data_by_folders successfully ended, moved "
+        << files_for_move.size() << " files";
 }
 
 template<typename type>
@@ -122,12 +124,12 @@ void amount_test()
     test_io(count_t({limits<int64_t>::max}));
     test_io(count_t({limits<int64_t>::min}));
 
-    cout() << "amount_test successfully ended" << endl;
+    cout() << "amount_test successfully ended";
 }
 
 void clear_screen()
 {
-    cout() << "\033[2J\033[1;1H";
+    cout(false) << "\033[2J\033[1;1H";
 }
 
 void parsers_stat(str_holder f)
@@ -184,10 +186,10 @@ void parsers_stat(str_holder f)
             {
                 uint64_t sz = (s.size - s.from_size) / message_size;
                 uint64_t mps = sz * ttime_t::frac / d.value;
-                cout() << uint_fixed<7, false>(mps) << "/s " << files[i] << endl;;
+                cout(false) << uint_fixed<7, false>(mps) << "/s " << files[i];
             }
             else
-                cout() << "[no data] " << files[i] << endl;
+                cout(false) << "[no data] " << files[i];
         }
 
         usleep(500000);
@@ -211,7 +213,7 @@ int main(int argc, char** argv)
     }
     catch(exception& e)
     {
-        cerr() << "main() exception: " << _str_holder(e.what()) << endl;
+        cerr() << "main() exception: " << _str_holder(e.what());
         return 1;
     }
     return 0;

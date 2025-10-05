@@ -14,6 +14,7 @@
 #include "../evie/config.hpp"
 #include "../evie/mlog.hpp"
 #include "../evie/signals.hpp"
+#include "../evie/utils.hpp"
 
 int main(int argc, char** argv)
 {
@@ -22,14 +23,17 @@ int main(int argc, char** argv)
         cout_write("Usage: ./makoa_server [config file]\n");
         return 1;
     }
-    auto log = log_init(argc == 1 ? "makoa_server.log" : get_log_name(_str_holder(argv[1])).c_str(),
-        mlog::store_tid | mlog::always_cout | mlog::lock_file);
 
+    unique_ptr<simple_log, free_simple_log> log;
     signals_holder sl(server_set_close);
     mstring name;
 
     try
     {
+        log = log_init(argc == 1 ? "makoa_server.log"
+            : get_log_name(_str_holder(argv[1])).c_str(),
+            mlog::store_tid | mlog::always_cout | mlog::lock_file);
+
         mlog(mlog::always_cout) << "makoa started";
         auto ef = init_efactory();
         print_init(argc, argv);
@@ -42,7 +46,8 @@ int main(int argc, char** argv)
     }
     catch(exception& e)
     {
-        mlog(mlog::error | mlog::always_cout) << "makoa(" << name << ") ended with " << e;
+        conditional_stream<mlog, cerr>(!log, mlog::error | mlog::always_cout, true)
+            << "makoa(" << name << ") ended with " << e;
         return 1;
     }
     mlog(mlog::always_cout) << "makoa (" << name << ") successfully ended";

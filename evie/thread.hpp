@@ -10,33 +10,41 @@
 
 #include <bits/pthreadtypes.h>
 
-struct my_mutex
+struct mutex
 {
-    pthread_mutex_t mutex;
+    pthread_mutex_t __mutex;
 
-    my_mutex();
-    ~my_mutex();
-    my_mutex(const my_mutex&) = delete;
+    mutex();
+    ~mutex();
+    mutex(const mutex&) = delete;
     void lock();
     void unlock();
     bool try_lock();
 
     struct scoped_lock
     {
-        my_mutex& mutex;
+        mutex& __mutex;
         bool locked;
 
-        scoped_lock(my_mutex& mutex);
+        scoped_lock(mutex& mutex);
         ~scoped_lock();
         void lock();
         void unlock();
     };
 };
 
+template<typename mutex>
+struct scoped_lock : mutex::scoped_lock
+{
+    [[nodiscard]] scoped_lock(mutex& m) : mutex::scoped_lock(m)
+    {
+    }
+};
+
 struct critical_section
 {
     bool flag;
-    my_mutex mutex;
+    ::mutex mutex;
     static const uint32_t free_lock_count = 10;
 
     critical_section() : flag()
@@ -102,17 +110,17 @@ struct critical_section::mt_lock<false>
     }
 };
 
-struct my_condition
+struct condition
 {
-    pthread_cond_t condition;
+    pthread_cond_t __condition;
 
-    my_condition();
-    ~my_condition();
-    my_condition(const my_condition&) = delete;
+    condition();
+    ~condition();
+    condition(const condition&) = delete;
 
-    void wait(my_mutex::scoped_lock& lock);
-    void timed_wait(my_mutex::scoped_lock& lock, uint32_t sec);
-    void timed_uwait(my_mutex::scoped_lock& lock, uint32_t usec);
+    void wait(mutex::scoped_lock& lock);
+    void timed_wait(mutex::scoped_lock& lock, uint32_t sec);
+    void timed_uwait(mutex::scoped_lock& lock, uint32_t usec);
     void notify_one();
     void notify_all();
 };

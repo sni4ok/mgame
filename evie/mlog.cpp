@@ -56,8 +56,9 @@ class simple_log
         {
             if(!b_stream.empty() && (force || (b_stream.size() > b_size / 2)))
             {
-                if(uint64_t(::write(hfile, b_stream.begin(), b_stream.size())) != b_stream.size())
-                    throw_system_failure(es() % "file " % name % " writing error");
+                if(uint64_t(::write(hfile, b_stream.begin(), b_stream.size()))
+                    != b_stream.size())
+                        throw_system_failure(es() % "file " % name % " writing error");
                 b_stream.clear();
             }
         }
@@ -75,7 +76,8 @@ class simple_log
 
     static const uint32_t log_no_cout_size = 10;
 
-    void write_impl(char_cit str, uint32_t size, uint32_t params, uint32_t all_sz, bool& first)
+    void write_impl(char_cit str, uint32_t size, uint32_t params,
+        uint32_t all_sz, bool& first)
     {
         if(str)
         {
@@ -86,14 +88,16 @@ class simple_log
                 if((params & mlog::critical) && !!stream_crit)
                     stream_crit->write(str, size);
             }
-            if((!stream || ((params & mlog::always_cout) && !(params & mlog::no_cout))) && !no_cout)
+            if((!stream || ((params & mlog::always_cout)
+                && !(params & mlog::no_cout))) && !no_cout)
             {
                 if(all_sz >= log_no_cout_size)
                 {
                     if(first)
                     {
                         cout_write(es() % "[[skipped " % all_sz %
-                            " rows from logging to stdout, see log file for found it]]" % endl, true);
+                            " rows from logging to stdout, see log file for found it]]"
+                            % endl, true);
                         first = false;
                     }
                 }
@@ -111,7 +115,7 @@ class simple_log
             mlog::data* data;
             static const uint32_t cntr_from = 128, cntr_to = 524288;
             uint32_t cntr = 128;
-            my_stream str;
+            mstream str;
             for(;;)
             {
                 uint32_t all_sz = atomic_load(all_size) - writed_sz;
@@ -180,7 +184,8 @@ class simple_log
         }
         catch(exception& e)
         {
-            cout_write(es() % "simple_log::write_thread error: " % _str_holder(e.what()) % endl);
+            cout_write(es() % "simple_log::write_thread error: "
+                % _str_holder(e.what()) % endl);
         }
     }
 
@@ -200,22 +205,18 @@ public:
     uint32_t params;
 
     simple_log(char_cit file_name, uint32_t params, bool set_instance)
-        : can_run(true), all_size(), nodes("mlog::nodes"), free_threads(),
-        profiler(), no_cout(), params(params)
+        : can_run(true), all_size(), nodes("mlog::nodes"),
+        no_cout(), params(params)
     {
-        if(set_instance)
-        {
-            log = this;
-            free_threads = init_free_threads();
-            profiler = new profilerinfo;
-        }
+        log = nullptr;
         if(file_name)
         {
             stream.reset(new ofile(file_name, params & mlog::truncate_file));
             if(!(params & mlog::no_crit_file))
             {
                 mstring crit_file = _str_holder(file_name) + "_crit";
-                stream_crit.reset(new ofile(crit_file.c_str(), params & mlog::truncate_crit_file));
+                stream_crit.reset(new ofile(crit_file.c_str(),
+                    params & mlog::truncate_crit_file));
             }
             if(params & mlog::lock_file)
             {
@@ -223,6 +224,12 @@ public:
                 if(!!stream_crit)
                     stream_crit->lock();
             }
+        }
+        if(set_instance)
+        {
+            log = this;
+            free_threads = init_free_threads();
+            profiler = new profilerinfo;
         }
         work_thread = jthread(&simple_log::write_thred, this);
     }
@@ -337,7 +344,8 @@ void free_simple_log(simple_log* ptr)
     delete ptr;
 }
 
-unique_ptr<simple_log, free_simple_log> log_init(char_cit file_name, uint32_t params, bool set_instance)
+unique_ptr<simple_log, free_simple_log> log_init(char_cit file_name,
+    uint32_t params, bool set_instance)
 {
     return new simple_log(file_name, params, set_instance);
 }
@@ -367,14 +375,14 @@ void MlogTestThread(size_t thread_id, size_t log_count)
     }
 }
 
-namespace my_cvt
+namespace cvt
 {
     void test_itoa();
 }
 
 void log_test(size_t thread_count, size_t log_count)
 {
-    my_cvt::test_itoa();
+    cvt::test_itoa();
     check_limits();
     simple_log::instance().params = mlog::always_cout;
     mlog() << "mlog test for " << thread_count << " threads and " << log_count << " loops";

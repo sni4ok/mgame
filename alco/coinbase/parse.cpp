@@ -10,7 +10,7 @@
 struct lws_i : lws_impl, read_time_impl
 {
     config& cfg;
-    typedef my_basic_string<sizeof(message_instr::security) + 1> ticker;
+    typedef basic_string<sizeof(message_instr::security) + 1> ticker;
     fmap<ticker, security> securities;
 
     security& get_security(char_cit i, char_cit ie, ttime_t time)
@@ -26,10 +26,11 @@ struct lws_i : lws_impl, read_time_impl
         else
             return it->second;
     }
-    lws_i() : lws_impl(config::instance().push, config::instance().log_lws), cfg(config::instance())
+    lws_i() : lws_impl(config::instance().push, config::instance().log_lws),
+        cfg(config::instance())
     {
         mstring tickers = join_tickers(cfg.tickers);
-        my_stream sub;
+        mstream sub;
         sub << "{\"type\":\"subscribe\",\"product_ids\": [" << tickers << "],\"channels\": [";
         if(cfg.orders)
             sub << "\"level2\",";

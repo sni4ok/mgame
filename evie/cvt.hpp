@@ -33,7 +33,7 @@ stream& operator<<(stream& s, const exception& e)
     return s;
 }
 
-namespace my_cvt
+namespace cvt
 {
     uint32_t itoa(char_it buf, bool t);
     uint32_t itoa(char_it buf, char v);
@@ -146,7 +146,8 @@ namespace my_cvt
     template<typename type>
     struct atoi_size
     {
-        static const uint32_t value = (is_unsigned_v<type> ? atoi_u_ps : atoi_s_ps)[sizeof(type) / 2];
+        static const uint32_t value = (is_unsigned_v<type> ? atoi_u_ps : atoi_s_ps)
+            [sizeof(type) / 2];
     };
 
     template<>
@@ -188,7 +189,7 @@ type lexical_cast(char_cit from, char_cit to)
 {
     if(from == to)
         throw str_exception("lexical_cast<integral>() from == to");
-    return my_cvt::atoi<type>(from, to - from);
+    return cvt::atoi<type>(from, to - from);
 }
 
 struct mstring;

@@ -14,7 +14,7 @@ mstring join_tickers(const mvector<mstring>& tickers, bool quotes = true);
 template<typename base>
 struct sec_id_by_name : base
 {
-    typedef my_basic_string<sizeof(message_instr::security) + 1> ticker;
+    typedef basic_string<sizeof(message_instr::security) + 1> ticker;
     uint32_t get_security_id(char_cit i, char_cit ie, ttime_t time)
     {
         assert(i != ie);

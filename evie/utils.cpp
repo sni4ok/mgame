@@ -117,27 +117,27 @@ ttime_t read_time_impl::read_time(char_cit& it)
         if(*(it + 4) != '-' || *(it + 7) != '-')
             throw mexception(es() % "bad time: " % str_holder(it, 26));
         struct tm t = tm();
-        int y = my_cvt::atoi<int>(it, 4); 
-        int m = my_cvt::atoi<int>(it + 5, 2); 
-        int d = my_cvt::atoi<int>(it + 8, 2); 
+        int y = cvt::atoi<int>(it, 4); 
+        int m = cvt::atoi<int>(it + 5, 2); 
+        int d = cvt::atoi<int>(it + 8, 2); 
         t.tm_year = y - 1900;
         t.tm_mon = m - 1;
         t.tm_mday = d;
-        cur_date_time = timegm(&t) * my_cvt::p10<9>();
+        cur_date_time = timegm(&t) * cvt::p10<9>();
         cur_date.init(it);
     }
     it += 10;
     if(*it != 'T' || *(it + 3) != ':' || *(it + 6) != ':' || (frac_size ? *(it + 9) != '.' : false))
         throw mexception(es() % "bad time: " % str_holder(it - 10, 20 + (frac_size ? 1 + frac_size : 0)));
 
-    uint64_t h = my_cvt::atoi<uint64_t>(it + 1, 2);
-    uint64_t m = my_cvt::atoi<uint64_t>(it + 4, 2);
-    uint64_t s = my_cvt::atoi<uint64_t>(it + 7, 2);
+    uint64_t h = cvt::atoi<uint64_t>(it + 1, 2);
+    uint64_t m = cvt::atoi<uint64_t>(it + 4, 2);
+    uint64_t s = cvt::atoi<uint64_t>(it + 7, 2);
     uint64_t ns = 0;
     if constexpr(frac_size)
     {
-        uint64_t frac = my_cvt::atoi<uint64_t>(it + 10, frac_size);
-        ns = uint64_t(frac * my_cvt::p10<9 - frac_size>());
+        uint64_t frac = cvt::atoi<uint64_t>(it + 10, frac_size);
+        ns = uint64_t(frac * cvt::p10<9 - frac_size>());
         it += (frac_size + 1);
     }
     it += 9;
@@ -161,15 +161,15 @@ inline time_parsed parse_time_impl(ttime_t time)
 const uint32_t cur_day_seconds = day_seconds(cur_mtime_seconds());
 const date cur_day_date = parse_time_impl(cur_mtime_seconds()).date;
 
-inline my_string get_cur_day_str()
+inline fstring get_cur_day_str()
 {
     buf_stream_fixed<29> str;
     str << uint_fixed<4>(cur_day_date.year) << "-" << uint_fixed<2>(cur_day_date.month)
         << "-" << uint_fixed<2>(cur_day_date.day);
-    return my_string(str.begin(), str.end());
+    return fstring(str.begin(), str.end());
 }
 
-const my_string cur_day_date_str = get_cur_day_str();
+const fstring cur_day_date_str = get_cur_day_str();
 
 time_parsed parse_time(ttime_t time)
 {
@@ -245,7 +245,7 @@ inline uint64_t get_decimal_pow(uint32_t e)
     if(e > 19)
         return limits<uint64_t>::max;
     else
-        return my_cvt::pow[e];
+        return cvt::pow[e];
 }
 
 int64_t read_decimal_impl(char_cit it, char_cit ie, int exponent)
@@ -260,7 +260,7 @@ int64_t read_decimal_impl(char_cit it, char_cit ie, int exponent)
             return c == 'E' || c == 'e';
         });
 
-    int64_t ret = my_cvt::atoi<int64_t>(it, min(p, E) - it);
+    int64_t ret = cvt::atoi<int64_t>(it, min(p, E) - it);
     int digits = 0;
     int64_t _float = 0;
 
@@ -268,14 +268,14 @@ int64_t read_decimal_impl(char_cit it, char_cit ie, int exponent)
     {
         ++p;
         digits = E - p;
-        _float = my_cvt::atoi<int64_t>(p, digits);
+        _float = cvt::atoi<int64_t>(p, digits);
     }
 
     int e = 0;
     if(E != ie)
     {
         ++E;
-        e = my_cvt::atoi<int>(E, ie - E);
+        e = cvt::atoi<int>(E, ie - E);
     }
 
     int em = -exponent + e;

@@ -2,12 +2,12 @@
     author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
-#include "algorithm.hpp"
-#include "myitoa.hpp"
+#include "cvt.hpp"
 #include "math.hpp"
 #include "string.hpp"
+#include "algorithm.hpp"
 
-namespace my_cvt
+namespace cvt
 {
     exception::exception(str_holder h, str_holder m)
     {
@@ -513,22 +513,22 @@ double lexical_cast<double>(char_cit from, char_cit to)
         bool m = *from == '-';
         if(p)
         {
-            int64_t v = my_cvt::atoi<int64_t>(from, d - from);
+            int64_t v = cvt::atoi<int64_t>(from, d - from);
             uint32_t frac_sz = to - (d + 1);
 
             if(frac_sz > 19)
                 throw str_exception("lexical_cast<double>() frac_sz overflow");
 
-            uint64_t frac = my_cvt::atoi<uint64_t>(d + 1, frac_sz);
+            uint64_t frac = cvt::atoi<uint64_t>(d + 1, frac_sz);
             double f = double(frac);
             if(m)
                 f = -f;
-            return double(v) + f / my_cvt::pow[frac_sz];
+            return double(v) + f / cvt::pow[frac_sz];
         }
         if(e)
         {
-            int64_t mantissa = my_cvt::atoi<int64_t>(from, d - from);
-            uint64_t exponent = my_cvt::atoi<uint64_t>(d + 1, to - (d + 1));
+            int64_t mantissa = cvt::atoi<int64_t>(from, d - from);
+            uint64_t exponent = cvt::atoi<uint64_t>(d + 1, to - (d + 1));
             return double(mantissa) * exp10(double(exponent));
         }
 
@@ -542,7 +542,7 @@ double lexical_cast<double>(char_cit from, char_cit to)
         if(size == 4 && m && *(from + 1) == 'I' && *(from + 2) == 'N' && *(from + 3) == 'F')
             return -limits<double>::infinity;
 
-        int64_t v = my_cvt::atoi<int64_t>(from, size);
+        int64_t v = cvt::atoi<int64_t>(from, size);
         return double(v);
     }
     catch(exception& e)

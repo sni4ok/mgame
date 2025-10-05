@@ -17,101 +17,101 @@
 
 #include <sys/resource.h>
 
-my_mutex::my_mutex()
+mutex::mutex()
 {
-    if(pthread_mutex_init(&mutex, nullptr))
+    if(pthread_mutex_init(&__mutex, nullptr))
         throw str_exception("create mutex error");
 }
 
-my_mutex::~my_mutex()
+mutex::~mutex()
 {
-    if(pthread_mutex_destroy(&mutex))
+    if(pthread_mutex_destroy(&__mutex))
     {
-        assert(false && "my_mutex::~my_mutex()");
-        mlog(mlog::critical) << "my_mutex::~my_mutex() pthread_mutex_destroy()";
+        assert(false && "mutex::~mutex()");
+        mlog(mlog::critical) << "mutex::~mutex() pthread_mutex_destroy()";
     }
 }
 
-void my_mutex::lock()
+void mutex::lock()
 {
     //MPROFILE("mutex::lock")
-    if(pthread_mutex_lock(&mutex))
+    if(pthread_mutex_lock(&__mutex))
         throw str_exception("lock mutex error");
 }
 
-bool my_mutex::try_lock()
+bool mutex::try_lock()
 {
     //MPROFILE("mutex::try_lock")
-    if(pthread_mutex_trylock(&mutex))
+    if(pthread_mutex_trylock(&__mutex))
         return false;
     return true;
 }
 
-void my_mutex::unlock()
+void mutex::unlock()
 {
-    if(pthread_mutex_unlock(&mutex))
+    if(pthread_mutex_unlock(&__mutex))
         throw str_exception("unlock mutex error");
 }
 
-my_mutex::scoped_lock::scoped_lock(my_mutex& mutex) : mutex(mutex)
+mutex::scoped_lock::scoped_lock(mutex& mutex) : __mutex(mutex)
 {
     lock();
     locked = true;
 }
 
-void my_mutex::scoped_lock::lock()
+void mutex::scoped_lock::lock()
 {
-    mutex.lock();
+    __mutex.lock();
     locked = true;
 }
 
-void my_mutex::scoped_lock::unlock()
+void mutex::scoped_lock::unlock()
 {
-    mutex.unlock();
+    __mutex.unlock();
     locked = false;
 }
 
-my_mutex::scoped_lock::~scoped_lock()
+mutex::scoped_lock::~scoped_lock()
 {
-    if(locked && pthread_mutex_unlock(&mutex.mutex))
+    if(locked && pthread_mutex_unlock(&__mutex.__mutex))
     {
-        assert(false && "my_mutex::scoped_lock::~scoped_lock()");
-        mlog(mlog::critical) << "my_mutex::scoped_lock::~scoped_lock() unlock mutex error";
+        assert(false && "mutex::scoped_lock::~scoped_lock()");
+        mlog(mlog::critical) << "mutex::scoped_lock::~scoped_lock() unlock mutex error";
     }
 }
 
-my_condition::my_condition()
+condition::condition()
 {
-    if(pthread_cond_init(&condition, nullptr))
+    if(pthread_cond_init(&__condition, nullptr))
         throw str_exception("create condition error");
 }
 
-my_condition::~my_condition()
+condition::~condition()
 {
-    if(pthread_cond_destroy(&condition))
+    if(pthread_cond_destroy(&__condition))
     {
-        assert(false && "my_condition::~my_condition()");
-        mlog(mlog::critical) << "my_condition::~my_condition() destroy condition error";
+        assert(false && "condition::~condition()");
+        mlog(mlog::critical) << "condition::~condition() destroy condition error";
     }
 }
 
-void my_condition::wait(my_mutex::scoped_lock& lock)
+void condition::wait(mutex::scoped_lock& lock)
 {
-    if(pthread_cond_wait(&condition, &lock.mutex.mutex))
-        throw str_exception("my_condition::wait() error");
+    if(pthread_cond_wait(&__condition, &lock.__mutex.__mutex))
+        throw str_exception("condition::wait() error");
 }
 
-void my_condition::timed_wait(my_mutex::scoped_lock& lock, uint32_t sec)
+void condition::timed_wait(mutex::scoped_lock& lock, uint32_t sec)
 {
     timespec t;
     clock_gettime(CLOCK_REALTIME, &t);
     t.tv_sec += sec;
-    int r = pthread_cond_timedwait(&condition, &lock.mutex.mutex, &t);
+    int r = pthread_cond_timedwait(&__condition, &lock.__mutex.__mutex, &t);
     if(r && r != ETIMEDOUT)
-        throw str_exception("my_condition::timed_wait() error");
+        throw str_exception("condition::timed_wait() error");
 }
 
-void my_condition::timed_uwait(my_mutex::scoped_lock& lock, uint32_t usec)
+void condition::timed_uwait(mutex::scoped_lock& lock, uint32_t usec)
 {
     timespec t;
     clock_gettime(CLOCK_REALTIME, &t);
@@ -121,21 +121,21 @@ void my_condition::timed_uwait(my_mutex::scoped_lock& lock, uint32_t usec)
         t.tv_sec += t.tv_nsec / ttime_t::frac;
         t.tv_nsec %= ttime_t::frac;
     }
-    int r = pthread_cond_timedwait(&condition, &lock.mutex.mutex, &t);
+    int r = pthread_cond_timedwait(&__condition, &lock.__mutex.__mutex, &t);
     if(r && r != ETIMEDOUT)
-        throw str_exception("my_condition::timed_uwait() error");
+        throw str_exception("condition::timed_uwait() error");
 }
 
-void my_condition::notify_one()
+void condition::notify_one()
 {
-    if(pthread_cond_signal(&condition))
-        throw str_exception("my_condition::notify_one() error");
+    if(pthread_cond_signal(&__condition))
+        throw str_exception("condition::notify_one() error");
 }
 
-void my_condition::notify_all()
+void condition::notify_all()
 {
-    if(pthread_cond_broadcast(&condition))
-        throw str_exception("my_condition::notify_all() error");
+    if(pthread_cond_broadcast(&__condition))
+        throw str_exception("condition::notify_all() error");
 }
 
 thread_local uint32_t cur_tid = 0;
@@ -143,24 +143,28 @@ thread_local uint32_t cur_tid = 0;
 struct free_threads
 {
     queue<uint32_t> ids;
-    my_mutex mutex;
+    mutex __mutex;
 
     free_threads()
     {
         for(uint32_t i = 1; i != max_threads_count; ++i)
             ids.push_back(i);
     }
-    void set() {
+    void set()
+    {
         if(cur_tid)
             return;
-        my_mutex::scoped_lock lock(mutex);
+
+        scoped_lock lock(__mutex);
         if(ids.empty())
             throw str_exception("set_thread_id() max_threads_count limit exceed");
+
         cur_tid = ids.front();
         ids.pop_front();
     }
-    void free() {
-        my_mutex::scoped_lock lock(mutex);
+    void free()
+    {
+        scoped_lock lock(__mutex);
         assert(cur_tid);
         ids.push_back(cur_tid);
     }

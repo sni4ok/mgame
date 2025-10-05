@@ -274,12 +274,12 @@ public:
 };
 
 template<uint32_t stack_sz = 252>
-using my_basic_string = array<char, stack_sz>;
+using basic_string = array<char, stack_sz>;
 
-typedef my_basic_string<> my_string;
+typedef basic_string<> fstring;
 
 template<typename stream, uint32_t stack_sz>
-stream& operator<<(stream& str, const my_basic_string<stack_sz>& v)
+stream& operator<<(stream& str, const basic_string<stack_sz>& v)
 {
     str.write(v.begin(), v.size());
     return str;

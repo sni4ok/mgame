@@ -190,8 +190,10 @@ struct print_default
     }
 };
 
-template<char sep = ',', bool no_end_sep = true, typename iterator, typename func = print_default>
-print_impl<sep, no_end_sep, iterator, func> print(iterator from, iterator to, func f = func())
+template<char sep = ',', bool no_end_sep = true, typename iterator,
+    typename func = print_default>
+print_impl<sep, no_end_sep, iterator, func>
+print(iterator from, iterator to, func f = func())
 {
     return {from, to, f};
 }
@@ -209,7 +211,7 @@ auto print_csv(const cont& c, func f = func())
 }
 
 extern const date cur_day_date;
-extern const my_string cur_day_date_str;
+extern const fstring cur_day_date_str;
 
 template<typename stream>
 stream& operator<<(stream& s, date d)
@@ -224,7 +226,8 @@ stream& operator<<(stream& s, date d)
 template<typename stream>
 stream& operator<<(stream& s, time_duration t)
 {
-    return s << print2chars(t.hours) << ':' << print2chars(t.minutes) << ':' << print2chars(t.seconds)
+    return s << print2chars(t.hours) << ':' << print2chars(t.minutes)
+        << ':' << print2chars(t.seconds)
         << "." << uint_fixed<6>(t.nanos / 1000);
 }
 

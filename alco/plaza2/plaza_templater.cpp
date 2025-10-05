@@ -197,7 +197,7 @@ struct skelet
         if(tmp.size() != 2 && tmp.size() != 4)
             throw mexception(es() % "bad add_field: " % data);
         if(tmp.size() == 4 && !tmp[2].empty())
-            cout() << data << endl;
+            cout() << data;
         tuple<mstring, mstring, optional<mstring> > v;
         get<0>(v) = tmp[0];
         get<1>(v) = convert_type(tmp[1]);
@@ -512,7 +512,7 @@ void parse_all(const mstring& ini_folder, const mstring& out_file)
     context ctx(out_file);
     for(auto&& fname: files) {
         ctx.cur_namespace = namespace_type();
-        cout() << "file: " << fname << endl;
+        cout() << "file: " << fname;
         ctx.sf << "// file: " << fname << endl;
         parse_file(ctx, read_file((ini_folder + "/" + fname).c_str()), fname);
     }
@@ -532,7 +532,7 @@ void parse_all(const mstring& ini_folder, const mstring& out_file)
         if(v.second != namespace_type())
             ctx.sf << "using " << v.second.first << "::" << v.second.second << "::" << v.first << ";" << endl;
     }
-    cout() << out_file << " successfully written" << endl;
+    cout() << out_file << " successfully written";
 }
 
 struct source : context
@@ -628,7 +628,7 @@ void proceed_selected(const mstring& ini_folder, const mstring& scheme, const ms
         s.check_fill();
         s.write_cpp_tail();
     }
-    cout() << "sources " << str.str() << " successfully saved" << endl;
+    cout() << "sources " << str.str() << " successfully saved";
 }
 
 int main(int argc, char** arg)
@@ -638,7 +638,7 @@ int main(int argc, char** arg)
         if(argc != 2 && argc != 4) {
             cout() << "Usage:" << endl
                 << "    ./plaza_templater scheme_folder" << endl
-                << "    ./plaza_templater scheme_folder part_scheme_file output_folder" << endl;
+                << "    ./plaza_templater scheme_folder part_scheme_file output_folder";
             return 1;
         }
         if(argc == 2)

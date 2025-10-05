@@ -11,20 +11,24 @@ struct lws_i: sec_id_by_name<lws_impl>
 {
     config& cfg;
 
-    lws_i() : sec_id_by_name<lws_impl>(config::instance().push, config::instance().log_lws), cfg(config::instance())
+    lws_i() : sec_id_by_name<lws_impl>(config::instance().push, config::instance().log_lws),
+        cfg(config::instance())
     {
-        my_stream sub;
+        mstream sub;
         sub << "{\"method\":\"subscribe\",\"params\":{\"channels\":[";
 
         bool have_c = false;
-        for(auto& v: cfg.tickers) {
-            if(cfg.orders) {
+        for(auto& v: cfg.tickers)
+        {
+            if(cfg.orders)
+            {
                 if(have_c)
                     sub << ",";
                 sub << "\"book." << v << "." << cfg.depth << "\"";
                 have_c = true;
             }
-            if(cfg.trades) {
+            if(cfg.trades)
+            {
                 if(have_c)
                     sub << ",";
                 sub << "\"trade." << v << "\"";
@@ -44,7 +48,8 @@ struct lws_i: sec_id_by_name<lws_impl>
         skip_fixed(it, "{\"id\":");
         char_cit ne = it;
         it = find(it, ie, ',');
-        if(skip_if_fixed(it, ",\"method\":\"subscribe\",\"code\":0,\"result\":{\"instrument_name\":\""))
+        if(skip_if_fixed(it,
+            ",\"method\":\"subscribe\",\"code\":0,\"result\":{\"instrument_name\":\""))
         {
             bool book = false;
             ne = find(it, ie, '\"');
@@ -64,7 +69,8 @@ struct lws_i: sec_id_by_name<lws_impl>
                 {
                     ne = ie - 80;
                     search_and_skip_fixed(ne, ie, "\"t\":");
-                    etime.value = lexical_cast<uint64_t>(ne, find(ne, ie, ',')) * (ttime_t::frac / 1000);
+                    etime.value = lexical_cast<uint64_t>(ne, find(ne, ie, ','))
+                        * (ttime_t::frac / 1000);
                 }
                 else
                     etime = ttime_t();

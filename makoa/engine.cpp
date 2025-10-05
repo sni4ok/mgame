@@ -213,8 +213,8 @@ class engine::impl : public stack_singleton<engine::impl>
     volatile bool& can_run;
     bool set_engine_time;
     volatile bool can_exit;
-    my_mutex mutex;
-    my_condition cond;
+    ::mutex mutex;
+    condition cond;
     linked_list ll;
     uint32_t consumers;
 
@@ -234,7 +234,7 @@ class engine::impl : public stack_singleton<engine::impl>
         if(!pooling_mode)
         {
             //MPROFILE("wait_lock()")
-            my_mutex::scoped_lock lock(mutex);
+            scoped_lock lock(mutex);
             cond.timed_uwait(lock, 100 * 1000);
         }
     }
