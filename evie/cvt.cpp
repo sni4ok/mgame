@@ -486,68 +486,61 @@ namespace cvt
 template<>
 double lexical_cast<double>(char_cit from, char_cit to)
 {
-    try
-    {
-        u32 size = to - from;
-        if(!size)
-            throw str_exception("lexical_cast<double>() from == to");
-
-        bool p = false, e = false;
-        char_cit d = to;
-
-        for(char_cit it = from; it != to; ++it)
-        {
-            if(*it == '.')
-            {
-                p = true;
-                d = it;
-                break;
-            }
-            if(*it == 'e')
-            {
-                e = true;
-                d = it;
-                break;
-            }
-        }
-        bool m = *from == '-';
-        if(p)
-        {
-            i64 v = cvt::atoi<i64>(from, d - from);
-            u32 frac_sz = to - (d + 1);
-
-            if(frac_sz > 19)
-                throw str_exception("lexical_cast<double>() frac_sz overflow");
-
-            u64 frac = cvt::atoi<u64>(d + 1, frac_sz);
-            double f = double(frac);
-            if(m)
-                f = -f;
-            return double(v) + f / cvt::pow[frac_sz];
-        }
-        if(e)
-        {
-            i64 mantissa = cvt::atoi<i64>(from, d - from);
-            u64 exponent = cvt::atoi<u64>(d + 1, to - (d + 1));
-            return double(mantissa) * exp10(double(exponent));
-        }
-
-        if(size == 3)
-        {
-            if(*from == 'N' && *(from + 1) == 'A' && *(from + 2) == 'N')
-                return limits<double>::quiet_NaN;
-            else if(*from == 'I' && *(from + 1) == 'N' && *(from + 2) == 'F')
-                return limits<double>::infinity;
-        }
-        if(size == 4 && m && *(from + 1) == 'I' && *(from + 2) == 'N' && *(from + 3) == 'F')
-            return -limits<double>::infinity;
-
-        i64 v = cvt::atoi<i64>(from, size);
-        return double(v);
-    }
-    catch(exception& e)
-    {
+    u32 size = to - from;
+    if(!size) [[unlikely]]
         throw mexception(es() % "lexical_cast<double>() error for: " % str_holder(from, to));
+
+    bool p = false, e = false;
+    char_cit d = to;
+
+    for(char_cit it = from; it != to; ++it)
+    {
+        if(*it == '.')
+        {
+            p = true;
+            d = it;
+            break;
+        }
+        if(*it == 'e')
+        {
+            e = true;
+            d = it;
+            break;
+        }
     }
+    bool m = *from == '-';
+    if(p)
+    {
+        i64 v = cvt::atoi<i64>(from, d - from);
+        u32 frac_sz = to - (d + 1);
+
+        if(frac_sz > 19) [[unlikely]]
+            throw mexception(es() % "lexical_cast<double>() error for: " % str_holder(from, to));
+
+        u64 frac = cvt::atoi<u64>(d + 1, frac_sz);
+        double f = double(frac);
+        if(m)
+            f = -f;
+        return double(v) + f / cvt::pow[frac_sz];
+    }
+    if(e)
+    {
+        i64 mantissa = cvt::atoi<i64>(from, d - from);
+        u64 exponent = cvt::atoi<u64>(d + 1, to - (d + 1));
+        return double(mantissa) * exp10(double(exponent));
+    }
+
+    if(size == 3)
+    {
+        if(*from == 'N' && *(from + 1) == 'A' && *(from + 2) == 'N')
+            return limits<double>::quiet_NaN;
+        else if(*from == 'I' && *(from + 1) == 'N' && *(from + 2) == 'F')
+            return limits<double>::infinity;
+    }
+    if(size == 4 && m && *(from + 1) == 'I' && *(from + 2) == 'N' && *(from + 3) == 'F')
+        return -limits<double>::infinity;
+
+    i64 v = cvt::atoi<i64>(from, size);
+    return double(v);
 }
 

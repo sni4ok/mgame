@@ -9,6 +9,12 @@
 #include "mlog.hpp"
 #include "sort.hpp"
 
+extern "C"
+{
+    extern char *strdup (const char *__s)
+        noexcept (true) __attribute__ ((__malloc__)) __attribute__ ((__nonnull__ (1)));
+}
+
 profilerinfo::info::info() : time(), time_max(), time_min(limits<ttime_t>::max), count(), name()
 {
 }
@@ -47,14 +53,19 @@ profilerinfo::profilerinfo() : cur_counters()
 
 u64 profilerinfo::register_counter(char_cit id)
 {
+    char_it cid = strdup(id);
+
     for(;;)
     {
         u64 c = atomic_load(cur_counters);
 
         if(c == max_counters)
+        {
+            free(cid);
             throw mexception("profilerinfo::register_counter() overloaded");
+        }
 
-        if(atomic_compare_exchange(counters[c].name, (char_cit)nullptr, id))
+        if(atomic_compare_exchange<char_cit>(counters[c].name, nullptr, cid))
         {
             atomic_add(cur_counters, 1ul);
             return c;
@@ -97,6 +108,8 @@ void profilerinfo::print(long mlog_params)
 
 profilerinfo::~profilerinfo()
 {
+    for(u64 c = 0; c != cur_counters; ++c)
+        free((char_it)counters[c].name);
 }
 
 mprofiler::mprofiler(u64 counter_id) : counter_id(counter_id), time(cur_ttime())

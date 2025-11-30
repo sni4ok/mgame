@@ -276,6 +276,7 @@ public:
 template<u32 stack_sz = 252>
 using basic_string = array<char, stack_sz>;
 
+typedef basic_string<32> my_trivial_string;
 typedef basic_string<> fstring;
 
 template<typename stream, u32 stack_sz>

@@ -139,6 +139,23 @@ void replace(iterator from, iterator to, const type& f, const type& t)
     }
 }
 
+template<typename type>
+inline void reverse(type* from, type* to)
+{
+    if(from == to)
+        return;
+
+    --to;
+
+    while(from != to)
+    {
+        simple_swap(*from, *to);
+        ++from;
+        if(from != to)
+            --to;
+    }
+}
+
 struct any_of
 {
     char_cit b, e;
