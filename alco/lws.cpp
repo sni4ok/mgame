@@ -59,7 +59,8 @@ lws_dump::lws_dump() : hfile(), lws_not_fake(true), lws_dump_en(), dump_buf("\n 
 
 void lws_dump::dump(char_cit p, u32 sz)
 {
-    if(sz) {
+    if(sz)
+    {
         memcpy(dump_buf + 1, &sz, sizeof(sz));
         if(::write(hfile, dump_buf, 6) != 6)
             throw_system_failure("lws_dump writing error");
@@ -92,8 +93,9 @@ lws_dump::~lws_dump()
         ::close(hfile);
 }
 
-lws_impl::lws_impl(const mstring& push, bool log_lws) :
-    emessages(push), log_lws(log_lws), bs(buf, buf + sizeof(buf) - 1), closed(), data_time(time(NULL))
+lws_impl::lws_impl(const mstring& push, bool log_lws, char msg_beg, char msg_end) :
+    emessages(push), log_lws(log_lws), bs(buf, buf + sizeof(buf) - 1),
+    closed(), data_time(time(NULL)), msg_beg(msg_beg), msg_end(msg_end)
 {
     bs.resize(LWS_PRE);
 }
@@ -139,26 +141,66 @@ lws_impl::~lws_impl()
     }
 }
 
-int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len)
+int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user,
+    void* in, size_t len)
 {
-    switch (reason)
+    switch(reason)
     {
+        case LWS_CALLBACK_CLIENT_RECEIVE:
+        {
+            lws_impl* w = (lws_impl*)user;
+            char_cit p = (char_cit)in;
+
+            if(w->msg_beg && (!w->big_message.empty() || p[len - 1] != w->msg_end))
+            {
+                MPROFILE("lws_event big_message_beg")
+                size_t sz = w->big_message.size();
+                w->big_message.resize(sz + len);
+                memcpy(w->big_message.begin() + sz, p, len);
+
+                if(p[len - 1] == w->msg_end)
+                {
+                    uint32_t f = 0, t = 0;
+                    for(char c: w->big_message)
+                    {
+                        if(c == w->msg_beg)
+                            ++f;
+                        else if(c == w->msg_end)
+                            ++t;
+                    }
+                    if(f != t)
+                        break;
+
+                    MPROFILE("lws_event big_message_end")
+                    if(w->lws_dump_en) [[unlikely]]
+                        w->dump(w->big_message.begin(), w->big_message.size());
+                    w->proceed(wsi, w->big_message.begin(), w->big_message.size());
+                    w->big_message.clear();
+                }
+            }
+            else
+            {
+                if(w->lws_dump_en) [[unlikely]]
+                    w->dump((char_cit)in, len);
+                if(w->log_lws) [[unlikely]]
+                    mlog() << "lws receive len: " << len;
+                w->proceed(wsi, p, len);
+            }
+
+            w->data_time = time(NULL);
+            break;
+        }
+        case LWS_CALLBACK_CLIENT_RECEIVE_PONG:
+        {
+            mlog() << "lws pong";
+            lws_validity_confirmed(wsi);
+            break;
+        }
         case LWS_CALLBACK_CLIENT_ESTABLISHED:
         {
             mlog() << "lws connection established";
             ((lws_impl*)user)->init(wsi);
             break;
-        }
-        case LWS_CALLBACK_CLIENT_RECEIVE:
-        {
-            lws_impl* w = (lws_impl*)user;
-            if(w->lws_dump_en) [[unlikely]]
-                w->dump((char_cit)in, len);
-            if(w->log_lws) [[unlikely]]
-                mlog() << "lws receive len: " << len;
-            w->proceed(wsi, (char_cit)in, len);
-            w->data_time = time(NULL);
-            return 0;
         }
         case LWS_CALLBACK_CLIENT_CLOSED:
         {
@@ -176,7 +218,7 @@ int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user, void* i
         case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
         case LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION:
         {
-            return 0;
+            break;
         }
         default:
         {
@@ -190,15 +232,14 @@ int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user, void* i
 
 lws_context* create_context(char_cit ssl_ca_file)
 {
-    int logs = LLL_ERR | LLL_WARN ;
+    int logs = LLL_ERR | LLL_WARN;
     lws_set_log_level(logs, NULL);
-    lws_context_creation_info info;
-    memset(&info, 0, sizeof (info));
+    lws_context_creation_info info = lws_context_creation_info();
     info.port = CONTEXT_PORT_NO_LISTEN;
 
     lws_protocols protocols[] =
     {
-        {"ws", &lws_event_cb, 0, 4096 * 1000, 0, 0, 0},
+        {"ws", &lws_event_cb, 0, 4096 * 1024, 0, 0, 0},
         lws_protocols()
     };
 

@@ -13,13 +13,15 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
     str_holder orders_table, trades_table;
     ttime_t etime;
 
-    lws_i() : sec_id_by_name<lws_impl>(config::instance().push, config::instance().log_lws), cfg(config::instance()), orders_table(cfg.orders_table.c_str(),
+    lws_i() : sec_id_by_name<lws_impl>(config::instance().push, config::instance().log_lws),
+        cfg(config::instance()), orders_table(cfg.orders_table.c_str(),
         cfg.orders_table.size()), trades_table("trade"), etime()
     {
         str_holder sb("{\"op\":\"subscribe\",\"args\":\"");
         str_holder se("\"}");
 
-        for(auto& v: cfg.tickers) {
+        for(auto& v: cfg.tickers)
+        {
             //subscribes.push_back(sb + "instrument:" + v + se);
             if(cfg.orders)
                 subscribes.push_back(sb + cfg.orders_table + ":" + v + se);
@@ -51,7 +53,6 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
         }
         skip_fixed(it, "]");
     }
-
     void proceed(lws*, char_cit in, size_t len)
     {
         ttime_t time = cur_ttime();
@@ -86,13 +87,15 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                         bool ask;
                         if(skip_if_fixed(it, "Sell"))
                             ask = true;
-                        else {
+                        else
+                        {
                             skip_fixed(it, "Buy");
                             ask = false;
                         }
                         skip_fixed(it, "\"");
                         count_t c = count_t();
-                        if(skip_if_fixed(it, ",\"size\":")) {
+                        if(skip_if_fixed(it, ",\"size\":"))
+                        {
                             ne = find_if(it, ie, [](char c) {return c == '}' || c == ',';});
                             c = lexical_cast<count_t>(it, ne);
                             if(ask)
@@ -118,7 +121,8 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                             break;
                         skip_fixed(it, ",{");
                     }
-                    else {
+                    else
+                    {
                         for(;;)
                         {
                             if(skip_if_fixed(it, "bids\":["))
@@ -140,7 +144,8 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                             else
                             {
                                 skip_fixed(it, "}]}");
-                                if(etime.value) {
+                                if(etime.value)
+                                {
                                     for(message *f = this->ms, *t = this->ms + m_s; f != t; ++f)
                                         f->t.etime = etime;
                                     etime = ttime_t();
@@ -186,7 +191,8 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                     add_trade(security_id, p, c, direction, etime, time);
                     it = find(it, ie, '}');
                     skip_fixed(it, "}");
-                    if(*it == ',') {
+                    if(*it == ',')
+                    {
                         ++it;
                         continue;
                     }
@@ -197,24 +203,16 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                 send_messages();
             }
             else [[unlikely]]
-            {
                 throw mexception(es() % "unknown table name: " % str_holder(in, len));
-            }
             if(it != ie) [[unlikely]]
                 throw mexception(es() % "parsing message error: " % str_holder(in, len));
         }
         else if(skip_if_fixed(it, "success\""))
-        {
             mlog(mlog::info) << str_holder(in, len);
-        }
         else if(skip_if_fixed(it, "info\""))
-        {
             mlog(mlog::info) << str_holder(in, len);
-        }
         else
-        {
             mlog(mlog::critical) << "unsupported message: " << str_holder(in, len);
-        }
     }
 };
 

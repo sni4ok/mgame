@@ -85,7 +85,8 @@ struct lws_i : sec_id_by_name<lws_impl>
     {
         if(*it != ']')
         {
-            for(;;) {
+            for(;;)
+            {
                 skip_fixed(it, "[");
                 char_cit ne = find(it, ie, ',');
                 price_t p = lexical_cast<price_t>(it, ne);
@@ -96,11 +97,13 @@ struct lws_i : sec_id_by_name<lws_impl>
                     c.value = -c.value;
                 skip_fixed(it, "]");
                 add_order(i.security_id, p.value, p, c, etime, time);
-                if(*it != ',') {
+                if(*it != ',')
+                {
                     skip_fixed(it, "]");
                     break;
                 }
-                else ++it;
+                else
+                    ++it;
             }
         }
         else
@@ -112,7 +115,8 @@ struct lws_i : sec_id_by_name<lws_impl>
         search_and_skip_fixed(it, ie, ",\"");
 
         bool have_asks = false;
-        if(skip_if_fixed(it, asks)) {
+        if(skip_if_fixed(it, asks))
+        {
             parse_orders_impl(i, etime, time, it, ie, true);
             have_asks = true;
         }
@@ -120,7 +124,8 @@ struct lws_i : sec_id_by_name<lws_impl>
         search_and_skip_fixed(it, ie, bids);
         parse_orders_impl(i, etime, time, it, ie, false);
 
-        if(!have_asks) {
+        if(!have_asks)
+        {
             search_and_skip_fixed(it, ie, asks);
             parse_orders_impl(i, etime, time, it, ie, true);
         }
@@ -156,26 +161,32 @@ struct lws_i : sec_id_by_name<lws_impl>
             price_t p = lexical_cast<price_t>(ne, it);
             skip_fixed(it, direction);
             u32 dir;
-            if(*it == 's') {
+            if(*it == 's')
+            {
                 skip_fixed(it, sell);
                 dir = 2;
-            } else {
+            }
+            else
+            {
                 skip_fixed(it, buy);
                 dir = 1;
             }
             add_trade(i.security_id, p, c, dir, etime, time);
 
-            if(*it != ',') {
+            if(*it != ',')
+            {
                 skip_fixed(it, "]");
                 break;
             }
-            else ++it;
+            else
+                ++it;
         }
 
         skip_fixed(it, end);
         send_messages();
     }
-    lws_i() : sec_id_by_name<lws_impl>(config::instance().push, config::instance().log_lws), 
+    lws_i() : sec_id_by_name<lws_impl>(config::instance().push,
+        config::instance().log_lws, char(), char()),
         ch("ch\":\"market."),
         ts(",\"ts\":"),
         tick(",\"tick\":{\""),
@@ -205,7 +216,8 @@ struct lws_i : sec_id_by_name<lws_impl>
             }
             if(c.orders)
             {
-                parsers[(v + ".mbp." + c.levels).str()] = impl(v.str(), &lws_i::parse_orders);
+                parsers[(v + ".mbp." + c.levels).str()] = impl(v.str(),
+                    &lws_i::parse_orders);
                 subscribes.push_back("{\"sub\":\"market." + v + ".mbp."
                     + c.levels + "\",\"id\":\"orders_" + v + "\"}");
             }
@@ -267,9 +279,8 @@ struct lws_i : sec_id_by_name<lws_impl>
         }
         else if(equal(error, error + sizeof(error) - 1, it)) [[unlikely]]
             throw mexception(es() % "error message: " % str);
-        else {
+        else
             mlog(mlog::critical) << "unsupported message: " << str;
-        }
     }
 };
 

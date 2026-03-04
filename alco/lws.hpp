@@ -38,8 +38,10 @@ struct lws_impl : emessages, lws_dump, stack_singleton<lws_impl>
     time_t data_time;
     mvector<mstring> subscribes;
     lws_context* context;
+    mvector<char> big_message;
+    const char msg_beg, msg_end;
     
-    lws_impl(const mstring& push, bool log_lws);
+    lws_impl(const mstring& push, bool log_lws, char msg_beg = '{', char msg_end = '}');
     void init(lws* wsi);
     void send(lws* wsi);
     ~lws_impl();
@@ -55,10 +57,11 @@ void proceed_lws_parser_fake(volatile bool& can_run)
 {
     mlog() << "parser started in fake mode, from " << _str_holder(getenv("lws_fake"));
     lws_w ls;
-    for(;can_run;)
+    while(can_run)
     {
         str_holder str = ls.read_dump();
-        if(!str.empty()) {
+        if(!str.empty())
+        {
             MPROFILE("lws_fake")
             ls.proceed(nullptr, str.begin(), str.size());
         }
@@ -89,11 +92,13 @@ void proceed_lws_parser(volatile bool& can_run)
                 {
                     i = 0;
                     if(ls.data_time + 10 < time(NULL))
-                        throw mexception(es() % " no data from " % u64(ls.data_time));
+                        throw mexception(es() % " no data from " % seconds(ls.data_time));
                 }
                 n = ls.service();
             }
-        } catch(exception& e) {
+        }
+        catch(exception& e)
+        {
             mlog() << "proceed_lws_parser " << e;
             if(can_run)
                 usleep(5000 * 1000);

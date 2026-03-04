@@ -34,7 +34,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     ttime_t t_time;
 
     lws_i() : sec_id_by_name<lws_impl>(config::instance().push,
-        config::instance().log_lws), cfg(config::instance())
+        config::instance().log_lws, char(), char()), cfg(config::instance())
     {
         mstring s = "{\"event\":\"subscribe\",\"pair\":["
             + join_tickers(cfg.tickers) + "],\"subscription\": {";
@@ -71,19 +71,22 @@ struct lws_i : sec_id_by_name<lws_impl>
         ask_count.value = -ask_count.value;
         skip_fixed(it, "],\"spread\",\"");
         if(*(ie - 1) != ']' || ie - it > 20)
-            throw mstring(es() % "parsing spread message error: " % str_holder(f, ie - f));
+            throw mexception(es() % "parsing spread message error: " % str_holder(f, ie - f));
         it = ie;
         
         add_order(security_id, 1, bid_price, bid_count, etime, time);
         add_order(security_id, 2, ask_price, ask_count, etime, time);
-       
-        send_messages();
     }
     void parse_book(u32 security_id, ttime_t time, char_cit& it, char_cit ie)
     {
         bool snapshot = false;
         char_cit f = it;
         skip_fixed(it, "{");
+
+        auto err = [&]()
+        {
+            throw mexception(es() % "parsing book message error: " % str_holder(f, ie - f));
+        };
 
         for(;;)
         {
@@ -95,7 +98,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             else if(*it == 'a')
                 ask = true;
             else
-                throw mstring(es() % "parsing book message error: " % str_holder(f, ie - f));
+                err();
 
             ++it;
 
@@ -135,15 +138,24 @@ struct lws_i : sec_id_by_name<lws_impl>
             else if(skip_if_fixed(it, "},{"))
                 continue;
             else
-                throw mstring(es() % "parsing book message error: " % str_holder(f, ie - f));
+                err();
+
             if(skip_if_fixed(it, "\"c\":\""))
+            {
+                it = find(it, ie, '\"');
+                if(it != ie)
+                {
+                    ++it;
+                    skip_fixed(it, "},\"");
+                }
                 break;
+            }
         }
+
         if(*(ie - 1) != ']' || ie - it > 35)
-            throw mstring(es() % "parsing book message error: " % str_holder(f, ie - f));
+            err();
 
         it = ie;
-        send_messages();
     }
     void parse_trade(u32 security_id, ttime_t time, char_cit& it, char_cit ie)
     {
@@ -161,7 +173,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             else if(*it == 's')
                 dir = 2;
             else
-                throw mstring(es() % "unsupported trade direction, " % str_holder(f, ie - f));
+                throw mexception(es() % "unsupported trade direction, " % str_holder(f, ie - f));
 
             add_trade(security_id, t_price, t_count, dir, t_time, time);
             ++it;
@@ -179,9 +191,8 @@ struct lws_i : sec_id_by_name<lws_impl>
         ++it;
         skip_fixed(it, ",\"trade\",\"");
         if(*(ie - 1) != ']' || ie - it > 20)
-            throw mstring(es() % "parsing trade message error: " % str_holder(f, ie - f));
+            throw mexception(es() % "parsing trade message error: " % str_holder(f, ie - f));
         it = ie;
-        send_messages();
     }
     void proceed(lws*, char_cit in, size_t len)
     {
@@ -198,6 +209,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             impl& i = parsers.at(channel);
             it = ne + 1;
             ((this)->*(i.f))(i.security_id, time, it, ie);
+            send_messages();
         }
         else if(skip_if_fixed(it, "{\"channelID\":"))
         {
@@ -225,7 +237,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             else if(type == "spread")
                 i.f = &lws_i::parse_spread;
             else
-                throw mstring(es() % "unsupported type: " % str_holder(in, len));
+                throw mexception(es() % "unsupported type: " % str_holder(in, len));
         }
         else if(skip_if_fixed(it, "{\"connectionID\":"))
             it = ie;

@@ -20,8 +20,10 @@ struct sec_id_by_name : base
         assert(i != ie);
         ticker symbol(i, ie);
         auto it = securities.find(symbol);
-        if(it == securities.end()) [[unlikely]] {
-            tmp.init(config::instance().exchange_id, config::instance().feed_id, mstring(i, ie));
+        if(it == securities.end()) [[unlikely]]
+        {
+            tmp.init(config::instance().exchange_id, config::instance().feed_id,
+                mstring(i, ie));
             securities[symbol] = tmp.mi.security_id;
             tmp.proceed_instr(this->e, time);
             return tmp.mi.security_id;
@@ -50,7 +52,8 @@ inline void skip_fixed(char_cit& it, const str& v)
     //bool eq = !(strncmp(it, v, sizeof(v) - 1));
     bool eq = !(memcmp(it, v, sizeof(v) - 1));
     if(!eq) [[unlikely]]
-        throw mexception(es() % "skip_fixed error, expect: |" % str_holder(v) % "| in |" % str_holder(it, strnlen(it, 100)) % "|");
+        throw mexception(es() % "skip_fixed error, expect: |" % str_holder(v)
+            % "| in |" % str_holder(it, strnlen(it, 100)) % "|");
     it += sizeof(v) - 1;
 }
 
@@ -60,7 +63,8 @@ inline void search_and_skip_fixed(char_cit& it, char_cit ie, const str& v)
     static_assert(is_array_v<str>);
     char_cit i = search(it, ie, v, v + (sizeof(v) - 1));
     if(i == ie) [[unlikely]]
-        throw mexception(es() % "search_and_skip_fixed error, expect: |" % str_holder(v) % "| in |" % str_holder(it, ie - it) % "|");
+        throw mexception(es() % "search_and_skip_fixed error, expect: |" % str_holder(v)
+            % "| in |" % str_holder(it, ie - it) % "|");
     it  = i + (sizeof(v) - 1);
 }
 

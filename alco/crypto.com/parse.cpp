@@ -35,7 +35,7 @@ struct lws_i: sec_id_by_name<lws_impl>
                 have_c = true;
             }
         }
-        sub << "]},\"nonce\":" << (cur_mtime().value / (ttime_t::frac / 1000)) << "}";
+        sub << "]},\"id\":1}";
         subscribes.push_back(sub.str());
     }
 
@@ -69,8 +69,7 @@ struct lws_i: sec_id_by_name<lws_impl>
                 {
                     ne = ie - 80;
                     search_and_skip_fixed(ne, ie, "\"t\":");
-                    etime.value = lexical_cast<u64>(ne, find(ne, ie, ','))
-                        * (ttime_t::frac / 1000);
+                    etime = milliseconds(lexical_cast<u64>(ne, find(ne, ie, ',')));
                 }
                 else
                     etime = ttime_t();
@@ -143,7 +142,7 @@ struct lws_i: sec_id_by_name<lws_impl>
                     search_and_skip_fixed(it, ie, "\",\"t\":");
                     ne = find(it, ie, ',');
                     ttime_t etime;
-                    etime.value = lexical_cast<u64>(it, ne) * (ttime_t::frac / 1000);
+                    etime = milliseconds(lexical_cast<u64>(it, ne));
                     skip_fixed(ne, ",\"p\":\"");
                     it = find(ne, ie, '\"');
                     price_t price = lexical_cast<price_t>(ne, it);
@@ -156,7 +155,8 @@ struct lws_i: sec_id_by_name<lws_impl>
                     u32 direction;
                     if(skip_if_fixed(it, "BUY"))
                         direction = 1;
-                    else {
+                    else
+                    {
                         skip_fixed(it, "SELL");
                         direction = 2;
                     }

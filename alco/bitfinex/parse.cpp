@@ -33,7 +33,8 @@ struct lws_i : sec_id_by_name<lws_impl>
     ttime_t ping_t;
 
     fmap<u32, impl> parsers; //channel, impl
-    lws_i() : sec_id_by_name<lws_impl>(config::instance().push, config::instance().log_lws),
+    lws_i() : sec_id_by_name<lws_impl>(config::instance().push,
+        config::instance().log_lws, char(), char()),
         cfg(config::instance()),
         subscribed("\"subscribed\",\"channel\":"),
         trade("\"trades\",\"chanId\":"),
@@ -43,13 +44,20 @@ struct lws_i : sec_id_by_name<lws_impl>
         ping(seconds(cfg.ping)), ping_t(cur_ttime())
     {
         prec_R0 = (cfg.precision == "R0");
-        for(auto& v: cfg.tickers) {
-            if(cfg.trades) {
-                subscribes.push_back("{\"event\":\"subscribe\",\"channel\":\"trades\",\"symbol\":\"" + v + "\"}");
+        for(auto& v: cfg.tickers)
+        {
+            if(cfg.trades)
+            {
+                subscribes.push_back(
+                    "{\"event\":\"subscribe\",\"channel\":\"trades\",\"symbol\":\""
+                    + v + "\"}");
             }
-            if(cfg.orders) {
-                subscribes.push_back("{\"event\":\"subscribe\",\"channel\":\"book\",\"symbol\":\""
-                    + v + "\",\"prec\":\"" + cfg.precision + "\",\"freq\":\"" + cfg.frequency + "\",\"len\":\"" + cfg.length + "\"}");
+            if(cfg.orders)
+            {
+                subscribes.push_back(
+                    "{\"event\":\"subscribe\",\"channel\":\"book\",\"symbol\":\""
+                    + v + "\",\"prec\":\"" + cfg.precision + "\",\"freq\":\""
+                    + cfg.frequency + "\",\"len\":\"" + cfg.length + "\"}");
             }
         }
         send_messages();

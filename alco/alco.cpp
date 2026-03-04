@@ -6,7 +6,8 @@
 
 #include "../makoa/types.hpp"
 
-void security::proceed_book(exporter& e, price_t price, count_t count, ttime_t etime, ttime_t time)
+void security::proceed_book(exporter& e, price_t price, count_t count,
+    ttime_t etime, ttime_t time)
 {
     mb.time = time;
     mb.etime = etime;
@@ -17,7 +18,8 @@ void security::proceed_book(exporter& e, price_t price, count_t count, ttime_t e
     e.proceed((message*)(&mb), 1);
 }
 
-void security::proceed_trade(exporter& e, u32 direction, price_t price, count_t count, ttime_t etime, ttime_t time)
+void security::proceed_trade(exporter& e, u32 direction, price_t price, count_t count,
+    ttime_t etime, ttime_t time)
 {
     mt.time = time;
     mt.etime = etime;
@@ -50,7 +52,8 @@ void security::proceed_ping(exporter& e, ttime_t etime)
     e.proceed((message*)(&mp), 1);
 }
 
-void security::init(const mstring& exchange_id, const mstring& feed_id, const mstring& ticker)
+void security::init(const mstring& exchange_id, const mstring& feed_id,
+    const mstring& ticker)
 {
     mb = message_book();
     mb.id = msg_book;
@@ -93,7 +96,8 @@ emessages::emessages(const mstring& push) : e(push), m_s()
 
 void emessages::ping(ttime_t etime, ttime_t time)
 {
-    if(m_s != pre_alloc) {
+    if(m_s != pre_alloc)
+    {
         message_ping& p = ms[m_s++].mp;
         p.time = time;
         p.etime = etime;
@@ -115,7 +119,8 @@ void emessages::add_clean(u32 security_id, ttime_t etime, ttime_t time)
     c.source = 0;
 }
 
-void emessages::add_order(u32 security_id, i64 level_id, price_t price, count_t count, ttime_t etime, ttime_t time)
+void emessages::add_order(u32 security_id, i64 level_id, price_t price, count_t count,
+    ttime_t etime, ttime_t time)
 {
     if(m_s == pre_alloc) [[unlikely]]
         send_messages();
@@ -130,7 +135,8 @@ void emessages::add_order(u32 security_id, i64 level_id, price_t price, count_t 
     m.count = count;
 }
 
-void emessages::add_trade(u32 security_id, price_t price, count_t count, u32 direction, ttime_t etime, ttime_t time)
+void emessages::add_trade(u32 security_id, price_t price, count_t count, u32 direction,
+    ttime_t etime, ttime_t time)
 {
     if(m_s == pre_alloc) [[unlikely]]
         send_messages();
@@ -147,7 +153,8 @@ void emessages::add_trade(u32 security_id, price_t price, count_t count, u32 dir
 
 void emessages::send_messages()
 {
-    if(m_s) {
+    if(m_s)
+    {
         set_export_mtime(ms);
         e.proceed(ms, m_s);
         m_s = 0;
