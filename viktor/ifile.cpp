@@ -454,7 +454,7 @@ struct ifile
                 {
                     if(fname[f_size] != '_')
                         continue;
-                    t = cvt::atoi<u32>(fname.begin() + f_size + 1, 10);
+                    t = atoi<u32>(fname.begin() + f_size + 1, 10);
                     if(t < tfrom)
                         continue;
                 }

@@ -73,8 +73,8 @@ struct buf_stream : ios_base
     template<typename type>
     void write_numeric(type t)
     {
-        check_size(cvt::atoi_size<type>::value);
-        cur += cvt::itoa(cur, t);
+        check_size(atoi_size<type>::value);
+        cur += itoa(cur, t);
     }
 };
 

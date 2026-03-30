@@ -73,9 +73,9 @@ struct cg_decimal
         {
         }
         else if(ds > 0)
-            ret.value /= cvt::pow[ds];
+            ret.value /= __pow10[ds];
         else
-            ret.value *= cvt::pow[-ds];
+            ret.value *= __pow10[-ds];
         return ret;
     }
 };

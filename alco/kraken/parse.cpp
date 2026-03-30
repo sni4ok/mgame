@@ -10,9 +10,9 @@
 ttime_t read_time(char_cit it, char_cit ie)
 {
     char_cit ne = find(it, ie, '.');
-    u32 time = cvt::atoi<u32>(it, ne - it);
+    u32 time = atoi<u32>(it, ne - it);
     it = ne + 1;
-    u32 time_us = cvt::atoi<u32>(it, 6);
+    u32 time_us = atoi<u32>(it, 6);
     return seconds(time) + microseconds(time_us);
 }
 
@@ -205,7 +205,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         {
             ++it;
             char_cit ne = find(it, ie, ',');
-            u32 channel = cvt::atoi<u32>(it, ne - it);
+            u32 channel = atoi<u32>(it, ne - it);
             impl& i = parsers.at(channel);
             it = ne + 1;
             ((this)->*(i.f))(i.security_id, time, it, ie);
@@ -216,7 +216,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             if(!cfg.log_lws)
                 mlog() << "" << str_holder(it, ie - it);
             char_cit ne = find(it, ie, ',');
-            u32 channel = cvt::atoi<u32>(it, ne - it);
+            u32 channel = atoi<u32>(it, ne - it);
             it = ne + 1;
             skip_fixed(it, "\"channelName\":\"");
             search_and_skip_fixed(it, ie, "\"pair\":\"");

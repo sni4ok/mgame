@@ -73,9 +73,9 @@ struct lws_i : sec_id_by_name<lws_impl>
         }
         skip_fixed(it, "[");
         char_cit ne = find(it, ie, ',');
-        u32 id = cvt::atoi<u32>(it, ne - it);
+        u32 id = atoi<u32>(it, ne - it);
         ++ne;
-        ttime_t etime = milliseconds(cvt::atoi<i64>(ne, 13));
+        ttime_t etime = milliseconds(atoi<i64>(ne, 13));
         ne += 13;
         skip_fixed(ne, ",");
         it = find(ne, ie, ',');
@@ -113,7 +113,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             ne = find(it, ie, ',');
             if(prec_R0)
             {
-                i64 level_id = cvt::atoi<i64>(it, ne - it);
+                i64 level_id = atoi<i64>(it, ne - it);
                 ++ne;
                 it = find(ne, ie, ',');
                 price_t price = lexical_cast<price_t>(ne, it);
@@ -130,7 +130,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                 price_t price = lexical_cast<price_t>(it, ne);
                 ++ne;
                 it = find(ne, ie, ',');
-                u32 count = cvt::atoi<u32>(ne, it - ne);
+                u32 count = atoi<u32>(ne, it - ne);
                 ++it;
                 ne = find(it, ie, ']');
                 count_t amount = lexical_cast<count_t>(it, ne);
@@ -172,7 +172,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         {
             ++it;
             char_cit ne = find(it, ie, ',');
-            u32 channel = cvt::atoi<u32>(it, ne - it);
+            u32 channel = atoi<u32>(it, ne - it);
             skip_fixed(ne, ",");
             ne = find(ne, ie, '[');
 
@@ -200,7 +200,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                     else
                         skip_fixed(it, book);
                     char_cit ne = find(it, ie, ',');
-                    u32 channel = cvt::atoi<u32>(it, ne - it);
+                    u32 channel = atoi<u32>(it, ne - it);
                     ++ne;
                     skip_fixed(ne, symbol);
                     it = find(ne, ie, '\"');

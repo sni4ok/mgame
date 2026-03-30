@@ -71,8 +71,8 @@ public:
     template<typename type>
     void write_numeric(type v)
     {
-        check_size(cvt::atoi_size<type>::value);
-        buf->tail->size += cvt::itoa(&buf->tail->buf[buf->tail->size], v);
+        check_size(atoi_size<type>::value);
+        buf->tail->size += itoa(&buf->tail->buf[buf->tail->size], v);
     }
 };
 

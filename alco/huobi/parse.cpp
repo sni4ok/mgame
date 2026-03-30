@@ -259,7 +259,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                     i->second.security.end(), time);
             ++ne;
             skip_fixed(ne, ts);
-            ttime_t etime = milliseconds(cvt::atoi<i64>(ne, 13));
+            ttime_t etime = milliseconds(atoi<i64>(ne, 13));
             ne += 13;
             skip_fixed(ne, tick);
             ((this)->*(i->second.f))(i->second, etime, time, ne, ie);

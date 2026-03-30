@@ -52,7 +52,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                 u32 security_id = get_security_id(it, ne, time);
                 it = ne + 1;
                 skip_fixed(it, ",\"ts\":");
-                ttime_t etime = milliseconds(cvt::atoi<i64>(it, 13));
+                ttime_t etime = milliseconds(atoi<i64>(it, 13));
                 it += 13;
                 skip_fixed(it, ",\"type\":\"");
                 
@@ -105,7 +105,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                 u32 security_id = get_security_id(it, ne, time);
                 it = ne + 1;
                 skip_fixed(it, ",\"ts\":");
-                ttime_t etime = milliseconds(cvt::atoi<i64>(it, 13));
+                ttime_t etime = milliseconds(atoi<i64>(it, 13));
                 it += 13;
                 skip_fixed(it, ",\"type\":\"snapshot\",\"data\":[");
             rep:

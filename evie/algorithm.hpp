@@ -180,6 +180,18 @@ any_of is_any_of(const char (&str)[size])
     return any_of(str, str + size - 1);
 }
 
+template<typename type, typename p1, typename ... params>
+bool from_any(const type& v, const p1& v1, const params& ... p)
+{
+    if(v == v1)
+        return true;
+
+    if constexpr(sizeof... (p))
+        return from_any(v, p...);
+
+    return false;
+}
+
 template<typename type>
 constexpr type min(type l, type r)
 {

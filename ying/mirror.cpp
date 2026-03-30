@@ -115,7 +115,7 @@ struct decimal_fixed
         type p = abs(v);
 
         i64 m = p.value / p.frac;
-        u32 d = cvt::log10(m);
+        u32 d = log10(m);
 
         if(v < type())
             ++d;

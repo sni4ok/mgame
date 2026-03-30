@@ -117,27 +117,27 @@ ttime_t read_time_impl::read_time(char_cit& it)
         if(*(it + 4) != '-' || *(it + 7) != '-')
             throw mexception(es() % "bad time: " % str_holder(it, 26));
         struct tm t = tm();
-        int y = cvt::atoi<int>(it, 4); 
-        int m = cvt::atoi<int>(it + 5, 2); 
-        int d = cvt::atoi<int>(it + 8, 2); 
+        int y = atoi<int>(it, 4); 
+        int m = atoi<int>(it + 5, 2); 
+        int d = atoi<int>(it + 8, 2); 
         t.tm_year = y - 1900;
         t.tm_mon = m - 1;
         t.tm_mday = d;
-        cur_date_time = timegm(&t) * cvt::p10<9>();
+        cur_date_time = timegm(&t) * pow10_v<9>;
         cur_date.init(it);
     }
     it += 10;
     if(*it != 'T' || *(it + 3) != ':' || *(it + 6) != ':' || (frac_size ? *(it + 9) != '.' : false))
         throw mexception(es() % "bad time: " % str_holder(it - 10, 20 + (frac_size ? 1 + frac_size : 0)));
 
-    u64 h = cvt::atoi<u64>(it + 1, 2);
-    u64 m = cvt::atoi<u64>(it + 4, 2);
-    u64 s = cvt::atoi<u64>(it + 7, 2);
+    u64 h = atoi<u64>(it + 1, 2);
+    u64 m = atoi<u64>(it + 4, 2);
+    u64 s = atoi<u64>(it + 7, 2);
     u64 ns = 0;
     if constexpr(frac_size)
     {
-        u64 frac = cvt::atoi<u64>(it + 10, frac_size);
-        ns = u64(frac * cvt::p10<9 - frac_size>());
+        u64 frac = atoi<u64>(it + 10, frac_size);
+        ns = u64(frac * pow10_v<9 - frac_size>);
         it += (frac_size + 1);
     }
     it += 9;
@@ -245,7 +245,7 @@ inline u64 get_decimal_pow(u32 e)
     if(e > 19)
         return limits<u64>::max;
     else
-        return cvt::pow[e];
+        return __pow10[e];
 }
 
 i64 read_decimal_impl(char_cit it, char_cit ie, int exponent)
@@ -260,7 +260,7 @@ i64 read_decimal_impl(char_cit it, char_cit ie, int exponent)
             return c == 'E' || c == 'e';
         });
 
-    i64 ret = cvt::atoi<i64>(it, min(p, E) - it);
+    i64 ret = atoi<i64>(it, min(p, E) - it);
     int digits = 0;
     i64 _float = 0;
 
@@ -268,14 +268,14 @@ i64 read_decimal_impl(char_cit it, char_cit ie, int exponent)
     {
         ++p;
         digits = E - p;
-        _float = cvt::atoi<i64>(p, digits);
+        _float = atoi<i64>(p, digits);
     }
 
     int e = 0;
     if(E != ie)
     {
         ++E;
-        e = cvt::atoi<int>(E, ie - E);
+        e = atoi<int>(E, ie - E);
     }
 
     int em = -exponent + e;

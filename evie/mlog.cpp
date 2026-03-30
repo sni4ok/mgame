@@ -375,14 +375,11 @@ void MlogTestThread(size_t thread_id, size_t log_count)
     }
 }
 
-namespace cvt
-{
-    void test_itoa();
-}
+void test_itoa();
 
 void log_test(size_t thread_count, size_t log_count)
 {
-    cvt::test_itoa();
+    test_itoa();
     check_limits();
     simple_log::instance().params = mlog::always_cout;
     mlog() << "mlog test for " << thread_count << " threads and " << log_count << " loops";

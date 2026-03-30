@@ -61,8 +61,8 @@ template<typename type>
 requires(is_numeric_v<type>)
 mstring to_string(type value)
 {
-    char buf[cvt::atoi_size_v<type>];
-    u32 size = cvt::itoa(buf, value);
+    char buf[atoi_size_v<type>];
+    u32 size = itoa(buf, value);
     return mstring(buf, buf + size);
 }
 
