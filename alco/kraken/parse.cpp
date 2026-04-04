@@ -91,7 +91,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         for(;;)
         {
             skip_fixed(it, "\"");
-            bool ask;
+            bool ask = false;
 
             if(*it == 'b')
                 ask = false;

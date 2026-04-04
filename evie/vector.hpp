@@ -14,17 +14,26 @@ void* tss_realloc(void* ptr, u64 old_size, u64 new_size);
 void tss_free(void* ptr, u64 size);
 
 template<typename ifrom, typename ito>
-constexpr void copy(ifrom from, ifrom to, ito out)
+constexpr void __copy(ifrom from, ifrom to, ito out)
 {
     for(; from != to; ++from, ++out)
         *out = *from;
 }
 
+template<typename ifrom, typename ito>
+constexpr void copy(ifrom from, ifrom to, ito out)
+{
+    __copy(from, to, out);
+}
+
 template<typename type>
-inline void copy(type* from, type* to, remove_const_t<type>* out)
+constexpr void copy(type* from, type* to, remove_const_t<type>* out)
     requires(is_trivially_destructible_v<type>)
 {
-    memcpy(out, from, (to - from) * sizeof(type));
+    if(std::__is_constant_evaluated())
+        __copy(from, to, out);
+    else
+        memcpy(out, from, (to - from) * sizeof(type));
 }
 
 template<typename ifrom, typename ito>

@@ -12,18 +12,15 @@ struct carray
 {
     type buf[size_];
 
-    carray() : buf() {
-    }
-    void init(const type* from)
+    constexpr carray() : buf()
     {
-        copy(from, from + size_, buf);
     }
-    constexpr carray(std::initializer_list<type> r)
+    constexpr carray(std::initializer_list<type> r) : buf()
     {
         assert(r.size() <= size_);
         copy(r.begin(), r.end(), buf);
     }
-    constexpr carray(span<type> str)
+    constexpr carray(span<type> str) : buf()
     {
         assert(str.size() <= size_);
         copy(str.begin(), str.end(), buf);
@@ -173,7 +170,8 @@ public:
     {
         if(new_size < size_)
             size_ = new_size;
-        else if(new_size <= capacity_) {
+        else if(new_size <= capacity_)
+        {
             //for(u32 i = size_; i != new_size; ++i)
             //    buf[i] = type();
             size_ = new_size;

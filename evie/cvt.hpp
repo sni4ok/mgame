@@ -127,13 +127,18 @@ struct pow10<0>
 template<u32 v>
 inline constexpr u64 pow10_v = pow10<v>::value;
 
-static constexpr u64 __pow10[] = 
+inline u64* __pow10_init()
 {
-    1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000,
-    pow10_v<9>, pow10_v<10>, pow10_v<11>, pow10_v<12>, pow10_v<13>,
-    pow10_v<14>, pow10_v<15>, pow10_v<16>, pow10_v<17>, pow10_v<18>,
-    pow10_v<19>
-};
+    static u64 r[20];
+    for(u64 i = 0, v = 1; i != 20; ++i)
+    {
+        r[i] = v;
+        v *= 10;
+    }
+    return r;
+}
+
+static const u64* __pow10 = __pow10_init();
 
 static constexpr u32 atoi_u_ps[] = {3, 5, 10, 0, 20, 0, 0, 0, 39};
 static constexpr u32 atoi_s_ps[] = {4, 6, 11, 0, 21, 0, 0, 0, 40};

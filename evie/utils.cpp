@@ -124,7 +124,7 @@ ttime_t read_time_impl::read_time(char_cit& it)
         t.tm_mon = m - 1;
         t.tm_mday = d;
         cur_date_time = timegm(&t) * pow10_v<9>;
-        cur_date.init(it);
+        copy(it, it + cur_date.size(), cur_date.begin());
     }
     it += 10;
     if(*it != 'T' || *(it + 3) != ':' || *(it + 6) != ':' || (frac_size ? *(it + 9) != '.' : false))
