@@ -221,7 +221,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         if(!!ping) {
             if(time > ping_t + ping) {
                 ping_t = time;
-                bs << "{\"event\":\"ping\",\"cid\":\"" << ping_t.value / ttime_t::frac << "\"}";
+                bs << "{\"event\":\"ping\",\"cid\":\"" << ping_t.value / frac<ttime_t>() << "\"}";
                 send(wsi);
             }
         }

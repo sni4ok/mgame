@@ -50,9 +50,9 @@ struct parser : emessages, stack_singleton<parser>
     void proceed_ping(const cg_time_t& server_time)
     {
         i64 server_ms = (server_time.hour * 3600 + server_time.minute * 60 + server_time.second) * 1000 + server_time.msec;
-        u64 ct = time(NULL) + cur_utc_time_delta.value / ttime_t::frac;
+        u64 ct = time(NULL) + cur_utc_time_delta.value / frac<ttime_t>();
         ttime_t etime;
-        etime.value = (ct - ct % (3600 * 24)) * ttime_t::frac + server_ms * (ttime_t::frac / 1000);
+        etime.value = (ct - ct % (3600 * 24)) * frac<ttime_t>() + server_ms * (frac<ttime_t>() / 1000);
         ping(etime, cur_ttime());
     }
     void init_tickers(volatile bool& can_run, parser::tickers_type& ft)
@@ -240,7 +240,7 @@ CG_RESULT orders_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
                 break;
             }
             price_t price = *o->price;
-            count_t count = {o->volume * count_t::frac};
+            count_t count = {o->volume * frac<count_t>()};
             ttime_t etime = {i64(o->moment_ns)};
             if(o->dir == 2)
                 count.value = -count.value;
@@ -343,7 +343,7 @@ CG_RESULT trades_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
                     else if(d->public_order_id_sell > d->public_order_id_buy)
                         direction = 2;
                     price_t price = *d->price;
-                    count_t count = {d->xamount * count_t::frac};
+                    count_t count = {d->xamount * frac<count_t>()};
                     ttime_t etime = {i64(d->moment_ns)};
                     parser::instance().set_trade(it, price, count, direction, etime);
                     if(config::instance().log_plaza)

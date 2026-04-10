@@ -20,13 +20,13 @@ struct brief_time : ttime_t
 template<typename stream>
 stream& operator<<(stream& s, const brief_time& t)
 {
-    time_t tt = t.value / ttime_t::frac;
+    time_t tt = t.value / frac<ttime_t>();
     tt = tt % (3600 * 24);
     u32 h = tt / 3600;
     u32 m = (tt - h * 3600) / 60;
     s << print2chars(h) << ':' << print2chars(m) << ':' << print2chars(tt % 60);
     if(t.show_frac)
-        s << '.' << uint_fixed<9>(t.value % ttime_t::frac);
+        s << '.' << uint_fixed<9>(t.value % frac<ttime_t>());
     return s;
 }
 
@@ -42,8 +42,8 @@ stream& operator<<(stream& s, const message_trade& t)
 template<typename stream>
 stream& operator<<(stream& s, const message_instr& i)
 {
-    s << "instr|" << i.id << "|" << i.exchange_id << "|" << i.feed_id << "|" << i.security << "|" << i.security_id
-        << "|" << i.etime << "|" << i.time << "|";
+    s << "instr|" << i.id << "|" << i.exchange_id << "|" << i.feed_id << "|" << i.security
+        << "|" << i.security_id << "|" << i.etime << "|" << i.time << "|";
     return s;
 }
 

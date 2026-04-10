@@ -85,7 +85,7 @@ stream& operator<<(stream& s, print_dt v)
     }
     if(minus)
         s << "-";
-    s << (v.value / ttime_t::frac) << "." << uint_fixed<9>(v.value % ttime_t::frac);
+    s << (v.value / frac<ttime_t>()) << "." << uint_fixed<9>(v.value % frac<ttime_t>());
     return s;
 }
 
@@ -114,7 +114,7 @@ struct decimal_fixed
 
         type p = abs(v);
 
-        i64 m = p.value / p.frac;
+        i64 m = p.value / frac<type>();
         u32 d = log10(m);
 
         if(v < type())
@@ -128,7 +128,7 @@ struct decimal_fixed
         else
             s << "0";
 
-         s << "." << uint_fix(p.value % p.frac, -p.exponent, true);
+         s << "." << uint_fix(p.value % frac<type>(), -p.exponent, true);
     }
 };
 

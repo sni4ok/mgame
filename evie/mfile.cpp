@@ -214,6 +214,6 @@ ttime_t get_file_mtime(char_cit fname)
     if(!ret)
         throw_system_failure(es() % "fstat() error for " % _str_holder(fname));
 
-    return {st.st_mtim.tv_sec * ttime_t::frac + st.st_mtim.tv_nsec};
+    return {st.st_mtim.tv_sec * frac<ttime_t>() + st.st_mtim.tv_nsec};
 }
 

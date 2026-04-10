@@ -112,21 +112,6 @@ inline bool atoi<bool>(char_cit buf, u32 size)
     return(buf[0] == '1');
 }
 
-template<u32 v>
-struct pow10
-{
-    static constexpr u64 value = pow10<v - 1>::value * 10;
-};
-
-template<>
-struct pow10<0>
-{
-    static constexpr u64 value = 1;
-};
-
-template<u32 v>
-inline constexpr u64 pow10_v = pow10<v>::value;
-
 inline u64* __pow10_init()
 {
     static u64 r[20];

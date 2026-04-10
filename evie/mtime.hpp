@@ -10,7 +10,7 @@ const ttime_t cur_utc_time_delta = seconds(3 * 3600);
 
 constexpr inline u32 day_seconds(ttime_t t)
 {
-    u64 v = t.value / ttime_t::frac;
+    u64 v = t.value / frac<ttime_t>();
     return u32(v - v % (3600 * 24));
 }
 

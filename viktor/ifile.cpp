@@ -501,8 +501,8 @@ struct ifile
         char_cit it = find_last(fname, '/') + 1;
         mstring dir(fname.begin(), it);
         mstring f(it, fname.end());
-        u64 tfrom = main_file.tf.value / ttime_t::frac,
-             tto = main_file.tt.value / ttime_t::frac;
+        u64 tfrom = main_file.tf.value / frac<ttime_t>(),
+             tto = main_file.tt.value / frac<ttime_t>();
 
         date df = parse_time(tf).date, dt = parse_time(tt).date;
 

@@ -97,10 +97,8 @@ typedef uint64_t u64;
 
 struct i128d
 {
-    double value;
-
-    static const i64 frac = 1;
     static const i64 exponent = 0;
+    double value;
 
     i128d(double v) : value(v)
     {

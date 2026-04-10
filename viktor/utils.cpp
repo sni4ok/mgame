@@ -185,7 +185,7 @@ void parsers_stat(str_holder f)
             if(!!s.from)
             {
                 u64 sz = (s.size - s.from_size) / message_size;
-                u64 mps = sz * ttime_t::frac / d.value;
+                u64 mps = sz * frac<ttime_t>() / d.value;
                 cout(false) << uint_fixed<7, false>(mps) << "/s " << files[i];
             }
             else

@@ -116,10 +116,10 @@ void condition::timed_uwait(mutex::scoped_lock& lock, u32 usec)
     timespec t;
     clock_gettime(CLOCK_REALTIME, &t);
     t.tv_nsec += usec * 1000;
-    if(t.tv_nsec >= i32(ttime_t::frac))
+    if(t.tv_nsec >= i32(frac<ttime_t>()))
     {
-        t.tv_sec += t.tv_nsec / ttime_t::frac;
-        t.tv_nsec %= ttime_t::frac;
+        t.tv_sec += t.tv_nsec / frac<ttime_t>();
+        t.tv_nsec %= frac<ttime_t>();
     }
     int r = pthread_cond_timedwait(&__condition, &lock.__mutex.__mutex, &t);
     if(r && r != ETIMEDOUT)

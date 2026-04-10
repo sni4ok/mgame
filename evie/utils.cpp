@@ -141,7 +141,7 @@ ttime_t read_time_impl::read_time(char_cit& it)
         it += (frac_size + 1);
     }
     it += 9;
-    return ttime_t{i64(cur_date_time + ns + (s + m * 60 + h * 3600) * ttime_t::frac)};
+    return ttime_t{i64(cur_date_time + ns + (s + m * 60 + h * 3600) * frac<ttime_t>())};
 }
 
 template ttime_t read_time_impl::read_time<0>(char_cit&);
@@ -151,11 +151,11 @@ template ttime_t read_time_impl::read_time<9>(char_cit&);
 
 inline time_parsed parse_time_impl(ttime_t time)
 {
-    time_t ti = time.value / ttime_t::frac;
+    time_t ti = time.value / frac<ttime_t>();
     tm *t, r;
     t = gmtime_r(&ti, &r);
     return {{u16(t->tm_year + 1900), u8(t->tm_mon + 1), u8(t->tm_mday)},
-        {u8(t->tm_hour), u8(t->tm_min), u8(t->tm_sec), u32(time.value % ttime_t::frac)}};
+        {u8(t->tm_hour), u8(t->tm_min), u8(t->tm_sec), u32(time.value % frac<ttime_t>())}};
 }
 
 const u32 cur_day_seconds = day_seconds(cur_mtime_seconds());
@@ -177,11 +177,11 @@ time_parsed parse_time(ttime_t time)
     {
         time_parsed ret;
         ret.date = cur_day_date;
-        u32 frac = (time.value / ttime_t::frac) % (24 * 3600);
+        u32 frac = (time.value / ::frac<ttime_t>()) % (24 * 3600);
         ret.duration.seconds = frac % 60;
         ret.duration.hours = frac / 3600;
         ret.duration.minutes = (frac - ret.duration.hours * 3600) / 60;
-        ret.duration.nanos = time.value % ttime_t::frac;
+        ret.duration.nanos = time.value % ::frac<ttime_t>();
         return ret;
     }
     else
@@ -191,11 +191,11 @@ time_parsed parse_time(ttime_t time)
 time_duration get_time_duration(ttime_t time)
 {
     time_duration ret;
-    u32 frac = (time.value / time.frac) % (24 * 3600);
+    u32 frac = (time.value / ::frac<ttime_t>()) % (24 * 3600);
     ret.seconds = frac % 60;
     ret.hours = frac / 3600;
     ret.minutes = (frac - ret.hours * 3600) / 60;
-    ret.nanos = time.value % time.frac;
+    ret.nanos = time.value % ::frac<ttime_t>();
     return ret;
 }
 
@@ -208,7 +208,7 @@ ttime_t pack_time(time_parsed p)
     t.tm_hour = p.duration.hours;
     t.tm_min = p.duration.minutes;
     t.tm_sec = p.duration.seconds;
-    return {i64(timegm(&t) * ttime_t::frac + p.duration.nanos)};
+    return {i64(timegm(&t) * frac<ttime_t>() + p.duration.nanos)};
 }
 
 date& date::operator+=(date_duration d)
@@ -216,7 +216,7 @@ date& date::operator+=(date_duration d)
     time_parsed tp = time_parsed();
     tp.date = *this;
     ttime_t t = pack_time(tp);
-    t.value += i64(d.days) * 24 * 3600 * ttime_t::frac;
+    t.value += i64(d.days) * 24 * 3600 * frac<ttime_t>();
     tp = parse_time(t);
     *this = tp.date;
     return *this;
@@ -230,7 +230,7 @@ date_duration date::operator-(date r) const
     t.date = r;
     ttime_t tr = pack_time(t);
     ttime_t ns = tl - tr;
-    return date_duration(ns.value / ttime_t::frac / (24 * 3600));
+    return date_duration(ns.value / frac<ttime_t>() / (24 * 3600));
 }
 
 ttime_t time_from_date(date t)

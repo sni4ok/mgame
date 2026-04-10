@@ -102,8 +102,8 @@ template<typename stream, typename decimal>
 stream& operator<<(stream& s, decimal d)
     requires(is_decimal<decimal>)
 {
-    decltype(decimal::value) int_ = d.value / decimal::frac;
-    decltype(decimal::value) float_ = d.value % decimal::frac;
+    decltype(decimal::value) int_ = d.value / frac<decimal>();
+    decltype(decimal::value) float_ = d.value % frac<decimal>();
 
     if(d.value < 0)
     {
