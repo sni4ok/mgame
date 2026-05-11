@@ -67,7 +67,7 @@ struct message_trade : message_times
     //enum direction{unknown = 0, buy = 1, sell = 2};
     u16 direction;
     u32 security_id;
-	i64 unused_;
+    i64 unused_;
     price_t price;
     count_t count;
     static const u32 msg_id = msg_trade;
@@ -105,7 +105,7 @@ struct message_book : message_times
     u8 unused[3];
 
     u32 security_id;
-	i64 level_id;
+    i64 level_id;
     price_t price; 
     count_t count; //this new counts for level_id
     static const u32 msg_id = msg_book;

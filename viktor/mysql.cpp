@@ -2,7 +2,7 @@
     author: Ilya Andronov <sni4ok@yandex.ru>
 
     export = mysql open_mode host port dbname user password
-	open_mode: truncate, append, rename_new
+    open_mode: truncate, append, rename_new
 
     mysql create or recreate tables: instruments, orders, trades
 */

@@ -23,7 +23,7 @@ struct cg_string
     {
         memset(buf, 0, sizeof(buf));
     }
-	cg_string(char_cit str, u32 size)
+    cg_string(char_cit str, u32 size)
     {
         if(size > sz)
             throw mexception("cg_string::operator= size overflow");

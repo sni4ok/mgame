@@ -23,7 +23,7 @@ struct ttime_t
 inline ttime_t cur_ttime()
 {
     timespec t;
-	clock_gettime(CLOCK_REALTIME, &t);
+    clock_gettime(CLOCK_REALTIME, &t);
 
     return ttime_t{i64(t.tv_sec) * frac<ttime_t>() + i64(t.tv_nsec)};
 }

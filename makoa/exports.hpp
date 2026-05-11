@@ -31,7 +31,8 @@ struct exporter
     void operator=(exporter&& r);
     ~exporter();
 
-    void proceed(const message* m, u32 count) {
+    void proceed(const message* m, u32 count)
+    {
         he.proceed(p, m, count);
     }
 };
@@ -48,6 +49,7 @@ inline void set_export_mtime(message* m)
 
 class simple_log;
 struct exports_factory;
+
 void free_exports_factory(exports_factory* ptr);
 unique_ptr<exports_factory, free_exports_factory> init_efactory();
 void register_exporter(exports_factory *ef, str_holder module, hole_exporter he);

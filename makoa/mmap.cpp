@@ -17,7 +17,7 @@ inline void init_smc(void* ptr)
 {
     shared_memory_sync* p = get_smc(ptr);
     int ret = 0;
-	pthread_condattr_t cond_attr;
+    pthread_condattr_t cond_attr;
     ret &= pthread_condattr_init(&cond_attr);
     ret &= pthread_condattr_setpshared(&cond_attr, PTHREAD_PROCESS_SHARED);
     ret &= pthread_cond_init(&(p->condition), &cond_attr);

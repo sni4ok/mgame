@@ -12,35 +12,22 @@ struct lws_i : sec_id_by_name<lws_impl>
     config& cfg;
     bool prec_R0;
     
-    char subscribed[24];
-    char trade[19];
-    char book[17];
-    char symbol[11];
-    char event[9];
-
     struct impl;
     typedef void (lws_i::*func)(impl& i, ttime_t time, char_cit& it, char_cit ie);
+
     struct impl
     {
-        u32 security_id;
         func f;
-        u32 high;
-        impl() : high()
-        {
-        }
+        u32 security_id, high;
     };
+
     const ttime_t ping;
     ttime_t ping_t;
 
     fmap<u32, impl> parsers; //channel, impl
     lws_i() : sec_id_by_name<lws_impl>(config::instance().push,
-        config::instance().log_lws, char(), char()),
+        config::instance().log_lws, '[', ']'),
         cfg(config::instance()),
-        subscribed("\"subscribed\",\"channel\":"),
-        trade("\"trades\",\"chanId\":"),
-        book("\"book\",\"chanId\":"),
-        symbol("\"symbol\":\""),
-        event("\"event\":"),
         ping(seconds(cfg.ping)), ping_t(cur_ttime())
     {
         prec_R0 = (cfg.precision == "R0");
@@ -80,6 +67,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         skip_fixed(ne, ",");
         it = find(ne, ie, ',');
         count_t count = lexical_cast<count_t>(ne, it);
+
         int dir = 1;
         if(count.value < 0)
         {
@@ -103,19 +91,21 @@ struct lws_i : sec_id_by_name<lws_impl>
     void parse_orders(impl& i, ttime_t time, char_cit& it, char_cit ie)
     {
         bool one = *(it + 1) != '[';
-
         if(!one)
             skip_fixed(it, "[");
+
         char_cit ne;
         for(;;)
         {
             skip_fixed(it, "[");
             ne = find(it, ie, ',');
+
             if(prec_R0)
             {
                 i64 level_id = atoi<i64>(it, ne - it);
                 ++ne;
                 it = find(ne, ie, ',');
+                assert(it != ie);
                 price_t price = lexical_cast<price_t>(ne, it);
                 ++it;
                 ne = find(it, ie, ']');
@@ -130,6 +120,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                 price_t price = lexical_cast<price_t>(it, ne);
                 ++ne;
                 it = find(ne, ie, ',');
+                assert(it != ie);
                 u32 count = atoi<u32>(ne, it - ne);
                 ++it;
                 ne = find(it, ie, ']');
@@ -139,6 +130,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                 else
                     add_order(i.security_id, price.value, price, count_t(), ttime_t(), time);
             }
+
             it = ne + 1;
             if(*it != ',')
                 break;
@@ -168,6 +160,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             mlog() << "lws proceed: " << str_holder(in, len);
         char_cit it = in, ie = it + len;
 
+    rep:
         if(*it == '[') [[likely]]
         {
             ++it;
@@ -176,50 +169,61 @@ struct lws_i : sec_id_by_name<lws_impl>
             skip_fixed(ne, ",");
             ne = find(ne, ie, '[');
 
-            if(ne != ie) [[likely]] {
+            if(ne != ie) [[likely]]
+            {
                 impl& i = parsers.at(channel);
                 ((this)->*(i.f))(i, time, ne, ie);
-                if(ne != ie)
-                    throw mexception(es() % "parsing market message error: " % str_holder(in, len));
             }
-            else {
-                //possible "hb" message
+            else
+            {
+                ne = it;
+                search_and_skip_fixed(ne, ie, ",\"hb\"]");
                 lws_impl::ping(ttime_t(), time);
             }
+
+            if(ne != ie)
+                throw mexception(es() % "parsing market message error: " % str_holder(in, len));
         }
         else if(*it == '{')
         {
             ++it;
-            if(skip_if_fixed(it, event))
+            if(skip_if_fixed(it, "\"event\":"))
             {
-                if(skip_if_fixed(it, subscribed))
+                if(skip_if_fixed(it, "\"subscribed\",\"channel\":"))
                 {
                     bool is_trades = false;
-                    if(skip_if_fixed(it, trade))
+                    if(skip_if_fixed(it, "\"trades\",\"chanId\":"))
                         is_trades = true;
                     else
-                        skip_fixed(it, book);
+                        skip_fixed(it, "\"book\",\"chanId\":");
                     char_cit ne = find(it, ie, ',');
                     u32 channel = atoi<u32>(it, ne - it);
                     ++ne;
-                    skip_fixed(ne, symbol);
+                    skip_fixed(ne, "\"symbol\":\"");
                     it = find(ne, ie, '\"');
 
                     str_holder ticker(ne, it - ne);
                     add_channel(channel, ticker, is_trades, time);
                     it = find(it, ie, '}') + 1;
-                    if(it != ie)
-                        throw mexception(es() % "parsing logic error message: " % str_holder(in, len));
                 }
+                else if(skip_if_fixed(it, "\"info\""))
+                    search_and_skip_fixed(it, ie, "}}");
+                else if(skip_if_fixed(it, "\"pong\""))
+                    search_and_skip_fixed(it, ie, "}");
+
+                if(it != ie)
+                    goto rep;
             }
             else
-                mlog(mlog::critical) << "unsupported message: " << str_holder(it, len);
+                throw mexception(es() % "unsupported message: " % str_holder(it, len));
         }
         else
-            mlog(mlog::critical) << "unsupported message: " << str_holder(it, len);
+            throw mexception(es() % "unsupported message: " % str_holder(it, len));
 
-        if(!!ping) {
-            if(time > ping_t + ping) {
+        if(!!ping)
+        {
+            if(time > ping_t + ping)
+            {
                 ping_t = time;
                 bs << "{\"event\":\"ping\",\"cid\":\"" << ping_t.value / frac<ttime_t>() << "\"}";
                 send(wsi);

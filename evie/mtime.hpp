@@ -6,7 +6,7 @@
 
 #include "time.hpp"
 
-const ttime_t cur_utc_time_delta = seconds(3 * 3600);
+const ttime_t cur_utc_time_delta = hours(3);
 
 constexpr inline u32 day_seconds(ttime_t t)
 {
@@ -102,11 +102,15 @@ struct time_duration
     }
 };
 
+static_assert(sizeof(time_duration) == 8);
+
 struct time_parsed
 {
     ::date date;
     time_duration duration;
 };
+
+static_assert(sizeof(time_parsed) == 12);
 
 time_parsed parse_time(ttime_t time);
 time_duration get_time_duration(ttime_t time);

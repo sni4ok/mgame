@@ -13,7 +13,8 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
     str_holder orders_table, trades_table;
     ttime_t etime;
 
-    lws_i() : sec_id_by_name<lws_impl>(config::instance().push, config::instance().log_lws),
+    lws_i() : sec_id_by_name<lws_impl>(config::instance().push,
+        config::instance().log_lws, '{', '}', true),
         cfg(config::instance()), orders_table(cfg.orders_table.c_str(),
         cfg.orders_table.size()), trades_table("trade"), etime()
     {
@@ -109,7 +110,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                             p = lexical_cast<price_t>(it, ne);
                             it = ne;
                         }
-                        skip_fixed(it, ",\"timestamp\":\"");
+                        skip_fixed(it, ",\"pool\":\"Aggregated\",\"timestamp\":\"");
                         {
                             etime = read_time<3>(it);
                             skip_fixed(it, "Z\"");

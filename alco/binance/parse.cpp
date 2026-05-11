@@ -17,13 +17,16 @@ struct lws_i : sec_id_by_name<lws_impl>
         mstream sub;
         sub << "{\"method\":\"SUBSCRIBE\",\"params\":[";
         int i = 0;
-        for(auto& v: cfg.tickers) {
-            if(cfg.trades) {
+        for(auto& v: cfg.tickers)
+        {
+            if(cfg.trades)
+            {
                 if(i++)
                     sub << ",";
                 sub << "\"" << v << "@trade\"";
             }
-            if(cfg.bba) {
+            if(cfg.bba)
+            {
                 if(i++)
                     sub << ",";
                 sub << "\"" << v << "@bookTicker\"";
@@ -98,22 +101,27 @@ struct lws_i : sec_id_by_name<lws_impl>
             ttime_t etime = milliseconds(atoi<i64>(it, 13));
             it = it + 14;
             skip_fixed(it, "\"m\":");
+
             int direction;
-            if(*it == 'f') {
+            if(*it == 'f')
+            {
                 ++it;
                 skip_fixed(it, "alse,\"M\":");
                 direction = 1;
             }
-            else if(*it == 't') {
+            else if(*it == 't')
+            {
                 ++it;
                 skip_fixed(it, "rue,\"M\":");
                 direction = 2;
             }
             else 
                 throw mexception(es() % "parsing message error: " % str_holder(in, ie - in));
+
             ne = find(it, ie, '}');
             if(((ne - it) != 4 && (ne - it) != 5) || (ne + 1) != ie)
                 throw mexception(es() % "parsing message error: " % str_holder(in, ie - in));
+
             add_trade(security_id, p, c, direction, etime, time);
             send_messages();
         }

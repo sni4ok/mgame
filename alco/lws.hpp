@@ -40,8 +40,28 @@ struct lws_impl : emessages, lws_dump, stack_singleton<lws_impl>
     lws_context* context;
     mvector<char> big_message;
     const char msg_beg, msg_end;
-    
-    lws_impl(const mstring& push, bool log_lws, char msg_beg = '{', char msg_end = '}');
+    const bool check_full;
+
+    bool full(char_cit f, char_cit t) const
+    {
+        assert(t > f);
+
+        if(*(t - 1) != msg_end)
+            return false;
+
+        uint32_t _f = 0, _t = 0;
+        for(; f != t; ++f)
+        {
+            if(*f == msg_beg)
+                ++_f;
+            else if(*f == msg_end)
+                ++_t;
+        }
+        return _f == _t;
+    }
+
+    lws_impl(const mstring& push, bool log_lws, char msg_beg = '{', char msg_end = '}',
+        bool check_full = false);
     void init(lws* wsi);
     void send(lws* wsi);
     ~lws_impl();
@@ -76,8 +96,8 @@ void proceed_lws_parser(volatile bool& can_run)
     set_can_run(&can_run);
     if(getenv("lws_fake"))
         proceed_lws_parser_fake<lws_w>(can_run);
-    else
-    while(can_run)
+
+    else while(can_run)
     {
         try
         {
@@ -100,6 +120,10 @@ void proceed_lws_parser(volatile bool& can_run)
         catch(exception& e)
         {
             mlog() << "proceed_lws_parser " << e;
+
+            if(getenv("lws_dump"))
+                throw;
+
             if(can_run)
                 usleep(5000 * 1000);
         }

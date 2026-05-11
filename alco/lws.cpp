@@ -93,9 +93,9 @@ lws_dump::~lws_dump()
         ::close(hfile);
 }
 
-lws_impl::lws_impl(const mstring& push, bool log_lws, char msg_beg, char msg_end) :
+lws_impl::lws_impl(const mstring& push, bool log_lws, char msg_beg, char msg_end, bool check_full) :
     emessages(push), log_lws(log_lws), bs(buf, buf + sizeof(buf) - 1),
-    closed(), data_time(time(NULL)), msg_beg(msg_beg), msg_end(msg_end)
+    closed(), data_time(time(NULL)), msg_beg(msg_beg), msg_end(msg_end), check_full(check_full)
 {
     bs.resize(LWS_PRE);
 }
@@ -135,7 +135,7 @@ lws_impl::~lws_impl()
         if(lws_not_fake)
             lws_context_destroy(context);
     }
-    catch (exception& e)
+    catch(exception& e)
     {
         mlog() << "~lws_impl() " << e;
     }
@@ -153,37 +153,37 @@ int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user,
 
             if(w->msg_beg && (!w->big_message.empty() || p[len - 1] != w->msg_end))
             {
+            big:
                 MPROFILE("lws_event big_message_beg")
                 size_t sz = w->big_message.size();
                 w->big_message.resize(sz + len);
                 memcpy(w->big_message.begin() + sz, p, len);
 
-                if(p[len - 1] == w->msg_end)
+                if(w->full(w->big_message.begin(), w->big_message.end()))
                 {
-                    uint32_t f = 0, t = 0;
-                    for(char c: w->big_message)
-                    {
-                        if(c == w->msg_beg)
-                            ++f;
-                        else if(c == w->msg_end)
-                            ++t;
-                    }
-                    if(f != t)
-                        break;
-
-                    MPROFILE("lws_event big_message_end")
                     if(w->lws_dump_en) [[unlikely]]
                         w->dump(w->big_message.begin(), w->big_message.size());
+
+                    MPROFILE("lws_event big_message_end")
                     w->proceed(wsi, w->big_message.begin(), w->big_message.size());
                     w->big_message.clear();
                 }
             }
             else
             {
+                if(w->check_full && !w->full(p, p + len))
+                {
+                    MPROFILE("lws_event !full")
+                    goto big;
+                }
+
                 if(w->lws_dump_en) [[unlikely]]
                     w->dump((char_cit)in, len);
+
                 if(w->log_lws) [[unlikely]]
                     mlog() << "lws receive len: " << len;
+
+                MPROFILE("lws_event proceed")
                 w->proceed(wsi, p, len);
             }
 

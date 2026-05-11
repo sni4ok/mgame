@@ -38,7 +38,7 @@ class window
     {
         endwin();
     }
-	unique_ptr<WINDOW, end_win> w;
+    unique_ptr<WINDOW, end_win> w;
     ncurses_err e;
 
     long log_par;
@@ -66,7 +66,7 @@ public:
         e = wresize(w.get(), rows, cols);
         e = nodelay(w.get(), TRUE);
 
-		e = noecho();
+        e = noecho();
         e = keypad(stdscr, TRUE);
         e = cbreak();
         
