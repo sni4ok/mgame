@@ -230,7 +230,7 @@ int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user,
     return 0;
 }
 
-lws_context* create_context(char_cit ssl_ca_file)
+lws_context* create_context(/*char_cit ssl_ca_file*/)
 {
     int logs = LLL_ERR | LLL_WARN;
     lws_set_log_level(logs, NULL);
@@ -247,8 +247,8 @@ lws_context* create_context(char_cit ssl_ca_file)
     info.gid = -1;
     info.uid = -1;
     info.options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
-    if(ssl_ca_file)
-        info.client_ssl_ca_filepath = ssl_ca_file;
+    //if(ssl_ca_file)
+    //    info.client_ssl_ca_filepath = ssl_ca_file;
     lws_context* context = lws_create_context(&info);
     if(!context)
         throw str_exception("lws_create_context error");

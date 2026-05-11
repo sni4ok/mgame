@@ -24,23 +24,23 @@ namespace
 
 struct efile
 {
-    char buf[1024 * 1024];
-    buf_stream bs;
-    bool bin;
+    buf_stream_fixed<1024 * 1024> bs;
+    bool bin = false;
     mstring fname;
     int hfile;
 
-    efile(const mstring& params) : buf(), bs(buf), bin()
+    efile(const mstring& params)
     {
         mvector<str_holder> p = split(params.str(), ' ');
         if(p.size() != 3)
             throw mexception(es() % "efile() \"file (bin,csv) (truncate,append,rename_new) file_name\", params: " % params);
+
         if(p[0] == "bin")
             bin = true;
         else if(p[0] != "csv")
             throw mexception(es() % "efile() bad file_type: " % params);
-        fname = move(p[2]);
 
+        fname = move(p[2]);
         int fp = O_WRONLY | O_CREAT | O_APPEND;
         if(p[1] == "truncate")
             fp |= O_TRUNC;

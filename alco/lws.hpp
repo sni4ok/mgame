@@ -70,7 +70,7 @@ struct lws_impl : emessages, lws_dump, stack_singleton<lws_impl>
     virtual void proceed(lws* wsi, char_cit in, size_t len) = 0;
 };
 
-lws_context* create_context(char_cit ssl_ca_file = 0);
+lws_context* create_context(/*char_cit ssl_ca_file = 0*/);
 
 template<typename lws_w>
 void proceed_lws_parser_fake(volatile bool& can_run)
