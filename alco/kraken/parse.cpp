@@ -34,7 +34,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     ttime_t t_time;
 
     lws_i() : sec_id_by_name<lws_impl>(config::instance().push,
-        config::instance().log_lws, char(), char()), cfg(config::instance())
+        config::instance().log_lws, char('['), char(']')), cfg(config::instance())
     {
         mstring s = "{\"event\":\"subscribe\",\"pair\":["
             + join_tickers(cfg.tickers) + "],\"subscription\": {";
@@ -113,6 +113,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             {
                 skip_fixed(it, "[");
                 parse_tick(it, ie);
+
                 if(ask)
                     t_count.value = -t_count.value;
                 bool rep = false;
@@ -121,8 +122,10 @@ struct lws_i : sec_id_by_name<lws_impl>
                     skip_fixed(it, ",\"r\"");
                     rep = true;
                 }
+
                 add_order(security_id, t_price.value, t_price, t_count,
                     (snapshot || rep) ? ttime_t() : t_time, time);
+
                 skip_fixed(it, "]");
                 if(*it == ',')
                     ++it;
@@ -201,6 +204,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             mlog() << "lws proceed: " << str_holder(in, len);
         char_cit it = in, ie = it + len;
 
+    rep:
         if(*it == '[')
         {
             ++it;
@@ -213,8 +217,6 @@ struct lws_i : sec_id_by_name<lws_impl>
         }
         else if(skip_if_fixed(it, "{\"channelID\":"))
         {
-            if(!cfg.log_lws)
-                mlog() << "" << str_holder(it, ie - it);
             char_cit ne = find(it, ie, ',');
             u32 channel = atoi<u32>(it, ne - it);
             it = ne + 1;
@@ -238,14 +240,24 @@ struct lws_i : sec_id_by_name<lws_impl>
                 i.f = &lws_i::parse_spread;
             else
                 throw mexception(es() % "unsupported type: " % str_holder(in, len));
+
         }
         else if(skip_if_fixed(it, "{\"connectionID\":"))
-            it = ie;
+        {
+            it = find(it, ie, '}') + 1;
+        }
         else if(skip_if_fixed(it, "{\"event\":\"heartbeat\"}"))
         {
         }
-        if(it != ie) [[unlikely]]
-            mlog(mlog::critical) << "unsupported message: " << str_holder(in, len);
+        else if(skip_if_fixed(it, "{\"event\":\"systemStatus\""))
+        {
+            it = find(it, ie, '}') + 1;
+        }
+        else
+            throw mexception(es() % "parsing message error: " % str_holder(in, len));
+
+        if(it != ie)
+            goto rep;
     }
 };
 

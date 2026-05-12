@@ -10,6 +10,7 @@
 #include "../makoa/exports.hpp"
 #include "../makoa/types.hpp"
 #include "../evie/mlog.hpp"
+#include "../evie/profiler.hpp"
 
 #include <sys/stat.h>
 #include <unistd.h>
@@ -33,7 +34,8 @@ struct efile
     {
         mvector<str_holder> p = split(params.str(), ' ');
         if(p.size() != 3)
-            throw mexception(es() % "efile() \"file (bin,csv) (truncate,append,rename_new) file_name\", params: " % params);
+            throw mexception(es() %
+"efile() \"file (bin,csv) (truncate,append,rename_new) file_name\", params: " % params);
 
         if(p[0] == "bin")
             bin = true;
@@ -65,7 +67,8 @@ struct efile
                 int r = rename(fname.c_str(), backup.c_str());
                 if(r)
                     mlog(mlog::critical) << "rename file from " << fname << ", to " << backup
-                        << ", error: " << r << ", " << _str_holder(errno ? strerror(errno) : "");
+                        << ", error: " << r << ", "
+                        << _str_holder(errno ? strerror(errno) : "");
                 else
                     mlog(mlog::critical) << "file renamed from " << fname << ", to " << backup;
 
@@ -77,7 +80,8 @@ struct efile
                 {
                     mstring gzip = "gzip " + backup;
                     r = system(gzip.c_str());
-                    mlog(mlog::critical) << gzip << (r ? _str_holder(" fail") : _str_holder(" success"));
+                    mlog(mlog::critical) << gzip
+                        << (r ? _str_holder(" fail") : _str_holder(" success"));
                 }
             }
             if(fsz || !hfile)
@@ -92,6 +96,7 @@ struct efile
     }
     void write(char_cit buf, u32 count)
     {
+        MPROFILE("efaile::write")
         if(::write(hfile, buf, count) != ssize_t(count))
             throw_system_failure(es() % "efile " % fname % " writing error");
     }

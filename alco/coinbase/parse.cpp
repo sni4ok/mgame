@@ -33,7 +33,7 @@ struct lws_i : lws_impl, read_time_impl
         mstream sub;
         sub << "{\"type\":\"subscribe\",\"product_ids\": [" << tickers << "],\"channels\": [";
         if(cfg.orders)
-            sub << "\"level2\",";
+            sub << "\"level2_batch\",";
         if(cfg.trades)
             sub << "\"matches\",";
         sub << "{\"name\": \"ticker\",\"product_ids\": [" << tickers << "]}]}";
@@ -137,6 +137,6 @@ void proceed_coinbase(volatile bool& can_run)
 
 void connect(lws_i& ls)
 {
-    lws_connect(ls, "ws-feed.pro.coinbase.com", 443, "/ws/2");
+    lws_connect(ls, "ws-feed.exchange.coinbase.com", 443, "/ws/2");
 }
 
