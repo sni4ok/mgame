@@ -6,65 +6,12 @@
 
 #include "../makoa/types.hpp"
 
-void security::proceed_book(exporter& e, price_t price, count_t count,
-    ttime_t etime, ttime_t time)
+u32 proceed_instr(exporter& e, str_holder exchange_id, str_holder feed_id, str_holder ticker, ttime_t time)
 {
-    mb.time = time;
-    mb.etime = etime;
-    mb.level_id = price.value;
-    mb.price = price;
-    mb.count = count;
-    _.t.time = cur_ttime(); //get_export_mtime
-    e.proceed((message*)(&mb), 1);
-}
-
-void security::proceed_trade(exporter& e, u32 direction, price_t price, count_t count,
-    ttime_t etime, ttime_t time)
-{
-    mt.time = time;
-    mt.etime = etime;
-    mt.direction = direction;
-    mt.price = price;
-    mt.count = count;
-    mb.time = cur_ttime(); //get_export_mtime
-    e.proceed((message*)(&mt), 1);
-}
-
-void security::proceed_clean(exporter& e)
-{
-    mc.time = cur_ttime();
-    mt.time = ttime_t(); //get_export_mtime
-    e.proceed((message*)(&mc), 1);
-}
-
-void security::proceed_instr(exporter& e, ttime_t time)
-{
+    static message_instr _, mi;
+    _.time = ttime_t();
     mi.time = time;
-    mc.time = ttime_t(); //get_export_mtime
-    e.proceed((message*)(&mi), 1);
-}
-
-void security::proceed_ping(exporter& e, ttime_t etime)
-{
-    mp.etime = etime;
-    mp.time = cur_ttime();
-    mi.time = ttime_t(); //get_export_mtime
-    e.proceed((message*)(&mp), 1);
-}
-
-void security::init(const mstring& exchange_id, const mstring& feed_id,
-    const mstring& ticker)
-{
-    mb = message_book();
-    mb.id = msg_book;
-    mt = message_trade();
-    mt.id = msg_trade;
-    mc = message_clean();
-    mc.id = msg_clean;
-    mi = message_instr();
     mi.id = msg_instr;
-    mp = message_ping();
-    mp.id = msg_ping;
 
     memset(&mi.exchange_id, 0, sizeof(mi.exchange_id));
     memset(&mi.feed_id, 0, sizeof(mi.feed_id));
@@ -83,11 +30,8 @@ void security::init(const mstring& exchange_id, const mstring& feed_id,
     copy(ticker.begin(), ticker.end(), &mi.security[0]);
 
     mi.security_id = calc_crc(mi);
-    mi.time = cur_ttime();
-
-    mb.security_id = mi.security_id;
-    mt.security_id = mi.security_id;
-    mc.security_id = mi.security_id;
+    e.proceed((message*)(&mi), 1);
+    return mi.security_id;
 }
 
 emessages::emessages(const mstring& push) : e(push), m_s()

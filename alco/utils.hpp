@@ -22,11 +22,10 @@ struct sec_id_by_name : base
         auto it = securities.find(symbol);
         if(it == securities.end()) [[unlikely]]
         {
-            tmp.init(config::instance().exchange_id, config::instance().feed_id,
-                mstring(i, ie));
-            securities[symbol] = tmp.mi.security_id;
-            tmp.proceed_instr(this->e, time);
-            return tmp.mi.security_id;
+            u32 id = proceed_instr(this->e, config::instance().exchange_id.str(),
+                config::instance().feed_id.str(), str_holder(i, ie), time);
+            securities[symbol] = id;
+            return id;
         }
         else
             return it->second;
@@ -36,7 +35,6 @@ struct sec_id_by_name : base
 
 private:
     fmap<ticker, u32> securities;
-    security tmp;
 };
 
 extern "C"

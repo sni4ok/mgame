@@ -7,26 +7,11 @@
 #include "../lws.hpp"
 #include "../utils.hpp"
 
-struct lws_i : lws_impl, read_time_impl
+struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
 {
     config& cfg;
-    typedef basic_string<sizeof(message_instr::security) + 1> ticker;
-    fmap<ticker, security> securities;
 
-    security& get_security(char_cit i, char_cit ie, ttime_t time)
-    {
-        ticker symbol(i, ie);
-        auto it = securities.find(symbol);
-        if(it == securities.end()) [[unlikely]] {
-            security& s = securities[symbol];
-            s.init(cfg.exchange_id, cfg.feed_id, mstring(i, ie));
-            s.proceed_instr(e, time);
-            return s;
-        }
-        else
-            return it->second;
-    }
-    lws_i() : lws_impl(config::instance().push, config::instance().log_lws),
+    lws_i() : sec_id_by_name<lws_impl>(config::instance().push, config::instance().log_lws),
         cfg(config::instance())
     {
         mstring tickers = join_tickers(cfg.tickers);
@@ -46,20 +31,24 @@ struct lws_i : lws_impl, read_time_impl
             mlog() << "lws proceed: " << str_holder(in, len);
         char_cit it = in, ie = it + len;
         skip_fixed(it, "{\"type\":\"");
+
         if(skip_if_fixed(it, "l2update\",\"product_id\":\""))
         {
             char_cit ne = find(it, ie, '\"');
-            security& s = get_security(it, ne, time);
+            u32 security_id = get_security_id(it, ne, time);
             it = ne + 1;
             skip_fixed(it, ",\"changes\":[[\"");
+
         repeat:
             bool ask;
             if(skip_if_fixed(it, "sell\",\""))
                 ask = true;
-            else {
+            else
+            {
                 skip_fixed(it, "buy\",\"");
                 ask = false;
             }
+
             ne = find(it, ie, '\"');
             price_t p = lexical_cast<price_t>(it, ne);
             it = ne + 1;
@@ -68,18 +57,22 @@ struct lws_i : lws_impl, read_time_impl
             count_t c = lexical_cast<count_t>(it, ne);
             if(ask)
                 c.value = -c.value;
+
             it = ne + 1;
             skip_fixed(it, "]");
-            s.proceed_book(e, p, c, ttime_t(), time);
+            add_order(security_id, p.value, p, c, ttime_t(), time);
             if(skip_if_fixed(it, ","))
             {
                 skip_fixed(it, "[\"");
                 goto repeat;
             }
+
             skip_fixed(it, "],\"time\":\"");
             ttime_t etime = read_time<6>(it);
             unused(etime);
             skip_fixed(it, "Z\"}");
+            send_messages();
+
             if(it != ie) [[unlikely]]
                 throw mexception(es() % "parsing message error: " % str_holder(in, ie - in));
         }
@@ -91,13 +84,16 @@ struct lws_i : lws_impl, read_time_impl
             skip_fixed(it, ",\"taker_order_id\":\"");
             it = find(it, ie, '\"') + 1;
             skip_fixed(it, ",\"side\":\"");
+
             int direction;
             if(skip_if_fixed(it, "sell\",\""))
                 direction = 1;
-            else {
+            else
+            {
                 skip_fixed(it, "buy\",\"");
                 direction = 2;
             }
+
             skip_fixed(it, "size\":\"");
             char_cit ne = find(it, ie, '\"');
             count_t c = lexical_cast<count_t>(it, ne);
@@ -108,7 +104,7 @@ struct lws_i : lws_impl, read_time_impl
             it = ne + 1;
             skip_fixed(it, ",\"product_id\":\"");
             ne = find(it, ie, '\"');
-            security& s = get_security(it, ne, time);
+            u32 security_id = get_security_id(it, ne, time);
             it = ne + 1;
             skip_fixed(it, ",\"sequence\":");
             it = find(it, ie, ',') + 1;
@@ -118,7 +114,8 @@ struct lws_i : lws_impl, read_time_impl
             if(it != ie) [[unlikely]]
                 throw mexception(es() % "parsing message error: " % str_holder(in, ie - in));
         
-            s.proceed_trade(e, direction, p, c, etime, time);
+            add_trade(security_id, p, c, direction, etime, time);
+            send_messages();
         }
         else if(skip_if_fixed(it, "heartbeat\""))
         {

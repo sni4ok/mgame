@@ -19,6 +19,7 @@ template<u32 sz>
 struct cg_string
 {
     char buf[sz + 1];
+
     cg_string()
     {
         memset(buf, 0, sizeof(buf));
@@ -45,6 +46,10 @@ struct cg_string
     bool empty() const
     {
         return buf[0] == char();
+    }
+    str_holder str() const
+    {
+        return from_array(buf);
     }
 };
 

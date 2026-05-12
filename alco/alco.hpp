@@ -6,23 +6,6 @@
 
 #include "../makoa/exports.hpp"
 
-struct security
-{
-    message _;
-    message_book mb;
-    message_trade mt;
-    message_clean mc;
-    message_instr mi;
-    message_ping mp;
-
-    void proceed_book(exporter& e, price_t price, count_t count, ttime_t etime, ttime_t time);
-    void proceed_trade(exporter& e, u32 direction, price_t price, count_t count, ttime_t etime, ttime_t time);
-    void proceed_clean(exporter& e);
-    void proceed_instr(exporter& e, ttime_t time);
-    void proceed_ping(exporter& e, ttime_t etime);
-    void init(const mstring& exchange_id, const mstring& feed_id, const mstring& ticker);
-};
-
 struct emessages
 {
     exporter e;
@@ -39,4 +22,6 @@ struct emessages
     void add_trade(u32 security_id, price_t price, count_t count, u32 direction, ttime_t etime, ttime_t time);
     void send_messages();
 };
+
+u32 proceed_instr(exporter& e, str_holder exchange_id, str_holder feed_id, str_holder ticker, ttime_t time);
 
