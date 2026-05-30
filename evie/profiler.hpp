@@ -14,13 +14,18 @@
 #define CONCAT(a, b) CONCAT_(a, b)
 #define CLINE(a) CONCAT(a, __LINE__)
 
-#define MPROFILE(id) static const u64 CLINE(counter_id) = profilerinfo::instance().register_counter(id); \
-    mprofiler CLINE(profile_me)(CLINE(counter_id));
-#define MPROFILE_USER(id, time) static const u64 CLINE(counter_id) = \
-    profilerinfo::instance().register_counter(id); \
-    profilerinfo::instance().add_info(CLINE(counter_id), time);
+#define MPROFILE(id) static const u64 CLINE(counter_id) = \
+    profiler::instance().register_counter(id, profiler::time); \
+    mprofiler CLINE(profile_id)(CLINE(counter_id));
 
-class profilerinfo : public stack_singleton<profilerinfo>
+#define MPROFILE_TYPE(id, type, value) static const u64 CLINE(counter_id) = \
+    profiler::instance().register_counter(id, profiler:: type); \
+    profiler::instance().add(CLINE(counter_id), value);
+
+#define MPROFILE_USER(id, value) MPROFILE_TYPE(id, time, value)
+#define MPROFILE_COUNT(id, value) MPROFILE_TYPE(id, count, value)
+
+class profiler : public stack_singleton<profiler>
 {
     static const u32 max_counters = 100;
 
@@ -29,6 +34,7 @@ class profilerinfo : public stack_singleton<profilerinfo>
         ttime_t time, time_max, time_min;
         i64 count;
         const char* name;
+        int type;
 
         info();
     };
@@ -36,16 +42,19 @@ class profilerinfo : public stack_singleton<profilerinfo>
     info counters[max_counters];
     u64 cur_counters;
 
-    void print_impl(long mlog_params);
-    profilerinfo();
-
+    profiler();
     friend class simple_log;
-public:
 
-    u64 register_counter(const char* id);
-    void add_info(u64 counter_id, ttime_t time);
+public:
+    enum type
+    {
+        time, count
+    };
+
+    u64 register_counter(const char* name, type t);
+    void add(u64 counter_id, ttime_t time);
     void print(long mlog_params);
-    ~profilerinfo();
+    ~profiler();
 };
 
 struct mprofiler

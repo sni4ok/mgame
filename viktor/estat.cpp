@@ -28,7 +28,6 @@ namespace
             stat() : min(limits<ttime_t>::max), max(limits<ttime_t>::min), sum(), d2(), count()
             {
             }
-
             void add(ttime_t f, ttime_t t)
             {
                 if(!f || !t)
@@ -58,26 +57,21 @@ namespace
 
         //  ttime_t etime; //exchange time
         //  ttime_t time;  //parser time
-        //  ttime_t mtime; //parser out or makoa server time
         //  ttime_t ctime; //cur estat time
         struct mstat
         {
-            stat et, tm, mc, tc, ec;
+            stat et, tc, ec;
 
             void print(mlog& ml, str_holder n) const
             {
                 mstring name(n);
                 et.print(ml, name + "_et");
-                tm.print(ml, name + "_tm");
-                mc.print(ml, name + "_mc");
                 tc.print(ml, name + "_tc");
                 ec.print(ml, name + "_ec");
             }
-            void add(ttime_t etime, ttime_t time, ttime_t mtime, ttime_t ctime)
+            void add(ttime_t etime, ttime_t time, ttime_t ctime)
             {
                 et.add(etime, time);
-                tm.add(time, mtime);
-                mc.add(mtime, ctime);
                 tc.add(time, ctime);
                 ec.add(etime, ctime);
             }
@@ -128,25 +122,25 @@ namespace
             }
             else
             {
-                ttime_t mtime = get_export_mtime(mes);
                 for(u32 i = 0; i != count; ++i, ++mes)
                 {
                     const message& m = *mes;
                     ttime_t ctime = cur_ttime();
                     if(m.id == msg_book)
-                        mb.add(m.mb.etime, m.mb.time, mtime, ctime);
+                        mb.add(m.mb.etime, m.mb.time, ctime);
                     else if(m.id == msg_trade)
-                        mt.add(m.mt.etime, m.mt.time, mtime, ctime);
+                        mt.add(m.mt.etime, m.mt.time, ctime);
                     else if(m.id == msg_clean)
-                        mc.add(m.mc.etime, m.mc.time, mtime, ctime);
+                        mc.add(m.mc.etime, m.mc.time, ctime);
                     else if(m.id == msg_instr)
-                        mi.add(ttime_t(), m.mi.time, mtime, ctime);
+                        mi.add(ttime_t(), m.mi.time, ctime);
                     else if(m.id == msg_ping)
-                        mp.add(m.mp.etime, m.mp.time, mtime, ctime);
+                        mp.add(m.mp.etime, m.mp.time, ctime);
                 }
             }
         }
-        ~estat() {
+        ~estat()
+        {
             print();
         }
     };

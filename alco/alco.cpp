@@ -4,6 +4,7 @@
 
 #include "alco.hpp"
 
+#include "../evie/profiler.hpp"
 #include "../makoa/types.hpp"
 
 u32 proceed_instr(exporter& e, str_holder exchange_id, str_holder feed_id, str_holder ticker, ttime_t time)
@@ -99,8 +100,8 @@ void emessages::send_messages()
 {
     if(m_s)
     {
-        set_export_mtime(ms);
         e.proceed(ms, m_s);
+        MPROFILE_COUNT("emessages::m_s", {m_s})
         m_s = 0;
     }
 }

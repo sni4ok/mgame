@@ -10,7 +10,6 @@ struct emessages
 {
     exporter e;
     static const u32 pre_alloc = 150;
-    message _;
     message ms[pre_alloc];
     u32 m_s;
 

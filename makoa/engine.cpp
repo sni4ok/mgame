@@ -384,7 +384,6 @@ public:
         }
 
         linked_node* n = (linked_node*)(ptr - sizeof(linked_node::_));
-        set_export_mtime(m);
         n->count = count;
         n->cnt = consumers + 1;
         ll.push(n);
@@ -450,7 +449,6 @@ public:
         {
             u32 cur_c = min<u32>(count - ci, sizeof(messages::m) / message_size);
             linked_node* n = ll.alloc();
-            set_export_mtime(n->m);
             n->count = cur_c;
             n->cnt = consumers;
             for(u32 i = 0; i != cur_c; ++i, ++ci)

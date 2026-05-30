@@ -198,7 +198,7 @@ class simple_log
     static simple_log* log;
 
     void* free_threads;
-    profilerinfo* profiler;
+    ::profiler* profiler;
 
 public:
     volatile bool no_cout;
@@ -229,7 +229,7 @@ public:
         {
             log = this;
             free_threads = init_free_threads();
-            profiler = new profilerinfo;
+            profiler = new ::profiler;
         }
         work_thread = jthread(&simple_log::write_thred, this);
     }
@@ -259,7 +259,7 @@ public:
     {
         log = l;
         set_free_threads(l->free_threads);
-        profilerinfo::set_instance(l->profiler);
+        profiler::set_instance(l->profiler);
     };
     static simple_log& instance()
     {
