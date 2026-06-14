@@ -11,6 +11,7 @@
 #include "../evie/queue.hpp"
 #include "../evie/math.hpp"
 
+#include <unordered_map>
 #include <stdlib.h>
 
 ncurses_err e;

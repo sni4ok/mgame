@@ -66,17 +66,18 @@ namespace
 
         void proceed(const message* m)
         {
-            if(m->id == msg_book) {
+            if(m->id == msg_book)
+            {
                 const price_t& p = m->mb.price;
                 info& v = (data.at(m->mb.security_id)).second;
-                if(m->mb.count.value < 0)
+                if(m->mb.count < count_t())
                 {
                     v.min_ask = !!v.min_ask ? min(*v.min_ask, p) : p;
                     v.max_ask = !!v.max_ask ? max(*v.max_ask, p) : p;
                     ++v.asks;
                     v.asks_p.insert(p);
                 }
-                else if(m->mb.count.value > 0)
+                else if(m->mb.count > count_t())
                 {
                     v.min_bid = !!v.min_bid ? min(*v.min_bid, p) : p;
                     v.max_bid = !!v.max_bid ? max(*v.max_bid, p) : p;
@@ -85,11 +86,11 @@ namespace
                 }
 
                 v.ob.proceed(*m);
-                if(!v.first_ob_time.value)
+                if(!v.first_ob_time)
                     v.first_ob_time = m->mb.time;
                 if(v.last_ob_time != m->mb.time && !v.ob.asks.empty() && !v.ob.bids.empty())
                 {
-                    ++v.spreads[{v.ob.asks.begin()->first.value - v.ob.bids.begin()->first.value}];
+                    ++v.spreads[v.ob.asks.begin()->first - v.ob.bids.begin()->first];
                     v.last_ob_time = m->mb.time;
                 }
             }
@@ -100,7 +101,7 @@ namespace
                 v.min_trade = !!v.min_trade ? min(*v.min_trade, p) : p;
                 v.max_trade = !!v.max_trade ? max(*v.max_trade, p) : p;
                 v.trades_p.insert(p);
-                if(m->mt.count.value)
+                if(!!m->mt.count)
                     ++v.trades[m->mt.count];
             }
             else if(m->id == msg_instr)
@@ -144,12 +145,14 @@ namespace
                 {
                     if(prices.empty())
                         return price_t();
+
                     auto it = prices.begin(), ie = prices.end();
                     price_t price = *it;
                     ++it;
-                    price_t min_price = price_t(abs(price.value - it->value));
-                    for(; it != ie; ++it) {
-                        min_price = min(min_price, price_t(abs(price.value - it->value)));
+                    price_t min_price = abs(price - *it);
+                    for(; it != ie; ++it)
+                    {
+                        min_price = min(min_price, abs(price - *it));
                         price = *it;
                     }
                     return min_price;
@@ -159,7 +162,8 @@ namespace
                     << i.bids << "(min price step " << get_pips(i.bids_p) << ") asks: "
                     << i.asks << "(min price step " << get_pips(i.asks_p) << ")";
 
-                if(!i.trades.empty()) {
+                if(!i.trades.empty())
+                {
                     auto it = i.trades.begin(), ie = i.trades.end();
                     ml << "\n  min_trade_count: " << it->first;
                     advance_impl<count_t>(it, ie, trades / 10);
@@ -172,7 +176,8 @@ namespace
                 }
                 u64 spreads = sum(i.spreads);
                 ml << "\n  spreads: " << spreads;
-                if(!i.spreads.empty()) {
+                if(!i.spreads.empty())
+                {
                     auto it = i.spreads.begin(), ie = i.spreads.end();
                     ml << " min_spread: " << it->first;
                     advance_impl<price_t>(it, ie, spreads / 100);

@@ -24,3 +24,11 @@ constexpr type abs(type v)
     return v;
 }
 
+template<typename type>
+constexpr type pow(type f, u32 e)
+{
+    if(!e)
+        return type(1);
+    return f * pow(f, e - 1);
+}
+

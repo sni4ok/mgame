@@ -91,7 +91,7 @@ class simple_log
             if((!stream || ((params & mlog::always_cout)
                 && !(params & mlog::no_cout))) && !no_cout)
             {
-                if(all_sz >= log_no_cout_size)
+                if(all_sz >= log_no_cout_size && !!stream)
                 {
                     if(first)
                     {

@@ -4,6 +4,7 @@
 #define DECIMAL_HPP
 
 #include "type_traits.hpp"
+#include "math.hpp"
 
 template<typename type>
 concept is_decimal = is_class_v<type> && requires(type* t)
@@ -13,19 +14,7 @@ concept is_decimal = is_class_v<type> && requires(type* t)
 };
 
 template<u32 v>
-struct pow10
-{
-    static constexpr u64 value = pow10<v - 1>::value * 10;
-};
-
-template<>
-struct pow10<0>
-{
-    static constexpr u64 value = 1;
-};
-
-template<u32 v>
-inline constexpr u64 pow10_v = pow10<v>::value;
+inline constexpr u64 pow10_v = pow<u64>(10, v);
 
 template<typename type>
 requires(is_decimal<type>)

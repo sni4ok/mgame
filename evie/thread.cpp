@@ -327,6 +327,9 @@ void on_usr_signal(int sign)
 
 void enable_core_dump()
 {
+    if(!getenv("core"))
+        return;
+
     rlimit corelim = rlimit();
     corelim.rlim_cur = RLIM_INFINITY;
     corelim.rlim_max = RLIM_INFINITY;
