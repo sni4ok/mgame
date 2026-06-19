@@ -18,7 +18,6 @@
 #else
 
     #include <unordered_map>
-    #include <map>
 
 namespace std
 {
@@ -50,11 +49,9 @@ struct order_book_ba
 #ifdef USE_PRICE_MAP
     typedef price_map<price_t, message_brief> orders_t;
     typedef price_map<price_t, book> asks_t;
-    //typedef fmap<price_t, book, less<price_t> > asks_t;
-    typedef fmap<price_t, book, greater<price_t> > bids_t;
+    typedef price_map<price_t, book, false> bids_t;
 #else
     typedef std::unordered_map<price_t, message_brief, std::hash<price_t>, std::equal_to<price_t> > orders_t;
-    //typedef std::map<price_t, message_brief> orders_t;
     typedef fmap<price_t, book, less<price_t> > asks_t;
     typedef fmap<price_t, book, greater<price_t> > bids_t;
 #endif
@@ -124,6 +121,9 @@ struct order_book_ba
     void set(const message_book& mb)
     {
         MPROFILE("order_book::set")
+
+        MPROFILE_COUNT("order_book::level_id", {mb.level_id})
+
         orders_t::iterator it;
         message_brief* m;
         {

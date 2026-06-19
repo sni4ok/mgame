@@ -124,11 +124,16 @@ struct tuple_element
     > type;
 };
 
+template<size_t i, typename t>
+struct tuple_element<i, const t>
+{
+    typedef const tuple_element<i, t>::type type;
+};
+
 template<size_t i, typename f, typename s>
 struct tuple_element<i, pair<f, s> >
 {
     typedef conditional_t<!i, f, s> type;
-
     static_assert(i < 2);
 };
 
@@ -137,6 +142,23 @@ struct tuple_element<i, void>
 {
     typedef void type;
 };
+
+namespace std
+{
+    template<size_t i, typename t>
+    struct tuple_element : :: tuple_element<i, t>
+    {
+    };
+
+    template<typename t>
+    struct tuple_size;
+
+    template<typename t>
+    requires(__have_tuple_size<t>)
+    struct tuple_size<t> : ::tuple_size<t>
+    {
+    };
+}
 
 template<size_t i, typename t>
 using tuple_element_t = typename tuple_element<i, t>::type;
@@ -310,14 +332,16 @@ template<int idx, typename type, typename ... types>
 auto read_csv_impl(char_cit& i, char_cit e, char sep)
 {
     char_cit te, t;
-    if((e - i) >= 2 && *i == '\"') {
+    if((e - i) >= 2 && *i == '\"')
+    {
         ++i;
         te = find(i, e, '\"');
         if(te == e)
             throw mexception(es() % "read_csv failure: " % str_holder(i, e));
         t = te + 1;
     }
-    else {
+    else
+    {
         te = find(i, e, sep);
         t = te;
     }
@@ -325,6 +349,7 @@ auto read_csv_impl(char_cit& i, char_cit e, char sep)
     i = t;
     if(i != e)
         ++i;
+
     auto ret = tuple_cat(make_tuple(v), read_csv_impl<idx + 1, types...>(i, e, sep));
     if(i != e)
         throw mexception(es() % "read_csv not complete: " % str_holder(i, e));
@@ -340,7 +365,8 @@ void read_csv(func f, str_holder s, char sep = ',', bool skip_empty_lines = true
         char_cit t = find(i, e, endl);
         if(t == e)
             throw str_exception("read_csv no endl found");
-        if(*i == '#' || (skip_empty_lines && i == t)) {
+        if(*i == '#' || (skip_empty_lines && i == t))
+        {
             i = t + 1;
             continue;
         }

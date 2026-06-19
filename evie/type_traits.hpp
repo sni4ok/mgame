@@ -402,5 +402,11 @@ concept __have_begin = is_class_v<t> && requires(t* v)
     v->begin();
 };
 
+template<typename t>
+concept __have_back = is_class_v<t> && requires(t* v)
+{
+    v->back();
+};
+
 #endif
 

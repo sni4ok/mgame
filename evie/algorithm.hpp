@@ -12,7 +12,7 @@
 #include "type_traits.hpp"
 
 template<typename cont>
-constexpr auto begin(const cont& c)
+[[nodiscard]] constexpr auto begin(const cont& c)
 {
     if constexpr(is_array_v<cont>)
         return &c[0];
@@ -21,12 +21,21 @@ constexpr auto begin(const cont& c)
 }
 
 template<typename cont>
-constexpr auto end(const cont& c)
+[[nodiscard]] constexpr auto end(const cont& c)
 {
     if constexpr(is_array_v<cont>)
         return &c[(sizeof(c) / sizeof(c[0])) - 1];
     else
         return c.end();
+}
+
+template<typename cont>
+auto& back(const cont& c)
+{
+    if constexpr(__have_back<cont>)
+        return c.back();
+    else
+        return *c.rbegin();
 }
 
 template<typename iterator, typename type>
@@ -234,9 +243,21 @@ bool equal(const type* b1, const type* e1, const type* b2, const type* e2)
         return false;
 }
 
-struct forward_iterator_tag
+struct forward_iterator_tag;
+struct bidirectional_iterator_tag;
+
+namespace std
 {
-};
+    struct forward_iterator_tag;
+    struct bidirectional_iterator_tag;
+}
+
+template<typename iterator>
+concept fwd_iters =
+    is_same_v<typename iterator::iterator_category, forward_iterator_tag> ||
+    is_same_v<typename iterator::iterator_category, bidirectional_iterator_tag> ||
+    is_same_v<typename iterator::iterator_category, std::forward_iterator_tag> ||
+    is_same_v<typename iterator::iterator_category, std::bidirectional_iterator_tag>;
 
 template<class it1, class it2>
 constexpr bool lexicographical_compare(it1 first1, it1 last1, it2 first2, it2 last2)
@@ -252,7 +273,7 @@ constexpr bool lexicographical_compare(it1 first1, it1 last1, it2 first2, it2 la
 }
 
 template<typename iterator>
-requires requires { is_same_v<typename iterator::iterator_category, forward_iterator_tag>; }
+requires requires { fwd_iters<iterator> == true; }
 bool equal(iterator b1, iterator e1, iterator b2, iterator e2)
 {
     for(; b1 != e1 && b2 != e2; ++b1, ++b2)
@@ -406,19 +427,32 @@ struct ref
 };
 
 template<typename iterator>
-requires requires { is_same_v<typename iterator::iterator_category, forward_iterator_tag>; }
-iterator advance(iterator it, u64 size)
+[[nodiscard]] iterator advance(iterator it, u64 size)
 {
-    for(u32 i = 0; i != size; ++i, ++it)
-        ;
+    if constexpr(fwd_iters<iterator>)
+    {
+        for(u32 i = 0; i != size; ++i, ++it)
+        {
+        }
+    }
+    else
+        it += size;
+
     return it;
 }
 
 template<typename iterator>
-iterator advance(iterator it, u64 size)
+int64_t distance(iterator f, iterator t)
 {
-    it += size;
-    return it;
+    if constexpr(fwd_iters<iterator>)
+    {
+        int64_t c = 0;
+        for(; f != t; ++f)
+            ++c;
+        return c;
+    }
+    else
+        return t - f;
 }
 
 #endif

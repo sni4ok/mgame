@@ -212,12 +212,12 @@ struct mirror::impl
             if(!ob->bids.empty() && top_order_p.value <= ob->bids.begin()->first.value)
             {
                 auto it = ob->bids.lower_bound(top_order_p);
-                return - i32((it - ob->bids.begin()));
+                return -distance(ob->bids.begin(), it);
             }
         }
         {
             auto it = ob->asks.lower_bound(top_order_p);
-            return it - ob->asks.begin();
+            return distance(ob->asks.begin(), it);
         }
     }
     void print_trades(window& w)
@@ -292,13 +292,18 @@ struct mirror::impl
 
         if(it < 0)
         {
-            auto b = ob->bids.begin() - it, i = ob->bids.begin();
-            if(b >= ob->bids.end())
-                b = ob->bids.end() - 1;
-            for(; row != w.rows - 1 && b >= i; --b)
+            i32 sz = ob->bids.size();
+            if(sz)
+                --sz;
+            auto b = advance(ob->bids.begin(), min(-it, sz));
+            auto i = ob->bids.begin();
+            for(; row != w.rows - 1; --b)
             {
                 assert(b->first != price_t());
                 print_book(true, b->first, b->second, w, row);
+
+                if(b == i)
+                    break;
             }
         }
         {
@@ -430,9 +435,9 @@ struct mirror::impl
                         else
                         {
                             if(u32(-it) >= ob->bids.size())
-                                top_order_p = ob->bids.rbegin()->first;
+                                top_order_p = back(ob->bids).first;
                             else
-                                top_order_p = (ob->bids.begin() - it)->first;
+                                top_order_p = advance(ob->bids.begin(), -it)->first;
                         }
                     }
                     else
@@ -442,9 +447,9 @@ struct mirror::impl
                         else
                         {
                             if(u32(it) >= ob->asks.size())
-                                top_order_p = ob->asks.rbegin()->first;
+                                top_order_p = back(ob->asks).first;
                             else
-                                top_order_p = (ob->asks.begin() + it)->first;
+                                top_order_p = advance(ob->asks.begin(), it)->first;
                         }
                     }
                 }
@@ -533,7 +538,7 @@ mirror::impl* create_mirror(str_holder params)
     if(!refresh_rate)
         throw mexception(es() % "mirror::mirror() bad params: "
             % params % ", refresh_rate should be at least 1");
-    return new mirror::impl(p[0], refresh_rate);
+    return new mirror::impl(p.empty() ? "$0" : p[0], refresh_rate);
 }
 
 mirror::mirror(str_holder params)
