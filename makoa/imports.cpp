@@ -282,6 +282,7 @@ void import_tcp_thread(import_tcp* it, int socket, mstring client,
         scoped_lock lock(it->mutex);
         ++(it->count);
         initialized = true;
+
         if(it->count == max_connections)
             mlog(mlog::warning) << "server("
                 << it->params << ") max_connections exceed on client " << client;
@@ -443,7 +444,7 @@ static const int _import_mmap_cp = register_importer("mmap_cp",
 static const int _import_pipe = register_importer("pipe",
     {importer_init<import_pipe>, importer_destroy<import_pipe>, import_pipe_start, nullptr}
 );
-static const int _import_tcp = register_importer("tyra",
+static const int _import_tcp = register_importer("tcp_import_server",
     {importer_init<import_tcp>, importer_destroy<import_tcp>, import_tcp_start, nullptr}
 );
 static const int _import_udp = register_importer("udp",

@@ -393,12 +393,12 @@ struct price_map
     typedef value value_type;
 
     //typedef idx_bits<bit64, bit64, bit64> idx_root;
-    //typedef idx_bits<bit64, bit64, bit64> idx_node;
+    typedef idx_bits<bit64, bit64, bit64> idx_node;
 
-    typedef idx_bits<bit64, bit64> idx_root;
-    typedef idx_bits<bit64, bit64> idx_node;
+    //typedef idx_bits<bit64, bit64> idx_root;
+    //typedef idx_bits<bit64, bit64> idx_node;
 
-    //typedef idx_bits<bit64> idx_root;
+    typedef idx_bits<bit64> idx_root;
     //typedef idx_bits<bit64> idx_node;
 
     struct node : idx_node

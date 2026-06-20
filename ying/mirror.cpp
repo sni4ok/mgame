@@ -254,7 +254,7 @@ struct mirror::impl
 
         last_printed_trade = std::move(tr);
     }
-    void print_book(bool bids, price_t price, const order_book_ba::book& b,
+    void print_book(bool bids, price_t price, const order_book_leaf& b,
         window& w, u32& row)
     {
         count_t c(bids ? b.count.value : - b.count.value);

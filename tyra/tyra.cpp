@@ -12,7 +12,8 @@
 
 #include <unistd.h>
 
-tyra::tyra(char_cit h) : send_from_call(), send_from_buffer(), bf(buf), bt(buf + sizeof(buf)), c(buf), e(buf) 
+tyra::tyra(char_cit h) : send_from_call(), send_from_buffer(),
+    bf(buf), bt(buf + sizeof(buf)), c(buf), e(buf)
 {
     str_holder host = _str_holder(h);
     mlog() << "tyra() " << host;

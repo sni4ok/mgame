@@ -8,61 +8,38 @@
 
 #include "../evie/utils.hpp"
 #include "../evie/fmap.hpp"
-#include "../evie/profiler.hpp"
+#include "../evie/price_map.hpp"
+#include "../evie/mlog.hpp"
+
+#include <unordered_map>
 
 //#define USE_PRICE_MAP
 
-#ifdef USE_PRICE_MAP
-
-    #include "../evie/price_map.hpp"
-#else
-
-    #include <unordered_map>
-
-namespace std
+struct message_brief
 {
-    template<>
-    struct hash<price_t>
-    {
-        size_t operator()(const price_t& p) const
-        {
-            return std::hash<u64>()(p.value);
-        }
-    };
-}
-#endif
+    price_t price;
+    count_t count;
+};
 
-struct order_book_ba
+struct order_book_leaf
 {
-    struct book
-    {
-        count_t count;
-        ttime_t time;
-    };
+    count_t count;
+    ttime_t time;
+};
 
-    struct message_brief
-    {
-        price_t price;
-        count_t count;
-    };
+template<typename orders_t, typename asks_t, typename bids_t>
+class order_book_base
+{
+    orders_t orders;
 
-#ifdef USE_PRICE_MAP
-    typedef price_map<price_t, message_brief> orders_t;
-    typedef price_map<price_t, book> asks_t;
-    typedef price_map<price_t, book, false> bids_t;
-#else
-    typedef std::unordered_map<price_t, message_brief, std::hash<price_t>, std::equal_to<price_t> > orders_t;
-    typedef fmap<price_t, book, less<price_t> > asks_t;
-    typedef fmap<price_t, book, greater<price_t> > bids_t;
-#endif
+public:
 
-    orders_t orders_l;
     asks_t asks;
     bids_t bids;
 
     void add(price_t price, count_t count, ttime_t time)
     {
-        //MPROFILE("order_book_ba::add")
+        //MPROFILE("order_book::add")
         if(!count)
             return;
 
@@ -86,7 +63,7 @@ struct order_book_ba
             }
             else
             {
-                book& b = bids[price];
+                order_book_leaf& b = bids[price];
                 b.count += count;
                 b.time = time;
             }
@@ -112,7 +89,7 @@ struct order_book_ba
             }
             else
             {
-                book& a = asks[price];
+                order_book_leaf& a = asks[price];
                 a.count += count;
                 a.time = time;
             }
@@ -121,27 +98,9 @@ struct order_book_ba
     void set(const message_book& mb)
     {
         MPROFILE("order_book::set")
-
         MPROFILE_COUNT("order_book::level_id", {mb.level_id})
 
-        orders_t::iterator it;
-        message_brief* m;
-        {
-            //MPROFILE("orders_l.[]")
-
-#ifdef USE_PRICE_MAP
-            auto v = orders_l.insert(price_t{mb.level_id});
-            it = v.first;
-#else
-            auto v = orders_l.emplace(std::piecewise_construct, std::make_tuple(price_t{mb.level_id}),
-                std::make_tuple());
-            it = v.first;
-#endif
-
-            m = &it->second;
-            if(v.second)
-                m->price = mb.price;
-        }
+        message_brief* m = orders.get(mb.level_id, mb.price);
 
         const price_t& price = !!mb.price ? mb.price : m->price;
         if(mb.price == m->price || !mb.price)
@@ -152,10 +111,7 @@ struct order_book_ba
             add(mb.price, mb.count, mb.time);
         }
         if(!mb.count)
-        {
-            //MPROFILE("orders_l.erase")
-            orders_l.erase(it);
-        }
+            orders.erase_prev();
         else
         {
             m->price = price;
@@ -168,15 +124,179 @@ struct order_book_ba
             set(m.mb);
         else if(m.id == msg_clean || m.id == msg_instr)
         {
-            orders_l.clear();
+            orders.clear();
+            if(m.id == msg_instr)
+                orders.set(m.mi);
             asks.clear();
             bids.clear();
         }
         else
             throw mexception(es() % "order_book::proceed() unsupported message type: " % m.id.id);
     }
-    ~order_book_ba()
+    ~order_book_base()
     {
     }
+};
+
+struct order_book_orders_t
+{
+    virtual void set(const message_instr& mi) = 0;
+    virtual message_brief* get(i64 level_id, price_t price) = 0;
+    virtual void erase_prev() = 0;
+    virtual void clear() = 0;
+
+    virtual ~order_book_orders_t() = default;
+};
+
+struct unordered_orders_t : order_book_orders_t
+{
+    typedef std::unordered_map<i64, message_brief> orders_t;
+    orders_t orders;
+    orders_t::iterator it;
+
+    void set(const message_instr&)
+    {
+    }
+    message_brief* get(i64 level_id, price_t price)
+    {
+        auto v = orders.emplace(std::piecewise_construct, std::make_tuple(level_id),
+            std::make_tuple());
+
+        it = v.first;
+
+        if(v.second)
+            it->second.price = price;
+
+        return &it->second;
+    }
+    void erase_prev()
+    {
+        orders.erase(it);
+    }
+    void clear()
+    {
+        orders.clear();
+    }
+};
+
+struct price_map_orders_t : order_book_orders_t
+{
+    typedef price_map<price_t, message_brief> orders_t;
+    orders_t orders;
+    orders_t::iterator it;
+
+    void set(const message_instr&)
+    {
+    }
+    message_brief* get(i64 level_id, price_t price)
+    {
+        auto v = orders.insert(price_t{level_id});
+        it = v.first;
+
+        if(v.second)
+            it->second.price = price;
+
+        return &it->second;
+    }
+    void erase_prev()
+    {
+        orders.erase(it);
+    }
+    void clear()
+    {
+        orders.clear();
+    }
+};
+
+struct bid_ask_orders_t : order_book_orders_t
+{
+    pair<bool, message_brief> values[3];
+    i64 prev;
+
+    void set(const message_instr&)
+    {
+    }
+    message_brief* get(i64 level_id, price_t price)
+    {
+        assert(level_id == 1 || level_id == 2);
+        auto& [b, m] = values[level_id];
+        if(!b)
+        {
+            b = true;
+            m.price = price;
+            m.count = count_t();
+        }
+
+        prev = level_id;
+        return &m;
+    }
+    void __erase(i64 level_id)
+    {
+        ::get<0>(values[level_id]) = false;
+    }
+    void erase_prev()
+    {
+        __erase(prev);
+    }
+    void clear()
+    {
+        __erase(1);
+        __erase(2);
+    }
+};
+
+struct dynamic_orders_t
+{
+    order_book_orders_t* orders = nullptr;
+
+    void set(const message_instr& mi)
+    {
+        if(!orders)
+        {
+            str_holder exchange = from_array(mi.exchange_id);
+            if(from_any(exchange, "crypcom", "huobi", "kraken"))
+                orders = new price_map_orders_t;
+            if(from_any(exchange, "binance", "bybit"))
+                orders = new bid_ask_orders_t;
+            else
+            {
+                mlog() << "dynamic_orders_t exchange not found: " << exchange
+                    << ", ticker: " << from_array(mi.security);
+                orders = new unordered_orders_t;
+            }
+        }
+    }
+    message_brief* get(i64 level_id, price_t price)
+    {
+        return orders->get(level_id, price);
+    }
+    void erase_prev()
+    {
+        orders->erase_prev();
+    }
+    void clear()
+    {
+        if(orders)
+            orders->clear();
+    }
+    ~dynamic_orders_t()
+    {
+        delete orders;
+    }
+};
+
+struct order_book_ba : order_book_base<
+#ifdef USE_PRICE_MAP
+    dynamic_orders_t,
+    //price_map_orders_t,
+    price_map<price_t, order_book_leaf>,
+    price_map<price_t, order_book_leaf, false>
+#else
+    unordered_orders_t,
+    fmap<price_t, order_book_leaf, less<price_t> >,
+    fmap<price_t, order_book_leaf, greater<price_t> >
+#endif
+    >
+{
 };
 

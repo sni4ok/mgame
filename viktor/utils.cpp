@@ -186,10 +186,10 @@ void parsers_stat(str_holder f)
             {
                 u64 sz = (s.size - s.from_size) / message_size;
                 u64 mps = sz * frac<ttime_t>() / d.value;
-                cout(false) << uint_fixed<7, false>(mps) << "/s " << files[i];
+                cout() << uint_fixed<7, false>(mps) << "/s " << files[i];
             }
             else
-                cout(false) << "[no data] " << files[i];
+                cout() << "[no data] " << files[i];
         }
 
         usleep(500000);
