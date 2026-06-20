@@ -19,6 +19,7 @@ public:
 };
 
 int socket_connect(const mstring& host, u16 port, u32 timeout = 3/*in seconds*/);
+int socket_connect(str_holder log_name, str_holder host_port, u32 timeout = 3);
 void socket_send(int socket, char_cit ptr, u32 sz);
 u32 try_socket_send(int socket, char_cit ptr, u32 sz);
 void socket_send_async(int socket, char_cit ptr, u32 sz);

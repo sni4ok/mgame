@@ -19,16 +19,7 @@ class tyra
 
 public:
     tyra(const char* host);
-
-    void send(const message& m);
     void send(const message* m, u32 count);
-
-    template<typename message_type>
-    void send(const message_type& m)
-    {
-        static_assert(sizeof(message_type) == sizeof(message));
-        return send(reinterpret_cast<const message&>(m));
-    }
 
     void flush();
     ~tyra();

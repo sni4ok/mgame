@@ -12,7 +12,7 @@
 #include "../evie/mlog.hpp"
 
 #include <deque>
-#include <map>
+#include <unordered_map>
 
 struct viktor
 {
@@ -24,8 +24,8 @@ struct viktor
     unique_ptr<exporter> e;
     time_t last_connect;
 
-    typedef std::map<i64/*level_id*/, message_book> snapshot;
-    std::map<u32, snapshot> snapshots;
+    typedef std::unordered_map<i64/*level_id*/, message_book> snapshot;
+    std::unordered_map<u32, snapshot> snapshots;
     mvector<message> s;
 
     viktor(char_cit params) : last_times(), params(_str_holder(params)), last_connect()

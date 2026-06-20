@@ -254,7 +254,7 @@ struct dynamic_orders_t
         if(!orders)
         {
             str_holder exchange = from_array(mi.exchange_id);
-            if(from_any(exchange, "crypcom", "huobi", "kraken"))
+            if(from_any(exchange, "huobi", "kraken"))
                 orders = new price_map_orders_t;
             if(from_any(exchange, "binance", "bybit"))
                 orders = new bid_ask_orders_t;

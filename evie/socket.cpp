@@ -109,6 +109,18 @@ int socket_connect(const mstring& host, u16 port, u32 timeout)
     return sh.release();
 }
 
+int socket_connect(str_holder log_name, str_holder host, u32 timeout)
+{
+    mlog() << log_name << " " << host;
+    auto ie = host.end(), i = find(host.begin(), ie, ':');
+    if(i == ie || i + 1 == ie)
+        throw mexception(es() % log_name % " bad host: " % host);
+
+    int socket = socket_connect({host.begin(), i}, lexical_cast<u16>(i + 1, host.end()));
+    mlog() << log_name << " connected to socket " << socket;
+    return socket;
+}
+
 void socket_send(int socket, char_cit ptr, u32 sz)
 {
     while(sz)

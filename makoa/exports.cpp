@@ -10,6 +10,7 @@
 #include "../tyra/tyra.hpp"
 
 #include "../evie/profiler.hpp"
+#include "../evie/socket.hpp"
 #include "../evie/fmap.hpp"
 #include "../evie/mlog.hpp"
 
@@ -146,6 +147,54 @@ namespace
     {
         return ((tyra*)t)->send(m, count);
     }
+    struct export_tcp_server
+    {
+        int socket = 0;
+
+        export_tcp_server(char_cit params)
+        {
+            str_holder _p = _str_holder(params);
+            mlog() << "export|tcp_server " << _p;
+            auto p = split(_p, ' ');
+            if(p.size() != 1 && p.size() != 2)
+                throw mexception(es() % "export|tcp_server, port[ possible_host]");
+
+            u16 port = lexical_cast<u16>(p[0]);
+            str_holder possible_host;
+
+            if(p.size() == 2)
+                possible_host = p[1];
+
+            mstring client;
+            socket = socket_accept_async(port, false/*local*/, false/*sync*/, &client, can_run_impl);
+
+            if(!possible_host.empty() && possible_host != "*" && possible_host != client)
+                throw mexception(es() % "export|tcp_server, client " % client
+                    % " != possible_host " % possible_host);
+        }
+        void proceed(const message* m, u32 count)
+        {
+            u32 sz = count * message_size;
+            socket_send(socket, (char_cit)m, sz);
+        }
+        ~export_tcp_server()
+        {
+            if(socket)
+                close(socket);
+        }
+    };
+    void* tcp_server_create(char_cit params)
+    {
+        return new export_tcp_server(params);
+    }
+    void tcp_server_destroy(void* t)
+    {
+        delete (export_tcp_server*)t;
+    }
+    void tcp_server_proceed(void* t, const message* m, u32 count)
+    {
+        ((export_tcp_server*)t)->proceed(m, count);
+    }
     struct exports_chain
     {
         static const u32 max_size = 20;
@@ -184,7 +233,8 @@ namespace
         mstring module, params;
         if(it == ie || it + 1 == ie)
             module = m;
-        else {
+        else
+        {
             module = mstring(ib, it);
             params = mstring(it + 1, ie);
         }
@@ -265,7 +315,8 @@ namespace
         for(u8* s = c; s != c + mmap_alloc_size_base; ++s)
         {
             if(*s)
-                throw mexception(es() % "mmap_init() mmap already filled: " % _str_holder(params));
+                throw mexception(es() % "mmap_init() mmap already filled: "
+                    % _str_holder(params));
         }
         *c = 2;
         *(c + 1) = 1;
@@ -324,8 +375,8 @@ namespace
             }
             memcpy(p, m + c, cur_count * message_size);
             mmap_store(i, cur_count);
-            //mlog() << "mmap_proceed(" << u64(v) << "," << u64(p) << "," << c << "," << cur_count
-            //    << "," << u32(*f) << "," << u32(*(f + 1)) << ")";
+            //mlog() << "mmap_proceed(" << u64(v) << "," << u64(p) << "," << c <<
+            //<< "," << cur_count << "," << u32(*f) << "," << u32(*(f + 1)) << ")";
             p += 255;
             ++i;
 
@@ -361,7 +412,8 @@ namespace
         {
             auto p = split_s(_str_holder(params), ' ');
             if(p.size() != 2)
-                throw mexception(es() % "export_udp, required 2 params (server_ip port): " % _str_holder(params));
+                throw mexception(es() %
+                    "export_udp, required 2 params (server_ip port): " % _str_holder(params));
 
             socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
             if(socket < 0)
@@ -443,7 +495,8 @@ void exporter::operator=(exporter&& r)
 exports_factory::exports_factory()
 {
     exporters["log_messages"] = {hole_no_init, hole_no_destroy, log_message};
-    exporters["tyra"] = {tyra_create, tyra_destroy, tyra_proceed};
+    exporters["tcp_client"] = {tyra_create, tyra_destroy, tyra_proceed};
+    exporters["tcp_server"] = {tcp_server_create, tcp_server_destroy, tcp_server_proceed};
     exporters["udp"] = {udp_init, udp_destroy, udp_proceed};
     exporters["pipe"] = {pipe_init, pipe_destroy, pipe_proceed};
     exporters["crc"] = {crc_init, crc_destroy, crc_proceed};

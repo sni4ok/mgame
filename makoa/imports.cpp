@@ -251,7 +251,7 @@ void import_pipe_start(void* c, void* p)
     work_thread_reader(r, ip.can_run, timeout);
 }
 
-struct import_tcp
+struct import_tcp_server
 {
     volatile bool& can_run;
     mstring params;
@@ -260,12 +260,12 @@ struct import_tcp
     ::mutex mutex;
     condition cond;
 
-    import_tcp(volatile bool& can_run, const mstring& params)
+    import_tcp_server(volatile bool& can_run, const mstring& params)
         : can_run(can_run), params(params),
         port(lexical_cast<u16>(params)), count()
     {
     }
-    ~import_tcp()
+    ~import_tcp_server()
     {
         scoped_lock lock(mutex);
         while(count)
@@ -273,7 +273,7 @@ struct import_tcp
     }
 };
 
-void import_tcp_thread(import_tcp* it, int socket, mstring client,
+void import_tcp_thread(import_tcp_server* it, int socket, mstring client,
     volatile bool& initialized, void* p)
 {
     try
@@ -284,7 +284,7 @@ void import_tcp_thread(import_tcp* it, int socket, mstring client,
         initialized = true;
 
         if(it->count == max_connections)
-            mlog(mlog::warning) << "server("
+            mlog(mlog::warning) << "import|tcp_server("
                 << it->params << ") max_connections exceed on client " << client;
 
         if(it->count > max_connections)
@@ -292,23 +292,23 @@ void import_tcp_thread(import_tcp* it, int socket, mstring client,
 
         it->cond.notify_all();
         lock.unlock();
-        mlog() << "server() thread for " << client << " started";
+        mlog() << "import|tcp_server thread for " << client << " started";
         reader<int> r(p, socket, socket_read);
         work_thread_reader(r, it->can_run, timeout);
     }
     catch(exception& e)
     {
-        mlog(mlog::error) << "server(" << it->params << ") client " << client << " " << e;
+        mlog(mlog::error) << "import|tcp_server(" << it->params << ") client " << client << " " << e;
     }
     scoped_lock lock(it->mutex);
     it->cond.notify_all();
-    mlog() << "server(" << it->params << ") thread for " << client << " ended";
+    mlog() << "import|tcp_server(" << it->params << ") thread for " << client << " ended";
     --(it->count);
 }
 
 void import_tcp_start(void* c, void* p)
 {
-    import_tcp& it = *((import_tcp*)(c));
+    import_tcp_server& it = *((import_tcp_server*)(c));
     while(it.can_run)
     {
         mstring client;
@@ -328,6 +328,26 @@ void import_tcp_start(void* c, void* p)
 
         thrd.detach();
     }
+}
+
+struct import_tcp_client
+{
+    volatile bool& can_run;
+    mstring params;
+
+    import_tcp_client(volatile bool& can_run, const mstring& params)
+        : can_run(can_run), params(params)
+    {
+    }
+};
+
+void import_tcp_client_start(void* c, void* p)
+{
+    import_tcp_client& tc = *((import_tcp_client*)c);
+    int socket = socket_connect("import|tcp_client", tc.params.str());
+    socket_holder ss(socket);
+    reader<int> r(p, socket, &socket_read);
+    work_thread_reader(r, tc.can_run, timeout);
 }
 
 struct import_udp
@@ -380,8 +400,8 @@ void import_udp_start(void* c, void* p)
     work_thread_reader(r, i.can_run, timeout);
 }
 
-template<void* (*fcreate)(const char* params, volatile bool& can_run),
-    void (*fdestroy)(void *v)>
+template<void* (*fcreate)(const char* params,
+    volatile bool& can_run), void (*fdestroy)(void *v)>
 struct import_ifile_impl
 {
     void* ptr;
@@ -444,8 +464,11 @@ static const int _import_mmap_cp = register_importer("mmap_cp",
 static const int _import_pipe = register_importer("pipe",
     {importer_init<import_pipe>, importer_destroy<import_pipe>, import_pipe_start, nullptr}
 );
-static const int _import_tcp = register_importer("tcp_import_server",
-    {importer_init<import_tcp>, importer_destroy<import_tcp>, import_tcp_start, nullptr}
+static const int _import_tcp_server = register_importer("tcp_server",
+    {importer_init<import_tcp_server>, importer_destroy<import_tcp_server>, import_tcp_start, nullptr}
+);
+static const int _import_tcp_client = register_importer("tcp_client",
+    {importer_init<import_tcp_client>, importer_destroy<import_tcp_client>, import_tcp_client_start, nullptr}
 );
 static const int _import_udp = register_importer("udp",
     {importer_init<import_udp>, importer_destroy<import_udp>, import_udp_start, nullptr}
