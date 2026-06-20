@@ -475,8 +475,8 @@ struct tss_pvector : data_tss<mvector<type*>, use_tss>
     {
     }
 
-    typedef pvector<type>::iterator iterator;
-    typedef pvector<type>::const_iterator const_iterator;
+    typedef typename pvector<type>::iterator iterator;
+    typedef typename pvector<type>::const_iterator const_iterator;
 
     iterator begin()
     {

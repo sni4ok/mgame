@@ -13,10 +13,12 @@
 extern "C"
 {
     extern char *strdup (const char *__s)
-        noexcept (true) __attribute__ ((__malloc__)) __attribute__ ((__nonnull__ (1)));
+        noexcept (true) __attribute__ ((__malloc__))
+        __attribute__ ((__nonnull__ (1)));
 }
 
-profiler::info::info() : time(), time_max(), time_min(limits<ttime_t>::max), count(), name()
+profiler::info::info() : time(), time_max(),
+    time_min(limits<ttime_t>::max), count(), name()
 {
 }
 
@@ -39,7 +41,8 @@ void profiler::print(long mlog_params)
 
     info counters_cpy[max_counters];
     copy(counters, counters + ncounters, counters_cpy);
-    sort(counters_cpy, counters_cpy + ncounters, [](const info& l, const info& r)
+    sort(counters_cpy, counters_cpy + ncounters,
+        [](const info& l, const info& r)
         {
             if(l.type == r.type)
                 return strcmp(l.name, r.name) < 0;
@@ -60,20 +63,22 @@ void profiler::print(long mlog_params)
         auto f = [&]<typename type>(type, auto av)
         {
             log << _str_holder(i.name) << ": avg: " << av
-                << ", min: " << type(i.time_min) << ", max: " <<  type(i.time_max)
-                << ", all: " << type(i.time) << ", count: " << i.count << endl;
+                << ", min: " << type{i.time_min} << ", max: "
+                <<  type{i.time_max}
+                << ", all: " << type{i.time} << ", count: "
+                << i.count << endl;
         };
 
         if(i.type == time)
         {
             ttime_t time_av = div_int(i.time, i.count);
-            f(print_t(), print_t(time_av));
+            f(print_t(), print_t{time_av});
         }
         else
         {
             int64_t av = i.time.value * 100 / i.count;
             if(av % 100)
-                f(print_count(), p2(av));
+                f(print_count(), p2{av});
             else
                 f(print_count(), av / 100);
         }
@@ -142,7 +147,8 @@ profiler::~profiler()
         free((char_it)counters[c].name);
 }
 
-mprofiler::mprofiler(u64 counter_id) : counter_id(counter_id), time(cur_ttime())
+mprofiler::mprofiler(u64 counter_id)
+    : counter_id(counter_id), time(cur_ttime())
 {
 }
 

@@ -19,10 +19,10 @@ public:
         data.reserve(prealloc_size);
     }
 
-    typedef data_type::iterator iterator;
-    typedef data_type::const_iterator const_iterator;
+    typedef typename data_type::iterator iterator;
+    typedef typename data_type::const_iterator const_iterator;
     typedef type value_type;
-    typedef data_type::reverse_iterator reverse_iterator;
+    typedef typename data_type::reverse_iterator reverse_iterator;
 
     type& front()
     {

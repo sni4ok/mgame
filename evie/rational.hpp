@@ -24,7 +24,7 @@ struct rational
     }
     rational operator-(rational v) const
     {
-        return (*this) + rational(-v.num, v.den);
+        return (*this) + rational({-v.num, v.den});
     }
     rational operator*(rational v) const;
     bool operator!() const

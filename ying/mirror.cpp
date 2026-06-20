@@ -115,7 +115,7 @@ struct decimal_fixed
 
         type p = abs(v);
 
-        i64 m = p.value / frac<type>();
+        u64 m = p.value / frac<type>();
         u32 d = log10(m);
 
         if(v < type())
@@ -125,11 +125,11 @@ struct decimal_fixed
             digits = d;
 
         if(digits)
-            s << uint_fix(m, digits, false);
+            s << uint_fix{m, digits, false};
         else
             s << "0";
 
-         s << "." << uint_fix(p.value % frac<type>(), -p.exponent, true);
+         s << "." << uint_fix{u64(p.value) % frac<type>(), -p.exponent, true};
     }
 };
 
@@ -257,7 +257,7 @@ struct mirror::impl
     void print_book(bool bids, price_t price, const order_book_leaf& b,
         window& w, u32& row)
     {
-        count_t c(bids ? b.count.value : - b.count.value);
+        count_t c{bids ? b.count.value : - b.count.value};
         book bo{c, b.time, price};
 
         if(books_printed[row] != bo)

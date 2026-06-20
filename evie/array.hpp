@@ -109,7 +109,7 @@ public:
     typedef type* iterator;
     typedef const type* const_iterator;
     typedef type value_type;
-    typedef mvector<type>::reverse_iterator reverse_iterator;
+    typedef typename mvector<type>::reverse_iterator reverse_iterator;
 
     array() : size_()
     {

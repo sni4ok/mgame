@@ -127,7 +127,7 @@ struct tuple_element
 template<size_t i, typename t>
 struct tuple_element<i, const t>
 {
-    typedef const tuple_element<i, t>::type type;
+    typedef const typename tuple_element<i, t>::type type;
 };
 
 template<size_t i, typename f, typename s>
@@ -205,7 +205,7 @@ auto tuple_cat(const tuple1& t1, const tuple2& t2)
             return w.add_front(t1);
         }
         else
-            static_assert(false);
+            static_assert(false && sz);
     }
 }
 
@@ -224,7 +224,7 @@ auto apply(func& f, tuple& t)
         else if constexpr(sz == 4)
             return (get<0>(t)->*f)(get<1>(t), get<2>(t), get<3>(t));
         else
-            static_assert(false);
+            static_assert(false && (sz < 1 || sz > 4));
     }
     else
     {
@@ -241,7 +241,7 @@ auto apply(func& f, tuple& t)
         else if constexpr(sz == 5)
             return f(get<0>(t), get<1>(t), get<2>(t), get<3>(t), get<4>(t));
         else
-            static_assert(false);
+            static_assert(false && (sz < 1 || sz > 5));
     }
     assert(false);
 }

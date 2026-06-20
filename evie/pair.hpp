@@ -32,7 +32,7 @@ struct pair
         else if constexpr(i == 1)
             return second;
         else
-            static_assert(false);
+            static_assert(false && i > 1);
     }
     template<unsigned i>
     const auto& get() const

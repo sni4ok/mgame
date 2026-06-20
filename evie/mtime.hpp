@@ -59,7 +59,7 @@ struct date
 
     date& operator-=(date_duration d)
     {
-        return *this += date_duration(-d.days);
+        return *this += date_duration{-d.days};
     }
     date operator+(date_duration d) const
     {
@@ -98,7 +98,7 @@ struct time_duration
     }
     constexpr operator ttime_t() const
     {
-        return ::seconds(total_seconds()) + ttime_t(nanos);
+        return ::seconds(total_seconds()) + ttime_t{nanos};
     }
 };
 

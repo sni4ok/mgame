@@ -551,19 +551,19 @@ namespace alloc_params
         const constexpr fast_alloc_params operator()(u32 pre_alloc,
             u32 max_size = 0) const
         {
-            return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size,
-                use_malloc, cont_type, allocator_cont);
+            return fast_alloc_params({use_mt, use_tss, pre_alloc, max_size,
+                use_malloc, cont_type, allocator_cont});
         }
         const constexpr fast_alloc_params malloc(bool use_malloc = true) const
         {
-            return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size,
-                use_malloc, cont_type, allocator_cont);
+            return fast_alloc_params({use_mt, use_tss, pre_alloc, max_size,
+                use_malloc, cont_type, allocator_cont});
         }
         const constexpr fast_alloc_params operator()(container_tag cont,
             container_tag ac = forward_list_t) const
         {
-            return fast_alloc_params(use_mt, use_tss, pre_alloc, max_size,
-                use_malloc, cont.value, ac.value);
+            return fast_alloc_params({use_mt, use_tss, pre_alloc, max_size,
+                use_malloc, cont.value, ac.value});
         }
         constexpr int node_type() const
         {
@@ -781,7 +781,8 @@ struct allocator_type
 };
 
 template<typename type, fast_alloc_params params = mt_tss,
-    typename node = node_type<type, params.use_tss, params.node_type()>::node>
+    typename node = typename node_type<type, params.use_tss,
+    params.node_type()>::node>
 struct fast_alloc_list :
     allocator_type<type, node, params>::type,
     container_type<type, node, params>::type,

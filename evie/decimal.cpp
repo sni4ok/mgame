@@ -18,7 +18,7 @@ mlog& operator<<(mlog& m, print_t t)
     else if(ta >= seconds(1))
         m << to_decimal<p2>(t.value) << "sec";
     else if(ta >= milliseconds(1))
-        m << div_int(p2(to_us(t.value)), 10) << "ms";
+        m << div_int(p2{to_us(t.value)}, 10) << "ms";
     else if(ta >= microseconds(1))
         m << to_decimal<p2>(milliseconds(t.value.value)) << "us";
     else
@@ -28,15 +28,17 @@ mlog& operator<<(mlog& m, print_t t)
 
 void test_print_t_impl(mlog& m, ttime_t v, auto ... args)
 {
-    m << print_t(v) << " " << print_t(-v) << " " << print_t(div_int(v, 2)) << " ";
+    m << print_t{v} << " " << print_t{-v} << " "
+        << print_t{div_int(v, 2)} << " ";
     if constexpr(sizeof... (args))
         test_print_t_impl(m, args...);
 }
 
 void test_print_t()
 {
-    ttime_t v(123), v2 = v + microseconds(10), v3 = v2 + milliseconds(10),
-        v4 = v3 + seconds(10), v5 = v4 + seconds(4000), v6 = v5 + seconds(36 * 3600),
+    ttime_t v{123}, v2 = v + microseconds(10), v3 = v2 + milliseconds(10),
+        v4 = v3 + seconds(10), v5 = v4 + seconds(4000),
+        v6 = v5 + seconds(36 * 3600),
         v7 = v6 + seconds(year_s * 1.2);
 
     mlog m;
@@ -53,13 +55,13 @@ stream& operator<<(stream& s, i128d v)
     }
     auto f = [](double v)
     {
-        int p = 0;
+        i32 p = 0;
         while(v >= 10.)
         {
             v /= 10;
             ++p;
         }
-        return pair<i32, i32>(i32(v), p);
+        return pair<i32, i32>{i32(v), p};
     };
 
     auto decimal_pow = [](double v, u32 e)
@@ -73,7 +75,7 @@ stream& operator<<(stream& s, i128d v)
         return v;
     };
 
-    i32 sz = 0;
+    u32 sz = 0;
 rep:
     while(v >= i128d(i64(10)))
     {
@@ -81,12 +83,12 @@ rep:
         double d = v.value - decimal_pow(p.first, p.second);
         assert(d >= double());
 
-        s << uint_fix(p.first, sz ? sz - p.second : 1, true);
+        s << uint_fix{u64(p.first), sz ? sz - p.second : 1, true};
         v = i128d(d);
         sz = p.second;
         goto rep;
     }
-    s << uint_fix(v.value, sz ? sz : 1, true);
+    s << uint_fix{u64(v.value), sz ? sz : 1, true};
     return s;
 }
 

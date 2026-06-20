@@ -11,9 +11,9 @@ template<typename type, typename comp = less<type>, template <typename> typename
 struct fset
 {
     typedef type key_type;
-    typedef vector<type>::value_type value_type;
-    typedef vector<type>::iterator iterator;
-    typedef vector<type>::const_iterator const_iterator;
+    typedef typename vector<type>::value_type value_type;
+    typedef typename vector<type>::iterator iterator;
+    typedef typename vector<type>::const_iterator const_iterator;
 
     vector<type> data;
 
@@ -200,7 +200,7 @@ struct pset : fset<type, comp, ppvector>
     typedef fset<type, comp, ppvector> base;
     using base::fset::fset;
 
-    base::iterator insert(base::iterator it, type* k)
+    typename base::iterator insert(typename base::iterator it, type* k)
     {
         if(it != this->data.end())
         {
@@ -216,7 +216,7 @@ struct pset : fset<type, comp, ppvector>
         }
         return this->data.insert(it, k);
     }
-    base::iterator insert(type* k)
+    typename base::iterator insert(type* k)
     {
         return insert(::lower_bound(this->data.begin(), this->data.end(), *k, comp()), k);
     }

@@ -8,11 +8,12 @@
 #define TYPE_TRAITS_HPP
 
 #include <cstdint>
+#include <type_traits>
 
 template<typename t>
 struct is_signed
 {
-    static constexpr bool value = t(t() - t(1)) < t();
+    static constexpr bool value = t(t() - t{1}) < t();
 };
 
 template<typename t>
@@ -184,7 +185,13 @@ struct is_polymorphic
 template<typename t>
 struct remove_cv
 {
-    using type = __remove_cv(t);
+    using type = t;
+};
+
+template<typename t>
+struct remove_cv<const t>
+{
+    using type = t;
 };
 
 template<typename t>
@@ -237,7 +244,7 @@ template<typename type, u64 count>
 inline constexpr bool is_array_v<type[count]> = true;
 
 template<typename type>
-using remove_reference_t = remove_reference<type>::type;
+using remove_reference_t = typename remove_reference<type>::type;
 
 template<typename type>
 inline constexpr bool is_trivially_copyable_v = is_trivially_copyable<type>::value;
@@ -344,7 +351,7 @@ struct add_const<const t>
 };
 
 template<typename type>
-using add_const_t = add_const<type>::type;
+using add_const_t = typename add_const<type>::type;
 
 template<typename t>
 struct remove_const
@@ -359,7 +366,7 @@ struct remove_const<const t>
 };
 
 template<typename type>
-using remove_const_t = remove_const<type>::type;
+using remove_const_t = typename remove_const<type>::type;
 
 template <typename type>
 inline constexpr bool is_class_v = __is_class(type);

@@ -17,9 +17,9 @@ struct fmap
     typedef ::pair<key, value> pair;
     typedef key key_type;
     typedef value mapped_type;
-    typedef vector<pair>::value_type value_type;
-    typedef vector<pair>::iterator iterator;
-    typedef vector<pair>::const_iterator const_iterator;
+    typedef typename vector<pair>::value_type value_type;
+    typedef typename vector<pair>::iterator iterator;
+    typedef typename vector<pair>::const_iterator const_iterator;
 
     vector<pair> data;
 
@@ -213,7 +213,7 @@ struct pmap : fmap<key, value, less<key>, ppvector>
     typedef fmap<key, value, less<key>, ppvector> base;
     using base::fmap::fmap;
 
-    base::iterator insert(base::pair* v)
+    typename base::iterator insert(typename base::pair* v)
     {
         auto it = base::lower_bound(v->first);
         if(it == this->data.end() || this->not_equal(it->first, v->first))

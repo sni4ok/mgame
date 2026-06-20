@@ -41,7 +41,7 @@ struct uint_fix
 template<u32 sz, bool zero = true>
 struct uint_fixed : uint_fix
 {
-    uint_fixed(u64 value) : uint_fix(value, sz, zero)
+    uint_fixed(u64 value) : uint_fix({value, sz, zero})
     {
         static_assert(sz > 0 && sz <= 13, "out of range");
     }
@@ -150,7 +150,7 @@ typedef pair<counting_iterator, counting_iterator> pcc;
 
 struct zpcc : pcc
 {
-    zpcc(i64 value) : pcc(0, value)
+    zpcc(i64 value) : pcc({0, value})
     {
     }
 };

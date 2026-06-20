@@ -28,8 +28,8 @@ namespace
             return ret;
         }
         template<typename key>
-        void advance_impl(std::map<key, u64>::iterator& it,
-            std::map<key, u64>::iterator ie, u64 count)
+        void advance_impl(typename std::map<key, u64>::iterator& it,
+            typename std::map<key, u64>::iterator ie, u64 count)
         {
             while(it != ie)
             {

@@ -230,7 +230,7 @@ date_duration date::operator-(date r) const
     t.date = r;
     ttime_t tr = pack_time(t);
     ttime_t ns = tl - tr;
-    return date_duration(ns.value / frac<ttime_t>() / (24 * 3600));
+    return date_duration({i32(ns.value / frac<ttime_t>() / (24 * 3600))});
 }
 
 ttime_t time_from_date(date t)
