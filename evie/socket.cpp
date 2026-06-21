@@ -116,21 +116,9 @@ int socket_connect(str_holder log_name, str_holder host, u32 timeout)
     if(i == ie || i + 1 == ie)
         throw mexception(es() % log_name % " bad host: " % host);
 
-    int socket = socket_connect({host.begin(), i}, lexical_cast<u16>(i + 1, host.end()));
+    int socket = socket_connect({host.begin(), i}, lexical_cast<u16>(i + 1, host.end()), timeout);
     mlog() << log_name << " connected to socket " << socket;
     return socket;
-}
-
-void socket_send(int socket, char_cit ptr, u32 sz)
-{
-    while(sz)
-    {
-        int ret = ::send(socket, ptr, sz, 0);
-        if(ret <= 0)
-            throw_system_failure("send eror");
-        ptr += ret;
-        sz -= ret;
-    }
 }
 
 u32 try_socket_send(int socket, char_cit ptr, u32 sz)
@@ -141,7 +129,7 @@ u32 try_socket_send(int socket, char_cit ptr, u32 sz)
         int ret = ::send(socket, ptr, sz, 0);
         if(ret == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))
         {
-            //MPROFILE("send_EAGAIN")
+            MPROFILE("send_EAGAIN")
             return sended;
         }
         else if(ret == 0)
@@ -153,6 +141,16 @@ u32 try_socket_send(int socket, char_cit ptr, u32 sz)
         sended += ret;
     }
     return sended;
+}
+
+void socket_send(int socket, char_cit ptr, u32 sz)
+{
+    while(sz)
+    {
+        int ret = try_socket_send(socket, ptr, sz);
+        ptr += ret;
+        sz -= ret;
+    }
 }
 
 void socket_send_async(int socket, char_cit ptr, u32 sz)

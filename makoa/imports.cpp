@@ -10,6 +10,7 @@
 #include "../evie/utils.hpp"
 #include "../evie/thread.hpp"
 #include "../evie/profiler.hpp"
+#include "../evie/optional.hpp"
 #include "../evie/mlog.hpp"
 
 #include <sys/stat.h>
@@ -24,29 +25,34 @@ pair<void*, str_holder> import_context_create(void* params);
 void import_context_destroy(pair<void*, str_holder> ctx);
 bool import_proceed_data(str_holder& buf, void* ctx);
 
-template<typename reader_state>
+template<typename reader_state, optional<u32> (*read)(reader_state socket, char_it buf, u32 buf_size)>
 struct reader
 {
-    typedef u32 (*func)(reader_state socket, char_it buf, u32 buf_size);
-
     reader_state socket;
-    func read;
     pair<void*, str_holder> ctx;
     time_t recv_time;
 
-    bool proceed()
+    bool proceed(bool& r)
     {
-        u32 readed = read(socket, const_cast<char_it>(ctx.second.begin()),
+        optional<u32> readed = read(socket, const_cast<char_it>(ctx.second.begin()),
             ctx.second.size());
+
         if(!readed) [[unlikely]]
+        {
+            r = false;
+            return true;
+        }
+
+        if(!*readed) [[unlikely]]
             return false;
 
-        ctx.second.resize(readed);
+        ctx.second.resize(*readed);
         bool ret = import_proceed_data(ctx.second, ctx.first);
         recv_time = time(NULL);
+        r = true;
         return ret;
     }
-    reader(void* ctx_params, reader_state socket, func read) : socket(socket), read(read),
+    reader(void* ctx_params, reader_state socket) : socket(socket),
         ctx(import_context_create(ctx_params)), recv_time(time(NULL))
     {
     }
@@ -57,9 +63,8 @@ struct reader
     reader(const reader&) = delete;
 };
 
-u32 socket_read(int socket, char_it buf, u32 buf_size)
+optional<u32> socket_read_ret(int ret)
 {
-    int ret = ::recv(socket, buf, buf_size, 0);
     if(ret <= 0) [[unlikely]]
     {
         if(ret == -1)
@@ -67,7 +72,7 @@ u32 socket_read(int socket, char_it buf, u32 buf_size)
             if(errno == EAGAIN || errno == EWOULDBLOCK)
             {
                 MPROFILE("server_EAGAIN")
-                return 0;
+                return none;
             }
             else
                 throw_system_failure("recv() error");
@@ -77,18 +82,30 @@ u32 socket_read(int socket, char_it buf, u32 buf_size)
         else
             throw_system_failure("socket error");
     }
-    return ret;
+    return {u32(ret)};
 }
 
-u32 pipe_read(int hfile, char_it buf, u32 buf_size)
+optional<u32> tcp_read(int socket, char_it buf, u32 buf_size)
+{
+    int ret = ::recv(socket, buf, buf_size, 0);
+    return socket_read_ret(ret);
+}
+
+optional<u32> udp_read(int socket, char_it buf, u32 buf_size)
+{
+    int ret = recvfrom(socket, buf, buf_size, 0, nullptr, nullptr);
+    return socket_read_ret(ret);
+}
+
+optional<u32> pipe_read(int hfile, char_it buf, u32 buf_size)
 {
     u32 read_bytes = ::read(hfile, buf, buf_size);
     if(!read_bytes) [[unlikely]]
         throw_system_failure("read() from pipe error");
-    return read_bytes;
+    return {read_bytes};
 }
 
-u32 mmap_cp_read(void *v, char_it buf, u32 buf_size)
+optional<u32> mmap_cp_read(void *v, char_it buf, u32 buf_size)
 {
     u8* f = (u8*)v, *e = f + message_size, *i = f;
     u8 w = mmap_load(f);
@@ -116,7 +133,7 @@ u32 mmap_cp_read(void *v, char_it buf, u32 buf_size)
             i = f + 2;
         *(f + 1) = u8(i - f);
     }
-    return cur_count * message_size;
+    return {cur_count * message_size};
 }
 
 struct import_mmap_cp
@@ -171,13 +188,14 @@ void import_mmap_cp_start(void* imc, void* params)
     import_mmap_cp& ic = *((import_mmap_cp*)(imc));
     auto ptr = ic.init();
     void* p = ptr.get();
-    reader<void*> rr(params, p, mmap_cp_read);
+    reader<void*, mmap_cp_read> rr(params, p);
     shared_memory_sync* s = get_smc(p);
     u8* w = (u8*)p, *r = w + 1;
+    bool readed;
 
     while(ic.can_run)
     {
-        if(!rr.proceed())
+        if(!rr.proceed(readed))
         {
             if(!ic.pooling_mode)
             {
@@ -210,7 +228,8 @@ struct import_pipe
     }
 };
 
-void work_thread_reader(reader<int>& r, volatile bool& can_run, i32 timeout/*in seconds*/)
+template<typename reader>
+void work_thread_reader(reader& r, volatile bool& can_run, i32 timeout/*in seconds*/)
 {
     pollfd pfd = pollfd();
     pfd.events = POLLIN;
@@ -229,8 +248,14 @@ void work_thread_reader(reader<int>& r, volatile bool& can_run, i32 timeout/*in 
                 throw str_exception("feed timeout");
             continue;
         }
-        if(!r.proceed())
-            break;
+
+        bool readed;
+        do
+        {
+            if(!r.proceed(readed))
+                break;
+        }
+        while(readed && can_run);
     }
 }
 
@@ -247,7 +272,7 @@ void import_pipe_start(void* c, void* p)
         throw_system_failure(es() % "open " % ip.params % " error");
     mlog() << "import from " << ip.params << " started";
     socket_holder ss(h);
-    reader<int> r(p, h, &pipe_read);
+    reader<int, pipe_read> r(p, h);
     work_thread_reader(r, ip.can_run, timeout);
 }
 
@@ -293,7 +318,7 @@ void import_tcp_thread(import_tcp_server* it, int socket, mstring client,
         it->cond.notify_all();
         lock.unlock();
         mlog() << "import|tcp_server thread for " << client << " started";
-        reader<int> r(p, socket, socket_read);
+        reader<int, tcp_read> r(p, socket);
         work_thread_reader(r, it->can_run, timeout);
     }
     catch(exception& e)
@@ -346,7 +371,7 @@ void import_tcp_client_start(void* c, void* p)
     import_tcp_client& tc = *((import_tcp_client*)c);
     int socket = socket_connect("import|tcp_client", tc.params.str());
     socket_holder ss(socket);
-    reader<int> r(p, socket, &socket_read);
+    reader<int, tcp_read> r(p, socket);
     work_thread_reader(r, tc.can_run, timeout);
 }
 
@@ -374,29 +399,11 @@ struct import_udp
     }
 };
 
-u32 udp_read(int socket, char_it buf, u32 buf_size)
-{
-    int ret = recvfrom(socket, buf, buf_size, 0, nullptr, nullptr);
-    if(ret == -1)
-    {
-        MPROFILE("import_udp::EAGAIN")
-        if(errno == EAGAIN || errno == EWOULDBLOCK)
-            return 0;
-        else
-            throw_system_failure("import_udp::recvfrom error");
-    }
-    else if(!ret)
-        throw_system_failure("import_udp, socket closed");
-    else if(ret < 0)
-        throw_system_failure("import_udp, recvfrom error");
-    return ret;
-}
-
 void import_udp_start(void* c, void* p)
 {
     import_udp& i = *((import_udp*)(c));
     udp_socket udp(i.host, i.port, i.src_ip, i.ma);
-    reader<int> r(p, udp.socket, &udp_read);
+    reader<int, udp_read> r(p, udp.socket);
     work_thread_reader(r, i.can_run, timeout);
 }
 
@@ -420,14 +427,16 @@ struct import_ifile_impl
 typedef import_ifile_impl<ifile_create, ifile_destroy> import_ifile;
 typedef import_ifile_impl<files_replay_create, files_replay_destroy> import_files_replay;
 
-template<typename fimport, u32 (*fread)(void *v, char* buf, u32 buf_size)>
+template<typename fimport, optional<u32> (*fread)(void *v, char* buf, u32 buf_size)>
 void import_ifile_start(void* c, void* p)
 {
     fimport& f = *((fimport*)(c));
-    reader<void*> r(p, f.ptr, fread);
+    reader<void*, fread> r(p, f.ptr);
+    bool readed;
+
     while(f.can_run)
     {
-        bool ret = r.proceed();
+        bool ret = r.proceed(readed);
         if(!ret) [[unlikely]]
             return;
     }
@@ -473,13 +482,25 @@ static const int _import_tcp_client = register_importer("tcp_client",
 static const int _import_udp = register_importer("udp",
     {importer_init<import_udp>, importer_destroy<import_udp>, import_udp_start, nullptr}
 );
+
+optional<u32> __ifile_read(void *v, char* buf, u32 buf_size)
+{
+    return {ifile_read(v, buf, buf_size)};
+}
+
 static const int _import_file = register_importer("file",
     {importer_init<import_ifile>, importer_destroy<import_ifile>,
-    import_ifile_start<import_ifile, ifile_read>, nullptr}
+    import_ifile_start<import_ifile, __ifile_read>, nullptr}
 );
+
+optional<u32> __files_replay_read(void *v, char* buf, u32 buf_size)
+{
+    return {files_replay_read(v, buf, buf_size)};
+}
+
 static const int _import_files_replay = register_importer("files_replay",
     {importer_init<import_files_replay>, importer_destroy<import_files_replay>,
-    import_ifile_start<import_files_replay, files_replay_read>, nullptr}
+    import_ifile_start<import_files_replay, __files_replay_read>, nullptr}
 );
 
 hole_importer create_importer(char_cit s)
