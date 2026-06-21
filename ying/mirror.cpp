@@ -386,6 +386,9 @@ struct mirror::impl
                 }
                 else if(key == 260 || key == 261) //arrow left || arrow right
                 {
+                    if(all_securities.size() == 1)
+                        break;
+
                     w.clear();
                     if(!all_securities.empty() && sec.security_id)
                     {

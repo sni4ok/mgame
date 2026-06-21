@@ -8,7 +8,6 @@
 #define TYPE_TRAITS_HPP
 
 #include <cstdint>
-#include <type_traits>
 
 template<typename t>
 struct is_signed
