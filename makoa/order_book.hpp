@@ -13,7 +13,7 @@
 
 #include <unordered_map>
 
-//#define USE_PRICE_MAP
+#define USE_PRICE_MAP
 
 struct message_brief
 {
@@ -103,6 +103,7 @@ public:
         message_brief* m = orders.get(mb.level_id, mb.price);
 
         const price_t& price = !!mb.price ? mb.price : m->price;
+
         if(mb.price == m->price || !mb.price)
             add(price, mb.count - m->count, mb.time);
         else
@@ -110,6 +111,7 @@ public:
             add(m->price, -m->count, mb.time);
             add(mb.price, mb.count, mb.time);
         }
+
         if(!mb.count)
             orders.erase_prev();
         else
@@ -179,9 +181,9 @@ struct unordered_orders_t : order_book_orders_t
     }
 };
 
+template<typename orders_t = price_map<price_t, message_brief> >
 struct price_map_orders_t : order_book_orders_t
 {
-    typedef price_map<price_t, message_brief> orders_t;
     orders_t orders;
     orders_t::iterator it;
 
@@ -254,10 +256,17 @@ struct dynamic_orders_t
         if(!orders)
         {
             str_holder exchange = from_array(mi.exchange_id);
-            if(from_any(exchange, "huobi", "kraken"))
-                orders = new price_map_orders_t;
-            if(from_any(exchange, "binance", "bybit"))
+
+            if(from_any(exchange, "bitfinex", "bitmex"))
+            {
+                //orders = new price_map_orders_t<price_map<price_t, message_brief, true
+                //   , 0, true, ib3, ib3> >;
+                orders = new unordered_orders_t;
+            }
+            else if(from_any(exchange, "binance", "bybit"))
                 orders = new bid_ask_orders_t;
+            else if(from_any(exchange, "huobi", "kraken"))
+                orders = new price_map_orders_t;
             else
             {
                 mlog() << "dynamic_orders_t exchange not found: " << exchange
@@ -272,6 +281,7 @@ struct dynamic_orders_t
     }
     void erase_prev()
     {
+        MPROFILE("dynamic_orders_t, erase_prev")
         orders->erase_prev();
     }
     void clear()
@@ -288,7 +298,6 @@ struct dynamic_orders_t
 struct order_book_ba : order_book_base<
 #ifdef USE_PRICE_MAP
     dynamic_orders_t,
-    //price_map_orders_t,
     price_map<price_t, order_book_leaf>,
     price_map<price_t, order_book_leaf, false>
 #else

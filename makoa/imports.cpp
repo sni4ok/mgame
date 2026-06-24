@@ -63,38 +63,16 @@ struct reader
     reader(const reader&) = delete;
 };
 
-optional<u32> socket_read_ret(int ret)
-{
-    if(ret <= 0) [[unlikely]]
-    {
-        if(ret == -1)
-        {
-            if(errno == EAGAIN || errno == EWOULDBLOCK)
-            {
-                MPROFILE("server_EAGAIN")
-                return none;
-            }
-            else
-                throw_system_failure("recv() error");
-        }
-        else if(!ret)
-            throw_system_failure("socket closed");
-        else
-            throw_system_failure("socket error");
-    }
-    return {u32(ret)};
-}
-
 optional<u32> tcp_read(int socket, char_it buf, u32 buf_size)
 {
-    int ret = ::recv(socket, buf, buf_size, 0);
-    return socket_read_ret(ret);
+    int ret = ::recv(socket, buf, buf_size, MSG_DONTWAIT);
+    return socket_result(ret, "tcp_read");
 }
 
 optional<u32> udp_read(int socket, char_it buf, u32 buf_size)
 {
-    int ret = recvfrom(socket, buf, buf_size, 0, nullptr, nullptr);
-    return socket_read_ret(ret);
+    int ret = recvfrom(socket, buf, buf_size, MSG_DONTWAIT, nullptr, nullptr);
+    return socket_result(ret, "udp_read");
 }
 
 optional<u32> pipe_read(int hfile, char_it buf, u32 buf_size)
@@ -166,19 +144,23 @@ struct import_mmap_cp
         {
             u8 wc = mmap_load(w);
             u8 rc = mmap_load(r);
+
             if((rc != 1 && rc != 0) || wc == 1)
             {
                 mmap_store(w, 0);
                 throw mexception(es() % "mmap inconsistence, wp: " % wc % ", rp: " % rc);
             }
+
             initialized = (wc == 2 && rc == 1);
             if(!initialized)
                 pthread_timedwait(s->condition, s->mutex, 1);
         }
         *r = 2;
         pthread_cond_signal(&(s->condition));
+
         if(initialized)
             mlog() << "receiving data from " << params[0] << " started";
+
         return ptr;
     }
 };
@@ -195,24 +177,20 @@ void import_mmap_cp_start(void* imc, void* params)
 
     while(ic.can_run)
     {
-        if(!rr.proceed(readed))
+        if(!rr.proceed(readed) && !ic.pooling_mode && !pthread_mutex_trylock(&(s->mutex)))
         {
-            if(!ic.pooling_mode)
+            u8 rc = *r;
+            if(rc < 2)
             {
-                if(!pthread_mutex_trylock(&(s->mutex)))
-                {
-                    u8 rc = *r;
-                    if(rc < 2)
-                    {
-                        pthread_mutex_unlock(&(s->mutex));
-                        throw mexception(es() % "mmap inconsistence 2, rp: " % rc);
-                    }
-                    u8 count = mmap_load(w + rc);
-                    if(!count)
-                        pthread_timedwait(s->condition, s->mutex, 1);
-                    pthread_mutex_unlock(&(s->mutex));
-                }
+                pthread_mutex_unlock(&(s->mutex));
+                throw mexception(es() % "mmap inconsistence 2, rp: " % rc);
             }
+
+            u8 count = mmap_load(w + rc);
+            if(!count)
+                pthread_timedwait(s->condition, s->mutex, 1);
+
+            pthread_mutex_unlock(&(s->mutex));
         }
     }
 }
@@ -243,9 +221,9 @@ void work_thread_reader(reader& r, volatile bool& can_run, i32 timeout/*in secon
 
         if(!ret)
         {
-            //timeout here
             if(time(NULL) > r.recv_time + timeout)
                 throw str_exception("feed timeout");
+
             continue;
         }
 
@@ -265,11 +243,12 @@ static const i32 timeout = 30; //in seconds
 void import_pipe_start(void* c, void* p)
 {
     import_pipe& ip = *((import_pipe*)(c));
-    int m = mkfifo(ip.params.c_str(), 0666);
-    unused(m);
+    mkfifo(ip.params.c_str(), 0666);
+
     i64 h = open(ip.params.c_str(), O_RDONLY | O_NONBLOCK);
     if(h <= 0)
         throw_system_failure(es() % "open " % ip.params % " error");
+
     mlog() << "import from " << ip.params << " started";
     socket_holder ss(h);
     reader<int, pipe_read> r(p, h);
@@ -325,6 +304,7 @@ void import_tcp_thread(import_tcp_server* it, int socket, mstring client,
     {
         mlog(mlog::error) << "import|tcp_server(" << it->params << ") client " << client << " " << e;
     }
+
     scoped_lock lock(it->mutex);
     it->cond.notify_all();
     mlog() << "import|tcp_server(" << it->params << ") thread for " << client << " ended";
@@ -334,6 +314,7 @@ void import_tcp_thread(import_tcp_server* it, int socket, mstring client,
 void import_tcp_start(void* c, void* p)
 {
     import_tcp_server& it = *((import_tcp_server*)(c));
+
     while(it.can_run)
     {
         mstring client;
@@ -342,8 +323,9 @@ void import_tcp_start(void* c, void* p)
             it.cond.timed_uwait(lock, 50 * 1000);
 
         lock.unlock();
-        int socket = socket_accept_async(it.port, false/*local*/, false/*sync*/,
+        int socket = socket_accept(it.port, false/*local*/,
             &client, &it.can_run, it.params.c_str());
+
         volatile bool initialized = false;
         thread thrd(&import_tcp_thread, &it, socket, client, ref(initialized), p);
         lock.lock();
@@ -369,7 +351,7 @@ struct import_tcp_client
 void import_tcp_client_start(void* c, void* p)
 {
     import_tcp_client& tc = *((import_tcp_client*)c);
-    int socket = socket_connect("import|tcp_client", tc.params.str());
+    int socket = socket_connect("import|tcp_client", tc.params.str(), 3, true);
     socket_holder ss(socket);
     reader<int, tcp_read> r(p, socket);
     work_thread_reader(r, tc.can_run, timeout);
@@ -381,7 +363,9 @@ struct import_udp
     mstring host, src_ip, ma;
     u16 port;
 
-    import_udp(volatile bool& can_run, const mstring& params) : can_run(can_run)
+    mstring __params;
+
+    import_udp(volatile bool& can_run, const mstring& params) : can_run(can_run), __params(params)
     {
         auto p = split(params.str(), ' ');
         if(p.size() != 2 && p.size() != 4)
@@ -396,6 +380,11 @@ struct import_udp
             src_ip = p[2];
             ma = p[3];
         }
+        mlog() << "import_udp, " << params << " started";
+    }
+    ~import_udp()
+    {
+        mlog() << "import_udp, " << __params << " ended";
     }
 };
 

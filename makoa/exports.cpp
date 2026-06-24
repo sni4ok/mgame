@@ -21,8 +21,8 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-volatile bool* can_run_impl = nullptr;
-exports_factory* efactory = nullptr;
+volatile bool* can_run_impl;
+exports_factory* efactory;
 
 void set_can_run(volatile bool* can_run)
 {
@@ -53,7 +53,7 @@ struct exports_factory
 void register_exporter(exports_factory *ef, str_holder module, hole_exporter he)
 {
     if(ef->exporters.find(module) != ef->exporters.end())
-        throw mexception(es() % "exports_factory() double registration for " % module);
+        throw mexception(es() % "register_exporter, double registration " % module);
     ef->exporters[module] = he;
 }
 
@@ -81,12 +81,12 @@ hole_exporter load_exporter(const mstring& module)
     mstring lib = "./lib" + module + ".so";
     unique_ptr<void, shared_destroy> p(dlopen(lib.c_str(), RTLD_NOW));
     if(!p)
-        throw_system_failure(es() % "load library '" % lib % "' error");
+        throw_system_failure(es() % "load_exporter, load library error " % lib);
 
     typedef void (create_hole)(hole_exporter* m, exporter_params params);
     create_hole *hole = (create_hole*)dlsym(p.get(), "create_hole");
     if(!hole)
-        throw_system_failure(es() % "not found create_hole() in '" % lib % "'");
+        throw_system_failure(es() % "load_exporter, no create_hole in " % lib);
 
     hole_exporter he;
     hole(&he, {log_get(), can_run_impl, efactory});
@@ -166,7 +166,7 @@ namespace
                 possible_host = p[1];
 
             mstring client;
-            socket = socket_accept_async(port, false/*local*/, false/*sync*/, &client, can_run_impl);
+            socket = socket_accept(port, false/*local*/, &client, can_run_impl);
 
             if(!possible_host.empty() && possible_host != "*" && possible_host != client)
                 throw mexception(es() % "export|tcp_server, client " % client
@@ -215,7 +215,7 @@ namespace
         void add(exporter&& e)
         {
             if(size == max_size)
-                throw str_exception("exports_chain max_size exceed");
+                throw str_exception("exports_chain, max_size exceed");
             exporters[size++] = move(e);
         }
     };
@@ -249,7 +249,7 @@ namespace
         unused(r);
         i64 h = ::open(params, O_WRONLY);
         if(h <= 0)
-            throw_system_failure(es() % "open " % _str_holder(params) % " error");
+            throw_system_failure(es() % "pipe_init, " % _str_holder(params) % " error");
 
         return (void*)h;
     }
@@ -295,8 +295,9 @@ namespace
     }
     void* mmap_init(char_cit params)
     {
-        mlog() << "mmap_init() open: " << _str_holder(params);
-        void *p = mmap_create(params, false);
+        str_holder sp = _str_holder(params);
+        mlog() << "mmap_init, open: " << sp;
+        void* p = mmap_create(params, false);
         unique_ptr<void, mmap_close> ptr(p);
         shared_memory_sync* s = get_smc(p);
 
@@ -307,7 +308,7 @@ namespace
             {
                 mmap_store(c, 1);
                 mmap_store(c + 1, 0);
-                throw mexception(es() % "mmap_init() mmap already open: " % s);
+                throw mexception(es() % "mmap_init, already open: " % s);
             }
             ++s;
         }
@@ -315,8 +316,7 @@ namespace
         for(u8* s = c; s != c + mmap_alloc_size_base; ++s)
         {
             if(*s)
-                throw mexception(es() % "mmap_init() mmap already filled: "
-                    % _str_holder(params));
+                throw mexception(es() % "mmap_init, already filled: " % sp);
         }
         *c = 2;
         *(c + 1) = 1;
@@ -324,12 +324,13 @@ namespace
         while(*(c + 1) != 2 && *can_run_impl)
         {
             if(mmap_nusers(params) != 2)
-                throw str_exception("import_mmap_cp_init() nusers != 2");
+                throw str_exception("mmap_init, nusers != 2");
+
             pthread_cond_signal(&(s->condition));
             pthread_timedwait(s->condition, s->mutex, 1);
         }
 
-        mlog() << "mmap_init() successfully opened: " << _str_holder(params);
+        mlog() << "mmap_init, successfully opened: " << sp;
         return ptr.release();
     }
     void mmap_destroy(void *p)
@@ -344,7 +345,7 @@ namespace
         u8 w = *f;
         u8 r = *(f + 1);
         if(w < 2 || w >= message_size || !r || r >= message_size) [[unlikely]]
-            throw mexception(es() % "mmap_proceed() internal error, wp: "
+            throw mexception(es() % "mmap_proceed, internal error, wp: "
                 % u32(w) % ", rp: " % u32(r));
 
         i += w;
@@ -370,7 +371,7 @@ namespace
                     nf = mmap_load(i);
                 }
                 if(nf)
-                    throw mexception(es() % "mmap_proceed() map overload, wp: "
+                    throw mexception(es() % "mmap_proceed, map overload, wp: "
                         % u32(*f) % ", rp: " % u32(*(f + 1)));
             }
             memcpy(p, m + c, cur_count * message_size);
@@ -384,7 +385,7 @@ namespace
                 i = f + 2;
 
             if(!mmap_compare_exchange(f, w, i - f))
-                throw mexception(es() % "mmap_proceed() set w error, w: " % *f
+                throw mexception(es() % "mmap_proceed, set w error, w: " % *f
                     % ", from: " % u32(w) % ", to: " % u32(i - f));
 
             w = i - f;
@@ -393,7 +394,7 @@ namespace
 
         if(flub)
         {
-            MPROFILE("mmap_proceed_flub")
+            MPROFILE("mmap_proceed, flub")
         }
 
         shared_memory_sync* s = get_smc(v);
@@ -408,12 +409,13 @@ namespace
         int socket;
         sockaddr_in sa;
 
-        udp(char_cit params)
+        udp(char_cit _p)
         {
-            auto p = split_s(_str_holder(params), ' ');
+            str_holder params = _str_holder(_p);
+            auto p = split_s(params, ' ');
             if(p.size() != 2)
                 throw mexception(es() %
-                    "export_udp, required 2 params (server_ip port): " % _str_holder(params));
+                    "export_udp, required 2 params (server_ip port), " % params);
 
             socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
             if(socket < 0)
@@ -423,6 +425,8 @@ namespace
             sa.sin_port = htons(lexical_cast<u16>(p[1]));
             if(inet_pton(AF_INET, p[0].c_str(), &sa.sin_addr) <= 0)
                 throw_system_failure("export_udp, int_pton error");
+
+            mlog() << "export_udp, " << params << " started";
         }
         ~udp()
         {
@@ -444,7 +448,7 @@ namespace
         ssize_t sz = sizeof(message) * count;
         ssize_t ret = sendto(u->socket, m, sz, 0, (sockaddr*)(&u->sa), sizeof(u->sa));
         if(ret != sz) [[unlikely]]
-            throw_system_failure(es() % "udp::write, sz: " % sz  % ", ret: " % ret);
+            throw_system_failure(es() % "export_udp, write, sz: " % sz  % ", ret: " % ret);
     }
 }
 

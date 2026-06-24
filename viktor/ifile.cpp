@@ -787,6 +787,14 @@ extern "C"
         return new ifile(can_run, p[0], tf, tt, history);
     }
 
+    void* __ifile_create(const char* params, volatile bool& can_run, simple_log* sl)
+    {
+        if(sl)
+            log_set(sl);
+
+        return ifile_create(params, can_run);
+    }
+
     void ifile_destroy(void *v)
     {
         delete ((ifile*)v);

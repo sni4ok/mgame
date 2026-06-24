@@ -385,21 +385,18 @@ struct idx_bits<bit0, bit1, bit2>
     }
 };
 
-template<typename key, typename value, bool less = true, u32 price_cvt = 1000>
+typedef idx_bits<bit64, bit64, bit64> ib3;
+typedef idx_bits<bit64, bit64> ib2;
+typedef idx_bits<bit64> ib1;
+
+template<typename key, typename value, bool less = true, u32 price_cvt = 1000
+    , bool shift_key = false, typename idx_root = ib1, typename idx_node = ib3
+    >
 struct price_map
 {
     typedef ::pair<key, value> pair;
     typedef key key_type;
     typedef value value_type;
-
-    //typedef idx_bits<bit64, bit64, bit64> idx_root;
-    typedef idx_bits<bit64, bit64, bit64> idx_node;
-
-    //typedef idx_bits<bit64, bit64> idx_root;
-    //typedef idx_bits<bit64, bit64> idx_node;
-
-    typedef idx_bits<bit64> idx_root;
-    //typedef idx_bits<bit64> idx_node;
 
     struct node : idx_node
     {
@@ -439,6 +436,10 @@ struct price_map
             assert(!(k.value % price_cvt));
             k.value = k.value / price_cvt;
         }
+
+        if constexpr(shift_key)
+            k.value = k.value % (idx_root::elems * idx_node::elems);
+
         if constexpr(!less)
             k.value = idx_root::elems * idx_node::elems - k.value;
 
@@ -447,11 +448,11 @@ struct price_map
         assert(r.first <= idx_root::elems);
         return r;
     }
-    static constexpr ::pair<idx_root::bits_t, idx_node::bits_t> bits(u64 k1, u64 k2)
+    static constexpr ::pair<typename idx_root::bits_t, typename idx_node::bits_t> bits(u64 k1, u64 k2)
     {
         return {idx_root::bits(k1), idx_node::bits(k2)};
     }
-    static constexpr tuple<u64, u64, idx_root::bits_t, idx_node::bits_t> keys_bits(key k)
+    static constexpr tuple<u64, u64, typename idx_root::bits_t, typename idx_node::bits_t> keys_bits(key k)
     {
         auto [k1, k2] = keys(k);
         auto [b1, b2] = bits(k1, k2);
@@ -584,12 +585,12 @@ struct price_map
     iterator find(const key& k)
     {
         auto [k1, k2] = keys(k);
-        idx_root::bits_t b1 = idx_root::bits(k1);
+        auto b1 = idx_root::bits(k1);
 
         if(!root_idx.is_set(b1))
             return end();
 
-        idx_node::bits_t b2 = idx_node::bits(k2);
+        auto b2 = idx_node::bits(k2);
         node*& ptr = nodes[k1];
 
         if(!ptr->is_set(b2))
@@ -600,7 +601,7 @@ struct price_map
     iterator lower_bound(const key& k)
     {
         auto [k1, k2] = keys(k);
-        idx_root::bits_t b1 = idx_root::bits(k1);
+        auto b1 = idx_root::bits(k1);
 
         if(!root_idx.is_set(b1))
         {
@@ -610,7 +611,7 @@ struct price_map
             k2 = 0;
         }
 
-        idx_node::bits_t b2 = idx_node::bits(k2);
+        auto b2 = idx_node::bits(k2);
         node*& ptr = nodes[k1];
 
         if(!ptr->is_set(b2))
@@ -634,13 +635,13 @@ struct price_map
     }
     iterator begin()
     {
-        optional<idx_root::bits_t> b1 = root_idx.begin();
+        auto b1 = root_idx.begin();
         if(!b1)
             return end();
 
         u64 k1 = idx_root::key(*b1);
         node* ptr = nodes[k1];
-        optional<idx_node::bits_t> b2 = ptr->begin();
+        auto b2 = ptr->begin();
         assert(!!b2);
         u64 k2 = idx_node::key(*b2);
         pair& v = ptr->values[k2];
@@ -651,10 +652,10 @@ struct price_map
         assert(it.v);
         auto [k1, k2] = keys(it.v->first);
         node* ptr = nodes[k1];
-        idx_node::bits_t b2 = idx_node::bits(k2);
+        auto b2 = idx_node::bits(k2);
         if(ptr->unset(b2))
         {
-            idx_root::bits_t b1 = idx_root::bits(k1);
+            auto b1 = idx_root::bits(k1);
             root_idx.unset(b1);
         }
     }
@@ -674,11 +675,11 @@ struct price_map
     }
     u64 size() const
     {
-        optional<idx_root::bits_t> b1o = root_idx.begin();
+        auto b1o = root_idx.begin();
         if(!b1o)
             return 0;
 
-        idx_root::bits_t& b1 = *b1o;
+        typename idx_root::bits_t& b1 = *b1o;
         u64 sz = 0;
         node* ptr = nullptr;
 
@@ -700,9 +701,9 @@ struct price_map
     const pair& back() const
     {
         assert(!empty());
-        idx_root::bits_t b1 = root_idx.last();
+        auto b1 = root_idx.last();
         node* ptr = nodes[idx_root::key(b1)];
-        idx_node::bits_t b2 = ptr->last();
+        auto b2 = ptr->last();
         return ptr->values[idx_node::key(b2)];
     }
 };

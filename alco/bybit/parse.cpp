@@ -10,9 +10,12 @@
 struct lws_i : sec_id_by_name<lws_impl>
 {
     config& cfg;
-    
+    bool trades_not_ended;
+    u32 security_id;
+    ttime_t etime;
+
     lws_i() : sec_id_by_name<lws_impl>(config::instance().push, config::instance().log_lws),
-        cfg(config::instance())
+        cfg(config::instance()), trades_not_ended(false), security_id(), etime()
     {
         mstream sub;
         sub << "{\"op\":\"subscribe\",\"args\":[";
@@ -42,6 +45,17 @@ struct lws_i : sec_id_by_name<lws_impl>
             mlog() << "lws proceed: " << str_holder(in, len);
 
         char_cit it = in, ie = it + len, ne;
+
+        if(trades_not_ended)
+        {
+            if(*it == ',')
+                ++it;
+            else
+                throw mexception(es() % "parsing error: " % str_holder(in, ie - in));
+
+            goto rep;
+        }
+
         skip_fixed(it, "{\"");
         if(*it == 't')
         {
@@ -49,10 +63,10 @@ struct lws_i : sec_id_by_name<lws_impl>
             if(skip_if_fixed(it, "orderbook.1."))
             {
                 ne = find(it, ie, '\"');
-                u32 security_id = get_security_id(it, ne, time);
+                security_id = get_security_id(it, ne, time);
                 it = ne + 1;
                 skip_fixed(it, ",\"ts\":");
-                ttime_t etime = milliseconds(atoi<i64>(it, 13));
+                etime = milliseconds(atoi<i64>(it, 13));
                 it += 13;
                 skip_fixed(it, ",\"type\":\"");
                 
@@ -102,12 +116,13 @@ struct lws_i : sec_id_by_name<lws_impl>
             else if(skip_if_fixed(it, "publicTrade."))
             {
                 ne = find(it, ie, '\"');
-                u32 security_id = get_security_id(it, ne, time);
+                security_id = get_security_id(it, ne, time);
                 it = ne + 1;
                 skip_fixed(it, ",\"ts\":");
-                ttime_t etime = milliseconds(atoi<i64>(it, 13));
+                etime = milliseconds(atoi<i64>(it, 13));
                 it += 13;
                 skip_fixed(it, ",\"type\":\"snapshot\",\"data\":[");
+
             rep:
                 skip_fixed(it, "{\"i\":\"");
                 search_and_skip_fixed(it, ie, "\"p\":\"");
@@ -122,14 +137,19 @@ struct lws_i : sec_id_by_name<lws_impl>
                 int dir = 1;
                 if(*it == 'S')
                     dir = 2;
+
                 else if(*it != 'B') [[unlikely]]
                     throw mexception(es() % "unknown message type: "
                         % str_holder(in, ie - in));
 
                 add_trade(security_id, p, c, dir, etime, time);
-                it = find(it, ie, '{');
+                ne = it;
+                it = find(ne, ie, '{');
                 if(it != ie)
                     goto rep;
+
+                it = find(ne, ie, ']');
+                trades_not_ended = it == ie;
                 send_messages();
             }
             else [[unlikely]]

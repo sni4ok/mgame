@@ -49,7 +49,7 @@ void tyra::flush()
 {
     if(c != e)
     {
-        socket_send_async(socket, c, e - c);
+        socket_send(socket, c, e - c);
         send_from_buffer += (e - c);
         c = bf;
         e = bf;

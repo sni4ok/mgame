@@ -5,6 +5,7 @@
 #pragma once
 
 #include "mstring.hpp"
+#include "optional.hpp"
 
 class socket_holder
 {
@@ -18,15 +19,15 @@ public:
     ~socket_holder();
 };
 
-int socket_connect(const mstring& host, u16 port, u32 timeout = 3/*in seconds*/);
-int socket_connect(str_holder log_name, str_holder host_port, u32 timeout = 3);
-void socket_send(int socket, char_cit ptr, u32 sz);
+int socket_connect(const mstring& host, u16 port, u32 timeout = 3/*in seconds*/, bool wait_pollin = false);
+int socket_connect(str_holder log_name, str_holder host_port, u32 timeout = 3, bool wait_pollin = false);
 u32 try_socket_send(int socket, char_cit ptr, u32 sz);
-void socket_send_async(int socket, char_cit ptr, u32 sz);
-int socket_accept_async(u32 port, bool local, bool sync = false,
+void socket_send(int socket, char_cit ptr, u32 sz);
+int socket_accept(u32 port, bool local,
     mstring* client_ip_ptr = nullptr, volatile bool* can_run = nullptr, char_cit name = "");
-int socket_accept_async(u32 port, const mstring& possible_client_ip, bool sync = false,
+int socket_accept(u32 port, const mstring& possible_client_ip,
     mstring* client_ip_ptr = nullptr, volatile bool* can_run = nullptr, char_cit name = "");
+optional<u32> socket_result(int ret, str_holder fname);
 
 struct socket_stream_op
 {
