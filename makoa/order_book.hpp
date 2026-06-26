@@ -101,6 +101,8 @@ public:
         MPROFILE_COUNT("order_book::level_id", {mb.level_id})
 
         message_brief* m = orders.get(mb.level_id, mb.price);
+        if(!m)
+            return;
 
         const price_t& price = !!mb.price ? mb.price : m->price;
 
@@ -146,6 +148,7 @@ struct order_book_orders_t
     virtual message_brief* get(i64 level_id, price_t price) = 0;
     virtual void erase_prev() = 0;
     virtual void clear() = 0;
+    virtual u64 max_elements() = 0;
 
     virtual ~order_book_orders_t() = default;
 };
@@ -179,6 +182,10 @@ struct unordered_orders_t : order_book_orders_t
     {
         orders.clear();
     }
+    u64 max_elements()
+    {
+        return limits<u64>::max;
+    }
 };
 
 template<typename orders_t = price_map<price_t, message_brief> >
@@ -207,6 +214,10 @@ struct price_map_orders_t : order_book_orders_t
     void clear()
     {
         orders.clear();
+    }
+    u64 max_elements()
+    {
+        return orders.elems;
     }
 };
 
@@ -245,11 +256,17 @@ struct bid_ask_orders_t : order_book_orders_t
         __erase(1);
         __erase(2);
     }
+    u64 max_elements()
+    {
+        return 2;
+    }
 };
 
 struct dynamic_orders_t
 {
     order_book_orders_t* orders = nullptr;
+    bool check_price_overflow = false;
+    price_t max_price;
 
     void set(const message_instr& mi)
     {
@@ -265,6 +282,12 @@ struct dynamic_orders_t
             }
             else if(from_any(exchange, "binance", "bybit"))
                 orders = new bid_ask_orders_t;
+            else if(from_any(exchange, "crypcom"))
+            {
+                orders = new price_map_orders_t;
+                //check_price_overflow = true;
+                //max_price = price_t{1000 * i64(orders->max_elements())};
+            }
             else if(from_any(exchange, "huobi", "kraken"))
                 orders = new price_map_orders_t;
             else
@@ -277,6 +300,15 @@ struct dynamic_orders_t
     }
     message_brief* get(i64 level_id, price_t price)
     {
+        if(check_price_overflow)
+        {
+            if(price > max_price || price.value % 1000)
+            {
+                MPROFILE("dynamic_orders_t, price skipped")
+                //mlog() << "dynamic_orders_t, price skipped " << price;
+                return nullptr;
+            }
+        }
         return orders->get(level_id, price);
     }
     void erase_prev()

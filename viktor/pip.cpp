@@ -10,34 +10,39 @@
 #include "../evie/singleton.hpp"
 #include "../evie/mlog.hpp"
 
-struct config : stack_singleton<config>
+namespace pip
 {
-    mstring push, import;
-    bool pooling;
-
-    config(char_cit fname)
+    struct config : stack_singleton<config>
     {
-        auto cs = read_file(fname);
-        push = get_config_param<str_holder>(cs, "push");
-        import = get_config_param<str_holder>(cs, "import");
-        pooling = get_config_param<bool>(cs, "pooling");
+        mstring push, import;
+        bool pooling;
 
-        mlog() << "config() import: " << import << ", push: " << push << ", pooling: " << pooling;
-    }
-};
+        config(char_cit fname)
+        {
+            auto cs = read_file(fname);
+            push = get_config_param<str_holder>(cs, "push");
+            import = get_config_param<str_holder>(cs, "import");
+            pooling = get_config_param<bool>(cs, "pooling");
+
+            mlog() << "pip_config, import: " << import << ", push: " << push << ", pooling: " << pooling;
+        }
+    };
+}
+
+const str_holder parser_name = "pip";
+
+#define PIP_HERE
+
+#define ns pip
+
+void (*term_signal_func)(int) = server_set_close;
 
 #include "../alco/main.hpp"
 
-void proceed_pip(volatile bool& can_run)
+void pip::proceed_parser(volatile bool& can_run)
 {
     auto& cfg = config::instance();
     engine en(can_run, cfg.pooling, {cfg.push}, 1);
     server sv(can_run, true);
     sv.run({cfg.import});
 }
-
-int main(int argc, char** argv)
-{
-    return parser_main(argc, argv, "pip", proceed_pip, server_set_close);
-}
-

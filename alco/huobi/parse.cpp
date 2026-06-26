@@ -8,8 +8,12 @@
 #include "../utils.hpp"
 #include "utils.hpp"
 
+namespace huobi
+{
+
 struct lws_i : sec_id_by_name<lws_impl>
 {
+    config& cfg;
     zlibe zlib;
 
     char ch[13];
@@ -186,7 +190,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         send_messages();
     }
     lws_i() : sec_id_by_name<lws_impl>(config::instance().push,
-        config::instance().log_lws, char(), char()),
+        config::instance().log_lws, char(), char()), cfg(config::instance()),
         ch("ch\":\"market."),
         ts(",\"ts\":"),
         tick(",\"tick\":{\""),
@@ -204,30 +208,29 @@ struct lws_i : sec_id_by_name<lws_impl>
         ping("ping\":"),
         error("status\":\"error\"")
     {
-        config& c = config::instance();
-        for(auto& v: c.tickers)
+        for(auto& v: cfg.tickers)
         {
-            if(c.snapshot)
+            if(cfg.snapshot)
             {
-                parsers[(v + ".depth." + c.step).str()] = impl(v.str(),
+                parsers[(v + ".depth." + cfg.step).str()] = impl(v.str(),
                     &lws_i::parse_snapshot);
                 subscribes.push_back("{\"sub\":\"market." + v + ".depth."
-                    + c.step + "\",\"id\":\"snapshot_" + v + "\"}");
+                    + cfg.step + "\",\"id\":\"snapshot_" + v + "\"}");
             }
-            if(c.orders)
+            if(cfg.orders)
             {
-                parsers[(v + ".mbp." + c.levels).str()] = impl(v.str(),
+                parsers[(v + ".mbp." + cfg.levels).str()] = impl(v.str(),
                     &lws_i::parse_orders);
                 subscribes.push_back("{\"sub\":\"market." + v + ".mbp."
-                    + c.levels + "\",\"id\":\"orders_" + v + "\"}");
+                    + cfg.levels + "\",\"id\":\"orders_" + v + "\"}");
             }
-            if(c.bbo)
+            if(cfg.bbo)
             {
                 parsers[(v + ".bbo").str()] = impl(v.str(), &lws_i::parse_bbo);
                 subscribes.push_back("{\"sub\":\"market." + v
                     + ".bbo\",\"id\":\"bbo_" + v + "\"}");
             }
-            if(c.trades)
+            if(cfg.trades)
             {
                 parsers[(v + ".trade.detail").str()] = impl(v.str(), &lws_i::parse_trades);
                 subscribes.push_back("{\"sub\":\"market." + v
@@ -239,7 +242,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     {
         ttime_t time = cur_ttime();
         str_holder str = zlib.decompress(in, len);
-        if(config::instance().log_lws)
+        if(cfg.log_lws)
             mlog() << "lws proceed: " << str;
         char_cit it = str.begin(), ie = str.end();
         if(*it != '{' || *(it + 1) != '\"') [[unlikely]]
@@ -256,7 +259,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                 throw mexception(es() % "unknown symbol in market message: " % str);
             if(!i->second.security_id) [[unlikely]]
                 i->second.security_id = get_security_id(i->second.security.begin(),
-                    i->second.security.end(), time);
+                    i->second.security.end(), time, cfg);
             ++ne;
             skip_fixed(ne, ts);
             ttime_t etime = milliseconds(atoi<i64>(ne, 13));
@@ -284,7 +287,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     }
 };
 
-void proceed_huobi(volatile bool& can_run)
+void proceed_parser(volatile bool& can_run)
 {
     return proceed_lws_parser<lws_i>(can_run);
 }
@@ -292,5 +295,7 @@ void proceed_huobi(volatile bool& can_run)
 void connect(lws_i& ls)
 {
     lws_connect(ls, "api.huobi.pro", 443, "/ws");
+}
+
 }
 

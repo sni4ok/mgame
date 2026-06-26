@@ -7,6 +7,9 @@
 #include "../lws.hpp"
 #include "../utils.hpp"
 
+namespace binance
+{
+
 struct lws_i : sec_id_by_name<lws_impl>
 {
     config& cfg;
@@ -47,7 +50,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             it = find(it + 1, ie, ',');
             skip_fixed(it, ",\"s\":\"");
             char_cit ne = find(it, ie, '\"');
-            u32 security_id = get_security_id(it, ne, time);
+            u32 security_id = get_security_id(it, ne, time, cfg);
             it = ne + 1;
             skip_fixed(it, ",\"b\":\"");
             ne = find(it, ie, '\"');
@@ -82,7 +85,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             it = it + 14;
             skip_fixed(it, "\"s\":\"");
             char_cit ne = find(it, ie, '\"');
-            u32 security_id = get_security_id(it, ne, time);
+            u32 security_id = get_security_id(it, ne, time, cfg);
             it = ne + 1;
             skip_fixed(it, ",\"t\":");
             it = find(it, ie, ',');
@@ -130,7 +133,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     }
 };
 
-void proceed_binance(volatile bool& can_run)
+void proceed_parser(volatile bool& can_run)
 {
     return proceed_lws_parser<lws_i>(can_run);
 }
@@ -138,5 +141,7 @@ void proceed_binance(volatile bool& can_run)
 void connect(lws_i& ls)
 {
     lws_connect(ls, "stream.binance.com", 9443, "/ws");
+}
+
 }
 

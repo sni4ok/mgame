@@ -13,6 +13,9 @@
 
 #include "../../evie/fmap.hpp"
 
+namespace plaza
+{
+
 CG_RESULT instruments_callback(cg_conn_t* conn, cg_listener_t* listener, struct cg_msg_t* msg, void* p);
 CG_RESULT orders_callback(cg_conn_t* conn, cg_listener_t* listener, struct cg_msg_t* msg, void* p);
 CG_RESULT trades_callback(cg_conn_t* conn, cg_listener_t* listener, struct cg_msg_t* msg, void* p);
@@ -169,7 +172,7 @@ CG_RESULT instruments_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg,
                     auto it = p->tickers.find(f->isin_id);
                     if(it == p->tickers.end())
                     {
-                        u32 security_id = proceed_instr(p->e, c.exchange_id.str(),
+                        u32 security_id = p->proceed_instr(c.exchange_id.str(),
                             c.feed_id.str(), f->short_isin.str(), ttime_t());
                         p->tickers[f->isin_id] = security_id;
                     }
@@ -452,7 +455,7 @@ CG_RESULT trades_callback(cg_conn_t*, cg_listener_t*, struct cg_msg_t* msg, void
     return CG_ERR_OK;
 }
 
-void proceed_plaza(volatile bool& can_run)
+void proceed_parser(volatile bool& can_run)
 {
     parser::tickers_type tickers;
     while(can_run)
@@ -476,5 +479,7 @@ void proceed_plaza(volatile bool& can_run)
                 usleep(5000 * 1000);
         }
     }
+}
+
 }
 

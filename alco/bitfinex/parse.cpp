@@ -7,6 +7,9 @@
 #include "../lws.hpp"
 #include "../utils.hpp"
 
+namespace bitfinex
+{
+
 struct lws_i : sec_id_by_name<lws_impl>
 {
     config& cfg;
@@ -147,7 +150,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     {
         mlog() << "add_channel: " << channel << ", ticker: " << ticker << ", is_trades: " << is_trades;
         impl& i = parsers[channel];
-        i.security_id = get_security_id(ticker.begin(), ticker.end(), time);
+        i.security_id = get_security_id(ticker.begin(), ticker.end(), time, cfg);
         if(is_trades)
             i.f = &lws_i::parse_trades;
         else
@@ -232,7 +235,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     }
 };
 
-void proceed_bitfinex(volatile bool& can_run)
+void proceed_parser(volatile bool& can_run)
 {
     return proceed_lws_parser<lws_i>(can_run);
 }
@@ -240,5 +243,7 @@ void proceed_bitfinex(volatile bool& can_run)
 void connect(lws_i& ls)
 {
     lws_connect(ls, "api-pub.bitfinex.com", 443, "/ws/2");
+}
+
 }
 

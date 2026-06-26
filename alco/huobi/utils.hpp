@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "../../evie/string.hpp"
+
 #include <zlib.h>
 
 template<typename alloc>

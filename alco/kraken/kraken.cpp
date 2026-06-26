@@ -3,12 +3,8 @@
 */
 
 #include "config.hpp"
+
+#define ns kraken
+
 #include "../main.hpp"
-
-void proceed_kraken(volatile bool& can_run);
-
-int main(int argc, char** argv)
-{
-    return parser_main(argc, argv, "kraken", proceed_kraken);
-}
 

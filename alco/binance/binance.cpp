@@ -3,12 +3,8 @@
 */
 
 #include "config.hpp"
+
+#define ns binance
+
 #include "../main.hpp"
-
-void proceed_binance(volatile bool& can_run);
-
-int main(int argc, char** argv)
-{
-    return parser_main(argc, argv, "binance", proceed_binance);
-}
 

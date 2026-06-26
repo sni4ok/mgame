@@ -3,12 +3,8 @@
 */
 
 #include "config.hpp"
+
+#define ns bybit
+
 #include "../main.hpp"
-
-void proceed_bybit(volatile bool& can_run);
-
-int main(int argc, char** argv)
-{
-    return parser_main(argc, argv, "bybit", proceed_bybit);
-}
 

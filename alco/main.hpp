@@ -4,17 +4,28 @@
 
 #pragma once
 
-#include "../evie/utils.hpp"
+#ifndef parser_name
+    #define PP_STR(text) PP_STR_I(text)
+    #define PP_STR_I(...) #__VA_ARGS__
+    #define parser_name str_holder(PP_STR(ns))
+#endif
+
 #include "../makoa/exports.hpp"
 
+#include "../evie/utils.hpp"
 #include "../evie/signals.hpp"
 #include "../evie/config.hpp"
 #include "../evie/mlog.hpp"
 
-int parser_main(int argc, char** argv, str_holder parser, void (*proceed)(volatile bool&),
-    void (*term_signal_func)(int) = nullptr)
+namespace ns
 {
-    mstring parser_name(parser);
+    void proceed_parser(volatile bool& can_run);
+}
+
+extern void (*term_signal_func)(int);
+
+int main(int argc, char** argv)
+{
     unique_ptr<simple_log, free_simple_log> log;
 
     if(argc > 2)
@@ -33,9 +44,8 @@ int parser_main(int argc, char** argv, str_holder parser, void (*proceed)(volati
         mlog() << parser_name << " started";
         auto ef = init_efactory();
         print_init(argc, argv);
-        config cfg(argc == 1 ? (parser_name + ".conf").c_str() : argv[1]);
-        proceed(can_run);
-
+        ns::config cfg(argc == 1 ? (parser_name + ".conf").c_str() : argv[1]);
+        ns::proceed_parser(can_run);
     }
     catch(exception& e)
     {
@@ -46,4 +56,56 @@ int parser_main(int argc, char** argv, str_holder parser, void (*proceed)(volati
     mlog() << parser_name << " successfully ended";
     return 0;
 }
+
+#ifndef PIP_HERE
+
+void (*term_signal_func)(int);
+#include "../makoa/imports.hpp"
+
+extern "C"
+{
+    void create_import(hole_importer* i, simple_log* sl)
+    {
+        log_set(sl);
+
+        struct parser 
+        {
+            volatile bool& can_run;
+            ns::config cfg;
+
+            parser(volatile bool& can_run, str_holder conf) : can_run(can_run),
+                cfg(conf.empty() ? (parser_name + ".conf").c_str() : conf.begin())
+            {
+                if(cfg.push != "local_import")
+                {
+                    mlog() << cfg.exchange_id << " push changed from " << cfg.push << " to local_import";
+                    cfg.push = "local_import";
+                }
+            }
+            void start()
+            {
+                ns::proceed_parser(can_run);
+            }
+        };
+
+        auto init = [](volatile bool& can_run, char_cit params)->void*
+        {
+            return new parser(can_run, _str_holder(params));
+        };
+        auto destroy = [](void* c)
+        {
+            delete ((parser*)c);
+        };
+        auto start = [](void* c, void*)
+        {
+            ((parser*)c)->start();
+        };
+
+        i->init = init;
+        i->destroy = destroy;
+        i->start = start;
+    }
+}
+
+#endif
 

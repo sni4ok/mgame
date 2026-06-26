@@ -397,6 +397,7 @@ struct price_map
     typedef ::pair<key, value> pair;
     typedef key key_type;
     typedef value value_type;
+    static const u64 elems = idx_root::elems * idx_node::elems;
 
     struct node : idx_node
     {

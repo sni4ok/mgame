@@ -9,6 +9,9 @@
 #include "../../evie/utils.hpp"
 #include "../../evie/mlog.hpp"
 
+namespace kraken
+{
+
 config::config(char_cit fname)
 {
     auto cs = read_file(fname);
@@ -20,19 +23,21 @@ config::config(char_cit fname)
     bba = get_config_param<bool>(cs, "bba");
 
     if((!orders && !trades && !bba) || tickers.empty())
-        throw str_exception("config::config() nothing to import");
+        throw str_exception("kraken_config, nothing to import");
     
     if(orders && bba)
-        throw str_exception("config::config() orders and bbo mutually exclusive");
+        throw str_exception("kraken_config, orders and bbo mutually exclusive");
 
     push = get_config_param<str_holder>(cs, "push");
     exchange_id = get_config_param<str_holder>(cs, "exchange_id");
     feed_id = get_config_param<str_holder>(cs, "feed_id");
     log_lws = get_config_param<bool>(cs, "log_lws");
 
-    mlog() << "config() tickers: " << smb
+    mlog() << "kraken_config, tickers: " << smb
         << ", trades: " << trades << ", orders: " << orders << ", bba: " << bba
         << ", exchange_id: " << exchange_id << ", feed_id: " << feed_id
         << ",\n    push: " << push << ", log_lws: " << log_lws;
+}
+
 }
 

@@ -7,6 +7,9 @@
 #include "../lws.hpp"
 #include "../utils.hpp"
 
+namespace crypcom
+{
+
 struct lws_i: sec_id_by_name<lws_impl>
 {
     config& cfg;
@@ -53,7 +56,7 @@ struct lws_i: sec_id_by_name<lws_impl>
         {
             bool book = false;
             ne = find(it, ie, '\"');
-            u32 security_id = get_security_id(it, ne, time);
+            u32 security_id = get_security_id(it, ne, time, cfg);
             it = ne + 1;
             skip_fixed(it, ",\"subscription\":\"");
             if(skip_if_fixed(it, "book"))
@@ -186,7 +189,7 @@ struct lws_i: sec_id_by_name<lws_impl>
     }
 };
 
-void proceed_crypto_com(volatile bool& can_run)
+void proceed_parser(volatile bool& can_run)
 {
     return proceed_lws_parser<lws_i>(can_run);
 }
@@ -194,5 +197,7 @@ void proceed_crypto_com(volatile bool& can_run)
 void connect(lws_i& ls)
 {
     lws_connect(ls, "stream.crypto.com", 443, "/v2/market");
+}
+
 }
 

@@ -14,7 +14,6 @@ struct hole_importer
     void (*set_close)(void* c) = 0;
 };
 
-int register_importer(const char* name, hole_importer hi);
 hole_importer create_importer(const char* name);
 
 typedef uint32_t u32;

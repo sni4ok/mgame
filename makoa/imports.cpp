@@ -3,6 +3,7 @@
 */
 
 #include "imports.hpp"
+#include "dlfcn.hpp"
 #include "mmap.hpp"
 
 #include "../evie/socket.hpp"
@@ -363,9 +364,7 @@ struct import_udp
     mstring host, src_ip, ma;
     u16 port;
 
-    mstring __params;
-
-    import_udp(volatile bool& can_run, const mstring& params) : can_run(can_run), __params(params)
+    import_udp(volatile bool& can_run, const mstring& params) : can_run(can_run)
     {
         auto p = split(params.str(), ' ');
         if(p.size() != 2 && p.size() != 4)
@@ -381,10 +380,6 @@ struct import_udp
             ma = p[3];
         }
         mlog() << "import_udp, " << params << " started";
-    }
-    ~import_udp()
-    {
-        mlog() << "import_udp, " << __params << " ended";
     }
 };
 
@@ -443,16 +438,25 @@ void importer_destroy(void* ptr)
     delete (type*)ptr;
 }
 
-fmap<mstring, hole_importer> _importers;
+struct importers
+{
+    fmap<mstring, hole_importer> i;
+    ::mutex m;
+    mvector<fcn_type> f;
+};
+
+importers _importers;
 
 int register_importer(char_cit s, hole_importer hi)
 {
     mstring name(_str_holder(s));
-    auto it = _importers.find(name);
-    if(it != _importers.end())
-        throw mexception(es() % "register_importer() double registration for " % name);
-    _importers[name] = hi;
-    return _importers.size();
+    mutex::scoped_lock lock(_importers.m);
+    auto it = _importers.i.find(name);
+    if(it != _importers.i.end())
+        throw mexception(es() % "register_importer, double registration for " % name);
+
+    _importers.i[name] = hi;
+    return _importers.i.size();
 }
 
 static const int _import_mmap_cp = register_importer("mmap_cp",
@@ -492,12 +496,24 @@ static const int _import_files_replay = register_importer("files_replay",
     import_ifile_start<import_files_replay, __files_replay_read>, nullptr}
 );
 
+hole_importer load_importer(const mstring& lib)
+{
+    typedef void (create_import)(hole_importer* i, simple_log* sl);
+    auto f = load_lib<create_import>(lib, "create_import");
+    hole_importer hi;
+    f.second(&hi, log_get());
+    _importers.i[lib] = hi;
+    _importers.f.push_back(move(f.first));
+    return hi;
+}
+
 hole_importer create_importer(char_cit s)
 {
     mstring name(_str_holder(s));
-    auto it = _importers.find(name);
-    if(it == _importers.end())
-        throw mexception(es() % "import " % name % " not registered");
-    return it->second;
+    mutex::scoped_lock lock(_importers.m);
+    auto it = _importers.i.find(name);
+    if(it != _importers.i.end())
+        return it->second;
+    return load_importer(name);
 }
 

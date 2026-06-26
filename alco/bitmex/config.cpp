@@ -9,6 +9,9 @@
 #include "../../evie/utils.hpp"
 #include "../../evie/mlog.hpp"
 
+namespace bitmex
+{
+
 config::config(char_cit fname)
 {
     auto cs = read_file(fname);
@@ -20,16 +23,18 @@ config::config(char_cit fname)
     orders_table = get_config_param<str_holder>(cs, "orders_table", !orders);
     
     if((!orders && !trades) || tickers.empty())
-        throw mexception("config::config() nothing to import");
+        throw mexception("bitmex_config, nothing to import");
     
     push = get_config_param<str_holder>(cs, "push");
     exchange_id = get_config_param<str_holder>(cs, "exchange_id");
     feed_id = get_config_param<str_holder>(cs, "feed_id");
     log_lws = get_config_param<bool>(cs, "log_lws");
 
-    mlog() << "config() tickers: " << smb
+    mlog() << "bitmex_config, tickers: " << smb
         << ", trades: " << trades << ", orders: " << orders
         << ", orders_table: " << orders_table << ", exchange_id: " << exchange_id << ", feed_id: " << feed_id
         << ",\n    push: " << push << ", log_lws: " << log_lws;
+}
+
 }
 

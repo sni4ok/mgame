@@ -7,6 +7,9 @@
 #include "../lws.hpp"
 #include "../utils.hpp"
 
+namespace coinbase
+{
+
 struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
 {
     config& cfg;
@@ -35,7 +38,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
         if(skip_if_fixed(it, "l2update\",\"product_id\":\""))
         {
             char_cit ne = find(it, ie, '\"');
-            u32 security_id = get_security_id(it, ne, time);
+            u32 security_id = get_security_id(it, ne, time, cfg);
             it = ne + 1;
             skip_fixed(it, ",\"changes\":[[\"");
 
@@ -104,7 +107,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
             it = ne + 1;
             skip_fixed(it, ",\"product_id\":\"");
             ne = find(it, ie, '\"');
-            u32 security_id = get_security_id(it, ne, time);
+            u32 security_id = get_security_id(it, ne, time, cfg);
             it = ne + 1;
             skip_fixed(it, ",\"sequence\":");
             it = find(it, ie, ',') + 1;
@@ -127,7 +130,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
     }
 };
 
-void proceed_coinbase(volatile bool& can_run)
+void proceed_parser(volatile bool& can_run)
 {
     return proceed_lws_parser<lws_i>(can_run);
 }
@@ -135,5 +138,7 @@ void proceed_coinbase(volatile bool& can_run)
 void connect(lws_i& ls)
 {
     lws_connect(ls, "ws-feed.exchange.coinbase.com", 443, "/ws/2");
+}
+
 }
 

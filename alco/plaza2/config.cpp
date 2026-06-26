@@ -8,6 +8,9 @@
 #include "../../evie/config.hpp"
 #include "../../evie/utils.hpp"
 
+namespace plaza
+{
+
 config::config(char_cit fname)
 {
     auto buf = read_file(fname);
@@ -42,5 +45,7 @@ bool config::proceed_ticker(const mstring& ticker) const
     if(tickers_filter.empty())
         return true;
     return find(tickers_filter.begin(), tickers_filter.end(), ticker) != tickers_filter.end();
+}
+
 }
 

@@ -3,12 +3,8 @@
 */
 
 #include "config.hpp"
+
+#define ns plaza
+
 #include "../main.hpp"
-
-void proceed_plaza(volatile bool& can_run);
-
-int main(int argc, char** argv)
-{
-    return parser_main(argc, argv, "plaza", proceed_plaza);
-}
 

@@ -29,7 +29,7 @@ struct lws_dump
 struct lws_context;
 struct lws;
 
-struct lws_impl : emessages, lws_dump, stack_singleton<lws_impl>
+struct lws_impl : emessages, lws_dump
 {
     const bool log_lws;
     char buf[512];

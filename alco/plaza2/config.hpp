@@ -7,6 +7,9 @@
 #include "../../evie/singleton.hpp"
 #include "../../evie/mstring.hpp"
 
+namespace plaza
+{
+
 struct config : stack_singleton<config>
 {
     mstring cgate_host, app_name, key, local_pass;
@@ -22,4 +25,6 @@ struct config : stack_singleton<config>
 
     config(char_cit fname);
 };
+
+}
 

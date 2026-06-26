@@ -207,7 +207,7 @@ struct mirror::impl
     i32 get_top_order(window& w)
     {
         if(auto_scroll || !top_order_p.value)
-            return -min<i32>(ob->bids.size(), w.rows / 2);
+            return -min<i32>(ob ? ob->bids.size() : 0, w.rows / 2);
         {
             if(!ob->bids.empty() && top_order_p.value <= ob->bids.begin()->first.value)
             {

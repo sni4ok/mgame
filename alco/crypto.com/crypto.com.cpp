@@ -3,12 +3,9 @@
 */
 
 #include "config.hpp"
+
+#define ns crypcom
+#define parser_name str_holder("crypto.com")
+
 #include "../main.hpp"
-
-void proceed_crypto_com(volatile bool& can_run);
-
-int main(int argc, char** argv)
-{
-    return parser_main(argc, argv, "crypto.com", proceed_crypto_com);
-}
 

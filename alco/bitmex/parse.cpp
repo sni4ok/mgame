@@ -7,6 +7,9 @@
 #include "../lws.hpp"
 #include "../utils.hpp"
 
+namespace bitmex
+{
+
 struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
 {
     config& cfg;
@@ -75,7 +78,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                 {
                     skip_fixed(it, "\"symbol\":\"");
                     ne = find(it, ie, '\"');
-                    u32 security_id = get_security_id(it, ne, time);
+                    u32 security_id = get_security_id(it, ne, time, cfg);
                     it = ne + 1;
                     skip_fixed(it, ",\"");
 
@@ -177,7 +180,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                     etime = read_time<3>(it);
                     skip_fixed(it, "Z\",\"symbol\":\"");
                     ne = find(it, ie, '\"');
-                    u32 security_id = get_security_id(it, ne, time);
+                    u32 security_id = get_security_id(it, ne, time, cfg);
                     it = ne + 1;
                     str_holder side = read_named_value(",\"side\":\"", it, ie, '\"', read_str);
                     int direction;
@@ -217,7 +220,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
     }
 };
 
-void proceed_bitmex(volatile bool& can_run)
+void proceed_parser(volatile bool& can_run)
 {
     return proceed_lws_parser<lws_i>(can_run);
 }
@@ -225,5 +228,7 @@ void proceed_bitmex(volatile bool& can_run)
 void connect(lws_i& ls)
 {
     lws_connect(ls, "www.bitmex.com", 443, "/realtime");
+}
+
 }
 

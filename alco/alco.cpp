@@ -7,11 +7,15 @@
 #include "../evie/profiler.hpp"
 #include "../makoa/types.hpp"
 
-u32 proceed_instr(exporter& e, str_holder exchange_id, str_holder feed_id, str_holder ticker, ttime_t time)
+u32 emessages::proceed_instr(str_holder exchange_id, str_holder feed_id, str_holder ticker, ttime_t time)
 {
-    static message_instr _, mi;
-    _.time = ttime_t();
+    if(m_s == pre_alloc) [[unlikely]]
+        send_messages();
+
+    message_instr& mi = ms[m_s++].mi;
+
     mi.time = time;
+    mi.etime = ttime_t();
     mi.id = msg_instr;
 
     memset(&mi.exchange_id, 0, sizeof(mi.exchange_id));
@@ -31,7 +35,6 @@ u32 proceed_instr(exporter& e, str_holder exchange_id, str_holder feed_id, str_h
     copy(ticker.begin(), ticker.end(), &mi.security[0]);
 
     mi.security_id = calc_crc(mi);
-    e.proceed((message*)(&mi), 1);
     return mi.security_id;
 }
 

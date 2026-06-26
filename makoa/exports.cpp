@@ -5,6 +5,7 @@
 
 #include "exports.hpp"
 #include "types.hpp"
+#include "dlfcn.hpp"
 #include "mmap.hpp"
 
 #include "../tyra/tyra.hpp"
@@ -14,7 +15,6 @@
 #include "../evie/fmap.hpp"
 #include "../evie/mlog.hpp"
 
-#include <dlfcn.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -29,19 +29,13 @@ void set_can_run(volatile bool* can_run)
     can_run_impl = can_run;
 }
 
-void shared_destroy(void* handle)
-{
-    if(handle)
-        dlclose(handle);
-}
-
 struct exports_factory
 {
     mvector<unique_ptr<void, shared_destroy> > dyn_exporters;
     fmap<mstring, hole_exporter> exporters;
 
     exports_factory();
-    hole_exporter get(const mstring& module);
+    hole_exporter get(const mstring& lib);
 
     ~exports_factory()
     {
@@ -50,11 +44,11 @@ struct exports_factory
     exports_factory(const exports_factory&) = delete;
 };
 
-void register_exporter(exports_factory *ef, str_holder module, hole_exporter he)
+void register_exporter(exports_factory *ef, str_holder lib, hole_exporter he)
 {
-    if(ef->exporters.find(module) != ef->exporters.end())
-        throw mexception(es() % "register_exporter, double registration " % module);
-    ef->exporters[module] = he;
+    if(ef->exporters.find(lib) != ef->exporters.end())
+        throw mexception(es() % "register_exporter, double registration " % lib);
+    ef->exporters[lib] = he;
 }
 
 void free_exports_factory(exports_factory* ptr)
@@ -76,380 +70,370 @@ void init_exporter_params(exporter_params params)
     efactory = params.efactory;
 }
 
-hole_exporter load_exporter(const mstring& module)
+hole_exporter load_exporter(const mstring& lib)
 {
-    mstring lib = "./lib" + module + ".so";
-    unique_ptr<void, shared_destroy> p(dlopen(lib.c_str(), RTLD_NOW));
-    if(!p)
-        throw_system_failure(es() % "load_exporter, load library error " % lib);
-
     typedef void (create_hole)(hole_exporter* m, exporter_params params);
-    create_hole *hole = (create_hole*)dlsym(p.get(), "create_hole");
-    if(!hole)
-        throw_system_failure(es() % "load_exporter, no create_hole in " % lib);
-
+    auto f = load_lib<create_hole>("./lib" + lib + ".so", "create_hole");
     hole_exporter he;
-    hole(&he, {log_get(), can_run_impl, efactory});
-    efactory->dyn_exporters.push_back(move(p));
+    f.second(&he, {log_get(), can_run_impl, efactory});
+    efactory->dyn_exporters.push_back(move(f.first));
     return he;
 }
 
-hole_exporter exports_factory::get(const mstring& module)
+hole_exporter exports_factory::get(const mstring& lib)
 {
-    auto it = exporters.find(module);
+    auto it = exporters.find(lib);
     if(it != exporters.end())
         return it->second;
-    hole_exporter he = load_exporter(module);
-    exporters[module] = he;
+    hole_exporter he = load_exporter(lib);
+    exporters[lib] = he;
     return he;
 }
 
-namespace
+void log_message(void*, const message* m, u32 count)
 {
-    void log_message(void*, const message* m, u32 count)
+    for(u32 i = 0; i != count; ++i, ++m)
     {
-        for(u32 i = 0; i != count; ++i, ++m)
-        {
-            if(m->id == msg_book)
-                mlog() << "<" << m->mb;
-            else if(m->id == msg_trade)
-                mlog() << "<" << m->mt;
-            else if(m->id == msg_clean)
-                mlog() << "<" << m->mc;
-            else if(m->id == msg_instr)
-                mlog() << "<" << m->mi;
-            else if(m->id == msg_ping)
-                mlog() << "<" << m->mp;
-            else if(m->id == msg_hello)
-                mlog() << "<" << m->dratuti;
-        }
-        mlog() << "<flush|";
+        if(m->id == msg_book)
+            mlog() << "<" << m->mb;
+        else if(m->id == msg_trade)
+            mlog() << "<" << m->mt;
+        else if(m->id == msg_clean)
+            mlog() << "<" << m->mc;
+        else if(m->id == msg_instr)
+            mlog() << "<" << m->mi;
+        else if(m->id == msg_ping)
+            mlog() << "<" << m->mp;
+        else if(m->id == msg_hello)
+            mlog() << "<" << m->dratuti;
     }
-    void* hole_no_init(char_cit)
-    {
-        return 0;
-    }
-    void hole_no_destroy(void*)
-    {
-    }
-    void hole_no_proceed(void*, const message*, u32)
-    {
-    }
-    void* tyra_create(char_cit params)
-    {
-        return new tyra(params);
-    }
-    void tyra_destroy(void* t)
-    {
-        delete (tyra*)t;
-    }
-    void tyra_proceed(void* t, const message* m, u32 count)
-    {
-        return ((tyra*)t)->send(m, count);
-    }
-    struct export_tcp_server
-    {
-        int socket = 0;
+    mlog() << "<flush|";
+}
+void* hole_no_init(char_cit)
+{
+    return 0;
+}
+void hole_no_destroy(void*)
+{
+}
+void hole_no_proceed(void*, const message*, u32)
+{
+}
+void* tyra_create(char_cit params)
+{
+    return new tyra(params);
+}
+void tyra_destroy(void* t)
+{
+    delete (tyra*)t;
+}
+void tyra_proceed(void* t, const message* m, u32 count)
+{
+    return ((tyra*)t)->send(m, count);
+}
+struct export_tcp_server
+{
+    int socket = 0;
 
-        export_tcp_server(char_cit params)
-        {
-            str_holder _p = _str_holder(params);
-            mlog() << "export|tcp_server " << _p;
-            auto p = split(_p, ' ');
-            if(p.size() != 1 && p.size() != 2)
-                throw mexception(es() % "export|tcp_server, port[ possible_host]");
+    export_tcp_server(char_cit params)
+    {
+        str_holder _p = _str_holder(params);
+        mlog() << "export|tcp_server " << _p;
+        auto p = split(_p, ' ');
+        if(p.size() != 1 && p.size() != 2)
+            throw mexception(es() % "export|tcp_server, port[ possible_host]");
 
-            u16 port = lexical_cast<u16>(p[0]);
-            str_holder possible_host;
+        u16 port = lexical_cast<u16>(p[0]);
+        str_holder possible_host;
 
-            if(p.size() == 2)
-                possible_host = p[1];
+        if(p.size() == 2)
+            possible_host = p[1];
 
-            mstring client;
-            socket = socket_accept(port, false/*local*/, &client, can_run_impl);
+        mstring client;
+        socket = socket_accept(port, false/*local*/, &client, can_run_impl);
 
-            if(!possible_host.empty() && possible_host != "*" && possible_host != client)
-                throw mexception(es() % "export|tcp_server, client " % client
-                    % " != possible_host " % possible_host);
-        }
-        void proceed(const message* m, u32 count)
-        {
-            u32 sz = count * message_size;
-            socket_send(socket, (char_cit)m, sz);
-        }
-        ~export_tcp_server()
-        {
-            if(socket)
-                close(socket);
-        }
-    };
-    void* tcp_server_create(char_cit params)
-    {
-        return new export_tcp_server(params);
+        if(!possible_host.empty() && possible_host != "*" && possible_host != client)
+            throw mexception(es() % "export|tcp_server, client " % client
+                % " != possible_host " % possible_host);
     }
-    void tcp_server_destroy(void* t)
+    void proceed(const message* m, u32 count)
     {
-        delete (export_tcp_server*)t;
+        u32 sz = count * message_size;
+        socket_send(socket, (char_cit)m, sz);
     }
-    void tcp_server_proceed(void* t, const message* m, u32 count)
+    ~export_tcp_server()
     {
-        ((export_tcp_server*)t)->proceed(m, count);
+        if(socket)
+            close(socket);
     }
-    struct exports_chain
-    {
-        static const u32 max_size = 20;
-        exporter exporters[max_size];
-        u32 size;
+};
+void* tcp_server_create(char_cit params)
+{
+    return new export_tcp_server(params);
+}
+void tcp_server_destroy(void* t)
+{
+    delete (export_tcp_server*)t;
+}
+void tcp_server_proceed(void* t, const message* m, u32 count)
+{
+    ((export_tcp_server*)t)->proceed(m, count);
+}
+struct exports_chain
+{
+    static const u32 max_size = 20;
+    exporter exporters[max_size];
+    u32 size;
 
-        exports_chain() : size()
-        {
-        }
-        ~exports_chain()
-        {
-        }
-        void proceed(const message* m, u32 count)
-        {
-            for(u32 i = 0; i != size; ++i)
-                exporters[i].proceed(m, count);
-        }
-        void add(exporter&& e)
-        {
-            if(size == max_size)
-                throw str_exception("exports_chain, max_size exceed");
-            exporters[size++] = move(e);
-        }
-    };
-    void chain_destroy(void* ptr)
+    exports_chain() : size()
     {
-        delete (exports_chain*)ptr;
     }
-    void chain_proceed(void* ec, const message* m, u32 count)
+    ~exports_chain()
     {
-        ((exports_chain*)ec)->proceed(m, count);
     }
-    exporter create_impl(const mstring& m)
+    void proceed(const message* m, u32 count)
     {
-        auto ib = m.begin(), ie = m.end(), it = find(ib, ie, ' ');
-        mstring module, params;
-        if(it == ie || it + 1 == ie)
-            module = m;
-        else
-        {
-            module = mstring(ib, it);
-            params = mstring(it + 1, ie);
-        }
-        exporter ret;
-        ret.he = efactory->get(module);
-        ret.p = ret.he.init(params.c_str());
-        return ret;
+        for(u32 i = 0; i != size; ++i)
+            exporters[i].proceed(m, count);
     }
-    void* pipe_init(char_cit params)
+    void add(exporter&& e)
     {
-        int r = mkfifo(params, 0666);
-        unused(r);
-        i64 h = ::open(params, O_WRONLY);
-        if(h <= 0)
-            throw_system_failure(es() % "pipe_init, " % _str_holder(params) % " error");
+        if(size == max_size)
+            throw str_exception("exports_chain, max_size exceed");
+        exporters[size++] = move(e);
+    }
+};
+void chain_destroy(void* ptr)
+{
+    delete (exports_chain*)ptr;
+}
+void chain_proceed(void* ec, const message* m, u32 count)
+{
+    ((exports_chain*)ec)->proceed(m, count);
+}
+exporter create_impl(const mstring& m)
+{
+    auto ib = m.begin(), ie = m.end(), it = find(ib, ie, ' ');
+    mstring lib, params;
+    if(it == ie || it + 1 == ie)
+        lib = m;
+    else
+    {
+        lib = mstring(ib, it);
+        params = mstring(it + 1, ie);
+    }
+    exporter ret;
+    ret.he = efactory->get(lib);
+    ret.p = ret.he.init(params.c_str());
+    return ret;
+}
+void* pipe_init(char_cit params)
+{
+    int r = mkfifo(params, 0666);
+    unused(r);
+    i64 h = ::open(params, O_WRONLY);
+    if(h <= 0)
+        throw_system_failure(es() % "pipe_init, " % _str_holder(params) % " error");
 
-        return (void*)h;
-    }
-    void pipe_destroy(void* p)
-    {
-        ::close(int((i64)p));
-    }
-    void pipe_proceed(void* p, const message* m, u32 count)
-    {
-        size_t wsize = sizeof(message) * count;
-        ssize_t ret = ::write(int((i64)p), (const void*)m, wsize);
-        if(ret != ssize_t(wsize)) [[unlikely]]
-            throw_system_failure(es() % "pipe::write, wsize: " % wsize  % ", ret: " % ret);
-    }
+    return (void*)h;
+}
+void pipe_destroy(void* p)
+{
+    ::close(int((i64)p));
+}
+void pipe_proceed(void* p, const message* m, u32 count)
+{
+    size_t wsize = sizeof(message) * count;
+    ssize_t ret = ::write(int((i64)p), (const void*)m, wsize);
+    if(ret != ssize_t(wsize)) [[unlikely]]
+        throw_system_failure(es() % "pipe::write, wsize: " % wsize  % ", ret: " % ret);
+}
 
-    struct crc_check
-    {
-        u32 count;
-        crc32 crc;
+struct crc_check
+{
+    u32 count;
+    crc32 crc;
 
-        crc_check() : count(), crc(0)
+    crc_check() : count(), crc(0)
+    {
+    }
+    ~crc_check()
+    {
+        mlog() << "crc_check: " << count << " messages, crc: " << crc.checksum();
+    }
+};
+
+void* crc_init(char_cit)
+{
+    return new crc_check;
+}
+void crc_destroy(void *p)
+{
+    delete (crc_check*)p;
+}
+void crc_proceed(void* p, const message* m, u32 count)
+{
+    crc_check* c = (crc_check*)p;
+    c->count += count;
+    c->crc.process_bytes((char_cit)m, message_size * count);
+}
+void* mmap_init(char_cit params)
+{
+    str_holder sp = _str_holder(params);
+    mlog() << "mmap_init, open: " << sp;
+    void* p = mmap_create(params, false);
+    unique_ptr<void, mmap_close> ptr(p);
+    shared_memory_sync* s = get_smc(p);
+
+    u8* c = (u8*)p;
+    {
+        char& s = *((char_it)p + mmap_alloc_size);
+        if(s != '1')
         {
+            mmap_store(c, 1);
+            mmap_store(c + 1, 0);
+            throw mexception(es() % "mmap_init, already open: " % s);
         }
-        ~crc_check()
-        {
-            mlog() << "crc_check: " << count << " messages, crc: " << crc.checksum();
-        }
-    };
+        ++s;
+    }
+    pthread_lock lock(s->mutex);
+    for(u8* s = c; s != c + mmap_alloc_size_base; ++s)
+    {
+        if(*s)
+            throw mexception(es() % "mmap_init, already filled: " % sp);
+    }
+    *c = 2;
+    *(c + 1) = 1;
 
-    void* crc_init(char_cit)
+    while(*(c + 1) != 2 && *can_run_impl)
     {
-        return new crc_check;
-    }
-    void crc_destroy(void *p)
-    {
-        delete (crc_check*)p;
-    }
-    void crc_proceed(void* p, const message* m, u32 count)
-    {
-        crc_check* c = (crc_check*)p;
-        c->count += count;
-        c->crc.process_bytes((char_cit)m, message_size * count);
-    }
-    void* mmap_init(char_cit params)
-    {
-        str_holder sp = _str_holder(params);
-        mlog() << "mmap_init, open: " << sp;
-        void* p = mmap_create(params, false);
-        unique_ptr<void, mmap_close> ptr(p);
-        shared_memory_sync* s = get_smc(p);
+        if(mmap_nusers(params) != 2)
+            throw str_exception("mmap_init, nusers != 2");
 
-        u8* c = (u8*)p;
+        pthread_cond_signal(&(s->condition));
+        pthread_timedwait(s->condition, s->mutex, 1);
+    }
+
+    mlog() << "mmap_init, successfully opened: " << sp;
+    return ptr.release();
+}
+void mmap_destroy(void *p)
+{
+    mmap_close(p);
+}
+void mmap_proceed(void* v, const message* m, u32 count)
+{
+    bool flub = false;
+    u8* f = (u8*)v, *e = f + message_size, *i = f;
+
+    u8 w = *f;
+    u8 r = *(f + 1);
+    if(w < 2 || w >= message_size || !r || r >= message_size) [[unlikely]]
+        throw mexception(es() % "mmap_proceed, internal error, wp: "
+            % u32(w) % ", rp: " % u32(r));
+
+    i += w;
+    message* p = (((message*)v) + 1) + (w - 2) * 255;
+
+    u32 c = 0;
+    while(c != count)
+    {
+        u32 cur_count = (count - c);
+        if(cur_count > 255)
+            cur_count = 255;
+
+        u8 nf = mmap_load(i);
+        if(nf)
         {
-            char& s = *((char_it)p + mmap_alloc_size);
-            if(s != '1')
+            //reader not exists or overloaded
+            time_t tf = time(NULL);
+            flub = true;
+
+            while(nf && tf + 5 >= time(NULL))
             {
-                mmap_store(c, 1);
-                mmap_store(c + 1, 0);
-                throw mexception(es() % "mmap_init, already open: " % s);
+                usleep(10);
+                nf = mmap_load(i);
             }
-            ++s;
-        }
-        pthread_lock lock(s->mutex);
-        for(u8* s = c; s != c + mmap_alloc_size_base; ++s)
-        {
-            if(*s)
-                throw mexception(es() % "mmap_init, already filled: " % sp);
-        }
-        *c = 2;
-        *(c + 1) = 1;
-
-        while(*(c + 1) != 2 && *can_run_impl)
-        {
-            if(mmap_nusers(params) != 2)
-                throw str_exception("mmap_init, nusers != 2");
-
-            pthread_cond_signal(&(s->condition));
-            pthread_timedwait(s->condition, s->mutex, 1);
-        }
-
-        mlog() << "mmap_init, successfully opened: " << sp;
-        return ptr.release();
-    }
-    void mmap_destroy(void *p)
-    {
-        mmap_close(p);
-    }
-    void mmap_proceed(void* v, const message* m, u32 count)
-    {
-        bool flub = false;
-        u8* f = (u8*)v, *e = f + message_size, *i = f;
-
-        u8 w = *f;
-        u8 r = *(f + 1);
-        if(w < 2 || w >= message_size || !r || r >= message_size) [[unlikely]]
-            throw mexception(es() % "mmap_proceed, internal error, wp: "
-                % u32(w) % ", rp: " % u32(r));
-
-        i += w;
-        message* p = (((message*)v) + 1) + (w - 2) * 255;
-
-        u32 c = 0;
-        while(c != count)
-        {
-            u32 cur_count = (count - c);
-            if(cur_count > 255)
-                cur_count = 255;
-
-            u8 nf = mmap_load(i);
             if(nf)
-            {
-                //reader not exists or overloaded
-                time_t tf = time(NULL);
-                flub = true;
-
-                while(nf && tf + 5 >= time(NULL))
-                {
-                    usleep(10);
-                    nf = mmap_load(i);
-                }
-                if(nf)
-                    throw mexception(es() % "mmap_proceed, map overload, wp: "
-                        % u32(*f) % ", rp: " % u32(*(f + 1)));
-            }
-            memcpy(p, m + c, cur_count * message_size);
-            mmap_store(i, cur_count);
-            //mlog() << "mmap_proceed(" << u64(v) << "," << u64(p) << "," << c <<
-            //<< "," << cur_count << "," << u32(*f) << "," << u32(*(f + 1)) << ")";
-            p += 255;
-            ++i;
-
-            if(i == e)
-                i = f + 2;
-
-            if(!mmap_compare_exchange(f, w, i - f))
-                throw mexception(es() % "mmap_proceed, set w error, w: " % *f
-                    % ", from: " % u32(w) % ", to: " % u32(i - f));
-
-            w = i - f;
-            c += cur_count;
+                throw mexception(es() % "mmap_proceed, map overload, wp: "
+                    % u32(*f) % ", rp: " % u32(*(f + 1)));
         }
+        memcpy(p, m + c, cur_count * message_size);
+        mmap_store(i, cur_count);
+        //mlog() << "mmap_proceed(" << u64(v) << "," << u64(p) << "," << c <<
+        //<< "," << cur_count << "," << u32(*f) << "," << u32(*(f + 1)) << ")";
+        p += 255;
+        ++i;
 
-        if(flub)
-        {
-            MPROFILE("mmap_proceed, flub")
-        }
+        if(i == e)
+            i = f + 2;
 
-        shared_memory_sync* s = get_smc(v);
-        if(s->pooling_mode == 2 && !pthread_mutex_lock(&(s->mutex))) {
-            pthread_cond_signal(&(s->condition));
-            pthread_mutex_unlock(&(s->mutex));
-        }
+        if(!mmap_compare_exchange(f, w, i - f))
+            throw mexception(es() % "mmap_proceed, set w error, w: " % *f
+                % ", from: " % u32(w) % ", to: " % u32(i - f));
+
+        w = i - f;
+        c += cur_count;
     }
 
-    struct udp
+    if(flub)
     {
-        int socket;
-        sockaddr_in sa;
-
-        udp(char_cit _p)
-        {
-            str_holder params = _str_holder(_p);
-            auto p = split_s(params, ' ');
-            if(p.size() != 2)
-                throw mexception(es() %
-                    "export_udp, required 2 params (server_ip port), " % params);
-
-            socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-            if(socket < 0)
-                throw_system_failure("export_udp, open udp socket error");
-
-            sa.sin_family = AF_INET;
-            sa.sin_port = htons(lexical_cast<u16>(p[1]));
-            if(inet_pton(AF_INET, p[0].c_str(), &sa.sin_addr) <= 0)
-                throw_system_failure("export_udp, int_pton error");
-
-            mlog() << "export_udp, " << params << " started";
-        }
-        ~udp()
-        {
-            ::close(socket);
-        }
-    };
-
-    void* udp_init(char_cit params)
-    {
-        return new udp(params);
+        MPROFILE("mmap_proceed, flub")
     }
-    void udp_destroy(void* p)
+
+    shared_memory_sync* s = get_smc(v);
+    if(s->pooling_mode == 2 && !pthread_mutex_lock(&(s->mutex)))
     {
-        delete (udp*)p;
+        pthread_cond_signal(&(s->condition));
+        pthread_mutex_unlock(&(s->mutex));
     }
-    void udp_proceed(void* p, const message* m, u32 count)
+}
+
+struct udp
+{
+    int socket;
+    sockaddr_in sa;
+
+    udp(char_cit _p)
     {
-        udp* u = (udp*)p;
-        ssize_t sz = sizeof(message) * count;
-        ssize_t ret = sendto(u->socket, m, sz, 0, (sockaddr*)(&u->sa), sizeof(u->sa));
-        if(ret != sz) [[unlikely]]
-            throw_system_failure(es() % "export_udp, write, sz: " % sz  % ", ret: " % ret);
+        str_holder params = _str_holder(_p);
+        auto p = split_s(params, ' ');
+        if(p.size() != 2)
+            throw mexception(es() %
+                "export_udp, required 2 params (server_ip port), " % params);
+
+        socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        if(socket < 0)
+            throw_system_failure("export_udp, open udp socket error");
+
+        sa.sin_family = AF_INET;
+        sa.sin_port = htons(lexical_cast<u16>(p[1]));
+        if(inet_pton(AF_INET, p[0].c_str(), &sa.sin_addr) <= 0)
+            throw_system_failure("export_udp, int_pton error");
+
+        mlog() << "export_udp, " << params << " started";
     }
+    ~udp()
+    {
+        ::close(socket);
+    }
+};
+
+void* udp_init(char_cit params)
+{
+    return new udp(params);
+}
+void udp_destroy(void* p)
+{
+    delete (udp*)p;
+}
+void udp_proceed(void* p, const message* m, u32 count)
+{
+    udp* u = (udp*)p;
+    ssize_t sz = sizeof(message) * count;
+    ssize_t ret = sendto(u->socket, m, sz, 0, (sockaddr*)(&u->sa), sizeof(u->sa));
+    if(ret != sz) [[unlikely]]
+        throw_system_failure(es() % "export_udp, write, sz: " % sz  % ", ret: " % ret);
 }
 
 exporter::exporter(const mstring& params)
@@ -496,6 +480,52 @@ void exporter::operator=(exporter&& r)
     r.he = hole_exporter();
 }
 
+pair<void*, str_holder> import_context_create(void* params);
+void import_context_destroy(pair<void*, str_holder> ctx);
+bool import_proceed_data(str_holder& buf, void* ctx);
+
+struct local_import
+{
+    pair<void*, str_holder> ctx;
+
+    local_import(char_cit params)
+    {
+        ctx = import_context_create((void*)params);
+    }
+    void proceed(const message* m, u32 count)
+    {
+        const u64 sz = message_size * count;
+        if(ctx.second.size() < sz) [[unlikely]]
+            throw str_exception("local_import, proceed overflow");
+
+        memcpy((char*)ctx.second.begin(), m, sz);
+        ctx.second.resize(sz);
+
+        bool ret = import_proceed_data(ctx.second, ctx.first);
+        if(!ret)
+            throw str_exception("local_import, import_proceed_data !continue");
+    }
+    ~local_import()
+    {
+        import_context_destroy(ctx);
+    }
+};
+
+void* local_import_init(char_cit params)
+{
+    return new local_import(params);
+}
+
+void local_import_destroy(void* p)
+{
+    delete ((local_import*)p);
+}
+
+void local_import_proceed(void* p, const message* m, u32 count)
+{
+    ((local_import*)p)->proceed(m, count);
+}
+
 exports_factory::exports_factory()
 {
     exporters["log_messages"] = {hole_no_init, hole_no_destroy, log_message};
@@ -506,5 +536,6 @@ exports_factory::exports_factory()
     exporters["crc"] = {crc_init, crc_destroy, crc_proceed};
     exporters["mmap_cp"] = {mmap_init, mmap_destroy, mmap_proceed};
     exporters["/dev/null"] = {hole_no_init, hole_no_destroy, hole_no_proceed};
+    exporters["local_import"] = {local_import_init, local_import_destroy, local_import_proceed};
 }
 

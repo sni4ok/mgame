@@ -7,6 +7,9 @@
 #include "../../evie/mstring.hpp"
 #include "../../evie/singleton.hpp"
 
+namespace bybit
+{
+
 struct config : stack_singleton<config>
 {
     mvector<mstring> tickers;
@@ -18,4 +21,6 @@ struct config : stack_singleton<config>
 
     config(char_cit fname);
 };
+
+}
 

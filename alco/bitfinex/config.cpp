@@ -9,6 +9,9 @@
 #include "../../evie/utils.hpp"
 #include "../../evie/mlog.hpp"
 
+namespace bitfinex
+{
+
 config::config(char_cit fname)
 {
     auto cs = read_file(fname);
@@ -17,7 +20,7 @@ config::config(char_cit fname)
     trades = get_config_param<bool>(cs, "trades");
     orders = get_config_param<bool>(cs, "orders");
     if((!orders && !trades) || tickers.empty())
-        throw str_exception("config::config() nothing to import");
+        throw str_exception("bitfinex_config, nothing to import");
     
     precision = get_config_param<str_holder>(cs, "precision");
     frequency = get_config_param<str_holder>(cs, "frequency");
@@ -30,10 +33,11 @@ config::config(char_cit fname)
     feed_id = get_config_param<str_holder>(cs, "feed_id");
     log_lws = get_config_param<bool>(cs, "log_lws");
 
-    mlog() << "config() tickers: " << smb
+    mlog() << "bitfinex_config, tickers: " << smb
         << ", trades: " << trades << ", orders: " << orders << ", precision: " << precision
         << ", frequency: " << frequency << ", length: " << length << ", ping: " << ping 
         << ", exchange_id: " << exchange_id << ", feed_id: " << feed_id
         << ",\n    push: " << push << ", log_lws: " << log_lws;
 }
 
+}

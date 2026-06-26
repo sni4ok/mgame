@@ -15,15 +15,17 @@ template<typename base>
 struct sec_id_by_name : base
 {
     typedef basic_string<sizeof(message_instr::security) + 1> ticker;
-    u32 get_security_id(char_cit i, char_cit ie, ttime_t time)
+    fmap<ticker, u32> securities;
+
+    u32 get_security_id(char_cit i, char_cit ie, ttime_t time, const auto& cfg)
     {
         assert(i != ie);
         ticker symbol(i, ie);
         auto it = securities.find(symbol);
         if(it == securities.end()) [[unlikely]]
         {
-            u32 id = proceed_instr(this->e, config::instance().exchange_id.str(),
-                config::instance().feed_id.str(), str_holder(i, ie), time);
+            u32 id = this->proceed_instr(cfg.exchange_id.str(),
+                cfg.feed_id.str(), str_holder(i, ie), time);
             securities[symbol] = id;
             return id;
         }
@@ -32,9 +34,6 @@ struct sec_id_by_name : base
     }
 
     using base::base;
-
-private:
-    fmap<ticker, u32> securities;
 };
 
 extern "C"

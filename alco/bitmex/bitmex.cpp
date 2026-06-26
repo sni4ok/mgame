@@ -3,12 +3,8 @@
 */
 
 #include "config.hpp"
+
+#define ns bitmex
+
 #include "../main.hpp"
-
-void proceed_bitmex(volatile bool& can_run);
-
-int main(int argc, char** argv)
-{
-    return parser_main(argc, argv, "bitmex", proceed_bitmex);
-}
 

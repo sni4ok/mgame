@@ -7,6 +7,9 @@
 #include "../lws.hpp"
 #include "../utils.hpp"
 
+namespace kraken
+{
+
 ttime_t read_time(char_cit it, char_cit ie)
 {
     char_cit ne = find(it, ie, '.');
@@ -223,7 +226,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             skip_fixed(it, "\"channelName\":\"");
             search_and_skip_fixed(it, ie, "\"pair\":\"");
             ne = find(it, ie, '\"');
-            u32 security_id = get_security_id(it, ne, time);
+            u32 security_id = get_security_id(it, ne, time, cfg);
             it = ne + 1;
             search_and_skip_fixed(it, ie, "\"name\":\"");
             ne = find(it, ie, '\"');
@@ -261,7 +264,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     }
 };
 
-void proceed_kraken(volatile bool& can_run)
+void proceed_parser(volatile bool& can_run)
 {
     return proceed_lws_parser<lws_i>(can_run);
 }
@@ -269,5 +272,7 @@ void proceed_kraken(volatile bool& can_run)
 void connect(lws_i& ls)
 {
     lws_connect(ls, "ws.kraken.com", 443, "/");
+}
+
 }
 

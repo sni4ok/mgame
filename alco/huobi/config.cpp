@@ -9,6 +9,9 @@
 #include "../../evie/utils.hpp"
 #include "../../evie/mlog.hpp"
 
+namespace huobi
+{
+
 config::config(char_cit fname)
 {
     auto cs = read_file(fname);
@@ -25,18 +28,20 @@ config::config(char_cit fname)
     bbo = get_config_param<bool>(cs, "bbo");
 
     if((!orders && !trades && !snapshot && !bbo) || tickers.empty())
-        throw str_exception("config::config() nothing to import");
+        throw str_exception("huobi_config, nothing to import");
 
     if(int(snapshot) + int(orders) + int(bbo) > 1)
-        throw str_exception("config::config() snapshot, orders and bbo mutually exclusive");
+        throw str_exception("huobi_config, snapshot, orders and bbo mutually exclusive");
 
     push = get_config_param<str_holder>(cs, "push");
     exchange_id = get_config_param<str_holder>(cs, "exchange_id");
     feed_id = get_config_param<str_holder>(cs, "feed_id");
     log_lws = get_config_param<bool>(cs, "log_lws");
 
-    mlog() << "config() tickers: " << smb
+    mlog() << "huobi_config, tickers: " << smb
         << ", trades: " << trades << ", orders: " << orders << ", step: " << step
         << ",\n    push: " << push << ", log_lws: " << log_lws;
+}
+
 }
 

@@ -3,12 +3,8 @@
 */
 
 #include "config.hpp"
+
+#define ns coinbase
+
 #include "../main.hpp"
-
-void proceed_coinbase(volatile bool& can_run);
-
-int main(int argc, char** argv)
-{
-    return parser_main(argc, argv, "coinbase", proceed_coinbase);
-}
 
