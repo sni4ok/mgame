@@ -23,6 +23,10 @@
 
 static ttime_t parse_time(const mstring& time)
 {
+    if(time == "min")
+        return limits<ttime_t>::min;
+    if(time == "max")
+        return limits<ttime_t>::max;
     if(time == "now")
         return cur_ttime();
 

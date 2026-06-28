@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "messages.hpp"
+#include "order_b.hpp"
 
 #include "../evie/utils.hpp"
 #include "../evie/fmap.hpp"
@@ -15,124 +15,26 @@
 
 #define USE_PRICE_MAP
 
-struct message_brief
-{
-    price_t price;
-    count_t count;
-};
-
-struct order_book_leaf
-{
-    count_t count;
-    ttime_t time;
-};
-
 template<typename orders_t, typename asks_t, typename bids_t>
 class order_book_base
 {
     orders_t orders;
 
 public:
-
     asks_t asks;
     bids_t bids;
 
-    void add(price_t price, count_t count, ttime_t time)
-    {
-        //MPROFILE("order_book::add")
-        if(!count)
-            return;
-
-        if(count > count_t())
-        {
-            auto ia = asks.find(price);
-            if(ia != asks.end())
-            {
-                if(ia->second.count <= count)
-                {
-                    count -= ia->second.count;
-                    asks.erase(ia);
-                    if(!!count)
-                        bids.insert({price, {count, time}});
-                }
-                else
-                {
-                    ia->second.count -= count;
-                    ia->second.time = time;
-                }
-            }
-            else
-            {
-                order_book_leaf& b = bids[price];
-                b.count += count;
-                b.time = time;
-            }
-        }
-        else
-        {
-            count = -count;
-            auto ib = bids.find(price);
-            if(ib != bids.end())
-            {
-                if(ib->second.count <= count)
-                {
-                    count -= ib->second.count;
-                    bids.erase(ib);
-                    if(!!count)
-                        asks.insert({price, {count, time}});
-                }
-                else
-                {
-                    ib->second.count -= count;
-                    ib->second.time = time;
-                }
-            }
-            else
-            {
-                order_book_leaf& a = asks[price];
-                a.count += count;
-                a.time = time;
-            }
-        }
-    }
-    void set(const message_book& mb)
-    {
-        MPROFILE("order_book::set")
-        MPROFILE_COUNT("order_book::level_id", {mb.level_id})
-
-        message_brief* m = orders.get(mb.level_id, mb.price);
-        if(!m)
-            return;
-
-        const price_t& price = !!mb.price ? mb.price : m->price;
-
-        if(mb.price == m->price || !mb.price)
-            add(price, mb.count - m->count, mb.time);
-        else
-        {
-            add(m->price, -m->count, mb.time);
-            add(mb.price, mb.count, mb.time);
-        }
-
-        if(!mb.count)
-            orders.erase_prev();
-        else
-        {
-            m->price = price;
-            m->count = mb.count;
-        }
-    }
     void proceed(const message& m)
     {
         if(m.id == msg_book)
-            set(m.mb);
+            proceed_message_book(m.mb, orders, asks, bids);
         else if(m.id == msg_clean || m.id == msg_instr)
         {
             orders.clear();
-            if(m.id == msg_instr)
-                orders.set(m.mi);
             asks.clear();
             bids.clear();
+            if(m.id == msg_instr)
+                orders.set(m.mi);
         }
         else
             throw mexception(es() % "order_book::proceed() unsupported message type: " % m.id.id);

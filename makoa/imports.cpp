@@ -499,7 +499,7 @@ static const int _import_files_replay = register_importer("files_replay",
 hole_importer load_importer(const mstring& lib)
 {
     typedef void (create_import)(hole_importer* i, simple_log* sl);
-    auto f = load_lib<create_import>(lib, "create_import");
+    auto f = lib_load<create_import>(lib, "create_import");
     hole_importer hi;
     f.second(&hi, log_get());
     _importers.i[lib] = hi;

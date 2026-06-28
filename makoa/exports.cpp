@@ -31,7 +31,7 @@ void set_can_run(volatile bool* can_run)
 
 struct exports_factory
 {
-    mvector<unique_ptr<void, shared_destroy> > dyn_exporters;
+    mvector<unique_ptr<void, lib_free> > dyn_exporters;
     fmap<mstring, hole_exporter> exporters;
 
     exports_factory();
@@ -73,7 +73,7 @@ void init_exporter_params(exporter_params params)
 hole_exporter load_exporter(const mstring& lib)
 {
     typedef void (create_hole)(hole_exporter* m, exporter_params params);
-    auto f = load_lib<create_hole>("./lib" + lib + ".so", "create_hole");
+    auto f = lib_load<create_hole>("./lib" + lib + ".so", "create_hole");
     hole_exporter he;
     f.second(&he, {log_get(), can_run_impl, efactory});
     efactory->dyn_exporters.push_back(move(f.first));
