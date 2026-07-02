@@ -47,7 +47,7 @@ struct security_filter
             return true;
         if(m.id == msg_instr)
         {
-            if(!security_id && (security == from_array(m.mi.security) || security == "$0"))
+            if(!security_id && from_any(security, from_array(m.mi.security), "$0"))
                 security_id = m.mi.security_id;
             return m.mi.security_id == security_id;
         }
@@ -124,6 +124,8 @@ struct decimal_fixed
         if(digits < d)
             digits = d;
 
+        if(v < type())
+            s << "-";
         if(digits)
             s << uint_fix{m, digits, false};
         else
@@ -257,8 +259,7 @@ struct mirror::impl
     void print_book(bool bids, price_t price, const order_book_leaf& b,
         window& w, u32& row)
     {
-        count_t c{bids ? b.count.value : - b.count.value};
-        book bo{c, b.time, price};
+        book bo{b.count, b.time, price};
 
         if(books_printed[row] != bo)
         {
@@ -266,7 +267,7 @@ struct mirror::impl
             bs << brief_time(b.time) << " ";
             print_p(bs, price);
             bs << " ";
-            print_c(bs, c);
+            print_c(bs, b.count);
 
             if(trades_from > bs.size())
                 bs.write(w.blank_row.begin(), trades_from - bs.size());

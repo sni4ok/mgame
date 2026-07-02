@@ -6,7 +6,7 @@
 
 #include <cassert>
 
-template<typename base>
+template<typename base, bool reinit_en = true>
 class stack_singleton
 {
     static base*& get_impl()
@@ -32,7 +32,10 @@ public:
     }
     ~stack_singleton()
     {
-        get_impl() = 0;
+        if constexpr(reinit_en)
+            get_impl() = 0;
+        else
+            get_impl() = (base*)1;
     }
 };
 

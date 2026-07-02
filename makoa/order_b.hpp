@@ -7,6 +7,7 @@
 #include "messages.hpp"
 
 #include "../evie/profiler.hpp"
+#include "../evie/string.hpp"
 
 struct message_brief
 {
@@ -19,6 +20,33 @@ struct order_book_leaf
     count_t count;
     ttime_t time;
 };
+
+void set_message_book_abs(price_t price, count_t count, ttime_t time, auto& asks, auto& bids)
+{
+    MPROFILE("set_message_book_abs")
+
+    if(count > count_t())
+    {
+        order_book_leaf& b = bids[price];
+        if(!b.count)
+            asks.erase(price);
+        b.count = count;
+        b.time = time;
+    }
+    else if(count < count_t())
+    {
+        order_book_leaf& a = asks[price];
+        if(!a.count)
+            bids.erase(price);
+        a.count = -count;
+        a.time = time;
+    }
+    else
+    {
+        if(!bids.erase(price))
+            asks.erase(price);
+    }
+}
 
 void add_message_book(price_t price, count_t count, ttime_t time, auto& asks, auto& bids)
 {
@@ -61,9 +89,35 @@ void add_message_book(price_t price, count_t count, ttime_t time, auto& asks, au
     }
 }
 
+void proceed_message_bba(const message_book& mb, auto& asks, auto& bids)
+{
+    MPROFILE("proceed_message_bba")
+    auto f = [&mb](auto& cont, count_t count)
+    {
+        if(!cont.empty())
+        {
+            auto it = cont.begin();
+            if(it->first == mb.price)
+            {
+                it->second = order_book_leaf(count, mb.time);
+                return;
+            }
+            cont.erase(it);
+        }
+        cont[mb.price] = order_book_leaf(count, mb.time);
+    };
+
+    if(mb.level_id == 1)
+        f(bids, mb.count);
+    else if(mb.level_id == 2)
+        f(asks, -mb.count);
+    else [[unlikely]]
+        throw str_exception("proceed_message_bba out of range");
+}
+
 void proceed_message_book(const message_book& mb, auto& orders, auto& asks, auto& bids)
 {
-    MPROFILE("order_book::set")
+    MPROFILE("proceed_message_book")
     MPROFILE_COUNT("order_book::level_id", {mb.level_id})
 
     message_brief* m = orders.get(mb.level_id, mb.price);
