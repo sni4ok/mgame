@@ -7,6 +7,19 @@
 #include "string.hpp"
 #include "algorithm.hpp"
 
+inline u64* __pow10_init()
+{
+    static u64 r[20];
+    for(u64 i = 0, v = 1; i != 20; ++i)
+    {
+        r[i] = v;
+        v *= 10;
+    }
+    return r;
+}
+
+const u64* __pow10 = __pow10_init();
+
 atoi_exception::atoi_exception(str_holder h, str_holder m)
 {
     memcpy(buf, h.begin(), h.size());

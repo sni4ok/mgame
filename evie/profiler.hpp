@@ -8,24 +8,26 @@
 #define EVIE_PROFILER_HPP
 
 #include "time.hpp"
-#include "singleton.hpp"
 
 #define CONCAT_(a, b) a##b
 #define CONCAT(a, b) CONCAT_(a, b)
 #define CLINE(a) CONCAT(a, __LINE__)
 
-#define MPROFILE(id) static const u64 CLINE(counter_id) = \
-    profiler::instance().register_counter(id, profiler::time); \
-    mprofiler CLINE(profile_id)(CLINE(counter_id));
+#define PROFILE(id, type, pf) static const u64 CLINE(counter_id) = \
+    profiler_ptr->register_counter(id, profiler::type); \
+    pf CLINE(profile_id)(CLINE(counter_id));
+
+#define MPROFILE(id) PROFILE(id, time, mprofiler)
+#define RPROFILE(id) PROFILE(id, rdtsc, rprofiler)
 
 #define MPROFILE_TYPE(id, type, value) static const u64 CLINE(counter_id) = \
-    profiler::instance().register_counter(id, profiler:: type); \
-    profiler::instance().add(CLINE(counter_id), value);
+    profiler_ptr->register_counter(id, profiler:: type); \
+    profiler_ptr->add(CLINE(counter_id), value);
 
 #define MPROFILE_USER(id, value) MPROFILE_TYPE(id, time, value)
 #define MPROFILE_COUNT(id, value) MPROFILE_TYPE(id, count, value)
 
-class profiler : public stack_singleton<profiler>
+class profiler
 {
     static const u32 max_counters = 100;
 
@@ -48,24 +50,43 @@ class profiler : public stack_singleton<profiler>
 public:
     enum type
     {
-        time, count
+        time, rdtsc, count
     };
 
     u64 register_counter(const char* name, type t);
     void add(u64 counter_id, ttime_t time);
     void print(long mlog_params);
+    static void set_instance(profiler* p);
     ~profiler();
 };
 
-struct mprofiler
+extern profiler* profiler_ptr;
+
+template<ttime_t (*get_time)()>
+struct profile
 {
     u64 counter_id;
     ttime_t time;
 
-    mprofiler(u64 counter_id);
-    mprofiler(const mprofiler&) = delete;
-    ~mprofiler();
+    profile(u64 counter_id) : counter_id(counter_id), time(get_time())
+    {
+    }
+    ~profile()
+    {
+        profiler_ptr->add(counter_id, get_time() - time);
+    }
+    profile(const profile&) = delete;
 };
+
+typedef profile<&cur_ttime> mprofiler;
+
+inline ttime_t rdtsc()
+{
+    return {i64(__builtin_ia32_rdtsc())};
+}
+
+typedef profile<&rdtsc> rprofiler;
+
 
 #endif
 

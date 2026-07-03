@@ -17,6 +17,8 @@ extern "C"
         __attribute__ ((__nonnull__ (1)));
 }
 
+profiler* profiler_ptr;
+
 profiler::info::info() : time(), time_max(),
     time_min(limits<ttime_t>::max), count(), name()
 {
@@ -87,6 +89,7 @@ void profiler::print(long mlog_params)
 
 profiler::profiler() : cur_counters()
 {
+    profiler_ptr = this;
 }
 
 u64 profiler::register_counter(char_cit id, type t)
@@ -115,11 +118,8 @@ u64 profiler::register_counter(char_cit id, type t)
 
 void profiler::add(u64 counter_id, ttime_t time)
 {
-    if(!time) [[unlikely]]
-        time = {1};
-
     info& i = counters[counter_id];
-    atomic_add(i.time, time);
+    i.time += time;
 
     ttime_t t;
     do
@@ -138,22 +138,19 @@ void profiler::add(u64 counter_id, ttime_t time)
     }
     while(!atomic_compare_exchange(i.time_min, t, time));
 
-    atomic_add(i.count, 1l);
+    ++i.count;
+}
+
+void profiler::set_instance(profiler* p)
+{
+    assert(!profiler_ptr || profiler_ptr == p);
+    profiler_ptr = p;
 }
 
 profiler::~profiler()
 {
+    profiler_ptr = nullptr;
     for(u64 c = 0; c != cur_counters; ++c)
         free((char_it)counters[c].name);
-}
-
-mprofiler::mprofiler(u64 counter_id)
-    : counter_id(counter_id), time(cur_ttime())
-{
-}
-
-mprofiler::~mprofiler()
-{
-    profiler::instance().add(counter_id, cur_ttime() - time);
 }
 

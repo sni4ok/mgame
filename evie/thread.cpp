@@ -322,7 +322,7 @@ void on_signal(int sign)
 void on_usr_signal(int sign)
 {
     mlog(mlog::critical) << "Signal usr received: " << sign;
-    profiler::instance().print(mlog::critical);
+    profiler_ptr->print(mlog::critical);
 }
 
 void enable_core_dump()

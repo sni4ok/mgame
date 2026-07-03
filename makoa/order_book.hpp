@@ -16,7 +16,7 @@
 #define USE_PRICE_MAP
 
 template<typename orders_t, typename asks_t, typename bids_t>
-struct order_book_base
+struct order_book
 {
     orders_t orders;
     asks_t asks;
@@ -25,6 +25,7 @@ struct order_book_base
 
     void proceed(const message& m)
     {
+        MPROFILE("order_book, proceed")
         if(m.id == msg_book)
         {
             if(need_init)
@@ -52,9 +53,9 @@ struct order_book_base
             }
         }
         else
-            throw mexception(es() % "order_book::proceed() unsupported message type: " % m.id.id);
+            throw mexception(es() % "order_book, proceed unsupported message type: " % m.id.id);
     }
-    ~order_book_base()
+    ~order_book()
     {
     }
 };
@@ -87,7 +88,7 @@ struct unordered_orders_t
     }
 };
 
-struct order_book_ba : order_book_base<
+struct order_book_ba : order_book<
 #ifdef USE_PRICE_MAP
     unordered_orders_t,
     price_map<price_t, order_book_leaf>,

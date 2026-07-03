@@ -112,18 +112,7 @@ inline bool atoi<bool>(char_cit buf, u32 size)
     return(buf[0] == '1');
 }
 
-inline u64* __pow10_init()
-{
-    static u64 r[20];
-    for(u64 i = 0, v = 1; i != 20; ++i)
-    {
-        r[i] = v;
-        v *= 10;
-    }
-    return r;
-}
-
-static const u64* __pow10 = __pow10_init();
+extern const u64* __pow10;
 
 static constexpr u32 atoi_u_ps[] = {3, 5, 10, 0, 20, 0, 0, 0, 39};
 static constexpr u32 atoi_s_ps[] = {4, 6, 11, 0, 21, 0, 0, 0, 40};
