@@ -103,10 +103,7 @@ struct i128d
     i128d(double v) : value(v)
     {
     }
-    i128d(i64 v = 0) : value(v)
-    {
-    }
-    i128d(u64 v) : value(v)
+    i128d() : value()
     {
     }
     template<typename type>

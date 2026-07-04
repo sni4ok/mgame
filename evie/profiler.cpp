@@ -78,7 +78,7 @@ void profiler::print(long mlog_params)
         }
         else
         {
-            int64_t av = i.time.value * 100 / i.count;
+            i64 av = i.time.value * 100 / i.count;
             if(av % 100)
                 f(print_count(), p2{av});
             else
@@ -110,7 +110,7 @@ u64 profiler::register_counter(char_cit id, type t)
         if(atomic_compare_exchange<char_cit>(i.name, nullptr, cid))
         {
             i.type = t;
-            atomic_add(cur_counters, 1ul);
+            atomic_add(cur_counters, u64(1));
             return c;
         }
     }

@@ -42,7 +42,7 @@ mstring join(const mstring* it, const mstring* ie, char sep)
     if(it == ie)
         return ret;
 
-    u32 sz = 0;
+    u64 sz = 0;
     for(auto v = it; v != ie; ++v)
         sz += v->size();
 
@@ -171,23 +171,6 @@ inline fstring get_cur_day_str()
 
 const fstring cur_day_date_str = get_cur_day_str();
 
-time_parsed parse_time(ttime_t time)
-{
-    if(day_seconds(time) == cur_day_seconds)
-    {
-        time_parsed ret;
-        ret.date = cur_day_date;
-        u32 frac = (time.value / ::frac<ttime_t>()) % (24 * 3600);
-        ret.duration.seconds = frac % 60;
-        ret.duration.hours = frac / 3600;
-        ret.duration.minutes = (frac - ret.duration.hours * 3600) / 60;
-        ret.duration.nanos = time.value % ::frac<ttime_t>();
-        return ret;
-    }
-    else
-        return parse_time_impl(time);
-}
-
 time_duration get_time_duration(ttime_t time)
 {
     time_duration ret;
@@ -197,6 +180,19 @@ time_duration get_time_duration(ttime_t time)
     ret.minutes = (frac - ret.hours * 3600) / 60;
     ret.nanos = time.value % ::frac<ttime_t>();
     return ret;
+}
+
+time_parsed parse_time(ttime_t time)
+{
+    if(day_seconds(time) == cur_day_seconds)
+    {
+        time_parsed ret;
+        ret.date = cur_day_date;
+        ret.duration = get_time_duration(time);
+        return ret;
+    }
+    else
+        return parse_time_impl(time);
 }
 
 ttime_t pack_time(time_parsed p)

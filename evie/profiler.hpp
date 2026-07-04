@@ -29,7 +29,7 @@
 
 class profiler
 {
-    static const u32 max_counters = 100;
+    static const u64 max_counters = 100;
 
     struct info
     {

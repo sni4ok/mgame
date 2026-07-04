@@ -3,7 +3,7 @@
 #include "optional.hpp"
 #include "profiler.hpp"
 
-template<typename t, int(*clz)(t), int(*ctz)(t), int(*count)(t)>
+template<typename t>
 struct bit
 {
     typedef t type;
@@ -18,6 +18,18 @@ struct bit
     static constexpr type bits(u64 k)
     {
         return k;
+    }
+    static inline int clz(type v)
+    {
+        return __builtin_clzg(v);
+    }
+    static inline int ctz(type v)
+    {
+        return __builtin_ctzg(v);
+    }
+    static inline int count(type v)
+    {
+        return __builtin_popcountg(v);
     }
     type first_bit() const
     {
@@ -83,38 +95,12 @@ struct bit
     }
 };
 
-int clz64(u64 v)
-{
-    return __builtin_clzl(v);
-}
+#ifdef USE_INT128_EXT
+    typedef bit<u128> bit128;
+#endif
 
-int clz32(u32 v)
-{
-    return __builtin_clz(v);
-}
-
-int ctz64(u64 v)
-{
-    return __builtin_ctzl(v);
-}
-
-int ctz32(u32 v)
-{
-    return __builtin_ctz(v);
-}
-
-int popcount64(u64 v)
-{
-    return __builtin_popcountl(v);
-}
-
-int popcount32(u32 v)
-{
-    return __builtin_popcount(v);
-}
-
-typedef bit<u64, clz64, ctz64, popcount64> bit64;
-typedef bit<u32, clz32, ctz32, popcount32> bit32;
+typedef bit<u64> bit64;
+typedef bit<u32> bit32;
 
 template<typename ... bits>
 struct idx_bits;
