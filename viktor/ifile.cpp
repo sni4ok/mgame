@@ -279,6 +279,43 @@ struct compact_book
     }
 };
 
+void sleep_break(volatile bool& can_run, ttime_t time)
+{
+    static const ttime_t break_time = milliseconds(100);
+
+    auto s = [](ttime_t v)
+    {
+        usleep(v.value / 1000);
+    };
+
+    if(time <= break_time)
+        s(time);
+    else
+    {
+        ttime_t ct = cur_ttime();
+        ttime_t et = ct + time;
+
+    rep:
+        s(break_time);
+
+        if(!can_run)
+            return;
+
+        ct = cur_ttime();
+
+        ttime_t t = et - ct;
+        if(t <= break_time)
+        {
+            if(t <= ttime_t())
+                return;
+
+            s(t);
+        }
+        else
+            goto rep;
+    }
+}
+
 struct ifile
 {
     struct node
@@ -622,9 +659,10 @@ struct ifile
                             if(last_file_moved())
                                 continue;
                         }
-                        usleep(10 * 1000);
+                        sleep_break(can_run, milliseconds(10));
                         if(ping.time > main_file.tt)
                             return ret;
+
                         memcpy(buf, &ping, message_size);
                         return message_size;
                     }
@@ -728,10 +766,10 @@ struct ifiles_replay
             ttime_t s = mb->t.time - files_time - dt;
             assert(s >= ttime_t());
             if(s < seconds(11))
-                usleep(s.value / 1000);
+                sleep_break(can_run, s);
             else
             {
-                sleep(10);
+                sleep_break(can_run, seconds(10));
                 start_time = cur_ttime();
                 files_time = mb->t.time;
                 mlog() << "ifile_replay() reinit, start_time: "

@@ -70,21 +70,21 @@ iterator find_if(iterator from, iterator to, compare cmp)
 }
 
 template<typename it1, typename it2>
-it1 search(it1 from_1, it1 to_1, it2 from_2, it2 to_2)
+it1 search(it1 f1, it1 t1, it2 f2, it2 t2)
 {
     for(;;)
     {
-        it1 i1 = from_1;
-        for(it2 i2 = from_2; ; ++i1, ++i2)
+        it1 i1 = f1;
+        for(it2 i2 = f2; ; ++i1, ++i2)
         {
-            if(i2 == to_2)
-                return from_1;
-            if(i1 == to_1)
-                return to_1;
+            if(i2 == t2)
+                return f1;
+            if(i1 == t1)
+                return t1;
             if(*i1 != *i2)
                 break;
         }
-        ++from_1;
+        ++f1;
     }
 }
 
@@ -106,15 +106,22 @@ struct greater
     }
 };
 
-template<typename iterator, typename type, typename compare = less<type> >
-iterator lower_bound(iterator from, iterator to, const type& val, compare cmp = compare())
+template<bool lb, typename iterator, typename type, typename compare>
+iterator __lower_bound(iterator from, iterator to, const type& val, compare cmp)
 {
     i64 count = to - from;
     while(count > 0)
     {
         i64 step = count / 2;
         iterator mid = from + step;
-        if(cmp(*mid, val))
+        bool c;
+
+        if constexpr(lb)
+            c = cmp(*mid, val);
+        else
+            c = !cmp(val, *mid);
+
+        if(c)
             from = ++mid, count -= step + 1;
         else
             count = step;
@@ -123,19 +130,15 @@ iterator lower_bound(iterator from, iterator to, const type& val, compare cmp = 
 }
 
 template<typename iterator, typename type, typename compare = less<type> >
+iterator lower_bound(iterator from, iterator to, const type& val, compare cmp = compare())
+{
+    return __lower_bound<true>(from, to, val, cmp);
+}
+
+template<typename iterator, typename type, typename compare = less<type> >
 iterator upper_bound(iterator from, iterator to, const type& val, compare cmp = compare())
 {
-  i64 count = to - from;
-  while(count > 0)
-  {
-    i64 step = count / 2;
-    iterator mid = from + step;
-    if(!cmp(val, *mid))
-        from = ++mid, count -= step + 1;
-    else
-        count = step;
-  }
-  return from;
+    return __lower_bound<false>(from, to, val, cmp);
 }
 
 template<typename iterator, typename type>
