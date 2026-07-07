@@ -51,27 +51,32 @@ public:
 
     window() : w(initscr())
     {
+        if(!w)
+            throw str_exception("initscr, error");
+
         log_par = log_params();
         log_params() ^= mlog::always_cout;
-        
+
+        resize();
+
+        e = nodelay(w.get(), TRUE);
+        e = noecho();
+        e = keypad(stdscr, TRUE);
+        e = cbreak();
+    }
+    void resize()
+    {
         winsize size;
-        if(ioctl(0, TIOCGWINSZ, (char *)&size) < 0)
-            throw str_exception("TIOCGWINSZ error");
+        if(ioctl(0, TIOCGWINSZ, (char*)&size) < 0)
+            throw str_exception("TIOCGWINSZ, error");
         
         rows = size.ws_row;
         cols = size.ws_col;
 
-        if(!w)
-            throw str_exception("initscr() error");
-        e = wresize(w.get(), rows, cols);
-        e = nodelay(w.get(), TRUE);
-
-        e = noecho();
-        e = keypad(stdscr, TRUE);
-        e = cbreak();
-        
         blank_row.resize(cols);
         fill(blank_row.begin(), blank_row.end(), ' ');
+
+        e = wresize(w.get(), rows, cols);
     }
     void clear()
     {

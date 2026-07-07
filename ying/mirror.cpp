@@ -70,7 +70,7 @@ struct print_dt
 {
     i64 value;
 
-    explicit print_dt(i64 value) :  value(value)
+    explicit print_dt(i64 value) : value(value)
     {
     }
 };
@@ -153,8 +153,8 @@ struct mirror::impl
 
         bool operator==(const book& b) const
         {
-            return count.value == b.count.value && time.value == b.time.value
-                && price.value == b.price.value;
+            return count == b.count && time == b.time
+                && price == b.price;
         }
     };
 
@@ -375,12 +375,19 @@ struct mirror::impl
                 else if(key == 112) // 'p'
                     paused = true;
 
-                if(paused)
-                    continue;
-
                 scoped_lock lock(mutex);
                 //mlog() << "key: " << key;
-                if(key == 97) // 'a'
+
+                if(key == KEY_RESIZE)
+                {
+                    w.clear();
+                    w.resize();
+                    last_printed_trade = book();
+                    print_trades(w);
+                }
+                else if(paused)
+                    continue;
+                else if(key == 97) // 'a'
                 {
                     auto_scroll = !auto_scroll;
                     set_auto_scroll();
