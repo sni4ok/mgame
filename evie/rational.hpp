@@ -5,6 +5,7 @@
 #pragma once
 
 #include "mstring.hpp"
+#include "decimal.hpp"
 
 struct rational
 {
@@ -48,4 +49,10 @@ stream& operator<<(stream& str, rational v)
 
 mstring to_string(rational value);
 template<> rational lexical_cast<rational>(char_cit from, char_cit to);
+
+template<typename to>
+inline constexpr to to_decimal(rational v)
+{
+    return {i64(v.num) * frac<to>() / v.den};
+}
 

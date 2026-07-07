@@ -5,10 +5,11 @@
 
 static const i64 day_s = 24 * 3600, year_s = day_s * 365;
 
-mlog& operator<<(mlog& m, print_t t)
+
+template<typename stream>
+stream& write(stream& m, print_t t)
 {
     ttime_t ta = abs(t.value);
-
     if(ta >= seconds(year_s))
         m << div_int(to_decimal<p2>(t.value), year_s) << "years";
     else if(ta >= seconds(day_s))
@@ -24,6 +25,16 @@ mlog& operator<<(mlog& m, print_t t)
     else
         m << t.value.value << "ns";
     return m;
+}
+
+mlog& operator<<(mlog& m, print_t t)
+{
+    return write(m, t);
+}
+
+buf_stream& operator<<(buf_stream& s, print_t t)
+{
+    return write(s, t);
 }
 
 void test_print_t_impl(mlog& m, ttime_t v, auto ... args)

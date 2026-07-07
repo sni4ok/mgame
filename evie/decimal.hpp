@@ -111,6 +111,9 @@ inline constexpr type operator-(type v)
 }
 
 template<typename to, typename from>
+to to_decimal(from v);
+
+template<typename to, typename from>
 requires(is_decimal<to>)
 inline constexpr to to_decimal(from v)
 {
@@ -122,7 +125,7 @@ inline constexpr to to_decimal(from v)
             return {v.value / (frac<from>() / frac<to>())};
     }
     else
-        return {v * frac<to>()};
+        return {decltype(to::value)(v * frac<to>())};
 }
 
 template<typename type>

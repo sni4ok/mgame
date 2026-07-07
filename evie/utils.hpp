@@ -186,7 +186,10 @@ struct print_default
     template<typename stream, typename type>
     stream& operator()(stream& s, const type& v) const
     {
-        return s << v;
+        if constexpr(is_same_v<type, const char*>)
+            return s << _str_holder(v);
+        else
+            return s << v;
     }
 };
 
