@@ -178,6 +178,12 @@ type lexical_cast(str_holder str)
     return lexical_cast<type>(str.begin(), str.end());
 }
 
+template<typename type, u64 sz>
+type lexical_cast(const char (&buf)[sz])
+{
+    return lexical_cast<type>(buf, buf + sz - 1);
+}
+
 template<>
 inline str_holder lexical_cast<str_holder>(char_cit from, char_cit to)
 {

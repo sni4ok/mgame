@@ -53,12 +53,13 @@ namespace
             u64 asks, bids;
             std::set<price_t> trades_p, asks_p, bids_p;
             std::map<count_t, u64> trades;
+            count_t trades_volume;
 
             order_book_ba ob;
             ttime_t first_ob_time, last_ob_time;
             std::map<price_t, u64> spreads;
 
-            info() : asks(), bids(), first_ob_time(), last_ob_time()
+            info() : asks(), bids(), trades_volume(), first_ob_time(), last_ob_time()
             {
             }
         };
@@ -103,6 +104,7 @@ namespace
                 v.trades_p.insert(p);
                 if(!!m->mt.count)
                     ++v.trades[m->mt.count];
+                v.trades_volume += m->mt.count;
             }
             else if(m->id == msg_instr)
             {
@@ -160,7 +162,8 @@ namespace
                 u64 trades = sum(i.trades);
                 ml << "\n  trades: " << trades << "(min price step " << get_pips(i.trades_p)  << ") bids: "
                     << i.bids << "(min price step " << get_pips(i.bids_p) << ") asks: "
-                    << i.asks << "(min price step " << get_pips(i.asks_p) << ")";
+                    << i.asks << "(min price step " << get_pips(i.asks_p) << ")"
+                    << "\n  volume: " << i.trades_volume;
 
                 if(!i.trades.empty())
                 {

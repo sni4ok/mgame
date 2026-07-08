@@ -15,19 +15,20 @@
 
 void fix_zero_tail(char_cit fname)
 {
-    cout() << "fix_zero_tail(" << _str_holder(fname) << "):";
+    mlog() << "fix_zero_tail(" << _str_holder(fname) << "):";
     mfile f(fname);
     u64 fsz = f.size();
     mvector<char> m(message_size), mc(message_size);
     i64 nsz = fsz - fsz % message_size;
-    while(nsz > 0) {
+    while(nsz > 0)
+    {
         f.seekg(nsz - message_size);
         f.read(m.begin(), message_size);
-        if(!(m == mc))
+        if(m != mc)
             break;
         nsz -= message_size;
     }
-    cout() << "  orig_file_size: " << fsz << ", new_file_size: " << nsz;
+    mlog() << "  orig_file_size: " << fsz << ", new_file_size: " << nsz;
     if(truncate(fname, nsz))
         throw str_exception("truncate file error");
 }
@@ -37,14 +38,16 @@ void sort_data_by_folders(str_holder folder)
     if(folder[folder.size() - 1] != '/')
         throw mexception(es() % "sort_data_by_folders() bad folder name: " % folder);
 
-    cout() << "sort_data_by_folders(" << folder << "):";
+    mlog() << "sort_data_by_folders(" << folder << "):";
     mvector<mstring> files_for_move;
     {
         dirent **ee;
         int n = scandir(folder.begin(), &ee, NULL, alphasort);
         if(n == -1)
             throw_system_failure(es() % "scandir error " % folder);
-        for(int i = 0; i != n; ++i) {
+
+        for(int i = 0; i != n; ++i)
+        {
             dirent *e = ee[i];
             if(e->d_type == DT_REG)
             {
@@ -52,6 +55,7 @@ void sort_data_by_folders(str_holder folder)
                 if(fname.size() < 3 || str_holder(fname.end() - 3, fname.end()) != ".gz")
                     throw mexception(es() %
                         "sort_data_by_folders() unsupported file type: " % fname);
+
                 files_for_move.push_back(fname);
             }
         }
@@ -67,6 +71,7 @@ void sort_data_by_folders(str_holder folder)
         char_cit f = find(fname.begin(), e, '_');
         if(f == e || (e - f) != 11)
             throw mexception(es() % "sort_data_by_folders() unsupported file: " % fname);
+
         u32 t = lexical_cast<u32>(f + 1, e);
         date d = parse_time(seconds(t)).date;
         mstring nf = folder + to_string(d.year) + "/" + to_string(d.month) + "/";
@@ -77,7 +82,7 @@ void sort_data_by_folders(str_holder folder)
         }
         rename_file((folder + fname).c_str(), (nf + fname).c_str());
     }
-    cout() << "sort_data_by_folders successfully ended, moved "
+    mlog() << "sort_data_by_folders successfully ended, moved "
         << files_for_move.size() << " files";
 }
 
@@ -118,11 +123,11 @@ void amount_test()
     count_t c = lexical_cast<count_t>(v);
     unused(c);
 
-    test_io(price_t({limits<i64>::max}));
-    test_io(price_t({limits<i64>::min}));
+    test_io(limits<price_t>::max);
+    test_io(limits<price_t>::min);
 
-    test_io(count_t({limits<i64>::max}));
-    test_io(count_t({limits<i64>::min}));
+    test_io(limits<count_t>::max);
+    test_io(limits<count_t>::min);
 
     cout() << "amount_test successfully ended";
 }
@@ -172,9 +177,9 @@ void parsers_stat(str_holder f)
 
     while(can_run)
     {
-        ct = cur_mtime();
+        ct = cur_ttime();
         update_stat();
-        ct = cur_mtime();
+        ct = cur_ttime();
         clear_screen();
 
         for(u32 i = 0; i != files.size(); ++i)
@@ -198,6 +203,7 @@ void parsers_stat(str_holder f)
 
 int main(int argc, char** argv)
 {
+    auto log = log_init("utils.log", mlog::always_cout);
     try
     {
         if(argc == 3 && _str_holder(argv[1]) == "fix_zero_tail")
@@ -213,7 +219,7 @@ int main(int argc, char** argv)
     }
     catch(exception& e)
     {
-        cerr() << "main() exception: " << _str_holder(e.what());
+        mlog() << "main, " << e;
         return 1;
     }
     return 0;

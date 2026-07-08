@@ -9,25 +9,77 @@
 #include "../evie/time.hpp"
 #include "../evie/utils.hpp"
 
-struct brief_time : ttime_t
+struct print_date
 {
-    bool show_frac;
-    explicit brief_time(ttime_t time, bool show_frac = true) : ttime_t(time), show_frac(show_frac)
+    date value;
+    char sep;
+
+    print_date(date value, char sep = '-')
+        : value(value), sep(sep)
+    {
+    }
+};
+
+struct print_td
+{
+    enum mode_t
+    {
+        sec = 0, ms, us, ns
+    };
+
+    time_duration value;
+    int mode;
+
+    print_td(time_duration value, int mode = sec)
+        : value(value), mode(mode)
+    {
+    }
+    print_td(ttime_t time, int mode = sec)
+        : print_td(get_time_duration(time), mode)
+    {
+    }
+};
+
+struct print_time
+{
+    ttime_t value;
+    char sep;
+    int mode;
+
+    print_time(ttime_t value, char sep = ' ', int mode = print_td::sec)
+        : value(value), sep(sep), mode(mode)
     {
     }
 };
 
 template<typename stream>
-stream& operator<<(stream& s, const brief_time& t)
+stream& operator<<(stream& log, print_date d)
 {
-    time_t tt = t.value / frac<ttime_t>();
-    tt = tt % (3600 * 24);
-    u32 h = tt / 3600;
-    u32 m = (tt - h * 3600) / 60;
-    s << print2chars(h) << ':' << print2chars(m) << ':' << print2chars(tt % 60);
-    if(t.show_frac)
-        s << '.' << uint_fixed<9>(t.value % frac<ttime_t>());
-    return s;
+    log << u32(d.value.year) << d.sep << print2chars(d.value.month)
+        << d.sep << print2chars(d.value.day);
+    return log;
+}
+
+template<typename stream>
+stream& operator<<(stream& log, print_td t)
+{
+    log << print2chars(t.value.hours) << ':' << print2chars(t.value.minutes)
+        << ':' << print2chars(t.value.seconds);
+    if(t.mode == print_td::ns)
+        log << "." << uint_fixed<9>(t.value.nanos);
+    else if(t.mode == print_td::us)
+        log << "." << uint_fixed<6>(t.value.nanos / 1000);
+    else if(t.mode == print_td::ms)
+        log << "." << uint_fixed<3>(t.value.nanos / pow10_v<6>);
+    return log;
+}
+
+template<typename stream>
+stream& operator<<(stream& log, print_time t)
+{
+    time_parsed p = parse_time(t.value);
+    log << print_date(p.date) << t.sep << print_td(p.duration, t.mode);
+    return log;
 }
 
 template<typename stream>
@@ -58,8 +110,8 @@ stream& operator<<(stream& s, const message_clean& c)
 template<typename stream>
 stream& operator<<(stream& s, const message_book& t)
 {
-    s << "book|" << t.id << "|" << t.security_id << "|" << t.level_id << "|" << t.price << "|" << t.count
-        << "|" << t.etime << "|" << t.time << "|";
+    s << "book|" << t.id << "|" << t.security_id << "|" << t.level_id << "|"
+        << t.price << "|" << t.count << "|" << t.etime << "|" << t.time << "|";
     return s;
 }
 

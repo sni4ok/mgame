@@ -14,7 +14,7 @@
 #include <unordered_map>
 #include <stdlib.h>
 
-ncurses_err e;
+static ncurses_err e;
 
 u32 get_security_id(const message& m)
 {
@@ -90,9 +90,9 @@ stream& operator<<(stream& s, print_dt v)
     return s;
 }
 
-int wstr(WINDOW* w, int y, int x, char_cit str, int n)
+void wstr(WINDOW* w, int y, int x, char_cit str, int n)
 {
-    return mvwaddnstr(w, y, x, str, n);
+    e = mvwaddnstr(w, y, x, str, n);
 }
 
 template<typename type>
@@ -105,7 +105,7 @@ struct decimal_fixed
     {
     }
 
-    void operator()(auto& s, type v)
+    void operator()(auto& s, type v, u32 decimal)
     {
         if(v < min_v)
             min_v = v;
@@ -131,7 +131,134 @@ struct decimal_fixed
         else
             s << "0";
 
-         s << "." << uint_fix{u64(p.value) % frac<type>(), -p.exponent, true};
+        if(decimal)
+        {
+            u64 v = u64(p.value) % frac<type>();
+            assert(decimal <= -type::exponent);
+            v /= __pow10[-type::exponent - decimal];
+            s << "." << uint_fix{v, decimal, true};
+        }
+    }
+};
+
+struct decimal_params
+{
+    u32 price_decimal = 0;
+    u32 count_decimal = 0;
+
+    u64 price_frac = __pow10[-price_t::exponent - price_decimal];
+    u64 count_frac = __pow10[-count_t::exponent - count_decimal];
+
+    template<typename type>
+    static void set(u32& decimal, u64& frac, type t)
+    {
+        u64 p;
+        p = abs(t.value) % ::frac<type>();
+        p = p % frac;
+
+        if(p)
+        {
+            while(!(p % 10))
+                p /= 10;
+
+            u32 d = log10(p);
+            decimal += d;
+            frac = __pow10[-type::exponent - decimal];
+        }
+    }
+    void set(price_t price, count_t count)
+    {
+        set(price_decimal, price_frac, price);
+        set(count_decimal, count_frac, count);
+    }
+};
+
+struct time_params
+{
+    bool print_time = true;
+    int mode = print_td::ms;
+    bool print_count = true;
+
+    u32 time_size(bool pt) const
+    {
+        if(!pt)
+            return 0;
+
+        mstream s;
+        s << print_td(cur_ttime(), mode) << " ";
+        return s.size();
+    }
+    u32 view_size(const decimal_params& p) const
+    {
+        mstream s;
+        decimal_fixed<price_t> pt;
+        pt(s, lexical_cast<price_t>("2e4"), p.price_decimal);
+        if(print_count)
+        {
+            s << " ";
+            decimal_fixed<count_t> c;
+            c(s, lexical_cast<count_t>("2e4"), p.count_decimal);
+        }
+        return s.size() + time_size(print_time);
+    }
+    void serialize(buf_stream& s) const
+    {
+        s << "t" << print_time << "m" << mode << "c" << print_count;
+    }
+    char_cit load(char_cit f, char_cit t, char last = char())
+    {
+        auto err = [&]()
+        {
+            throw mexception(es() % "mirror_params error: " % str_holder(f, t));
+        };
+
+        if(f == t || *f != 't')
+            err();
+
+        char_cit it = f + 1, ne;
+        ne = find(f, t, 'm');
+        if(ne == t)
+            err();
+
+        print_time = lexical_cast<bool>(it, ne);
+        it = ne + 1;
+        ne = find(f, t, 'c');
+        if(ne == t)
+            err();
+
+        mode = lexical_cast<int>(it, ne);
+        if(mode < print_td::sec || mode > print_td::ns)
+            err();
+
+        it = ne + 1;
+        ne = last ? find(f, t, last) : t;
+        print_count = lexical_cast<bool>(it, ne);
+
+        return ne;
+    }
+};
+
+struct glass_params : time_params
+{
+};
+
+struct trades_params : time_params
+{
+    bool print_etime = true;
+
+    void serialize(buf_stream& s) const
+    {
+        time_params::serialize(s);
+        s << "e" << print_etime;
+    }
+    void load(char_cit f, char_cit t)
+    {
+        char_cit it = time_params::load(f, t, 'e');
+        if(it == t)
+            throw str_exception("mirror_params, trades_params error");
+
+        ++it;
+        print_etime = lexical_cast<bool>(it, t);
     }
 };
 
@@ -139,6 +266,10 @@ struct mirror::impl
 {
     fmap<u32, message_instr> all_securities;
     std::unordered_map<u32, pair<order_book_ba, queue<message_trade> > > all_books;
+
+    decimal_params dp;
+    glass_params gp;
+    trades_params tp;
 
     security_filter sec;
     u32 refresh_rate;
@@ -182,9 +313,10 @@ struct mirror::impl
 
     jthread refresh_thrd;
 
-    impl(const mstring& sec, u32 refresh_rate_ms) :
+    impl(const mstring& sec, u32 refresh_rate_ms, glass_params gp, trades_params tp) :
+        gp(gp), tp(tp),
         sec(sec), refresh_rate(refresh_rate_ms * 1000), ob(),
-        auto_scroll(true), top_order_p(), trades_from(40), trades_width(),
+        auto_scroll(true), top_order_p(), trades_from(gp.view_size(dp)), trades_width(),
         dE(), dP(), can_run(true),
         refresh_thrd(&impl::refresh_thread, this)
     {
@@ -209,21 +341,22 @@ struct mirror::impl
     i32 get_top_order(window& w)
     {
         if(auto_scroll || !top_order_p.value)
-            return -min<i32>(ob ? ob->bids.size() : 0, w.rows / 2);
+            return -min<i32>(ob ? ob->bids.size() : 0, (w.rows - 1) / 2);
+
+        if(!ob->bids.empty() && top_order_p.value <= ob->bids.begin()->first.value)
         {
-            if(!ob->bids.empty() && top_order_p.value <= ob->bids.begin()->first.value)
-            {
-                auto it = ob->bids.lower_bound(top_order_p);
-                return -distance(ob->bids.begin(), it);
-            }
+            auto it = ob->bids.lower_bound(top_order_p);
+            return -distance(ob->bids.begin(), it);
         }
-        {
-            auto it = ob->asks.lower_bound(top_order_p);
-            return distance(ob->asks.begin(), it);
-        }
+
+        auto it = ob->asks.lower_bound(top_order_p);
+        return distance(ob->asks.begin(), it);
     }
     void print_trades(window& w)
     {
+        if(!trades)
+            return;
+
         if(w.rows <= trades->size())
             trades->pop_front(trades->size() + 1 - w.rows);
 
@@ -238,8 +371,19 @@ struct mirror::impl
 
         for(auto& v : *trades)
         {
-            bs << "  " << brief_time(v.etime) << " " << brief_time(v.time)
-                << " " << v.price << " " << v.count << " " << get_direction(v.direction);
+            bs << "  ";
+            if(tp.print_etime)
+                bs << print_td(v.etime, tp.mode) << " ";
+            if(tp.print_time)
+                bs << print_td(v.time, tp.mode) << " ";
+
+            print_p(bs, v.price, dp.price_decimal);
+            if(tp.print_count)
+            {
+                bs << " ";
+                print_c(bs, v.count, dp.count_decimal);
+                bs << " " << get_direction(v.direction);
+            }
 
             if(bs.size() < trades_width)
                 bs.write(w.blank_row.begin(), trades_width - bs.size());
@@ -247,12 +391,12 @@ struct mirror::impl
                 bs.resize(trades_width_limit);
             else
                 trades_width = max<u32>(trades_width, bs.size());
-            e = wstr(w, i++, trades_from, bs.begin(), bs.size());
+            wstr(w, i++, trades_from, bs.begin(), bs.size());
             bs.clear();
         }
 
         for(; i != w.rows - 1; ++i)
-            e = wstr(w, i, trades_from, w.blank_row.begin(), w.cols - trades_from);
+            wstr(w, i, trades_from, w.blank_row.begin(), w.cols - trades_from);
 
         last_printed_trade = std::move(tr);
     }
@@ -260,19 +404,25 @@ struct mirror::impl
         window& w, u32& row)
     {
         book bo{b.count, b.time, price};
+        dp.set(price, b.count);
 
         if(books_printed[row] != bo)
         {
             e = attron(COLOR_PAIR(bids ? 2 : 3));
-            bs << brief_time(b.time) << " ";
-            print_p(bs, price);
-            bs << " ";
-            print_c(bs, b.count);
+            if(gp.print_time)
+                bs << print_td(b.time, gp.mode) << " ";
+
+            print_p(bs, price, dp.price_decimal);
+            if(gp.print_count)
+            {
+                bs << " ";
+                print_c(bs, b.count, dp.count_decimal);
+            }
 
             if(trades_from > bs.size())
                 bs.write(w.blank_row.begin(), trades_from - bs.size());
 
-            e = wstr(w, row, 0, bs.begin(), bs.size());
+            wstr(w, row, 0, bs.begin(), bs.size());
 
             if(bs.size() > trades_from)
             {
@@ -307,6 +457,7 @@ struct mirror::impl
                     break;
             }
         }
+        if(ob)
         {
             auto b = ob->asks.begin(), i = ob->asks.end();
             for(; row != w.rows - 1 && b != i; ++b)
@@ -325,21 +476,21 @@ struct mirror::impl
                 break;
 
             books_printed[row] = book();
-            e = wstr(w, row, 0, w.blank_row.begin(), trades_from);
+            wstr(w, row, 0, w.blank_row.begin(), trades_from);
         }
     }
     void print_head(window& w)
     {
         if(!head_msg_auto_scroll_printed)
         {
-            e = wstr(w, w.rows - 1, 0, head_msg_auto_scroll.begin(),
+            wstr(w, w.rows - 1, 0, head_msg_auto_scroll.begin(),
                 head_msg_auto_scroll.size());
             head_msg_auto_scroll_printed = true;
         }
         if(!dEdP_printed)
         {
             bs << "dE: " << print_dt(dE.value) << ", dP: " << print_dt(dP.value) << '\0';
-            e = wstr(w, w.rows - 1, w.cols - bs.size(), bs.begin(), bs.size());
+            wstr(w, w.rows - 1, w.cols - bs.size(), bs.begin(), bs.size());
             bs.clear();
             dEdP_printed = true;
         }
@@ -361,13 +512,13 @@ struct mirror::impl
     }
     void wait_input(window& w)
     {
-        u32 c = refresh_rate / 20000;
+        u32 c = refresh_rate / 1000;
         int key = -1;
         for(u32 i = 0; i != c; ++i)
         {
             key = getch();
             if(key == -1)
-                usleep(20000);
+                usleep(1000);
             else
             {
                 if(paused)
@@ -383,6 +534,8 @@ struct mirror::impl
                     w.clear();
                     w.resize();
                     last_printed_trade = book();
+                    head_msg_auto_scroll_printed = false;
+                    dEdP_printed = false;
                     print_trades(w);
                 }
                 else if(paused)
@@ -542,14 +695,26 @@ struct mirror::impl
 mirror::impl* create_mirror(str_holder params)
 {
     auto p = split(params, ' ');
-    if(p.size() > 2)
-        throw mexception(es() % "mirror::mirror() bad params: " % params);
+    if(p.size() > 3)
+        throw mexception(es() % "create_mirror, bad params: " % params);
 
-    u32 refresh_rate = p.size() == 2 ? lexical_cast<u32>(p[1]) : 100;
+    u32 refresh_rate = p.size() >= 2 ? lexical_cast<u32>(p[1]) : 10;
     if(!refresh_rate)
-        throw mexception(es() % "mirror::mirror() bad params: "
+        throw mexception(es() % "create_mirror, bad params: "
             % params % ", refresh_rate should be at least 1");
-    return new mirror::impl(p.empty() ? "$0" : p[0], refresh_rate);
+
+    glass_params gp;
+    trades_params tp;
+
+    if(p.size() == 3)
+    {
+        char_cit ie = p[2].end();
+        char_cit it = gp.load(p[2].begin(), ie, '|');
+        if(it != ie)
+            tp.load(it + 1, ie);
+    }
+
+    return new mirror::impl(p.empty() ? "$0" : p[0], refresh_rate, gp, tp);
 }
 
 mirror::mirror(str_holder params)
