@@ -380,7 +380,6 @@ void test_itoa();
 void log_test(size_t thread_count, size_t log_count)
 {
     test_itoa();
-    check_limits();
     simple_log::instance().params = mlog::always_cout;
     mlog() << "mlog test for " << thread_count << " threads and " << log_count << " loops";
     MPROFILE("MlogTest")

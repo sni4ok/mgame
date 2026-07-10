@@ -35,7 +35,7 @@ struct lws_impl : emessages, lws_dump
     char buf[512];
     buf_stream bs;
     bool closed;
-    time_t data_time;
+    ttime_t data_time;
     mvector<mstring> subscribes;
     lws_context* context;
     mvector<char> big_message;
@@ -44,7 +44,7 @@ struct lws_impl : emessages, lws_dump
 
     bool full(char_cit f, char_cit t) const
     {
-        assert(t > f);
+        ASSERT(t > f);
 
         if(*(t - 1) != msg_end)
             return false;
@@ -111,8 +111,8 @@ void proceed_lws_parser(volatile bool& can_run)
                 if(!((++i) % 50))
                 {
                     i = 0;
-                    if(ls.data_time + 10 < time(NULL))
-                        throw mexception(es() % " no data from " % seconds(ls.data_time));
+                    if(ls.data_time + seconds(10) < cur_ttime_seconds())
+                        throw mexception(es() % " no data from " % ls.data_time);
                 }
                 n = ls.service();
             }

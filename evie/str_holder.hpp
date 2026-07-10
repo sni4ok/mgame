@@ -4,32 +4,40 @@
 
 #pragma once
 
-#include "stdint.hpp"
-
-#include <cassert>
+#include "assert.hpp"
 
 extern "C"
 {
-    extern void* memset(void*, int, size_t) __THROW __nonnull ((1));
-    extern void* memcpy(void*, const void*, size_t) __THROW __nonnull ((1, 2));
-    extern void* memmove(void*, const void*, size_t) __THROW __nonnull ((1, 2));
-    extern int memcmp(const void*, const void*, size_t) __THROW __attribute_pure__ __nonnull ((1, 2));
-    extern int strcmp(const char *__s1, const char *__s2) noexcept (true)
-        __attribute__ ((__pure__)) __attribute__ ((__nonnull__ (1, 2)));
-    extern void *malloc (size_t __size) __THROW __attribute_malloc__ __attribute_alloc_size__ ((1)) __wur;
-    extern void *realloc(void*, size_t) __THROW __attribute_warn_unused_result__
-        __attribute_alloc_size__ ((2));
-    extern void free(void*) __THROW;
-    extern char *getenv(const char*) __THROW __nonnull ((1)) __wur;
-    extern int usleep(u32 __useconds);
-    extern int close(int __fd);
-    extern int system (const char *__command);
+#define NE noexcept
+#define NN(...) __attribute__ ((__nonnull__  (__VA_ARGS__) ))
+#define PURE __attribute__ ((__pure__))
+#define UR __attribute__ ((__warn_unused_result__))
+#define AM __attribute__ ((__malloc__))
+#define AS(...) __attribute__ ((__alloc_size__  (__VA_ARGS__) ))
+
+    extern void* memset(void*, int, size_t) NE NN(1);
+    extern void* memcpy(void*, const void*, size_t) NE NN(1, 2);
+    extern void* memmove(void*, const void*, size_t) NE NN(1, 2);
+    extern int memcmp(const void*, const void*, size_t) NE PURE NN(1, 2);
+    extern int strcmp(char_cit, char_cit) NE PURE NN(1, 2);
+    extern void* malloc (size_t) NE AM AS(1) UR;
+    extern void* realloc(void*, size_t) NE UR AS(2);
+    extern void free(void*) NE;
+    extern char_it getenv(char_cit) NE NN(1) UR;
+    extern int usleep(u32);
+    extern int close(int);
+    extern int system(char_cit);
+    extern char_it strdup(char_cit) NE AM NN(1);
+
+#undef NE
+#undef NN
+#undef PURE
+#undef UR
+#undef AM
+#undef AS
 }
 
 static const char endl = '\n';
-
-typedef char* char_it;
-typedef const char* char_cit;
 
 template<typename type>
 class span
@@ -68,7 +76,7 @@ public:
     }
     constexpr auto& back() const
     {
-        assert(size_);
+        ASSERT(size_);
         return *(end() - 1);
     }
     constexpr u64 size() const
@@ -81,12 +89,12 @@ public:
     }
     constexpr void resize(u64 size)
     {
-        assert(size <= size_);
+        ASSERT(size <= size_);
         size_ = size;
     }
     constexpr void pop_back()
     {
-        assert(size_);
+        ASSERT(size_);
         --size_;
     }
 };

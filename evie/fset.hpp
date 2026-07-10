@@ -206,7 +206,7 @@ struct pset : fset<type, comp, ppvector>
         {
             if(this->not_equal(*it, *k))
             {
-                assert(comp()(*k, *it));
+                ASSERT(comp()(*k, *it));
             }
             else
             {

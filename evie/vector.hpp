@@ -82,7 +82,7 @@ protected:
     void __check_iterator(const type* it)
     {
         (void)it;
-        assert(it >= buf && it <= buf + size_);
+        ASSERT(it >= buf && it <= buf + size_);
     }
 
 public:
@@ -322,12 +322,12 @@ public:
     }
     type& operator[](u64 elem)
     {
-        assert(elem < size_);
+        ASSERT(elem < size_);
         return buf[elem];
     }
     const type& operator[](u64 elem) const
     {
-        assert(elem < size_);
+        ASSERT(elem < size_);
         return buf[elem];
     }
     type& at(u64 elem)
@@ -420,7 +420,7 @@ public:
         return buf[size_ - 1];
     }
     void pop_back() {
-        assert(size_);
+        ASSERT(size_);
         __destroy(begin() + size_ - 1);
         --size_;
     }
@@ -561,7 +561,7 @@ struct pvector : mvector<type*>
     }
     iterator insert(iterator it, type* v)
     {
-        assert(v);
+        ASSERT(v);
         return {base::insert(it.it, v)};
     }
     void splice(pvector& r)

@@ -175,7 +175,7 @@ u32 try_socket_send(int socket, char_cit ptr, u32 sz)
 
 void socket_send(int socket, char_cit ptr, u32 sz)
 {
-    time_t send_from = 0;
+    ttime_t send_from = ttime_t();
 
     for(;;)
     {
@@ -187,13 +187,13 @@ void socket_send(int socket, char_cit ptr, u32 sz)
         ptr += s;
         if(!s)
         {
-            if(send_from)
+            if(!!send_from)
             {
-                if(time(NULL) > send_from + 3)
+                if(cur_ttime_seconds() > send_from + seconds(3))
                     throw str_exception("socket_send, timeout");
             }
             else
-                send_from = time(NULL);
+                send_from = cur_ttime_seconds();
         }
 
         check_socket(socket, POLLOUT, 100, "socket_send");

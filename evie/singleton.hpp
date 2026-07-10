@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <cassert>
+#include "assert.hpp"
 
 template<typename base, bool reinit_en = true>
 class stack_singleton
@@ -19,7 +19,7 @@ class stack_singleton
 public:
     static void set_instance(base* instance)
     {
-        assert((!get_impl() || get_impl() == instance) && "singleton already initialized");
+        ASSERT((!get_impl() || get_impl() == instance) && "singleton already initialized");
         get_impl() = instance;
     }
     static base& instance()

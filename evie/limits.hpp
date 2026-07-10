@@ -39,25 +39,3 @@ struct limits<decimal>
     static constexpr decimal max = {limits<decltype(decimal::value)>::max};
 };
 
-//#define CHECK_LIMITS
-
-template<typename t>
-void check_limit()
-{
-#ifdef CHECK_LIMITS
-    limits<t> v;
-    std::numeric_limits<t> nl;
-    assert(v.min == nl.min());
-    assert(v.max == nl.max());
-#endif
-}
-
-inline void check_limits()
-{
-    check_limit<short>();
-    check_limit<int>();
-    check_limit<unsigned>();
-    check_limit<long long>();
-    check_limit<long unsigned long>();
-}
-

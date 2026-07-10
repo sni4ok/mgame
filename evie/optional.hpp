@@ -54,22 +54,22 @@ struct optional
     }
     const type& operator*() const
     {
-        assert(initialized);
+        ASSERT(initialized);
         return value;
     }
     type& operator*()
     {
-        assert(initialized);
+        ASSERT(initialized);
         return value;
     }
     const type* operator->() const
     {
-        assert(initialized);
+        ASSERT(initialized);
         return &value;
     }
     type* operator->()
     {
-        assert(initialized);
+        ASSERT(initialized);
         return &value;
     }
     bool operator==(const optional& v) const

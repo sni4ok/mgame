@@ -50,13 +50,13 @@ public:
     }
     void pop_front(u64 count)
     {
-        assert(from + count <= data.size());
+        ASSERT(from + count <= data.size());
         from += count;
         __pop_front_impl();
     }
     void pop_front()
     {
-        assert(from < data.size());
+        ASSERT(from < data.size());
         ++from;
         __pop_front_impl();
     }

@@ -243,7 +243,7 @@ auto apply(func& f, tuple& t)
         else
             static_assert(false && (sz < 1 || sz > 5));
     }
-    assert(false);
+    ASSERT(false);
 }
 
 template<size_t sz, typename stream, typename ... types>

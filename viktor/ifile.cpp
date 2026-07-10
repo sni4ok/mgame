@@ -236,7 +236,7 @@ struct compact_book
             }
             else
             {
-                assert(it->id == msg_trade || it->id == msg_clean || it->id == msg_ping);
+                ASSERT(it->id == msg_trade || it->id == msg_clean || it->id == msg_ping);
             }
             last_time = it->mt.time;
         }
@@ -247,7 +247,7 @@ struct compact_book
 
         for(; i != e; ++i)
         {
-            assert(i->second.mi.id == msg_instr);
+            ASSERT(i->second.mi.id == msg_instr);
             message m;
             m.mi = i->second.mi;
             m.mi.time = last_time;
@@ -264,7 +264,7 @@ struct compact_book
                 if(!!it->second.count)
                 {
                     message m;
-                    assert(!!it->second.price);
+                    ASSERT(!!it->second.price);
                     m.mb = it->second;
                     m.mi.time = last_time;
                     m.mi.etime = ttime_t();
@@ -415,7 +415,7 @@ struct ifile
 
             if(nt.tt > main_file.tf || last_file)
             {
-                assert(nt.from == 0 && nt.off == 0);
+                ASSERT(nt.from == 0 && nt.off == 0);
                 static const u64 buf_size = message_size * 1024 * 1024;
                 read_buf.resize(buf_size / message_size);
                 nt.off = message_size * lower_bound_int(0, sz / message_size,
@@ -731,7 +731,7 @@ struct ifiles_replay
             }
             if(min_time == limits<ttime_t>::max)
                 break;
-            assert(min_time != ttime_t());
+            ASSERT(min_time != ttime_t());
 
             queue<char>& b2_ = b2[min_idx];
             message* m = (message*)b2_.begin();
@@ -764,7 +764,7 @@ struct ifiles_replay
                 return 0;
 
             ttime_t s = mb->t.time - files_time - dt;
-            assert(s >= ttime_t());
+            ASSERT(s >= ttime_t());
             if(s < seconds(11))
                 sleep_break(can_run, s);
             else

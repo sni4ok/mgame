@@ -63,7 +63,7 @@ struct efile
             }
             if(fsz)
             {
-                mstring backup = fname + "_" + to_string(u64(time(NULL)));
+                mstring backup = fname + "_" + to_string(to_seconds(cur_ttime_seconds()));
                 int r = rename(fname.c_str(), backup.c_str());
                 if(r)
                     mlog(mlog::critical) << "rename file from " << fname << ", to " << backup

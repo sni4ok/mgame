@@ -18,7 +18,7 @@ struct uint_fix
 
     constexpr str_holder str() const
     {
-        assert(size);
+        ASSERT(size);
         u64 v = value;
         u32 idx = size - 1;
 

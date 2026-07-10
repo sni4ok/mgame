@@ -92,7 +92,7 @@ rep:
     {
         auto p = f(v.value);
         double d = v.value - decimal_pow(p.first, p.second);
-        assert(d >= double());
+        ASSERT(d >= double());
 
         s << uint_fix{u64(p.first), sz ? sz - p.second : 1, true};
         v = i128d(d);
@@ -147,7 +147,7 @@ void test_i128d()
         type v2 = lexical_cast<type>(str);
         double d = abs(v2.value - v.value);
         (void) d;
-        assert(d <= abs(v.value) * limits<double>::epsilon);
+        ASSERT(d <= abs(v.value) * limits<double>::epsilon);
     };
 
     f(i128d());

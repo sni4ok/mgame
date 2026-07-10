@@ -186,10 +186,10 @@ struct cg_listener_h
     void* func_state;
     mstring def_state;
     mstring rev;
-    time_t last_call_time;
+    ttime_t last_call_time;
     void set_call()
     {
-        last_call_time = time(NULL);
+        last_call_time = cur_ttime_seconds();
     }
     cg_listener_h(cg_conn_h& conn, char_cit name, char_cit cli_listener, plaza_func func,
         void* func_state = 0, mstring def_state = mstring())
@@ -265,8 +265,8 @@ struct cg_listener_h
             open();
         else
         {
-            time_t t = time(NULL);
-            if(t > last_call_time + 5)
+            ttime_t t = cur_ttime_seconds();
+            if(t > last_call_time + seconds(5))
             {
                 u32 state = 0;
                 u32 r = cg_lsn_getstate(listener, &state);

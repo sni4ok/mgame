@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "type_traits.hpp"
+#include "stdint.hpp"
 
 extern "C"
 {
@@ -16,7 +16,7 @@ extern "C"
 }
 
 template<typename type>
-requires(is_signed_v<type>)
+requires(is_signed<type>::value)
 constexpr type abs(type v)
 {
     if(v < type())

@@ -93,7 +93,7 @@ void test_io(type c)
     buf_stream str(buf);
     str << c;
     type v = lexical_cast<type>(str.str());
-    assert(v == c);
+    ASSERT(v == c);
     unused(v);
 }
 
@@ -102,7 +102,7 @@ void test_impl(str_holder a1, str_holder a2)
     count_t v1 = lexical_cast<count_t>(a1);
     count_t v2 = lexical_cast<count_t>(a2);
     test_io(v1);
-    assert(v1.value == v2.value);
+    ASSERT(v1 == v2);
     test_io(v1);
     unused(v1, v2);
 }

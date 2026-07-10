@@ -108,7 +108,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                 i64 level_id = atoi<i64>(it, ne - it);
                 ++ne;
                 it = find(ne, ie, ',');
-                assert(it != ie);
+                ASSERT(it != ie);
                 price_t price = lexical_cast<price_t>(ne, it);
                 ++it;
                 ne = find(it, ie, ']');
@@ -123,7 +123,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                 price_t price = lexical_cast<price_t>(it, ne);
                 ++ne;
                 it = find(ne, ie, ',');
-                assert(it != ie);
+                ASSERT(it != ie);
                 u32 count = atoi<u32>(ne, it - ne);
                 ++it;
                 ne = find(it, ie, ']');

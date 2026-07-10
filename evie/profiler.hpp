@@ -70,7 +70,7 @@ struct profile
     }
     ~profile()
     {
-        profiler_ptr->add(counter_id, get_time() - time);
+        profiler_ptr->add(counter_id, ttime_t(get_time().value - time.value));
     }
     profile(const profile&) = delete;
 };

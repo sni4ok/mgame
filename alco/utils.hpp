@@ -19,7 +19,7 @@ struct sec_id_by_name : base
 
     u32 get_security_id(char_cit i, char_cit ie, ttime_t time, const auto& cfg)
     {
-        assert(i != ie);
+        ASSERT(i != ie);
         ticker symbol(i, ie);
         auto it = securities.find(symbol);
         if(it == securities.end()) [[unlikely]]

@@ -39,12 +39,12 @@ struct bit
     }
     type first_bit() const
     {
-        assert(value);
+        ASSERT(value);
         return ctz(value);
     }
     type last() const
     {
-        assert(value);
+        ASSERT(value);
         int bit = clz(value);
         return type(elems - bit - 1);
     }
@@ -185,7 +185,7 @@ struct idx_bits<bit0, bit1>
     static constexpr bits_t bits(u64 k)
     {
         bits_t b{k / bit1::elems, k % bit1::elems};
-        assert(get<0>(b) <= bit0::elems && get<1>(b) <= bit1::elems);
+        ASSERT(get<0>(b) <= bit0::elems && get<1>(b) <= bit1::elems);
         return b;
     }
     optional<bits_t> begin() const
@@ -239,7 +239,7 @@ struct idx_bits<bit0, bit1>
                 break;
 
             b0 = idx0.next_bit(b0);
-            assert(b0);
+            ASSERT(b0);
         }
 
         return sz;
@@ -302,7 +302,7 @@ struct idx_bits<bit0, bit1, bit2>
     static constexpr bits_t bits(u64 k)
     {
         bits_t b{k / (bit1::elems * bit2::elems), (k / bit2::elems) % bit1::elems, k % bit2::elems};
-        assert(get<0>(b) <= bit0::elems && get<1>(b) <= bit1::elems && get<2>(b) <= bit2::elems);
+        ASSERT(get<0>(b) <= bit0::elems && get<1>(b) <= bit1::elems && get<2>(b) <= bit2::elems);
         return b;
     }
     optional<bits_t> begin() const
@@ -371,7 +371,7 @@ struct idx_bits<bit0, bit1, bit2>
                 break;
 
             b0 = idx0.next_bit(b0);
-            assert(b0);
+            ASSERT(b0);
         }
         return sz;
     }
@@ -426,7 +426,7 @@ struct price_map
     {
         if constexpr(price_cvt)
         {
-            assert(!(k.value % price_cvt));
+            ASSERT(!(k.value % price_cvt));
             k.value = k.value / price_cvt;
         }
 
@@ -436,9 +436,9 @@ struct price_map
         if constexpr(!less)
             k.value = idx_root::elems * idx_node::elems - k.value;
 
-        assert(k.value >= 0);
+        ASSERT(k.value >= 0);
         ::pair<u64, u64> r(k.value / idx_node::elems, k.value % idx_node::elems);
-        assert(r.first <= idx_root::elems);
+        ASSERT(r.first <= idx_root::elems);
         return r;
     }
     static constexpr ::pair<typename idx_root::bits_t, typename idx_node::bits_t> bits(u64 k1, u64 k2)
@@ -545,7 +545,7 @@ struct price_map
         }
         else
         {
-            assert(ptr);
+            ASSERT(ptr);
             have_value = ptr->is_set(b2);
         }
 
@@ -635,14 +635,14 @@ struct price_map
         u64 k1 = idx_root::key(*b1);
         node* ptr = nodes[k1];
         auto b2 = ptr->begin();
-        assert(!!b2);
+        ASSERT(!!b2);
         u64 k2 = idx_node::key(*b2);
         pair& v = ptr->values[k2];
         return {&v, this};
     }
     void erase(iterator it)
     {
-        assert(it.v);
+        ASSERT(it.v);
         auto [k1, k2] = keys(it.v->first);
         node* ptr = nodes[k1];
         auto b2 = idx_node::bits(k2);
@@ -693,7 +693,7 @@ struct price_map
     }
     const pair& back() const
     {
-        assert(!empty());
+        ASSERT(!empty());
         auto b1 = root_idx.last();
         node* ptr = nodes[idx_root::key(b1)];
         auto b2 = ptr->last();

@@ -6,18 +6,6 @@
 
 #include "stdint.hpp"
 
-template<typename t>
-struct is_signed
-{
-    static constexpr bool value = t(t() - t{1}) < t();
-};
-
-template<typename t>
-struct is_unsigned
-{
-    static constexpr bool value = !is_signed<t>::value;
-};
-
 struct false_type
 {
     static constexpr bool value = false;
@@ -351,9 +339,6 @@ struct remove_const<const t>
 
 template<typename type>
 using remove_const_t = typename remove_const<type>::type;
-
-template <typename type>
-inline constexpr bool is_class_v = __is_class(type);
 
 template<typename type>
 [[nodiscard]] constexpr remove_reference_t<type>&& move(type&& t) noexcept

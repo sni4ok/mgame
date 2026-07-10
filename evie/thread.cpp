@@ -26,7 +26,7 @@ mutex::~mutex()
 {
     if(pthread_mutex_destroy(&__mutex))
     {
-        assert(false && "mutex::~mutex()");
+        ASSERT(false && "mutex::~mutex()");
         mlog(mlog::critical) << "mutex::~mutex() pthread_mutex_destroy()";
     }
 }
@@ -74,7 +74,7 @@ mutex::scoped_lock::~scoped_lock()
 {
     if(locked && pthread_mutex_unlock(&__mutex.__mutex))
     {
-        assert(false && "mutex::scoped_lock::~scoped_lock()");
+        ASSERT(false && "mutex::scoped_lock::~scoped_lock()");
         mlog(mlog::critical) << "mutex::scoped_lock::~scoped_lock() unlock mutex error";
     }
 }
@@ -89,7 +89,7 @@ condition::~condition()
 {
     if(pthread_cond_destroy(&__condition))
     {
-        assert(false && "condition::~condition()");
+        ASSERT(false && "condition::~condition()");
         mlog(mlog::critical) << "condition::~condition() destroy condition error";
     }
 }
@@ -164,7 +164,7 @@ struct free_threads
     void free()
     {
         scoped_lock lock(__mutex);
-        assert(cur_tid);
+        ASSERT(cur_tid);
         ids.push_back(cur_tid);
     }
 };
@@ -173,7 +173,7 @@ free_threads* free_threads_ptr = nullptr;
 
 void* init_free_threads()
 {
-    assert(!free_threads_ptr);
+    ASSERT(!free_threads_ptr);
     free_threads_ptr = new free_threads;
     return free_threads_ptr;
 }

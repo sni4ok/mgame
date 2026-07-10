@@ -21,7 +21,7 @@ struct viktor
 
     mstring params;
     unique_ptr<exporter> e;
-    time_t last_connect;
+    ttime_t last_connect;
 
     typedef std::unordered_map<i64/*level_id*/, message_book> snapshot;
     std::unordered_map<u32, snapshot> snapshots;
@@ -83,7 +83,7 @@ struct viktor
             {
                 message_book& mb = sn[m.level_id];
                 price_t price = m.price.value ? m.price : mb.price;
-                assert(price.value);
+                ASSERT(price.value);
                 mb = m;
                 mb.price = price;
             }
@@ -107,8 +107,8 @@ struct viktor
     }
     void reconnect()
     {
-        time_t ct = time(NULL);
-        if(ct > last_connect + 5)
+        ttime_t ct = cur_ttime_seconds();
+        if(ct > last_connect + seconds(5))
         {
             last_connect = ct;
             e.reset(new exporter(params));

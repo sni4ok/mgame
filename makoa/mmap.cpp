@@ -121,7 +121,7 @@ pthread_lock::~pthread_lock()
 
 void pthread_lock::lock()
 {
-    assert(!mlock);
+    ASSERT(!mlock);
     if(pthread_mutex_lock(mutex))
         throw str_exception("mmap::mmap_lock error");
     mlock = true;
@@ -129,7 +129,7 @@ void pthread_lock::lock()
 
 void pthread_lock::unlock()
 {
-    assert(mlock);
+    ASSERT(mlock);
     pthread_mutex_unlock(mutex);
     mlock = false;
 }

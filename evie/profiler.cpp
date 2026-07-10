@@ -10,13 +10,6 @@
 #include "mlog.hpp"
 #include "sort.hpp"
 
-extern "C"
-{
-    extern char *strdup (const char *__s)
-        noexcept (true) __attribute__ ((__malloc__))
-        __attribute__ ((__nonnull__ (1)));
-}
-
 profiler* profiler_ptr;
 
 profiler::info::info() : time(), time_max(),
@@ -143,7 +136,7 @@ void profiler::add(u64 counter_id, ttime_t time)
 
 void profiler::set_instance(profiler* p)
 {
-    assert(!profiler_ptr || profiler_ptr == p);
+    ASSERT(!profiler_ptr || profiler_ptr == p);
     profiler_ptr = p;
 }
 

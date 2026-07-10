@@ -134,7 +134,7 @@ struct decimal_fixed
         if(decimal)
         {
             u64 v = u64(p.value) % frac<type>();
-            assert(decimal <= -type::exponent);
+            ASSERT(decimal <= -type::exponent);
             v /= __pow10[-type::exponent - decimal];
             s << "." << uint_fix{v, decimal, true};
         }
@@ -450,7 +450,7 @@ struct mirror::impl
             auto i = ob->bids.begin();
             for(; row != w.rows - 1; --b)
             {
-                assert(b->first != price_t());
+                ASSERT(b->first != price_t());
                 print_book(true, b->first, b->second, w, row);
 
                 if(b == i)
@@ -462,7 +462,7 @@ struct mirror::impl
             auto b = ob->asks.begin(), i = ob->asks.end();
             for(; row != w.rows - 1 && b != i; ++b)
             {
-                assert(b->first != price_t());
+                ASSERT(b->first != price_t());
                 print_book(false, b->first, b->second, w, row);
             }
         }

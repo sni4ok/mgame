@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include <numeric>
+#include <time.h>
 
 void throw_system_failure(str_holder msg)
 {
@@ -331,5 +332,32 @@ const char binary16[] = "000102030405060708090A0B0C0D0E0F101112131415161718191A1
 str_holder itoa_hex(u8 ch)
 {
     return str_holder(&binary16[ch * 2], 2);
+}
+
+namespace std
+{
+    void terminate() noexcept __attribute__ ((__noreturn__,__cold__));
+}
+
+void assert_func(char_cit info, char_cit func, char_cit file, int line)
+{
+    cerr() << "assert " << _str_holder(info) << endl
+        << _str_holder(func) << endl
+        << _str_holder(file) << ": " << line;
+
+    std::terminate();
+}
+
+ttime_t cur_ttime()
+{
+    timespec t;
+    clock_gettime(CLOCK_REALTIME, &t);
+
+    return ttime_t{i64(t.tv_sec) * ttime_t::frac + i64(t.tv_nsec)};
+}
+
+ttime_t cur_ttime_seconds()
+{
+    return seconds(time(NULL));
 }
 

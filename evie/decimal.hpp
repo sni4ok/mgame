@@ -1,6 +1,5 @@
 #pragma once
 
-#include "type_traits.hpp"
 #include "math.hpp"
 
 template<typename type>

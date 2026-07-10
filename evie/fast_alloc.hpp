@@ -253,14 +253,14 @@ struct cas_forward : emplace_decl<type, cas_forward<type, max_size> >
     }
     type* to_type(node* n)
     {
-        assert(n > nodes && n < nodes + max_size + 1);
+        ASSERT(n > nodes && n < nodes + max_size + 1);
         return (type*)n->value_buf;
     }
     node* to_node(type* p)
     {
-        assert(p);
+        ASSERT(p);
         node* n = (node*)(p);
-        assert(n > nodes && n < nodes + max_size + 1);
+        ASSERT(n > nodes && n < nodes + max_size + 1);
         return n;
     }
     void free_impl(type* p)
@@ -426,7 +426,7 @@ struct rbuffer
             t = t + 1;
         }
 
-        assert(t != f && "rbuffer::push_back overloaded");
+        ASSERT(t != f && "rbuffer::push_back overloaded");
         values[tf] = v;
     }
     type pop_front()

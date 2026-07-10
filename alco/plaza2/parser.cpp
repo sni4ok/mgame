@@ -53,7 +53,7 @@ struct parser : emessages, stack_singleton<parser>
     {
         i64 server_ms = (server_time.hour * 3600 + server_time.minute * 60 + server_time.second)
             * 1000 + server_time.msec;
-        u64 ct = time(NULL) + cur_utc_time_delta.value / frac<ttime_t>();
+        u64 ct = to_seconds(cur_ttime_seconds()) + cur_utc_time_delta.value / frac<ttime_t>();
         ttime_t etime;
         etime.value = (ct - ct % (3600 * 24)) * frac<ttime_t>() + server_ms * (frac<ttime_t>() / 1000);
         ping(etime, cur_ttime());

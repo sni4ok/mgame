@@ -58,7 +58,7 @@ void free_exports_factory(exports_factory* ptr)
 
 unique_ptr<exports_factory, free_exports_factory> init_efactory()
 {
-    assert(!efactory);
+    ASSERT(!efactory);
     efactory = new exports_factory;
     return {efactory};
 }

@@ -95,7 +95,7 @@ lws_dump::~lws_dump()
 
 lws_impl::lws_impl(const mstring& push, bool log_lws, char msg_beg, char msg_end, bool check_full) :
     emessages(push), log_lws(log_lws), bs(buf, buf + sizeof(buf) - 1),
-    closed(), data_time(time(NULL)), msg_beg(msg_beg), msg_end(msg_end), check_full(check_full)
+    closed(), data_time(cur_ttime_seconds()), msg_beg(msg_beg), msg_end(msg_end), check_full(check_full)
 {
     bs.resize(LWS_PRE);
 }
@@ -187,7 +187,7 @@ int lws_event_cb(lws* wsi, enum lws_callback_reasons reason, void* user,
                 w->proceed(wsi, p, len);
             }
 
-            w->data_time = time(NULL);
+            w->data_time = cur_ttime_seconds();
             break;
         }
         case LWS_CALLBACK_CLIENT_RECEIVE_PONG:

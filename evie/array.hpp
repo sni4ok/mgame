@@ -17,12 +17,12 @@ struct carray
     }
     constexpr carray(std::initializer_list<type> r) : buf()
     {
-        assert(r.size() <= size_);
+        ASSERT(r.size() <= size_);
         copy(r.begin(), r.end(), buf);
     }
     constexpr carray(span<type> str) : buf()
     {
-        assert(str.size() <= size_);
+        ASSERT(str.size() <= size_);
         copy(str.begin(), str.end(), buf);
     }
 
@@ -56,12 +56,12 @@ struct carray
     }
     constexpr const type& operator[](u32 elem) const
     {
-        assert(elem < size_);
+        ASSERT(elem < size_);
         return buf[elem];
     }
     constexpr type& operator[](u32 elem)
     {
-        assert(elem < size_);
+        ASSERT(elem < size_);
         return buf[elem];
     }
     constexpr span<type> str() const
@@ -116,21 +116,21 @@ public:
     }
     explicit array(u32 size) : size_(size)
     {
-        assert(size_ <= capacity_);
+        ASSERT(size_ <= capacity_);
     }
     array(const array& r) : size_(r.size_)
     {
-        assert(size_ <= capacity_);
+        ASSERT(size_ <= capacity_);
         copy(r.begin(), r.end(), buf);
     }
     array(span<type> str) : size_(str.size())
     {
-        assert(size_ <= capacity_);
+        ASSERT(size_ <= capacity_);
         copy(str.begin(), str.end(), buf);
     }
     array(const type* f, const type* t) : size_(t - f)
     {
-        assert(size_ <= capacity_);
+        ASSERT(size_ <= capacity_);
         copy(f, t, buf);
     }
     template<u32 sz>
@@ -141,7 +141,7 @@ public:
     }
     array(std::initializer_list<value_type> r) : size_(r.size())
     {
-        assert(size_ <= capacity_);
+        ASSERT(size_ <= capacity_);
         copy(r.begin(), r.end(), buf);
     }
     array& operator=(const array& r)
@@ -181,13 +181,13 @@ public:
     }
     void push_back(type&& v)
     {
-        assert(size_ < capacity_);
+        ASSERT(size_ < capacity_);
         buf[size_] = move(v);
         ++size_;
     }
     void push_back(const type& v)
     {
-        assert(size_ < capacity_);
+        ASSERT(size_ < capacity_);
         buf[size_] = v;
         ++size_;
     }
@@ -217,12 +217,12 @@ public:
     }
     const type& operator[](u32 elem) const
     {
-        assert(elem < size_);
+        ASSERT(elem < size_);
         return buf[elem];
     }
     type& operator[](u32 elem)
     {
-        assert(elem < size_);
+        ASSERT(elem < size_);
         return buf[elem];
     }
     type& back()
@@ -235,7 +235,7 @@ public:
     }
     void pop_back()
     {
-        assert(size_);
+        ASSERT(size_);
         --size_;
     }
     span<type> str() const

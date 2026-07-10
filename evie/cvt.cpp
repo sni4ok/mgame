@@ -78,7 +78,7 @@ struct itoa_prealloc
     template<typename type>
     u32 write(type value, char_it buf) const
     {
-        assert(value < values);
+        ASSERT(value < values);
         memcpy(buf, &data[value * digits], digits);
         return digits;
     }
@@ -99,7 +99,7 @@ struct itoa_combined
     template<typename type>
     u32 write(type value, char_it buf) const
     {
-        assert(value < values);
+        ASSERT(value < values);
         buf += f.write(value / s.values, buf);
         s.write(value % s.values, buf);
         return digits;
@@ -396,7 +396,7 @@ void test_itoa()
     auto check = [&](str_holder s)
     {
         unused(s);
-        assert(str_holder(buf, sz) == s);
+        ASSERT(str_holder(buf, sz) == s);
     };
 
     check("1");
@@ -404,43 +404,43 @@ void test_itoa()
     check("1267");
     sz = itoa(buf, u16(52346));
     check("52346");
-    assert(atoi<u16>(buf, sz) == 52346);
+    ASSERT(atoi<u16>(buf, sz) == 52346);
     sz = itoa(buf, u32(44));
     check("44");
-    assert(atoi<u32>(buf, sz) == 44);
+    ASSERT(atoi<u32>(buf, sz) == 44);
     sz = itoa(buf, u32(60701));
     check("60701");
-    assert(atoi<u32>(buf, sz) == 60701);
+    ASSERT(atoi<u32>(buf, sz) == 60701);
     sz = itoa(buf, u32(1486666));
     check("1486666");
-    assert(atoi<u32>(buf, sz) == 1486666);
+    ASSERT(atoi<u32>(buf, sz) == 1486666);
     sz = itoa(buf, i16(-2346));
     check("-2346");
-    assert(atoi<i16>(buf, sz) == -2346);
+    ASSERT(atoi<i16>(buf, sz) == -2346);
     sz = itoa(buf, -52578631);
     check("-52578631");
-    assert(atoi<i32>(buf, sz) == -52578631);
+    ASSERT(atoi<i32>(buf, sz) == -52578631);
     sz = itoa(buf, i64(-947593471239506712LL));
     check("-947593471239506712");
-    assert(atoi<i64>(buf, sz) == -947593471239506712);
+    ASSERT(atoi<i64>(buf, sz) == -947593471239506712);
     sz = itoa(buf, u64(9475934712395012ULL));
     check("9475934712395012");
-    assert(atoi<u64>(buf, sz) == 9475934712395012);
+    ASSERT(atoi<u64>(buf, sz) == 9475934712395012);
 
     auto check_double = [&buf, &sz](double v, str_holder s)
     {
         unused(v, s);
         sz = itoa(buf, v);
-        assert(str_holder(buf, sz) == s);
+        ASSERT(str_holder(buf, sz) == s);
         double d = lexical_cast<double>(buf, buf + sz);
         unused(d);
         if(v == v)
         {
-            assert(d == v);
+            ASSERT(d == v);
         }
         else
         {
-            assert(!memcmp(&v, &d, sizeof(double)));
+            ASSERT(!memcmp(&v, &d, sizeof(double)));
         }
     };
 
@@ -455,7 +455,7 @@ void test_itoa()
     check_double(-limits<double>::infinity, "-INF");
     double v = lexical_cast<double>("1e10");
     unused(v);
-    assert(v == 10000000000.);
+    ASSERT(v == 10000000000.);
 
     auto check_i = [&]<typename type>(type)
     {
@@ -463,7 +463,7 @@ void test_itoa()
         {
             u32 sz = itoa(buf, i);
             type v = atoi<t>(buf, sz);
-            assert(v == i);
+            ASSERT(v == i);
             unused(sz, v);
         };
 
