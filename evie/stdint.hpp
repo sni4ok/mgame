@@ -42,3 +42,6 @@ struct is_unsigned
 template <typename type>
 inline constexpr bool is_class_v = __is_class(type);
 
+struct forward_iterator_tag;
+struct bidirectional_iterator_tag;
+

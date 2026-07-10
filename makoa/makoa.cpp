@@ -15,6 +15,7 @@
 #include "../evie/mlog.hpp"
 #include "../evie/signals.hpp"
 #include "../evie/utils.hpp"
+#include "../evie/string.hpp"
 #include "../evie/cond_stream.hpp"
 
 int main(int argc, char** argv)

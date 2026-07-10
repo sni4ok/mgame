@@ -6,6 +6,7 @@
 
 #include "../evie/profiler.hpp"
 #include "../makoa/types.hpp"
+#include "../evie/string.hpp"
 
 u32 emessages::proceed_instr(str_holder exchange_id, str_holder feed_id, str_holder ticker, ttime_t time)
 {

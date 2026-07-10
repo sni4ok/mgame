@@ -37,6 +37,9 @@ extern "C"
 #undef AS
 }
 
+char_cit find(char_cit from, char_cit to, char c);
+char_it find(char_it from, char_it to, char c);
+
 static const char endl = '\n';
 
 template<typename type>
@@ -118,4 +121,9 @@ stream& operator<<(stream& s, str_holder str)
     s.write(str.begin(), str.size());
     return s;
 }
+
+bool operator==(str_holder l, str_holder r);
+
+[[noreturn]] void throw_exception(str_holder);
+[[noreturn]] void throw_exception(str_holder, str_holder);
 

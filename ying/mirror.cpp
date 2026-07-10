@@ -8,6 +8,7 @@
 #include "../makoa/types.hpp"
 
 #include "../evie/thread.hpp"
+#include "../evie/mstring.hpp"
 #include "../evie/queue.hpp"
 #include "../evie/math.hpp"
 

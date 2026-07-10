@@ -5,7 +5,6 @@
 #include "mfile.hpp"
 #include "string.hpp"
 #include "mstring.hpp"
-#include "algorithm.hpp"
 
 #include <unistd.h>
 #include <stdio.h>

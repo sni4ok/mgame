@@ -73,10 +73,9 @@ struct make_signed<t> \
 
 struct i128d
 {
-    static const i64 exponent = 0;
     double value;
 
-    i128d(double v) : value(v)
+    explicit i128d(double v) : value(v)
     {
     }
     i128d() : value()
@@ -91,6 +90,10 @@ struct i128d
     i128d operator/(type v) const
     {
         return {value / v};
+    }
+    bool operator<(i128d r) const
+    {
+        return value < r.value;
     }
 };
 
@@ -109,10 +112,11 @@ SET_INTEGRAL_TYPE(i128, u128)
     typedef i128d u128;
 #endif
 
-SET_INTEGRAL(i128d)
-SET_UNSIGNED(i128d, i128d, i128d)
 FOR_EACH(SET_INTEGRAL_TYPE_E, char, short, int, long, long long)
 FOR_EACH(SET_INTEGRAL, char, wchar_t, bool)
+
+template<typename stream>
+stream& operator<<(stream& s, i128d v);
 
 template<typename t>
 struct remove_reference
@@ -383,4 +387,22 @@ concept __have_back = is_class_v<t> && requires(t* v)
 {
     v->back();
 };
+
+template<typename cont>
+[[nodiscard]] constexpr auto begin(const cont& c)
+{
+    if constexpr(is_array_v<cont>)
+        return &c[0];
+    else
+        return c.begin();
+}
+
+template<typename cont>
+[[nodiscard]] constexpr auto end(const cont& c)
+{
+    if constexpr(is_array_v<cont>)
+        return &c[(sizeof(c) / sizeof(c[0])) - 1];
+    else
+        return c.end();
+}
 

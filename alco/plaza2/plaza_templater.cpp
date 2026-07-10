@@ -9,6 +9,8 @@
 #include "../../evie/config.hpp"
 #include "../../evie/tuple.hpp"
 #include "../../evie/unique_ptr.hpp"
+#include "../../evie/algorithm.hpp"
+#include "../../evie/string.hpp"
 
 #include <map>
 #include <set>

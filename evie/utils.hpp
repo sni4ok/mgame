@@ -4,11 +4,10 @@
 
 #pragma once
 
-#include "string.hpp"
-#include "mstring.hpp"
-#include "algorithm.hpp"
 #include "array.hpp"
 #include "mtime.hpp"
+#include "decimal.hpp"
+#include "print.hpp"
 
 struct uint_fix
 {
@@ -52,30 +51,6 @@ stream& operator<<(stream& log, const uint_fix& v)
 }
 
 typedef uint_fixed<2> print2chars;
-
-template<typename type>
-void split(mvector<type>& ret, char_cit it, char_cit ie, char sep)
-{
-    if(it != ie)
-    {
-        for(;;)
-        {
-            char_cit i = find(it, ie, sep);
-            ret.push_back(type(it, i));
-
-            if(i == ie)
-                break;
-
-            it = i + 1;
-        }
-    }
-}
-
-mvector<mstring> split_s(str_holder str, char sep = ',');
-mvector<str_holder> split(str_holder str, char sep = ',');
-
-mstring join(const mstring* it, const mstring* ie, char sep = ',');
-mstring join(const mvector<mstring>& s, char sep = ',');
 
 struct crc32
 {
@@ -177,18 +152,6 @@ stream& operator<<(stream& s, const print_impl<sep, no_end_sep, iterator, func>&
     }
     return s;
 }
-
-struct print_default
-{
-    template<typename stream, typename type>
-    stream& operator()(stream& s, const type& v) const
-    {
-        if constexpr(is_same_v<type, const char*>)
-            return s << _str_holder(v);
-        else
-            return s << v;
-    }
-};
 
 template<char sep = ',', bool no_end_sep = true, typename iterator,
     typename func = print_default>

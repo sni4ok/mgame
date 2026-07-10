@@ -404,7 +404,8 @@ struct rbuffer
 
     rbuffer() : f(), t()
     {
-        fill(values, values + capacity_v, empty_v);
+        for(auto& v: values)
+            v = empty_v;
     }
 
     void push_back(type v)

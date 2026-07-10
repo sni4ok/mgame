@@ -4,9 +4,7 @@
 
 #pragma once
 
-#include "string.hpp"
 #include "mstring.hpp"
-#include "algorithm.hpp"
 
 mstring get_log_name(str_holder fname);
 void print_init(int argc, char** argv);

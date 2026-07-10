@@ -3,8 +3,10 @@
 */
 
 #include "utils.hpp"
+#include "string.hpp"
 #include "rational.hpp"
 #include "math.h"
+#include "algorithm.hpp"
 
 #include <errno.h>
 #include <string.h>
@@ -20,49 +22,6 @@ void throw_system_failure(str_holder msg)
 str_holder _str_holder(char_cit str)
 {
     return str_holder(str, strlen(str));
-}
-
-mvector<mstring> split_s(str_holder str, char sep)
-{
-    mvector<mstring> ret;
-    split(ret, str.begin(), str.end(), sep);
-    return ret;
-}
-
-mvector<str_holder> split(str_holder str, char sep)
-{
-    mvector<str_holder> ret;
-    split(ret, str.begin(), str.end(), sep);
-    return ret;
-}
-
-mstring join(const mstring* it, const mstring* ie, char sep)
-{
-    mstring ret;
-
-    if(it == ie)
-        return ret;
-
-    u64 sz = 0;
-    for(auto v = it; v != ie; ++v)
-        sz += v->size();
-
-    ret.resize(sz + (ie - it) - 1);
-    buf_stream str(&ret[0], &ret[0] + ret.size());
-
-    for(auto v = it; v != ie; ++v)
-    {
-        if(v != it)
-            str << sep;
-        str << *v;
-    }
-
-    return ret;
-}
-
-mstring join(const mvector<mstring>& s, char sep)
-{
-    return join(s.begin(), s.end(), sep);
 }
 
 class crc32_table
@@ -348,11 +307,20 @@ void assert_func(char_cit info, char_cit func, char_cit file, int line)
     std::terminate();
 }
 
+void throw_exception(str_holder f)
+{
+    throw mexception(f);
+}
+
+void throw_exception(str_holder f, str_holder s)
+{
+    throw mexception(es() % f % s);
+}
+
 ttime_t cur_ttime()
 {
     timespec t;
     clock_gettime(CLOCK_REALTIME, &t);
-
     return ttime_t{i64(t.tv_sec) * ttime_t::frac + i64(t.tv_nsec)};
 }
 

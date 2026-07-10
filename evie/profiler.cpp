@@ -3,7 +3,6 @@
 */
 
 #include "profiler.hpp"
-#include "vector.hpp"
 #include "atomic.hpp"
 #include "utils.hpp"
 #include "mtime.hpp"

@@ -11,6 +11,7 @@
 #include "../makoa/types.hpp"
 #include "../evie/mlog.hpp"
 #include "../evie/profiler.hpp"
+#include "../evie/string.hpp"
 
 #include <sys/stat.h>
 #include <unistd.h>

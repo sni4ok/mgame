@@ -9,24 +9,6 @@
 #include "type_traits.hpp"
 
 template<typename cont>
-[[nodiscard]] constexpr auto begin(const cont& c)
-{
-    if constexpr(is_array_v<cont>)
-        return &c[0];
-    else
-        return c.begin();
-}
-
-template<typename cont>
-[[nodiscard]] constexpr auto end(const cont& c)
-{
-    if constexpr(is_array_v<cont>)
-        return &c[(sizeof(c) / sizeof(c[0])) - 1];
-    else
-        return c.end();
-}
-
-template<typename cont>
 auto& back(const cont& c)
 {
     if constexpr(__have_back<cont>)
@@ -202,22 +184,6 @@ bool from_any(const type& v, const p1& v1, const params& ... p)
 }
 
 template<typename type>
-constexpr type min(type l, type r)
-{
-    if(l < r)
-        return l;
-    return r;
-}
-
-template<typename type>
-constexpr type max(type l, type r)
-{
-    if(l > r)
-        return l;
-    return r;
-}
-
-template<typename type>
 bool equal(const type* b1, const type* e1, const type* b2)
     requires(is_trivially_copyable_v<type>)
 {
@@ -242,9 +208,6 @@ bool equal(const type* b1, const type* e1, const type* b2, const type* e2)
     else
         return false;
 }
-
-struct forward_iterator_tag;
-struct bidirectional_iterator_tag;
 
 namespace std
 {

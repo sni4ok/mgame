@@ -4,6 +4,8 @@
 
 #include "config.hpp"
 #include "mlog.hpp"
+#include "algorithm.hpp"
+#include "string.hpp"
 
 inline bool is_endl(char c)
 {

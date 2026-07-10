@@ -6,9 +6,11 @@
 #include "../makoa/types.hpp"
 
 #include "../evie/mfile.hpp"
+#include "../evie/mstring.hpp"
 #include "../evie/fset.hpp"
 #include "../evie/signals.hpp"
 #include "../evie/mlog.hpp"
+#include "../evie/string.hpp"
 
 #include <unistd.h>
 #include <dirent.h>

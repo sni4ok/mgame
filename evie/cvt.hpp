@@ -8,7 +8,6 @@
 #include "type_traits.hpp"
 #include "decimal.hpp"
 #include "limits.hpp"
-#include "exception.hpp"
 
 u32 itoa(char_it buf, bool t);
 u32 itoa(char_it buf, char v);
@@ -28,14 +27,6 @@ u32 itoa(char_it buf, u128 v);
 u32 itoa(char_it buf, i128 v);
 #endif
 
-struct atoi_exception : exception
-{
-    char buf[64];
-
-    atoi_exception(str_holder h, str_holder m);
-    char_cit what() const noexcept;
-};
-
 template<typename type>
 type atoi_u(char_cit buf, u32 size)
 {
@@ -46,11 +37,11 @@ type atoi_u(char_cit buf, u32 size)
     for(u32 i = 0; i != size; ++i)
     {
         if(ret > mm) [[unlikely]]
-            throw atoi_exception("atoi() max possible size exceed for: ", {buf, size});
+            throw_exception("atoi_u, max possible size exceed for: ", {buf, size});
 
         char ch = buf[i];
         if(ch < '0' || ch > '9') [[unlikely]]
-            throw atoi_exception("atoi() bad integral number: ", {buf, size});
+            throw_exception("atoi_u, bad integral number: ", {buf, size});
 
         ret *= 10;
         ret += (ch - '0');
@@ -77,7 +68,7 @@ template<>
 inline char atoi<char>(char_cit buf, u32 size)
 {
     if(size != 1) [[unlikely]]
-        throw atoi_exception("atoi() bad char size: ", {buf, size});
+        throw_exception("atoi, bad char size: ", {buf, size});
     return *buf;
 }
 
@@ -85,7 +76,7 @@ template<>
 inline bool atoi<bool>(char_cit buf, u32 size)
 {
     if(size != 1 || (buf[0] != '0' && buf[0] != '1')) [[unlikely]]
-        throw atoi_exception("atoi() bad bool number: ", {buf, size});
+        throw_exception("atoi, bad bool number: ", {buf, size});
     return(buf[0] == '1');
 }
 
@@ -138,7 +129,7 @@ requires(is_integral_v<type>)
 type lexical_cast(char_cit from, char_cit to)
 {
     if(from == to)
-        throw str_exception("lexical_cast<integral>() from == to");
+        throw_exception("lexical_cast<integral>, from == to");
     return atoi<type>(from, to - from);
 }
 

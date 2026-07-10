@@ -5,6 +5,7 @@
 #include "mlog.hpp"
 #include "utils.hpp"
 #include "thread.hpp"
+#include "mstring.hpp"
 #include "fast_alloc.hpp"
 
 #include <stdio.h>
@@ -389,5 +390,38 @@ void log_test(size_t thread_count, size_t log_count)
             threads.push_back(thread(&MlogTestThread, i, log_count));
     }
     mlog() << "mlog test successfully ended";
+}
+
+template<typename stream>
+stream& write(stream& m, print_t t)
+{
+    static const i64 day_s = 24 * 3600, year_s = day_s * 365;
+
+    ttime_t ta = abs(t.value);
+    if(ta >= seconds(year_s))
+        m << div_int(to_decimal<p2>(t.value), year_s) << "years";
+    else if(ta >= seconds(day_s))
+        m << div_int(to_decimal<p2>(t.value), day_s) << "days";
+    else if(ta >= seconds(3600))
+        m << div_int(to_decimal<p2>(t.value), 3600) << "hours";
+    else if(ta >= seconds(1))
+        m << to_decimal<p2>(t.value) << "sec";
+    else if(ta >= milliseconds(1))
+        m << div_int(p2{to_us(t.value)}, 10) << "ms";
+    else if(ta >= microseconds(1))
+        m << to_decimal<p2>(milliseconds(t.value.value)) << "us";
+    else
+        m << t.value.value << "ns";
+    return m;
+}
+
+mlog& operator<<(mlog& m, print_t t)
+{
+    return write(m, t);
+}
+
+buf_stream& operator<<(buf_stream& s, print_t t)
+{
+    return write(s, t);
 }
 

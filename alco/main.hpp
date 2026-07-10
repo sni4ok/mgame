@@ -17,6 +17,7 @@
 #include "../evie/config.hpp"
 #include "../evie/mlog.hpp"
 #include "../evie/cond_stream.hpp"
+#include "../evie/string.hpp"
 
 namespace ns
 {

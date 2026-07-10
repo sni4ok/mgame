@@ -8,16 +8,15 @@
 
 #include "../evie/fmap.hpp"
 #include "../evie/mfile.hpp"
-#include "../evie/utils.hpp"
 #include "../evie/queue.hpp"
 #include "../evie/profiler.hpp"
 #include "../evie/mlog.hpp"
+#include "../evie/mstring.hpp"
 
 #include <map>
 #include <unordered_map>
 
 #include <fcntl.h>
-#include <unistd.h>
 #include <dirent.h>
 #include <sys/stat.h>
 

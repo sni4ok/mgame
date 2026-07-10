@@ -9,15 +9,10 @@
 struct mirror
 {
     struct impl;
+    impl* pimpl;
     
-    mirror(str_holder params); //like "837037107[ 100]"
-                               //  or "tBTCUSD[ 100]"
-                               //  or "$0[ 100]"
-
+    mirror(str_holder params);
     void proceed(const message* m, u32 count);
     ~mirror();
-
-private:
-    impl* pimpl;
 };
 

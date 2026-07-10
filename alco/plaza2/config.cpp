@@ -7,6 +7,7 @@
 #include "../../evie/mfile.hpp"
 #include "../../evie/config.hpp"
 #include "../../evie/utils.hpp"
+#include "../../evie/algorithm.hpp"
 
 namespace plaza
 {

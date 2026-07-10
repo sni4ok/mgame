@@ -32,3 +32,19 @@ constexpr type pow(type f, u32 e)
     return f * pow(f, e - 1);
 }
 
+template<typename type>
+constexpr type min(type l, type r)
+{
+    if(l < r)
+        return l;
+    return r;
+}
+
+template<typename type>
+constexpr type max(type l, type r)
+{
+    if(l > r)
+        return l;
+    return r;
+}
+

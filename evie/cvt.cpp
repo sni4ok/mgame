@@ -20,21 +20,6 @@ inline u64* __pow10_init()
 
 const u64* __pow10 = __pow10_init();
 
-atoi_exception::atoi_exception(str_holder h, str_holder m)
-{
-    memcpy(buf, h.begin(), h.size());
-    u32 sz = sizeof(buf) - 1 - h.size();
-    if(sz > m.size())
-        sz = m.size();
-    memcpy(buf + h.size(), m.begin(), sz);
-    buf[h.size() + sz] = char();
-}
-
-char_cit atoi_exception::what() const noexcept
-{
-    return buf;
-}
-
 template<u32 digits_s>
 struct itoa_prealloc
 {

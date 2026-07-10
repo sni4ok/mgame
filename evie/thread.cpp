@@ -2,18 +2,18 @@
     author: Ilya Andronov <sni4ok@yandex.ru>
 */
 
-#include "thread.hpp"
 #include "signals.hpp"
 #include "atomic.hpp"
 #include "mlog.hpp"
 #include "profiler.hpp"
 #include "queue.hpp"
-
-#include <csignal>
+#include "mlog.hpp"
 
 #include <pthread.h>
-#include <errno.h>
+#include "thread.hpp" //
 
+#include <csignal>
+#include <errno.h>
 #include <sys/resource.h>
 
 mutex::mutex()
@@ -208,6 +208,8 @@ void set_affinity_thread(u32 thrd)
 }
 
 static const u32 trash_t1 = 3, trash_t2 = 9;
+
+void cerr_write(str_holder str, bool flush = true);
 
 void set_trash_thread()
 {

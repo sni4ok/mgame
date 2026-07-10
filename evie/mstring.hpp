@@ -93,3 +93,11 @@ mstring operator+(str_holder l, const type& r)
     return l + r.str();
 }
 
+bool operator==(const mstring& l, str_holder r);
+
+mvector<mstring> split_s(str_holder str, char sep = ',');
+mvector<str_holder> split(str_holder str, char sep = ',');
+
+mstring join(const mstring* it, const mstring* ie, char sep = ',');
+mstring join(const mvector<mstring>& s, char sep = ',');
+

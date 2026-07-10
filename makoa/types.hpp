@@ -14,7 +14,7 @@ struct print_date
     date value;
     char sep;
 
-    print_date(date value, char sep = '-')
+    explicit print_date(date value, char sep = '-')
         : value(value), sep(sep)
     {
     }
@@ -30,11 +30,11 @@ struct print_td
     time_duration value;
     int mode;
 
-    print_td(time_duration value, int mode = sec)
+    explicit print_td(time_duration value, int mode = sec)
         : value(value), mode(mode)
     {
     }
-    print_td(ttime_t time, int mode = sec)
+    explicit print_td(ttime_t time, int mode = sec)
         : print_td(get_time_duration(time), mode)
     {
     }
@@ -46,7 +46,7 @@ struct print_time
     char sep;
     int mode;
 
-    print_time(ttime_t value, char sep = ' ', int mode = print_td::sec)
+    explicit print_time(ttime_t value, char sep = ' ', int mode = print_td::sec)
         : value(value), sep(sep), mode(mode)
     {
     }

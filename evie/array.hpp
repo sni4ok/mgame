@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "string.hpp"
-#include "algorithm.hpp"
+#include "assert.hpp"
+#include "vector.hpp"
 
 template<typename type, u32 size_>
 struct carray
@@ -177,7 +177,9 @@ public:
             size_ = new_size;
         }
         else
-            throw mexception(es() % "array resize for " % new_size % ", capacity " % capacity_);
+        {
+            ASSERT(false);
+        }
     }
     void push_back(type&& v)
     {
@@ -288,7 +290,8 @@ template<typename type, u32 size>
 constexpr auto fill_carray(type v = type())
 {
     carray<type, size> ret;
-    fill(ret.begin(), ret.end(), v);
+    for(type& r: ret)
+        r = v;
     return ret;
 }
 
