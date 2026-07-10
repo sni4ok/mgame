@@ -7,6 +7,7 @@
 #include "array.hpp"
 #include "thread.hpp"
 #include "atomic.hpp"
+#include "new.hpp"
 
 template<typename node, bool use_tss>
 struct data_tss;
@@ -78,7 +79,7 @@ node* fast_alloc_alloc()
 {
     node* n = (node*)malloc(sizeof(node));
     if(!n)
-        throw std::bad_alloc();
+        throw bad_alloc();
     return n;
 }
 
@@ -143,13 +144,12 @@ struct list_base : data_tss<node_type*, use_tss>
     {
         node* n = fast_alloc_alloc<node>();
         type* p = to_type(n);
-        new(p)type(args...);
+        new(p) type(args...);
         return p;
     }
     bool erase(type* p) //liniar complexity
     {
         node* n = to_node(p);
-
         bool free_lock;
 
         if constexpr(use_mt)

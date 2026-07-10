@@ -5,8 +5,10 @@
 #pragma once
 
 #include "pair.hpp"
-#include "cvt.hpp"
+#include "new.hpp"
 #include "type_traits.hpp"
+#include "str_holder.hpp"
+#include "exception.hpp"
 
 #include <initializer_list>
 
@@ -165,7 +167,7 @@ public:
             else
                new_ptr = realloc((void*)buf, new_size * sizeof(type));
             if(!new_ptr)
-                throw std::bad_alloc();
+                throw bad_alloc();
             buf = (type*)new_ptr;
             if constexpr(fill_zero)
                 memset((void*)(buf + size_), 0, (new_size - size_) * sizeof(type));
@@ -203,7 +205,7 @@ public:
         else
             new_ptr = realloc((void*)buf, new_capacity * sizeof(type));
         if(!new_ptr)
-            throw std::bad_alloc();
+            throw bad_alloc();
         buf = (type*)new_ptr;
         capacity_ = new_capacity;
     }

@@ -8,30 +8,7 @@
 #include "type_traits.hpp"
 #include "decimal.hpp"
 #include "limits.hpp"
-
-#include <new>
-
-typedef std::exception exception;
-
-struct str_exception : exception
-{
-    char_cit msg;
-
-    str_exception(char_cit msg) : msg(msg)
-    {
-    }
-    char_cit what() const noexcept
-    {
-        return msg;
-    }
-};
-
-template<typename stream>
-stream& operator<<(stream& s, const exception& e)
-{
-    s << "exception: " << _str_holder(e.what());
-    return s;
-}
+#include "exception.hpp"
 
 u32 itoa(char_it buf, bool t);
 u32 itoa(char_it buf, char v);

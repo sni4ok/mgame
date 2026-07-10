@@ -5,6 +5,7 @@
 #pragma once
 
 #include "vector.hpp"
+#include "cvt.hpp"
 
 struct mstring : mvector<char>
 {

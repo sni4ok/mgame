@@ -5,18 +5,17 @@ typedef unsigned char u8;
 typedef short i16;
 typedef unsigned short u16;
 typedef int i32;
+typedef unsigned int u32;
 
 #ifdef __x86_64
-    typedef unsigned int u32;
     typedef long int i64;
     typedef unsigned long u64;
+    typedef u64 size_t;
 #else
-    typedef unsigned long u32;
     typedef long long i64;
     typedef unsigned long long u64;
+    typedef u32 size_t;
 #endif
-
-typedef unsigned long size_t;
 
 static_assert(sizeof(i16) == 2);
 static_assert(sizeof(u16) == 2);

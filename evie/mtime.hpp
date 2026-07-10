@@ -10,18 +10,18 @@ const ttime_t cur_utc_time_delta = hours(3);
 
 constexpr inline u32 day_seconds(ttime_t t)
 {
-    u64 v = t.value / frac<ttime_t>();
+    u64 v = t.value / ttime_t::frac;
     return u32(v - v % (3600 * 24));
 }
 
 inline ttime_t cur_mtime()
 {
-    return cur_ttime() + cur_utc_time_delta;
+    return {cur_ttime().value + cur_utc_time_delta.value};
 }
 
 inline ttime_t cur_mtime_seconds()
 {
-    return cur_ttime_seconds() + cur_utc_time_delta;
+    return {cur_ttime_seconds().value + cur_utc_time_delta.value};
 }
 
 struct date_duration
@@ -98,7 +98,7 @@ struct time_duration
     }
     constexpr operator ttime_t() const
     {
-        return ::seconds(total_seconds()) + ttime_t{nanos};
+        return {::seconds(total_seconds()).value + nanos};
     }
 };
 
