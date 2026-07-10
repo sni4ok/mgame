@@ -1,8 +1,5 @@
 #pragma once
 
-#ifndef DECIMAL_HPP
-#define DECIMAL_HPP
-
 #include "type_traits.hpp"
 #include "math.hpp"
 
@@ -165,6 +162,4 @@ struct p2
     static const i64 exponent = -2;
     i64 value;
 };
-
-#endif
 

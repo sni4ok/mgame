@@ -4,12 +4,7 @@
 
 #pragma once
 
-#ifndef EVIE_TIME_HPP
-#define EVIE_TIME_HPP
-
 #include "decimal.hpp"
-
-#include <cstdint>
 
 #include <time.h>
 
@@ -72,6 +67,4 @@ inline ttime_t cur_ttime_seconds()
 {
     return seconds(time(NULL));
 }
-
-#endif
 

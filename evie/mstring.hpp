@@ -4,9 +4,6 @@
 
 #pragma once
 
-#ifndef EVIE_MSTRING_HPP
-#define EVIE_MSTRING_HPP
-
 #include "vector.hpp"
 
 struct mstring : mvector<char>
@@ -94,6 +91,4 @@ mstring operator+(str_holder l, const type& r)
 {
     return l + r.str();
 }
-
-#endif
 

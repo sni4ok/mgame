@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "smart_ptr.hpp"
+#include "unique_ptr.hpp"
 #include "atomic.hpp"
 
 template<typename type, void (*free)(type*) = default_free<type> >

@@ -8,7 +8,6 @@
 
 #include "../evie/fmap.hpp"
 #include "../evie/vector.hpp"
-#include "../evie/smart_ptr.hpp"
 #include "../evie/mlog.hpp"
 
 #include <deque>

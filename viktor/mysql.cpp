@@ -11,7 +11,6 @@
 #include "../makoa/types.hpp"
 
 #include "../evie/mlog.hpp"
-#include "../evie/smart_ptr.hpp"
 
 #include <mysql/mysql.h>
 

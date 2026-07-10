@@ -6,7 +6,6 @@
 #include "signals.hpp"
 #include "atomic.hpp"
 #include "mlog.hpp"
-#include "smart_ptr.hpp"
 #include "profiler.hpp"
 #include "queue.hpp"
 

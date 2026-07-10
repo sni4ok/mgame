@@ -8,7 +8,7 @@
 #include "../../evie/mfile.hpp"
 #include "../../evie/config.hpp"
 #include "../../evie/tuple.hpp"
-#include "../../evie/smart_ptr.hpp"
+#include "../../evie/unique_ptr.hpp"
 
 #include <map>
 #include <set>

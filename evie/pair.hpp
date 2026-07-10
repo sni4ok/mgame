@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <stddef.h>
+#include "stdint.hpp"
 
 template<typename f, typename s>
 struct pair

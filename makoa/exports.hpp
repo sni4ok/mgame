@@ -9,7 +9,7 @@
 #include "messages.hpp"
 
 #include "../evie/mstring.hpp"
-#include "../evie/smart_ptr.hpp"
+#include "../evie/unique_ptr.hpp"
 
 struct hole_exporter
 {

@@ -4,10 +4,7 @@
 
 #pragma once
 
-#ifndef TYPE_TRAITS_HPP
-#define TYPE_TRAITS_HPP
-
-#include <cstdint>
+#include "stdint.hpp"
 
 template<typename t>
 struct is_signed
@@ -85,15 +82,6 @@ struct make_signed<t> \
     macro(a1) \
   __VA_OPT__(FOR_EACH_AGAIN PP (macro, __VA_ARGS__))
 #define FOR_EACH_AGAIN() FOR_EACH_HELPER
-
-typedef int8_t i8;
-typedef uint8_t u8;
-typedef int16_t i16;
-typedef uint16_t u16;
-typedef int32_t i32;
-typedef uint32_t u32;
-typedef int64_t i64;
-typedef uint64_t u64;
 
 struct i128d
 {
@@ -410,6 +398,4 @@ concept __have_back = is_class_v<t> && requires(t* v)
 {
     v->back();
 };
-
-#endif
 

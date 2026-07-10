@@ -4,11 +4,8 @@
 
 #pragma once
 
-#ifndef EVIE_MLOG_HPP
-#define EVIE_MLOG_HPP
-
 #include "cvt.hpp"
-#include "smart_ptr.hpp"
+#include "unique_ptr.hpp"
 #include "time.hpp"
 
 class simple_log;
@@ -90,6 +87,4 @@ struct print_t
 };
 
 mlog& operator<<(mlog& m, print_t t);
-
-#endif
 

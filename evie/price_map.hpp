@@ -1,3 +1,9 @@
+/*
+    author: Ilya Andronov <sni4ok@yandex.ru>
+*/
+
+#pragma once
+
 #include "tuple.hpp"
 #include "math.hpp"
 #include "optional.hpp"

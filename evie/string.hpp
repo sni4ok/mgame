@@ -4,9 +4,6 @@
 
 #pragma once
 
-#ifndef EVIE_STRING_HPP
-#define EVIE_STRING_HPP
-
 #include "vector.hpp"
 
 struct buf_stream : ios_base
@@ -164,6 +161,4 @@ struct conditional_stream : ios_base
             ((s1*)(buf))->write_numeric(v);
     }
 };
-
-#endif
 

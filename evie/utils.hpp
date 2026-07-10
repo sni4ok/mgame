@@ -4,9 +4,6 @@
 
 #pragma once
 
-#ifndef EVIE_UTILS_HPP
-#define EVIE_UTILS_HPP
-
 #include "string.hpp"
 #include "mstring.hpp"
 #include "algorithm.hpp"
@@ -257,6 +254,4 @@ inline auto print_binary(str_holder str)
 
     return print<' '>(str, f);
 }
-
-#endif
 

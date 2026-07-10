@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../evie/mstring.hpp"
-#include "../evie/smart_ptr.hpp"
+#include "../evie/unique_ptr.hpp"
 #include "../evie/string.hpp"
 
 #include <dlfcn.h>

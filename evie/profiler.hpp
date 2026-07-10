@@ -4,9 +4,6 @@
 
 #pragma once
 
-#ifndef EVIE_PROFILER_HPP
-#define EVIE_PROFILER_HPP
-
 #include "time.hpp"
 
 #define CONCAT_(a, b) a##b
@@ -86,7 +83,4 @@ inline ttime_t rdtsc()
 }
 
 typedef profile<&rdtsc> rprofiler;
-
-
-#endif
 

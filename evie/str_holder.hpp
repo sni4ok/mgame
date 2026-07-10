@@ -4,8 +4,7 @@
 
 #pragma once
 
-#include <stdint.h>
-#include <stddef.h>
+#include "stdint.hpp"
 
 #include <cassert>
 
@@ -22,7 +21,7 @@ extern "C"
         __attribute_alloc_size__ ((2));
     extern void free(void*) __THROW;
     extern char *getenv(const char*) __THROW __nonnull ((1)) __wur;
-    extern int usleep(__useconds_t __useconds);
+    extern int usleep(u32 __useconds);
     extern int close(int __fd);
     extern int system (const char *__command);
 }
@@ -31,7 +30,6 @@ static const char endl = '\n';
 
 typedef char* char_it;
 typedef const char* char_cit;
-typedef uint64_t u64;
 
 template<typename type>
 class span

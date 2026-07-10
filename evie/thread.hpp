@@ -6,8 +6,6 @@
 
 #include "tuple.hpp"
 
-#include <cstdint>
-
 #include <bits/pthreadtypes.h>
 
 struct mutex

@@ -49,7 +49,7 @@ struct lws_impl : emessages, lws_dump
         if(*(t - 1) != msg_end)
             return false;
 
-        uint32_t _f = 0, _t = 0;
+        u32 _f = 0, _t = 0;
         for(; f != t; ++f)
         {
             if(*f == msg_beg)

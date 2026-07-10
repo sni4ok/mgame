@@ -4,9 +4,6 @@
 
 #pragma once
 
-#ifndef EVIE_ALGORITHM_HPP
-#define EVIE_ALGORITHM_HPP
-
 #include "pair.hpp"
 #include "str_holder.hpp"
 #include "type_traits.hpp"
@@ -445,11 +442,11 @@ template<typename iterator>
 }
 
 template<typename iterator>
-int64_t distance(iterator f, iterator t)
+i64 distance(iterator f, iterator t)
 {
     if constexpr(fwd_iters<iterator>)
     {
-        int64_t c = 0;
+        i64 c = 0;
         for(; f != t; ++f)
             ++c;
         return c;
@@ -457,6 +454,4 @@ int64_t distance(iterator f, iterator t)
     else
         return t - f;
 }
-
-#endif
 
