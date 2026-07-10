@@ -84,16 +84,25 @@ struct i128d
     template<typename type>
     i128d operator*(type v) const
     {
-        return {value * v};
+        return i128d(value * v);
     }
     template<typename type>
     i128d operator/(type v) const
     {
-        return {value / v};
+        return i128d(value / v);
+    }
+    i128d& operator+=(i128d r)
+    {
+        value += r.value;
+        return *this;
     }
     bool operator<(i128d r) const
     {
         return value < r.value;
+    }
+    operator double() const
+    {
+        return value;
     }
 };
 
