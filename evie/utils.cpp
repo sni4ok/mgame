@@ -121,13 +121,15 @@ inline time_parsed parse_time_impl(ttime_t time)
 
 const u32 cur_day_seconds = day_seconds(cur_mtime_seconds());
 const date cur_day_date = parse_time_impl(cur_mtime_seconds()).date;
+mstring __cur_day;
 
 inline str_holder get_cur_day_str()
 {
-    static buf_stream_fixed<40> str;
+    buf_stream_fixed<29> str;
     str << uint_fixed<4>(cur_day_date.year) << "-" << uint_fixed<2>(cur_day_date.month)
         << "-" << uint_fixed<2>(cur_day_date.day);
-    return str.str();
+    __cur_day = str.str();
+    return __cur_day.str();
 }
 
 const str_holder cur_day_date_str = get_cur_day_str();
