@@ -4,72 +4,17 @@
 
 #pragma once
 
-#include "stdint.hpp"
+#include "iterator.hpp"
 
 struct false_type
 {
-    static constexpr bool value = false;
+    static const bool value = false;
 };
 
 struct true_type
 {
-    static constexpr bool value = true;
+    static const bool value = true;
 };
-
-template<typename type>
-struct is_integral : false_type {};
-
-#define SET_INTEGRAL(t) \
-template<> \
-struct is_integral<t> \
-{ \
-    static constexpr bool value = true; \
-};
-
-#define SET_INTEGRALE(st, ut) \
-    SET_INTEGRAL(st) \
-    SET_INTEGRAL(ut)
-
-template<typename t>
-struct make_unsigned
-{
-};
-
-template<typename t>
-struct make_signed
-{
-};
-
-#define SET_UNSIGNED(t, st, ut) \
-template<> \
-struct make_unsigned<t> \
-{ \
-    typedef ut type; \
-}; \
-template<> \
-struct make_signed<t> \
-{ \
-    typedef st type; \
-};
-
-#define SET_INTEGRAL_TYPE(st, ut) \
-    SET_INTEGRALE(st, ut) \
-    SET_UNSIGNED(st, st, ut) \
-    SET_UNSIGNED(ut, st, ut)
-
-#define SET_INTEGRAL_TYPE_E(t) \
-    SET_INTEGRAL_TYPE(signed t, unsigned t)
-
-#define PP ()
-#define EXPAND(...) EXPAND2(EXPAND2(EXPAND2(EXPAND2(__VA_ARGS__))))
-#define EXPAND2(...) EXPAND1(EXPAND1(EXPAND1(__VA_ARGS__)))
-#define EXPAND1(...) __VA_ARGS__
-#define FOR_EACH(macro, ...) \
-  __VA_OPT__(EXPAND(FOR_EACH_HELPER(macro, __VA_ARGS__)))
-#define FOR_EACH_HELPER(macro, a1, ...) \
-    macro(a1) \
-  __VA_OPT__(FOR_EACH_AGAIN PP (macro, __VA_ARGS__))
-#define FOR_EACH_AGAIN() FOR_EACH_HELPER
 
 struct i128d
 {
@@ -114,73 +59,25 @@ struct i128d
 __extension__ typedef __int128 i128;
 __extension__ typedef __uint128_t u128;
 
-SET_INTEGRAL_TYPE(i128, u128)
-
 #else
     typedef i128d i128;
     typedef i128d u128;
 #endif
 
-FOR_EACH(SET_INTEGRAL_TYPE_E, char, short, int, long, long long)
-FOR_EACH(SET_INTEGRAL, char, wchar_t, bool)
-
 template<typename stream>
 stream& operator<<(stream& s, i128d v);
 
 template<typename t>
-struct remove_reference
-{
-    using type = t;
-};
-
-template<typename t>
-struct remove_reference<t&>
-{
-    using type = t;
-};
-
-template<typename t>
-struct remove_reference<t&&>
-{
-    using type = t;
-};
-
-template<typename t>
 struct is_trivially_copyable
 {
-    static constexpr bool value = __is_trivially_copyable(t);
-};
-
-template<typename t>
-struct is_trivially_destructible 
-{
-#ifdef CLANG_COMPILER
-    static constexpr bool value = __is_trivially_destructible(t);
-#else
-    static constexpr bool value = __has_trivial_destructor(t);
-#endif
+    static const bool value = __is_trivially_copyable(t);
 };
 
 template<typename t>
 struct is_polymorphic
 {
-    static constexpr bool value = __is_polymorphic(t);
+    static const bool value = __is_polymorphic(t);
 };
-
-template<typename t>
-struct remove_cv
-{
-    using type = t;
-};
-
-template<typename t>
-struct remove_cv<const t>
-{
-    using type = t;
-};
-
-template<typename t>
-using __remove_cv_t = typename remove_cv<t>::type;
 
 template<typename t, typename>
 struct __remove_pointer_helper
@@ -194,66 +91,104 @@ struct __remove_pointer_helper<t, p*>
     typedef p type;
 };
 
+template<typename type>
+using remove_const_t = typename remove_const<type>::type;
+
 template<typename t>
-struct remove_pointer
-: public __remove_pointer_helper<t, __remove_cv_t<t> >
+struct remove_pointer : public __remove_pointer_helper<t, remove_const_t<t> >
 {
 };
 
 template<typename t, typename p>
 struct is_same
 {
-    static constexpr bool value = __is_same(t, p);
+    static const bool value = __is_same(t, p);
 };
 
 template<typename type>
-inline constexpr bool is_unsigned_v = is_unsigned<type>::value;
+static const bool is_array_v = false;
 
 template<typename type>
-inline constexpr bool is_signed_v = is_signed<type>::value;
+static const bool is_array_v<type[]> = true;
 
-template<typename type>
-inline constexpr bool is_integral_v = is_integral<type>::value;
-
-template<typename type>
-using make_unsigned_t = typename make_unsigned<type>::type;
-
-template<typename type>
-using make_signed_t = typename make_signed<type>::type;
-
-template<typename type>
-inline constexpr bool is_array_v = false;
-template<typename type>
-inline constexpr bool is_array_v<type[]> = true;
 template<typename type, u64 count>
-inline constexpr bool is_array_v<type[count]> = true;
+static const bool is_array_v<type[count]> = true;
 
 template<typename type>
 using remove_reference_t = typename remove_reference<type>::type;
 
 template<typename type>
-inline constexpr bool is_trivially_copyable_v = is_trivially_copyable<type>::value;
+static const bool is_trivially_copyable_v = is_trivially_copyable<type>::value;
 
 template<typename type>
-inline constexpr bool is_trivially_destructible_v = is_trivially_destructible<type>::value;
+static const bool is_trivially_destructible_v = is_trivially_destructible<type>::value;
 
 template<typename type>
-inline constexpr bool is_polymorphic_v = is_polymorphic<type>::value;
+static const bool is_polymorphic_v = is_polymorphic<type>::value;
 
 template<typename type>
 using remove_pointer_t = typename remove_pointer<type>::type;
 
 template<typename t, typename p>
-inline constexpr bool is_same_v = is_same<t, p>::value;
+static const bool is_same_v = is_same<t, p>::value;
+
+template<typename type>
+concept __is_integral = !is_class_v<type> && 
+    is_same_v<type, remove_reference_t<type> > && requires(remove_const_t<type> a, type b)
+{
+    a = a << b - a;
+};
+
+template<typename type>
+struct is_integral
+{
+    static const bool value = __is_integral<type>;
+};
+
+template<typename type>
+static const bool is_integral_v = __is_integral<type>;
+
+template<typename t>
+concept __make_signed =
+    is_same_v<t, remove_reference_t<t> > && requires(remove_const_t<t> a)
+{
+    a = t() - t{1};
+    a < t();
+};
+
+template<typename t>
+struct is_signed
+{
+    static constexpr bool get()
+    {
+        if constexpr(__make_signed<t>)
+            return t(t() - t{1}) < t();
+        else
+            return false;
+    }
+    static const bool value = get();
+};
+
+template<typename t>
+struct is_unsigned
+{
+    static const bool value = !is_signed<t>::value;
+};
+
+template<typename type>
+static const bool is_unsigned_v = is_unsigned<type>::value;
+
+template<typename type>
+static const bool is_signed_v = is_signed<type>::value;
 
 template<typename type>
 struct is_numeric
 {
-    static constexpr bool value = is_integral_v<type> || is_same_v<type, double>;
+    static const bool value = is_integral_v<type> || is_same_v<type, double>;
 };
 
 template<typename type>
-inline constexpr bool is_numeric_v = is_numeric<type>::value;
+static const bool is_numeric_v = is_numeric<type>::value;
 
 template<bool const, typename t, typename p>
 struct conditional
@@ -271,16 +206,24 @@ template<bool cond, typename t, typename p>
 using conditional_t = typename conditional<cond, t, p>::type;
 
 template<typename>
-struct is_function : false_type {};
+struct is_function : false_type
+{
+};
 
 template<typename ret, typename... args>
-struct is_function<ret(args...)> : true_type {};
+struct is_function<ret(args...)> : true_type
+{
+};
 
 template<typename ret, typename... args>
-struct is_function<ret(args...) const> : true_type {};
+struct is_function<ret(args...) const> : true_type
+{
+};
 
 template<typename t>
-struct is_member_function_pointer_helper : false_type {};
+struct is_member_function_pointer_helper : false_type
+{
+};
 
 template<typename t, typename p>
 struct is_member_function_pointer_helper<t p::*> : is_function<t>
@@ -288,12 +231,14 @@ struct is_member_function_pointer_helper<t p::*> : is_function<t>
 };
 
 template<typename t>
-struct is_member_function_pointer : is_member_function_pointer_helper<typename remove_cv<t>::type>
+struct is_member_function_pointer
+    : is_member_function_pointer_helper<remove_const_t<t> >
 {
 };
 
 template<typename type>
-inline constexpr bool is_member_function_pointer_v = is_member_function_pointer<type>::value;
+static const bool is_member_function_pointer_v
+    = is_member_function_pointer<type>::value;
 
 template<typename>
 struct is_pointer : false_type
@@ -311,7 +256,7 @@ struct is_pointer<const t*> : true_type
 };
 
 template<typename type>
-inline constexpr bool is_pointer_v = is_pointer<type>::value;
+static const bool is_pointer_v = is_pointer<type>::value;
 
 template<typename>
 struct is_const : false_type
@@ -337,35 +282,6 @@ struct add_const<const t>
 
 template<typename type>
 using add_const_t = typename add_const<type>::type;
-
-template<typename t>
-struct remove_const
-{
-    typedef t type;
-};
-
-template<typename t>
-struct remove_const<const t>
-{
-    typedef t type;
-};
-
-template<typename type>
-using remove_const_t = typename remove_const<type>::type;
-
-template<typename type>
-[[nodiscard]] constexpr remove_reference_t<type>&& move(type&& t) noexcept
-{
-    return static_cast<remove_reference_t<type>&&>(t);
-}
-
-template<typename type>
-void simple_swap(type& a, type& b)
-{
-    type tmp = a;
-    a = b;
-    b = tmp;
-}
 
 template<typename t>
 concept __have_tuple_size = is_class_v<t> && requires(t* v)
@@ -413,5 +329,67 @@ template<typename cont>
         return &c[(sizeof(c) / sizeof(c[0])) - 1];
     else
         return c.end();
+}
+
+template<int index, int index_from, typename ... params>
+struct conditional_multi_f;
+
+template<int index, int index_from, typename param>
+struct conditional_multi_f<index, index_from, param>
+{
+    typedef conditional_t<index == index_from, param, void> type;
+};
+
+template<int index, int index_from, typename param, typename ... params>
+struct conditional_multi_f<index, index_from, param, params...>
+{
+    typedef conditional_t<index == index_from, param,
+        typename conditional_multi_f<index, index_from + 1, params...>::type> type;
+};
+
+template<int index, typename param, typename ... params>
+struct conditional_multi : conditional_multi_f<index, 0, param, params...>
+{
+};
+
+template<int index, typename param, typename ... params>
+using conditional_multi_t = typename conditional_multi<index, param, params...>::type;
+
+template<typename t>
+requires(__is_integral<t> && !is_same_v<t, bool>)
+struct make_unsigned
+{
+    typedef conditional_multi_t<sizeof(t) / 2, u8, u16, u32, void, u64
+#ifdef __x86_64
+        , void, void, void, u128
+#endif
+        > type;
+};
+
+template<typename t>
+requires(__is_integral<t> && !is_same_v<t, bool>)
+struct make_signed
+{
+    typedef conditional_multi_t<sizeof(t) / 2, i8, i16, i32, void, i64
+#ifdef __x86_64
+        , void, void, void, i128
+#endif
+        > type;
+};
+
+template<typename type>
+using make_unsigned_t = typename make_unsigned<type>::type;
+
+template<typename type>
+using make_signed_t = typename make_signed<type>::type;
+
+
+template<typename type>
+requires(is_signed<type>::value)
+constexpr type abs(type v)
+{
+    if(v < type())
+        return -v;
+    return v;
 }
 

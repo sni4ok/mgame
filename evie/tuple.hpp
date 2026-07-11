@@ -111,11 +111,11 @@ template<typename t>
 requires(__have_tuple_size<t>)
 struct tuple_size
 {
-    static constexpr size_t value = t::tuple_size();
+    static const size_t value = t::tuple_size();
 };
 
 template<typename t>
-inline constexpr size_t tuple_size_v = tuple_size<t>::value;
+static const size_t tuple_size_v = tuple_size<t>::value;
 
 template<size_t i, typename t>
 struct tuple_element

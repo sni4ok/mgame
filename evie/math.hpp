@@ -16,15 +16,6 @@ extern "C"
 }
 
 template<typename type>
-requires(is_signed<type>::value)
-constexpr type abs(type v)
-{
-    if(v < type())
-        return -v;
-    return v;
-}
-
-template<typename type>
 constexpr type pow(type f, u32 e)
 {
     if(!e)

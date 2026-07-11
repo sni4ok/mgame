@@ -5,13 +5,12 @@
 #include "utils.hpp"
 #include "string.hpp"
 #include "rational.hpp"
-#include "math.h"
 #include "algorithm.hpp"
 
-#include <errno.h>
-#include <string.h>
-
 #include <numeric>
+
+#include <string.h>
+#include <errno.h>
 #include <time.h>
 
 void throw_system_failure(str_holder msg)
@@ -72,10 +71,11 @@ ttime_t read_time_impl::read_time(char_cit& it)
     //2020-01-26T10:45:21.418 //frac_size 3
     //2020-01-26T10:45:21.418000001 //frac_size 9
 
-    if(!equal(cur_date.begin(), cur_date.end(), it)) [[unlikely]]
+    if(!equal(cur_date, cur_date + sizeof(cur_date), it)) [[unlikely]]
     {
         if(*(it + 4) != '-' || *(it + 7) != '-')
             throw mexception(es() % "bad time: " % str_holder(it, 26));
+
         struct tm t = tm();
         int y = atoi<int>(it, 4); 
         int m = atoi<int>(it + 5, 2); 
@@ -84,9 +84,10 @@ ttime_t read_time_impl::read_time(char_cit& it)
         t.tm_mon = m - 1;
         t.tm_mday = d;
         cur_date_time = timegm(&t) * pow10_v<9>;
-        copy(it, it + cur_date.size(), cur_date.begin());
+        copy(it, it + sizeof(cur_date), cur_date);
     }
-    it += 10;
+
+    it += sizeof(cur_date);
     if(*it != 'T' || *(it + 3) != ':' || *(it + 6) != ':' || (frac_size ? *(it + 9) != '.' : false))
         throw mexception(es() % "bad time: " % str_holder(it - 10, 20 + (frac_size ? 1 + frac_size : 0)));
 
@@ -121,15 +122,15 @@ inline time_parsed parse_time_impl(ttime_t time)
 const u32 cur_day_seconds = day_seconds(cur_mtime_seconds());
 const date cur_day_date = parse_time_impl(cur_mtime_seconds()).date;
 
-inline fstring get_cur_day_str()
+inline str_holder get_cur_day_str()
 {
-    buf_stream_fixed<29> str;
+    static buf_stream_fixed<40> str;
     str << uint_fixed<4>(cur_day_date.year) << "-" << uint_fixed<2>(cur_day_date.month)
         << "-" << uint_fixed<2>(cur_day_date.day);
-    return fstring(str.begin(), str.end());
+    return str.str();
 }
 
-const fstring cur_day_date_str = get_cur_day_str();
+const str_holder cur_day_date_str = get_cur_day_str();
 
 time_duration get_time_duration(ttime_t time)
 {

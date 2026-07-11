@@ -729,30 +729,6 @@ struct malloc_alloc
     }
 };
 
-template<int index, int index_from, typename ... params>
-struct conditional_multi_f;
-
-template<int index, int index_from, typename param>
-struct conditional_multi_f<index, index_from, param>
-{
-    typedef conditional_t<index == index_from, param, void> type;
-};
-
-template<int index, int index_from, typename param, typename ... params>
-struct conditional_multi_f<index, index_from, param, params...>
-{
-    typedef conditional_t<index == index_from, param,
-        typename conditional_multi_f<index, index_from + 1, params...>::type> type;
-};
-
-template<int index, typename param, typename ... params>
-struct conditional_multi : conditional_multi_f<index, 0, param, params...>
-{
-};
-
-template<int index, typename param, typename ... params>
-using conditional_multi_t = typename conditional_multi<index, param, params...>::type;
-
 template<typename type, bool use_tss, int t>
 struct node_type
 {

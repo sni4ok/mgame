@@ -4,8 +4,10 @@
 
 #pragma once
 
-#include "assert.hpp"
-#include "vector.hpp"
+#include "iterator.hpp"
+#include "str_holder.hpp"
+
+#include "initializer_list.hpp"
 
 template<typename type, u32 size_>
 struct carray
@@ -66,10 +68,7 @@ struct carray
     }
     constexpr span<type> str() const
     {
-        if constexpr(is_same_v<type, char>)
-            return from_array(buf);
-        else
-            return span<type>(begin(), end());
+        return span<type>(begin(), end());
     }
     constexpr carray& operator+=(const carray& r)
     {
@@ -109,7 +108,7 @@ public:
     typedef type* iterator;
     typedef const type* const_iterator;
     typedef type value_type;
-    typedef typename mvector<type>::reverse_iterator reverse_iterator;
+    typedef reverse_iter<type> reverse_iterator;
 
     array() : size_()
     {
@@ -268,15 +267,15 @@ public:
     }
     void reserve(u32 sz)
     {
-        if(sz > capacity_)
-            throw str_exception("array::reserve() sz > capacity");
+        if(sz > capacity_) [[unlikely]]
+            throw_exception("array::reserve, sz > capacity");
     }
 };
 
 template<u32 stack_sz = 252>
 using basic_string = array<char, stack_sz>;
 
-typedef basic_string<32> my_trivial_string;
+typedef basic_string<32> trivial_string;
 typedef basic_string<> fstring;
 
 template<typename stream, u32 stack_sz>

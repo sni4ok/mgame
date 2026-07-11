@@ -12,7 +12,6 @@
 
 #include "../makoa/exports.hpp"
 
-#include "../evie/utils.hpp"
 #include "../evie/signals.hpp"
 #include "../evie/config.hpp"
 #include "../evie/mlog.hpp"

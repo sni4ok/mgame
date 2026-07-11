@@ -7,7 +7,7 @@
 #include "../makoa/types.hpp"
 
 #include "../evie/fmap.hpp"
-#include "../evie/algorithm.hpp"
+#include "../evie/array.hpp"
 
 mstring join_tickers(const mvector<mstring>& tickers, bool quotes = true);
 
@@ -35,11 +35,6 @@ struct sec_id_by_name : base
 
     using base::base;
 };
-
-extern "C"
-{
-    extern size_t strnlen(const char*, size_t) __THROW __attribute_pure__ __nonnull ((1));
-}
 
 template<typename str>
 inline void skip_fixed(char_cit& it, const str& v)

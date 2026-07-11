@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <stdint.h>
+#include "../evie/stdint.hpp"
 
 struct hole_importer
 {
@@ -15,8 +15,6 @@ struct hole_importer
 };
 
 hole_importer create_importer(const char* name);
-
-typedef uint32_t u32;
 
 extern "C"
 {

@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "array.hpp"
 #include "mtime.hpp"
 #include "decimal.hpp"
 #include "print.hpp"
@@ -63,7 +62,7 @@ struct crc32
 
 struct read_time_impl
 {
-    carray<char, 10> cur_date;
+    char cur_date[10] = {};
     u64 cur_date_time;
 
     template<u32 frac_size>
@@ -118,16 +117,6 @@ struct counting_iterator
     }
 };
 
-typedef pair<counting_iterator, counting_iterator> pcc;
-
-struct zpcc : pcc
-{
-    zpcc(i64 value) : pcc({0, value})
-    {
-    }
-};
-
-
 template<char s, bool no_end_s, typename iterator, typename func>
 struct print_impl
 {
@@ -174,7 +163,7 @@ auto print_csv(const cont& c, func f = func())
 }
 
 extern const date cur_day_date;
-extern const fstring cur_day_date_str;
+extern const str_holder cur_day_date_str;
 
 template<typename stream>
 stream& operator<<(stream& s, date d)

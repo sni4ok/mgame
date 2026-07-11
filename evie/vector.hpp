@@ -6,37 +6,13 @@
 
 #include "pair.hpp"
 #include "new.hpp"
-#include "type_traits.hpp"
 #include "str_holder.hpp"
 #include "exception.hpp"
-
-#include <initializer_list>
+#include "iterator.hpp"
+#include "initializer_list.hpp"
 
 void* tss_realloc(void* ptr, u64 old_size, u64 new_size);
 void tss_free(void* ptr, u64 size);
-
-template<typename ifrom, typename ito>
-constexpr void __copy(ifrom from, ifrom to, ito out)
-{
-    for(; from != to; ++from, ++out)
-        *out = *from;
-}
-
-template<typename ifrom, typename ito>
-constexpr void copy(ifrom from, ifrom to, ito out)
-{
-    __copy(from, to, out);
-}
-
-template<typename type>
-constexpr void copy(type* from, type* to, remove_const_t<type>* out)
-    requires(is_trivially_destructible_v<type>)
-{
-    if(std::__is_constant_evaluated())
-        __copy(from, to, out);
-    else
-        memcpy(out, from, (to - from) * sizeof(type));
-}
 
 template<typename ifrom, typename ito>
 constexpr void copy_backward(ifrom from, ifrom to, ito out)
@@ -47,8 +23,8 @@ constexpr void copy_backward(ifrom from, ifrom to, ito out)
 }
 
 template<typename type>
-inline void copy_backward(type* from, type* to, remove_const_t<type>* out)
-    requires(is_trivially_destructible_v<type>)
+inline void copy_backward(type* from, type* to, typename remove_const<type>::type* out)
+    requires(is_trivially_destructible<type>::value)
 {
     memmove(out, from, (to - from) * sizeof(type));
 }
@@ -67,8 +43,8 @@ protected:
         capacity_ = 0;
     }
 
-    static const bool have_destructor = !is_trivially_destructible_v<type>;
-    static_assert(!is_polymorphic_v<type>);
+    static const bool have_destructor = !is_trivially_destructible<type>::value;
+    static_assert(!__is_polymorphic(type));
 
     static void __destroy(type* v)
     {
@@ -254,42 +230,6 @@ public:
     {
         return {begin(), end()};
     }
-
-    template<typename t>
-    struct reverse_iter
-    {
-        t* ptr;
-
-        reverse_iter& operator++()
-        {
-            --ptr;
-            return *this;
-        }
-        reverse_iter operator+(i64 c) const
-        {
-            return {ptr - c};
-        }
-        reverse_iter operator-(i64 c) const
-        {
-            return {ptr + c};
-        }
-        i64 operator-(const reverse_iter& r) const
-        {
-            return r.ptr - ptr;
-        }
-        t& operator*()
-        {
-            return *ptr;
-        }
-        t* operator->()
-        {
-            return ptr;
-        }
-        bool operator==(const reverse_iter& r) const
-        {
-            return ptr == r.ptr;
-        }
-    };
 
     typedef reverse_iter<const type> const_reverse_iterator;
     typedef reverse_iter<type> reverse_iterator;

@@ -6,16 +6,14 @@
 
 #include "../evie/mstring.hpp"
 
-struct engine // wrapper for control lifetime of consumers
-              // used modules: logger
+struct engine
 {
     class impl;
+    impl* pimpl;
+
     engine(volatile bool& can_run, bool pooling, const mvector<mstring>& exports, u32 export_threads,
         bool set_engine_time = false);
     engine(const engine&) = delete;
     ~engine();
-
-private:
-    impl* pimpl;
 };
 

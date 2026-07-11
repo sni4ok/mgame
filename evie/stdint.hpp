@@ -27,21 +27,39 @@ static_assert(sizeof(u64) == 8);
 typedef char* char_it;
 typedef const char* char_cit;
 
-template<typename t>
-struct is_signed
-{
-    static constexpr bool value = t(t() - t{1}) < t();
-};
-
-template<typename t>
-struct is_unsigned
-{
-    static constexpr bool value = !is_signed<t>::value;
-};
-
-template <typename type>
-inline constexpr bool is_class_v = __is_class(type);
-
 struct forward_iterator_tag;
 struct bidirectional_iterator_tag;
+
+template <typename type>
+inline const bool is_class_v = __is_class(type);
+
+template<typename t>
+struct is_trivially_destructible
+{
+#ifdef CLANG_COMPILER
+    static const bool value = __is_trivially_destructible(t);
+#else
+    static const bool value = __has_trivial_destructor(t);
+#endif
+};
+
+template<typename t>
+struct remove_const
+{
+    typedef t type;
+};
+
+template<typename t>
+struct remove_const<const t>
+{
+    typedef t type;
+};
+
+template<typename type>
+void simple_swap(type& a, type& b)
+{
+    type tmp = a;
+    a = b;
+    b = tmp;
+}
 

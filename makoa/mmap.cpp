@@ -4,7 +4,6 @@
 
 #include "mmap.hpp"
 
-#include "../evie/utils.hpp"
 #include "../evie/mfile.hpp"
 #include "../evie/mlog.hpp"
 #include "../evie/string.hpp"

@@ -8,10 +8,8 @@
 
 #include "../evie/socket.hpp"
 #include "../evie/fmap.hpp"
-#include "../evie/utils.hpp"
 #include "../evie/thread.hpp"
 #include "../evie/profiler.hpp"
-#include "../evie/optional.hpp"
 #include "../evie/mlog.hpp"
 
 #include <sys/stat.h>

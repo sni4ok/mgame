@@ -1,6 +1,10 @@
+/*
+    author: Ilya Andronov <sni4ok@yandex.ru>
+*/
+
+#include "decimal.hpp"
 #include "mlog.hpp"
 #include "utils.hpp"
-#include "math.hpp"
 #include "string.hpp"
 #include "mstring.hpp"
 

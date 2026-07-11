@@ -5,7 +5,6 @@
 #pragma once
 
 #include "tuple.hpp"
-#include "math.hpp"
 #include "optional.hpp"
 #include "profiler.hpp"
 

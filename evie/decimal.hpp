@@ -1,3 +1,7 @@
+/*
+    author: Ilya Andronov <sni4ok@yandex.ru>
+*/
+
 #pragma once
 
 #include "math.hpp"
@@ -10,7 +14,7 @@ concept is_decimal = is_class_v<type> && requires(type* t)
 };
 
 template<u32 v>
-inline constexpr u64 pow10_v = pow<u64>(10, v);
+static const u64 pow10_v = pow<u64>(10, v);
 
 template<typename type>
 requires(is_decimal<type>)

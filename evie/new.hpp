@@ -7,6 +7,8 @@
 #ifndef _NEW
 #define _NEW
 
+#include "stdint.hpp"
+
 inline void* operator new(size_t, void* p)
 {
     return p;

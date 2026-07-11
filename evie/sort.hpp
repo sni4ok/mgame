@@ -1,3 +1,7 @@
+/*
+    author: Ilya Andronov <sni4ok@yandex.ru>
+*/
+
 #pragma once
 
 #include "algorithm.hpp"
@@ -17,8 +21,9 @@ int qsort_cmp(const void* p1, const void* p2, void* cmp)
 
 extern "C"
 {
-    typedef int (*__compar_d_fn_t) (const void *, const void *, void *);
-    extern void qsort_r (void *, size_t, size_t, __compar_d_fn_t, void *) __nonnull ((1, 4));
+    typedef int(*__compar_d_fn_t)(const void*, const void*, void*);
+    extern void qsort_r(void*, size_t, size_t, __compar_d_fn_t, void *)
+        __attribute__ ((__nonnull__(1, 4)));
 }
 
 template<typename type, typename comp = less<type> >

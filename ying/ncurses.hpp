@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "../evie/utils.hpp"
 #include "../evie/mlog.hpp"
 
 #include <curses.h>

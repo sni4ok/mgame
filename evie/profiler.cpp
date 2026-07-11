@@ -95,7 +95,7 @@ u64 profiler::register_counter(char_cit id, type t)
         if(c == max_counters)
         {
             free(cid);
-            throw mexception("profiler::register_counter() overloaded");
+            throw_exception("profiler::register_counter, overloaded");
         }
 
         info& i = counters[c];

@@ -111,7 +111,7 @@ struct atoi_size<bool>
 };
 
 template<typename type>
-inline constexpr u32 atoi_size_v = atoi_size<type>::value;
+static const u32 atoi_size_v = atoi_size<type>::value;
 
 i64 read_decimal_impl(char_cit it, char_cit ie, int exponent);
 

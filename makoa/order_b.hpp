@@ -7,7 +7,8 @@
 #include "messages.hpp"
 
 #include "../evie/profiler.hpp"
-#include "../evie/string.hpp"
+#include "../evie/decimal.hpp"
+#include "../evie/str_holder.hpp"
 
 struct message_brief
 {
@@ -112,7 +113,7 @@ void proceed_message_bba(const message_book& mb, auto& asks, auto& bids)
     else if(mb.level_id == 2)
         f(asks, -mb.count);
     else [[unlikely]]
-        throw str_exception("proceed_message_bba out of range");
+        throw_exception("proceed_message_bba out of range");
 }
 
 void proceed_message_book(const message_book& mb, auto& orders, auto& asks, auto& bids)

@@ -6,7 +6,6 @@
 
 #include "order_b.hpp"
 
-#include "../evie/utils.hpp"
 #include "../evie/fmap.hpp"
 #include "../evie/price_map.hpp"
 #include "../evie/mlog.hpp"
