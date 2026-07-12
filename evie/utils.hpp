@@ -7,6 +7,7 @@
 #include "mtime.hpp"
 #include "decimal.hpp"
 #include "print.hpp"
+#include "type_traits.hpp"
 
 struct uint_fix
 {
@@ -163,13 +164,13 @@ auto print_csv(const cont& c, func f = func())
 }
 
 extern const date cur_day_date;
-extern const str_holder cur_day_date_str;
+str_holder cur_day_date_str();
 
 template<typename stream>
 stream& operator<<(stream& s, date d)
 {
     if(d == cur_day_date)
-        s << cur_day_date_str;
+        s << cur_day_date_str();
     else
         s << d.year << '-' << print2chars(d.month) << '-' << print2chars(d.day);
     return s;

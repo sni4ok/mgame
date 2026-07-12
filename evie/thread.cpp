@@ -6,25 +6,35 @@
 #include "atomic.hpp"
 #include "mlog.hpp"
 #include "profiler.hpp"
+#include "thread.hpp"
 #include "queue.hpp"
 #include "mlog.hpp"
 
 #include <pthread.h>
-#include "thread.hpp" //
-
 #include <csignal>
 #include <errno.h>
 #include <sys/resource.h>
 
+pthread_mutex_t* get(mutex* m)
+{
+    return (pthread_mutex_t*)m->__mutex;
+}
+
+pthread_cond_t* get(condition* c)
+{
+    return (pthread_cond_t*)c->__condotion;
+}
+
 mutex::mutex()
 {
-    if(pthread_mutex_init(&__mutex, nullptr))
+    static_assert(sizeof(pthread_mutex_t) == __mutex_size);
+    if(pthread_mutex_init(get(this), nullptr))
         throw str_exception("create mutex error");
 }
 
 mutex::~mutex()
 {
-    if(pthread_mutex_destroy(&__mutex))
+    if(pthread_mutex_destroy(get(this)))
     {
         ASSERT(false && "mutex::~mutex()");
         mlog(mlog::critical) << "mutex::~mutex() pthread_mutex_destroy()";
@@ -33,22 +43,20 @@ mutex::~mutex()
 
 void mutex::lock()
 {
-    //MPROFILE("mutex::lock")
-    if(pthread_mutex_lock(&__mutex))
+    if(pthread_mutex_lock(get(this)))
         throw str_exception("lock mutex error");
 }
 
 bool mutex::try_lock()
 {
-    //MPROFILE("mutex::try_lock")
-    if(pthread_mutex_trylock(&__mutex))
+    if(pthread_mutex_trylock(get(this)))
         return false;
     return true;
 }
 
 void mutex::unlock()
 {
-    if(pthread_mutex_unlock(&__mutex))
+    if(pthread_mutex_unlock(get(this)))
         throw str_exception("unlock mutex error");
 }
 
@@ -72,7 +80,7 @@ void mutex::scoped_lock::unlock()
 
 mutex::scoped_lock::~scoped_lock()
 {
-    if(locked && pthread_mutex_unlock(&__mutex.__mutex))
+    if(locked && pthread_mutex_unlock(get(&__mutex)))
     {
         ASSERT(false && "mutex::scoped_lock::~scoped_lock()");
         mlog(mlog::critical) << "mutex::scoped_lock::~scoped_lock() unlock mutex error";
@@ -81,13 +89,13 @@ mutex::scoped_lock::~scoped_lock()
 
 condition::condition()
 {
-    if(pthread_cond_init(&__condition, nullptr))
+    if(pthread_cond_init(get(this), nullptr))
         throw str_exception("create condition error");
 }
 
 condition::~condition()
 {
-    if(pthread_cond_destroy(&__condition))
+    if(pthread_cond_destroy(get(this)))
     {
         ASSERT(false && "condition::~condition()");
         mlog(mlog::critical) << "condition::~condition() destroy condition error";
@@ -96,7 +104,7 @@ condition::~condition()
 
 void condition::wait(mutex::scoped_lock& lock)
 {
-    if(pthread_cond_wait(&__condition, &lock.__mutex.__mutex))
+    if(pthread_cond_wait(get(this), get(&lock.__mutex)))
         throw str_exception("condition::wait() error");
 }
 
@@ -105,7 +113,7 @@ void condition::timed_wait(mutex::scoped_lock& lock, u32 sec)
     timespec t;
     clock_gettime(CLOCK_REALTIME, &t);
     t.tv_sec += sec;
-    int r = pthread_cond_timedwait(&__condition, &lock.__mutex.__mutex, &t);
+    int r = pthread_cond_timedwait(get(this), get(&lock.__mutex), &t);
     if(r && r != ETIMEDOUT)
         throw str_exception("condition::timed_wait() error");
 }
@@ -120,20 +128,20 @@ void condition::timed_uwait(mutex::scoped_lock& lock, u32 usec)
         t.tv_sec += t.tv_nsec / frac<ttime_t>();
         t.tv_nsec %= frac<ttime_t>();
     }
-    int r = pthread_cond_timedwait(&__condition, &lock.__mutex.__mutex, &t);
+    int r = pthread_cond_timedwait(get(this), get(&lock.__mutex), &t);
     if(r && r != ETIMEDOUT)
         throw str_exception("condition::timed_uwait() error");
 }
 
 void condition::notify_one()
 {
-    if(pthread_cond_signal(&__condition))
+    if(pthread_cond_signal(get(this)))
         throw str_exception("condition::notify_one() error");
 }
 
 void condition::notify_all()
 {
-    if(pthread_cond_broadcast(&__condition))
+    if(pthread_cond_broadcast(get(this)))
         throw str_exception("condition::notify_all() error");
 }
 

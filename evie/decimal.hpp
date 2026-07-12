@@ -7,7 +7,7 @@
 #include "math.hpp"
 
 template<typename type>
-concept is_decimal = is_class_v<type> && requires(type* t)
+concept is_decimal = __is_class(type) && requires(type* t)
 {
     t->exponent;
     t->value;

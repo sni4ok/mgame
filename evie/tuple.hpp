@@ -6,6 +6,7 @@
 
 #include "print.hpp"
 #include "pair.hpp"
+#include "type_traits.hpp"
 
 template<typename ... types>
 struct tuple;
@@ -105,6 +106,12 @@ struct tuple<type, types...>
             return true;
         return values < r.values;
     }
+};
+
+template<typename t>
+concept __have_tuple_size = __is_class(t) && requires(t* v)
+{
+    v->tuple_size();
 };
 
 template<typename t>

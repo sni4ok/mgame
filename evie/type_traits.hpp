@@ -132,6 +132,9 @@ using remove_pointer_t = typename remove_pointer<type>::type;
 template<typename t, typename p>
 static const bool is_same_v = is_same<t, p>::value;
 
+template <typename type>
+inline const bool is_class_v = __is_class(type);
+
 template<typename type>
 concept __is_integral = !is_class_v<type> && 
     is_same_v<type, remove_reference_t<type> > && requires(remove_const_t<type> a, type b)
@@ -189,18 +192,6 @@ struct is_numeric
 
 template<typename type>
 static const bool is_numeric_v = is_numeric<type>::value;
-
-template<bool const, typename t, typename p>
-struct conditional
-{
-    typedef t type;
-};
-
-template<typename t, typename p>
-struct conditional<false, t, p>
-{
-    typedef p type;
-};
 
 template<bool cond, typename t, typename p>
 using conditional_t = typename conditional<cond, t, p>::type;
@@ -283,12 +274,6 @@ struct add_const<const t>
 template<typename type>
 using add_const_t = typename add_const<type>::type;
 
-template<typename t>
-concept __have_tuple_size = is_class_v<t> && requires(t* v)
-{
-    v->tuple_size();
-};
-
 template<typename t1, typename t2 = t1>
 concept __have_equal_op = is_class_v<t1> && requires(t1& v1, t2& v2)
 {
@@ -360,7 +345,7 @@ requires(__is_integral<t> && !is_same_v<t, bool>)
 struct make_unsigned
 {
     typedef conditional_multi_t<sizeof(t) / 2, u8, u16, u32, void, u64
-#ifdef __x86_64
+#ifdef USE_INT128_EXT
         , void, void, void, u128
 #endif
         > type;
@@ -371,7 +356,7 @@ requires(__is_integral<t> && !is_same_v<t, bool>)
 struct make_signed
 {
     typedef conditional_multi_t<sizeof(t) / 2, i8, i16, i32, void, i64
-#ifdef __x86_64
+#ifdef USE_INT128_EXT
         , void, void, void, i128
 #endif
         > type;

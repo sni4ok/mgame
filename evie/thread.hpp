@@ -6,11 +6,19 @@
 
 #include "tuple.hpp"
 
-#include <bits/pthreadtypes.h>
+static const u64 __mutex_size = 
+#ifdef __x86_64
+    40
+#else
+    24
+#endif
+, __condition_size = 48;
+
+static const u32 max_threads_count = 100;
 
 struct mutex
 {
-    pthread_mutex_t __mutex;
+    u64 __mutex[__mutex_size / 8];
 
     mutex();
     ~mutex();
@@ -110,7 +118,7 @@ struct critical_section::mt_lock<false>
 
 struct condition
 {
-    pthread_cond_t __condition;
+    u64 __condotion[__condition_size / 8];
 
     condition();
     ~condition();
@@ -122,8 +130,6 @@ struct condition
     void notify_one();
     void notify_all();
 };
-
-static const u32 max_threads_count = 100;
 
 void* init_free_threads();
 void delete_free_threads(void* ptr);

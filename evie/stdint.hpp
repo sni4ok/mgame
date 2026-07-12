@@ -30,31 +30,6 @@ typedef const char* char_cit;
 struct forward_iterator_tag;
 struct bidirectional_iterator_tag;
 
-template <typename type>
-inline const bool is_class_v = __is_class(type);
-
-template<typename t>
-struct is_trivially_destructible
-{
-#ifdef CLANG_COMPILER
-    static const bool value = __is_trivially_destructible(t);
-#else
-    static const bool value = __has_trivial_destructor(t);
-#endif
-};
-
-template<typename t>
-struct remove_const
-{
-    typedef t type;
-};
-
-template<typename t>
-struct remove_const<const t>
-{
-    typedef t type;
-};
-
 template<typename type>
 void simple_swap(type& a, type& b)
 {
@@ -62,4 +37,16 @@ void simple_swap(type& a, type& b)
     a = b;
     b = tmp;
 }
+
+template<bool const, typename t, typename p>
+struct conditional
+{
+    typedef t type;
+};
+
+template<typename t, typename p>
+struct conditional<false, t, p>
+{
+    typedef p type;
+};
 
