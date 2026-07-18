@@ -16,27 +16,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     config& cfg;
     zlibe zlib;
 
-    char ch[13];
-    char ts[7];
-    char tick[11];
-    char ask[8];
-    char askSize[12];
-    char bid[8];
-    char bidSize[12];
-    char end[3];
-
-    char id[7];
-    char amount[11];
-    char price[10];
-    char direction[15];
-    char sell[7];
-    char buy[6];
-   
-    char bids[8];
-    char asks[8];
-
-    char ping[7];
-    char error[16];
+    static constexpr char end[3] = "}}";
 
     typedef basic_string<64> string;
     struct impl;
@@ -62,17 +42,17 @@ struct lws_i : sec_id_by_name<lws_impl>
         //MPROFILE("parse_bbo")
 
         it = find(it, ie, ',');
-        skip_fixed(it, ask);
+        skip_fixed(it, ",\"ask\":");
         char_cit ne = find(it, ie, ',');
         price_t ask_price = lexical_cast<price_t>(it, ne);
-        skip_fixed(ne, askSize);
+        skip_fixed(ne, ",\"askSize\":");
         it = find(ne, ie, ',');
         count_t ask_count = lexical_cast<count_t>(ne, it);
-        ask_count.value = -ask_count.value;
-        skip_fixed(it, bid);
+        ask_count = -ask_count;
+        skip_fixed(it, ",\"bid\":");
         ne = find(it, ie, ',');
         price_t bid_price = lexical_cast<price_t>(it, ne);
-        skip_fixed(ne, bidSize);
+        skip_fixed(ne, ",\"bidSize\":");
         it = find(ne, ie, ',');
         count_t bid_count = lexical_cast<count_t>(ne, it);
 
@@ -119,13 +99,14 @@ struct lws_i : sec_id_by_name<lws_impl>
         search_and_skip_fixed(it, ie, ",\"");
 
         bool have_asks = false;
+        static const char asks[8] = "asks\":[";
         if(skip_if_fixed(it, asks))
         {
             parse_orders_impl(i, etime, time, it, ie, true);
             have_asks = true;
         }
 
-        search_and_skip_fixed(it, ie, bids);
+        search_and_skip_fixed(it, ie, "bids\":[");
         parse_orders_impl(i, etime, time, it, ie, false);
 
         if(!have_asks)
@@ -153,26 +134,28 @@ struct lws_i : sec_id_by_name<lws_impl>
         it = find(it, ie, '[') + 1;
         for(;;)
         {
-            skip_fixed(it, id);
+            skip_fixed(it, "{\"id\":");
             it = find(it, ie, ',');
             it = find(it + 1, ie, ',');
             it = find(it + 1, ie, ',');
-            skip_fixed(it, amount);
+            skip_fixed(it, ",\"amount\":");
             char_cit ne = find(it, ie, ',');
             count_t c = lexical_cast<count_t>(it, ne);
-            skip_fixed(ne, price);
+            skip_fixed(ne, ",\"price\":");
             it = find(ne, ie, ',');
             price_t p = lexical_cast<price_t>(ne, it);
-            skip_fixed(it, direction);
+            skip_fixed(it, ",\"direction\":\"");
             u32 dir;
             if(*it == 's')
             {
-                skip_fixed(it, sell);
+                skip_fixed(it, "sell\",\"isRpiTrade\":");
+                it = find(it, ne, '}') + 1;
                 dir = 2;
             }
             else
             {
-                skip_fixed(it, buy);
+                skip_fixed(it, "buy\",\"isRpiTrade\":");
+                it = find(it, ne, '}') + 1;
                 dir = 1;
             }
             add_trade(i.security_id, p, c, dir, etime, time);
@@ -190,23 +173,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         send_messages();
     }
     lws_i() : sec_id_by_name<lws_impl>(config::instance().push,
-        config::instance().log_lws, char(), char()), cfg(config::instance()),
-        ch("ch\":\"market."),
-        ts(",\"ts\":"),
-        tick(",\"tick\":{\""),
-        ask(",\"ask\":"), askSize(",\"askSize\":"),
-        bid(",\"bid\":"), bidSize(",\"bidSize\":"),
-        end("}}"),
-        id("{\"id\":"),
-        amount(",\"amount\":"),
-        price(",\"price\":"),
-        direction(",\"direction\":\""),
-        sell("sell\"}"),
-        buy("buy\"}"),
-        bids("bids\":["),
-        asks("asks\":["),
-        ping("ping\":"),
-        error("status\":\"error\"")
+        config::instance().log_lws, char(), char()), cfg(config::instance())
     {
         for(auto& v: cfg.tickers)
         {
@@ -249,9 +216,8 @@ struct lws_i : sec_id_by_name<lws_impl>
             throw mexception(es() % "bad message: " % str);
         it = it + 2;
 
-        if(equal(ch, ch + sizeof(ch) - 1, it)) [[likely]]
+        if(skip_if_fixed(it, "ch\":\"market."))
         {
-            it = it + sizeof(ch) - 1;
             char_cit ne = find(it, ie, '\"');
             str_holder symbol(it, ne - it);
             auto i = parsers.find(symbol);
@@ -261,17 +227,16 @@ struct lws_i : sec_id_by_name<lws_impl>
                 i->second.security_id = get_security_id(i->second.security.begin(),
                     i->second.security.end(), time, cfg);
             ++ne;
-            skip_fixed(ne, ts);
+            skip_fixed(ne, ",\"ts\":");
             ttime_t etime = milliseconds(atoi<i64>(ne, 13));
             ne += 13;
-            skip_fixed(ne, tick);
+            skip_fixed(ne, ",\"tick\":{\"");
             ((this)->*(i->second.f))(i->second, etime, time, ne, ie);
             if(ne != ie)
                 throw mexception(es() % "parsing market message error: " % str);
         }
-        else if(equal(ping, ping + sizeof(ping) - 1, it))
+        else if(skip_if_fixed(it, "ping\":"))
         {
-            it = it + sizeof(ping) - 1;
             if(*(it + 13) != '}' || it + 14 != ie) [[unlikely]]
                 throw mexception(es() % "bad ping message: " % str);
 
@@ -280,7 +245,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             bs << "}";
             send(wsi);
         }
-        else if(equal(error, error + sizeof(error) - 1, it)) [[unlikely]]
+        else if(skip_if_fixed(it, "status\":\"error\""))
             throw mexception(es() % "error message: " % str);
         else
             mlog(mlog::critical) << "unsupported message: " << str;
