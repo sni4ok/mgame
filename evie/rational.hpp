@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "mstring.hpp"
 #include "decimal.hpp"
+#include "lexical_cast.hpp"
 
 struct rational
 {

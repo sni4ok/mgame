@@ -8,6 +8,7 @@
 #include "type_traits.hpp"
 #include "decimal.hpp"
 #include "limits.hpp"
+#include "lexical_cast.hpp"
 
 u32 itoa(char_it buf, bool t);
 u32 itoa(char_it buf, char v);
@@ -117,7 +118,7 @@ i64 read_decimal_impl(char_cit it, char_cit ie, int exponent);
 
 template<typename decimal>
 inline decimal lexical_cast(char_cit it, char_cit ie)
-    requires(is_decimal<decimal> && decimal::exponent != 0)
+    requires(is_decimal<decimal>)
 {
     decimal ret;
     ret.value = read_decimal_impl(it, ie, decimal::exponent);
@@ -132,11 +133,6 @@ type lexical_cast(char_cit from, char_cit to)
         throw_exception("lexical_cast<integral>, from == to");
     return atoi<type>(from, to - from);
 }
-
-struct mstring;
-template<typename type>
-requires(!(is_integral_v<type> || is_same_v<type, mstring> || is_decimal<type>))
-type lexical_cast(char_cit from, char_cit to);
 
 template<> double lexical_cast<double>(char_cit from, char_cit to);
 

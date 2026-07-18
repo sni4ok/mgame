@@ -6,6 +6,7 @@
 #include "string.hpp"
 #include "rational.hpp"
 #include "algorithm.hpp"
+#include "mstring.hpp"
 
 #include <numeric>
 

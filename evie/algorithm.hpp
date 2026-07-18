@@ -251,7 +251,8 @@ bool equal(iterator b1, iterator e1, iterator b2, iterator e2)
 }
 
 template<typename t1, typename t2>
-concept __classes_with_begin = is_class_v<t1> && is_class_v<t2> && __have_begin<t1> && __have_begin<t2>;
+concept __classes_with_begin = is_class_v<t1> && is_class_v<t2>
+    && __have_begin<t1> && __have_begin<t2>;
 
 template<typename t1, typename t2>
 bool operator==(const t1& v1, const t2& v2)

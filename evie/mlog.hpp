@@ -87,4 +87,5 @@ struct print_t
 };
 
 mlog& operator<<(mlog& m, print_t t);
+buf_stream& operator<<(buf_stream& s, print_t t);
 

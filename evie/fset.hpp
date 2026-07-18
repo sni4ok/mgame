@@ -7,7 +7,8 @@
 #include "vector.hpp"
 #include "algorithm.hpp"
 
-template<typename type, typename comp = less<type>, template <typename> typename vector = fvector>
+template<typename type, typename comp = less<type>,
+    template <typename> typename vector = fvector>
 struct fset
 {
     typedef type key_type;
@@ -17,13 +18,17 @@ struct fset
 
     vector<type> data;
 
-    fset() {
+    fset()
+    {
     }
-    fset(fset&& r) : data(move(r.data)) {
+    fset(fset&& r) : data(move(r.data))
+    {
     }
-    fset(const fset& r) : data(r.data) {
+    fset(const fset& r) : data(r.data)
+    {
     }
-    fset(std::initializer_list<type> init) {
+    fset(std::initializer_list<type> init)
+    {
         for(const auto& v: init)
             insert(v);
     }
