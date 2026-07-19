@@ -56,24 +56,20 @@ struct security_filter
     }
 };
 
-char get_direction(u32 direction)
+pair<int, char> trade_color(u32 direction)
 {
     if(direction == 0)
-        return 'U';
+        return {1, 'U'};
     if(direction == 1)
-        return 'B';
+        return {2, 'B'};
     if(direction == 2)
-        return 'S';
+        return {3, 'S'};
     throw mexception(es() % "bad direction: " % direction);
 }
 
 struct print_dt
 {
     i64 value;
-
-    explicit print_dt(i64 value) : value(value)
-    {
-    }
 };
 
 template<typename stream>
@@ -91,8 +87,11 @@ stream& operator<<(stream& s, print_dt v)
     return s;
 }
 
-void wstr(WINDOW* w, int y, int x, char_cit str, int n)
+void wstr(window& w, int y, int x, char_cit str, int n)
 {
+    if(x + n + 1 > int(w.cols))
+        n = w.cols - x - 1;
+
     e = mvwaddnstr(w, y, x, str, n);
 }
 
@@ -367,11 +366,16 @@ struct mirror::impl
         if(tr == last_printed_trade)
             return;
 
+        if(w.cols <= trades_from)
+            return;
+
         u32 i = 0;
         u32 trades_width_limit = w.cols - trades_from;
 
-        for(auto& v : *trades)
+        for(const auto& v : *trades)
         {
+            auto p = trade_color(v.direction);
+            e = attron(COLOR_PAIR(p.first));
             bs << "  ";
             if(tp.print_etime)
                 bs << print_td(v.etime, tp.mode) << " ";
@@ -383,16 +387,28 @@ struct mirror::impl
             {
                 bs << " ";
                 print_c(bs, v.count, dp.count_decimal);
-                bs << " " << get_direction(v.direction);
+                bs << " " << p.second;
             }
 
+            bool print = true;
             if(bs.size() < trades_width)
-                bs.write(w.blank_row.begin(), trades_width - bs.size());
+            {
+                wstr(w, i++, trades_from, bs.begin(), bs.size());
+                e = attron(COLOR_PAIR(1));
+                wstr(w, i - 1, trades_from + bs.size(), w.blank_row.begin(), trades_width - bs.size());
+                print = false;
+            }
             else if(bs.size() > trades_width_limit)
                 bs.resize(trades_width_limit);
             else
                 trades_width = max<u32>(trades_width, bs.size());
-            wstr(w, i++, trades_from, bs.begin(), bs.size());
+
+            if(print)
+            {
+                wstr(w, i++, trades_from, bs.begin(), bs.size());
+                e = attron(COLOR_PAIR(1));
+            }
+
             bs.clear();
         }
 
@@ -491,7 +507,8 @@ struct mirror::impl
         if(!dEdP_printed)
         {
             bs << "dE: " << print_dt(dE.value) << ", dP: " << print_dt(dP.value) << '\0';
-            wstr(w, w.rows - 1, w.cols - bs.size(), bs.begin(), bs.size());
+            if(w.cols > bs.size())
+                wstr(w, w.rows - 1, w.cols - bs.size(), bs.begin(), bs.size());
             bs.clear();
             dEdP_printed = true;
         }
@@ -630,8 +647,8 @@ struct mirror::impl
             curs_set(0);
             e = start_color()
                 & init_pair(1, COLOR_WHITE, COLOR_BLACK)
-                & init_pair(2, COLOR_BLUE, COLOR_YELLOW)
-                & init_pair(3, COLOR_BLUE, COLOR_CYAN);
+                & init_pair(2, COLOR_BLUE, COLOR_CYAN)
+                & init_pair(3, COLOR_BLUE, COLOR_YELLOW);
 
             while(can_run)
             {

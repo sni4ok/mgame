@@ -136,7 +136,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                 ne = find(it, ie, '\"');
                 count_t c = lexical_cast<count_t>(it, ne);
                 it = ne + 1;
-                skip_fixed(it, ",\"");
+                skip_fixed(it, ",\"S\":\"");
                 int dir = 1;
                 if(*it == 'S')
                     dir = 2;
