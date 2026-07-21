@@ -56,7 +56,7 @@ auto read_csv_impl(char_cit& i, char_cit e, char sep)
 template<typename ... types, typename func>
 void read_csv(func f, str_holder s, char sep = ',', bool skip_empty_lines = true)
 {
-    char_cit i = s.begin(), e = s.end();
+    auto [i, e] = be(s);
     while(i != e)
     {
         char_cit t = find(i, e, endl);

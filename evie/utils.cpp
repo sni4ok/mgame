@@ -7,6 +7,7 @@
 #include "rational.hpp"
 #include "algorithm.hpp"
 #include "mstring.hpp"
+#include "mlog.hpp"
 
 #include <numeric>
 
@@ -334,5 +335,10 @@ ttime_t cur_ttime()
 ttime_t cur_ttime_seconds()
 {
     return seconds(time(NULL));
+}
+
+void print_init(int argc, char_cit* argv)
+{
+    mlog(mlog::no_cout) << print<' '>(argv, argv + argc);
 }
 

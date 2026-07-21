@@ -25,7 +25,7 @@ namespace ns
 
 extern void (*term_signal_func)(int);
 
-int main(int argc, char** argv)
+int main(int argc, char_cit* argv)
 {
     unique_ptr<simple_log, free_simple_log> log;
 

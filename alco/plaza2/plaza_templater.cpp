@@ -729,7 +729,7 @@ void proceed_selected(const mstring& ini_folder, const mstring& scheme,
     cout() << "sources " << str.str() << " successfully saved";
 }
 
-int main(int argc, char** arg)
+int main(int argc, char_cit* arg)
 {
     try
     {

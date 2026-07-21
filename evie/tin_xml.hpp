@@ -43,7 +43,8 @@ struct xml_element
         }
     rep:
         e = search(e, t, sf, st);
-        if(e != t && (*(e + (st - sf)) != '>' || *(e - 1) != '/' || *(e - 2) != '<')) {
+        if(e != t && (*(e + (st - sf)) != '>' || *(e - 1) != '/' || *(e - 2) != '<'))
+        {
             e += (st - sf);
             goto rep;
         }
@@ -51,7 +52,7 @@ struct xml_element
     }
     static void throw_error()
     {
-        throw str_exception("tin_xml() parsing error");
+        throw str_exception("tin_xml, parsing error");
     }
     static void skip_blanks(char_cit& i, char_cit e)
     {
@@ -60,7 +61,7 @@ struct xml_element
     }
     void skip_xml_tags()
     {
-        char_cit i = data.begin(), e = data.end();
+        auto [i, e] = be(data);
         for(;;)
         {
             if(*i != '<')
@@ -79,8 +80,8 @@ struct xml_element
     }
     xml_element first_child_impl(str_holder data, str_holder name, bool optional) const
     {
-        char_cit i = data.begin();
-        char_cit e = data.end();
+        auto [i, e] = be(data);
+
     rep:
         i = find(i, e, '<');
         char_cit s = find_if(i, e, is_any_of(" >"));
@@ -107,7 +108,7 @@ struct xml_element
         {
             if(optional)
                 return {buf, str_holder()};
-            throw mexception(es() % "tin_xml::first_child(), " % name % " not found");
+            throw_exception("tin_xml, not found: ", name);
         }
         return {buf, {i, e}};
     }
@@ -149,12 +150,12 @@ struct xml_element
         char_cit i = find(data.begin(), data.end(), '>');
         char_cit e = find(i, data.end(), '<');
         if(e == data.end())
-            throw str_exception("tin_xml::value(), not found");
+            throw str_exception("tin_xml, value not found");
         return {i + 1, e};
     }
     str_holder name() const
     {
-        if(*data.begin() != ' ')
+        if(data.front() != ' ')
             throw_error();
         char_cit i = data.begin(), b = buf->begin();
         while(i != b && *i != '<')
@@ -172,7 +173,7 @@ struct xml_element
         if(i == e)
         {
             if(!optional)
-                throw mexception(es() % "tin_xml::attribute(), " % name % " not found");
+                throw_exception("tin_xml, attribute not found: ", name);
             else
                 return str_holder();
         }
@@ -233,7 +234,7 @@ struct xml_element
 inline xml_element parse_xml(mvector<char>&& data)
 {
     if(data.size() < 1)
-        throw str_exception("parse_xml() error");
+        throw str_exception("parse_xml, error");
     shared_ptr<mvector<char> > buf(new mvector<char>);
     *buf = move(data);
     xml_element e = {buf, {buf->begin(), buf->end()}};

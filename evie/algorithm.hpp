@@ -419,3 +419,15 @@ i64 distance(iterator f, iterator t)
         return t - f;
 }
 
+template<typename t1, typename t2>
+pair<t1, t2> make_pair(const t1& l, const t2& r)
+{
+    return {l, r};
+}
+
+template<typename cont>
+auto be(const cont& c)
+{
+    return make_pair(::begin(c), ::end(c));
+}
+

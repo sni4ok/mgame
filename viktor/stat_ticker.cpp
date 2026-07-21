@@ -148,7 +148,7 @@ namespace
                     if(prices.empty())
                         return price_t();
 
-                    auto it = prices.begin(), ie = prices.end();
+                    auto [it, ie] = be(prices);
                     price_t price = *it;
                     ++it;
                     price_t min_price = abs(price - *it);

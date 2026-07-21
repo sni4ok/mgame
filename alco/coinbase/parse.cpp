@@ -29,9 +29,14 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
     }
     void proceed(lws*, char_cit in, size_t len)
     {
+        auto err = [&]()
+        {
+            throw_exception("coinbase, parsing error: ", str_holder(in, len));
+        };
+
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
-            mlog() << "lws proceed: " << str_holder(in, len);
+            mlog() << "coinbase, lws proceed: " << str_holder(in, len);
         char_cit it = in, ie = it + len;
         skip_fixed(it, "{\"type\":\"");
 
@@ -77,7 +82,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
             send_messages();
 
             if(it != ie) [[unlikely]]
-                throw mexception(es() % "parsing message error: " % str_holder(in, ie - in));
+                err();
         }
         else if(skip_if_fixed(it, "match\",\"trade_id\":"))
         {
@@ -115,7 +120,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
             ttime_t etime = read_time<6>(it);
             skip_fixed(it, "Z\"}");
             if(it != ie) [[unlikely]]
-                throw mexception(es() % "parsing message error: " % str_holder(in, ie - in));
+                err();
         
             add_trade(security_id, p, c, direction, etime, time);
             send_messages();
@@ -123,10 +128,10 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
         else if(skip_if_fixed(it, "heartbeat\""))
         {
             if(ie - it > 120)
-                throw mexception(es() % "parsing message error: " % str_holder(in, ie - in));
+                err();
         }
         else if(skip_if_fixed(it, "error\""))
-            throw mexception(es() % "error message: " % str_holder(in, len));
+            throw_exception("coinbase, error message: ", str_holder(in, len));
     }
 };
 

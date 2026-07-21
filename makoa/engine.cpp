@@ -480,7 +480,7 @@ void actives::on_disconnect()
 {
     mlog() << "makoa() actives::on_disconnect";
     engine::impl::instance().push_clean(data);
-    auto it = data.begin(), ie = data.end();
+    auto [it, ie] = be(data);
     for(; it != ie; ++it)
     {
         auto& v = get(it->security_id);

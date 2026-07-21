@@ -26,7 +26,6 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
 
         for(auto& v: cfg.tickers)
         {
-            //subscribes.push_back(sb + "instrument:" + v + se);
             if(cfg.orders)
                 subscribes.push_back(sb + cfg.orders_table + ":" + v + se);
             if(cfg.trades)
@@ -61,7 +60,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
-            mlog() << "lws proceed: " << str_holder(in, len);
+            mlog() << "bitmex, lws proceed: " << str_holder(in, len);
         char_cit it = in, ie = it + len;
 
         skip_fixed(it, "{\"");
@@ -156,7 +155,7 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                                 }
                                 send_messages();
                                 if(it != ie) [[unlikely]]
-                                    throw mexception(es() % "parsing message error: " % str_holder(in, len));
+                                    throw_exception("bitmex, parsing message error: ", str_holder(in, len));
                                 return;
                             }
                         }
@@ -164,12 +163,12 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                 }
                 send_messages();
                 if(it != ie) [[unlikely]]
-                    throw mexception(es() % "parsing message error: " % str_holder(in, len));
+                    throw_exception(es() % "bitmex, parsing message error: ", str_holder(in, len));
             }
             else if(table == trades_table)
             {
                 str_holder action = read_named_value("\",\"action\":\"", it, ie, '\"', read_str);
-                if(action == str_holder("partial")) //partial table contains old trades
+                if(action == "partial") //partial table contains old trades
                     return;
 
                 search_and_skip_fixed(it, ie, "data\":[");
@@ -184,12 +183,12 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                     it = ne + 1;
                     str_holder side = read_named_value(",\"side\":\"", it, ie, '\"', read_str);
                     int direction;
-                    if(side == str_holder("Buy"))
+                    if(side == "Buy")
                         direction = 1;
-                    else if(side == str_holder("Sell"))
+                    else if(side == "Sell")
                         direction = 2;
                     else
-                        throw mexception(es() % "unknown trade direction in message: " % str_holder(in, len));
+                        throw_exception("bitmex, unknown trade direction in message: ", str_holder(in, len));
                     count_t c = read_named_value(",\"size\":", it, ie, ',', read_count);
                     price_t p = read_named_value("\"price\":", it, ie, ',', read_price);
                     add_trade(security_id, p, c, direction, etime, time);
@@ -207,16 +206,16 @@ struct lws_i : sec_id_by_name<lws_impl>, read_time_impl
                 send_messages();
             }
             else [[unlikely]]
-                throw mexception(es() % "unknown table name: " % str_holder(in, len));
+                throw_exception("bitmex, unknown table name: ", str_holder(in, len));
             if(it != ie) [[unlikely]]
-                throw mexception(es() % "parsing message error: " % str_holder(in, len));
+                throw_exception("bitmex, parsing message error: ", str_holder(in, len));
         }
         else if(skip_if_fixed(it, "success\""))
-            mlog(mlog::info) << str_holder(in, len);
+            mlog(mlog::info) << "bitmex, " << str_holder(in, len);
         else if(skip_if_fixed(it, "info\""))
-            mlog(mlog::info) << str_holder(in, len);
+            mlog(mlog::info) << "bitmex, " << str_holder(in, len);
         else
-            mlog(mlog::critical) << "unsupported message: " << str_holder(in, len);
+            mlog(mlog::critical) << "bitmex, unsupported message: " << str_holder(in, len);
     }
 };
 

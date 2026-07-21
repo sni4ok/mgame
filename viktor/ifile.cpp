@@ -48,9 +48,6 @@ struct zip_file
     const char* data_it;
     mfile f;
 
-    zip_file() : f(0)
-    {
-    }
     operator bool() const
     {
         if(!!zip)
@@ -151,14 +148,11 @@ class last_used_c : public map
     typedef typename map::key_type key_type;
     typedef typename map::mapped_type value_type;
 
-    key_type last;
-    value_type* v;
+    key_type last = key_type();
+    value_type* v = nullptr;
 
 public:
 
-    last_used_c() : last(), v()
-    {
-    }
     value_type& operator[](const key_type& key)
     {
         if(key == last)
@@ -178,19 +172,11 @@ public:
 struct compact_book
 {
     mvector<char> book;
-    u64 book_off;
-
-    compact_book() : book_off()
-    {
-    }
+    u64 book_off = 0;
 
     struct orders_t : std::unordered_map<i64/*level_id*/, message_book>
     {
-        message_instr mi;
-
-        orders_t() : mi()
-        {
-        }
+        message_instr mi = message_instr();
     };
 
     void read(zip_file& f, const mstring& fname, u64 from, u64 to)
@@ -205,8 +191,8 @@ struct compact_book
         //read
         mvector<message> buf((to - from) / message_size);
         f.seekg(from);
-        f.read((char*)(buf.begin()), to - from);
-        auto it = buf.begin(), ie = buf.end();
+        f.read((char_it)(buf.begin()), to - from);
+        auto [it, ie] = be(buf);
 
         for(; it != ie; ++it)
         {
@@ -242,33 +228,30 @@ struct compact_book
 
         //compact
         buf.clear();
-        auto i = orders.begin(), e = orders.end();
 
-        for(; i != e; ++i)
+        for(const auto& o: orders)
         {
-            ASSERT(i->second.mi.id == msg_instr);
+            ASSERT(o.second.mi.id == msg_instr);
             message m;
-            m.mi = i->second.mi;
+            m.mi = o.second.mi;
             m.mi.time = last_time;
             m.mi.etime = ttime_t();
             buf.push_back(m);
         }
-        i = orders.begin();
 
-        for(; i != e; ++i)
+        for(const auto& o: orders)
         {
-            auto it = i->second.begin(), ie = i->second.end();
-            for(; it != ie; ++it)
+            for(const auto& v: o.second)
             {
-                if(!!it->second.count)
-                {
-                    message m;
-                    ASSERT(!!it->second.price);
-                    m.mb = it->second;
-                    m.mi.time = last_time;
-                    m.mi.etime = ttime_t();
-                    buf.push_back(m);
-                }
+                if(!v.second.count)
+                    continue;
+
+                message m;
+                ASSERT(!!v.second.price);
+                m.mb = v.second;
+                m.mi.time = last_time;
+                m.mi.etime = ttime_t();
+                buf.push_back(m);
             }
         }
 
@@ -670,10 +653,6 @@ struct ifile
             return ret;
         }
     }
-
-    ~ifile()
-    {
-    }
 };
 
 struct ifiles_replay
@@ -738,7 +717,8 @@ struct ifiles_replay
             b2_.pop_front(message_size);
         }
 
-        message* mb = b.begin(), *me = b.end(), *mi = mb;
+        auto [mb, me] = be(b);
+        auto mi = mb;
 
         if(!files_time) [[unlikely]]
             files_time = mb->t.time;

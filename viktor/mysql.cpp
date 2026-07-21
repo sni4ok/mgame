@@ -26,13 +26,14 @@ struct mysql
     unique_ptr<MYSQL, mysql_close> sql;
     bool truncate, rename_new;
 
-    mysql(str_holder params) : bufi(), bufo(), buft(), bsi(bufi), bso(bufo), bst(buft), sql(mysql_init(0)), truncate(), rename_new()
+    mysql(str_holder params) : bufi(), bufo(), buft(), bsi(bufi), bso(bufo),
+        bst(buft), sql(mysql_init(0)), truncate(), rename_new()
     {
         if(!sql)
             throw str_exception("mysql() mysql_init error");
         mvector<mstring> p = split_s(params, ' ');
         if(p.size() != 6)
-            throw mexception(es() % "mysql() \"mysql (truncate,append,rename_new) host port dbname user password\", params: " % params);
+            throw_exception("mysql() \"mysql (truncate,append,rename_new) host port dbname user password\", params: ", params);
 
         if(p[0] == "truncate")
             truncate = true;
@@ -42,9 +43,10 @@ struct mysql
         else if(p[0] == "rename_new")
             rename_new = true;
         else
-            throw mexception(es() % "mysql() bad open_mode: " % params);
+            throw_exception("mysql, bad open_mode: ", params);
 
-        if(!mysql_real_connect(sql.get(), p[1].c_str(), p[4].c_str(), p[5].c_str(), p[3].c_str(), lexical_cast<u16>(p[2]), NULL, 0))
+        if(!mysql_real_connect(sql.get(), p[1].c_str(), p[4].c_str(), p[5].c_str(),
+                p[3].c_str(), lexical_cast<u16>(p[2]), NULL, 0))
             throw_error();
 
         init_tables();
@@ -158,28 +160,36 @@ struct mysql
     }
     void proceed(const message* m, u32 count)
     {
-        for(u32 i = 0; i != count; ++i, ++m) {
-            if(m->id == msg_book) {
+        for(u32 i = 0; i != count; ++i, ++m)
+        {
+            if(m->id == msg_book)
+            {
                 message_book &v = (message_book&)*m;
                 if(bso.size() != so)
                     bso << ',';
-                bso << '(' << v.time.value << ',' << v.etime.value << ',' << v.security_id << "," << v.level_id << ',' << v.price << ',' << v.count << ')';
+                bso << '(' << v.time.value << ',' << v.etime.value << ','
+                    << v.security_id << "," << v.level_id << ',' << v.price << ',' << v.count << ')';
             }
-            else if(m->id == msg_trade) {
+            else if(m->id == msg_trade)
+            {
                 message_trade &v = (message_trade&)*m;
                 if(bst.size() != st)
                     bst << ',';
-                bst << '(' << v.time.value << ',' << v.etime.value << "," << v.security_id << ',' << v.direction << ',' << v.price << ',' << v.count << ')';
+                bst << '(' << v.time.value << ',' << v.etime.value << ","
+                    << v.security_id << ',' << v.direction << ',' << v.price << ',' << v.count << ')';
             }
-            else if(m->id == msg_clean) {
+            else if(m->id == msg_clean)
+            {
                 message_clean &v = (message_clean&)*m;
                 clean(v.security_id, v.time, v.etime);
             }
-            else if(m->id == msg_instr) {
+            else if(m->id == msg_instr)
+            {
                 message_instr &v = (message_instr&)*m;
                 if(bsi.size() != si)
                     bsi << ',';
-                bsi << "(\'" << v.exchange_id << "\',\'" << v.feed_id << "\',\'" << v.security << "\'," << v.security_id << ',' << v.time.value << ')';
+                bsi << "(\'" << v.exchange_id << "\',\'" << v.feed_id << "\',\'"
+                    << v.security << "\'," << v.security_id << ',' << v.time.value << ')';
                 clean(v.security_id, v.time, v.etime);
             }
         }

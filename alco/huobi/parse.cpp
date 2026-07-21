@@ -210,10 +210,10 @@ struct lws_i : sec_id_by_name<lws_impl>
         ttime_t time = cur_ttime();
         str_holder str = zlib.decompress(in, len);
         if(cfg.log_lws)
-            mlog() << "lws proceed: " << str;
-        char_cit it = str.begin(), ie = str.end();
+            mlog() << "huobi, lws proceed: " << str;
+        auto [it, ie] = be(str);
         if(*it != '{' || *(it + 1) != '\"') [[unlikely]]
-            throw mexception(es() % "bad message: " % str);
+            throw_exception("huobi, bad message: ", str);
         it = it + 2;
 
         if(skip_if_fixed(it, "ch\":\"market."))
@@ -222,7 +222,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             str_holder symbol(it, ne - it);
             auto i = parsers.find(symbol);
             if(i == parsers.end()) [[unlikely]]
-                throw mexception(es() % "unknown symbol in market message: " % str);
+                throw_exception("huobi, unknown symbol in market message: ", str);
             if(!i->second.security_id) [[unlikely]]
                 i->second.security_id = get_security_id(i->second.security.begin(),
                     i->second.security.end(), time, cfg);
@@ -233,12 +233,12 @@ struct lws_i : sec_id_by_name<lws_impl>
             skip_fixed(ne, ",\"tick\":{\"");
             ((this)->*(i->second.f))(i->second, etime, time, ne, ie);
             if(ne != ie)
-                throw mexception(es() % "parsing market message error: " % str);
+                throw_exception("huobi, parsing market message error: ", str);
         }
         else if(skip_if_fixed(it, "ping\":"))
         {
             if(*(it + 13) != '}' || it + 14 != ie) [[unlikely]]
-                throw mexception(es() % "bad ping message: " % str);
+                throw_exception("huobi, bad ping message: ", str);
 
             bs << "{\"pong\":";
             bs.write(it, 13);
@@ -246,9 +246,9 @@ struct lws_i : sec_id_by_name<lws_impl>
             send(wsi);
         }
         else if(skip_if_fixed(it, "status\":\"error\""))
-            throw mexception(es() % "error message: " % str);
+            throw_exception("huobi, error message: ", str);
         else
-            mlog(mlog::critical) << "unsupported message: " << str;
+            mlog(mlog::critical) << "huobi, unsupported message: " << str;
     }
 };
 

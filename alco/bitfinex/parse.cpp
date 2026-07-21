@@ -148,7 +148,8 @@ struct lws_i : sec_id_by_name<lws_impl>
     }
     void add_channel(u32 channel, str_holder ticker, bool is_trades, ttime_t time)
     {
-        mlog() << "add_channel: " << channel << ", ticker: " << ticker << ", is_trades: " << is_trades;
+        mlog() << "bitfinex, add_channel: " << channel << ", ticker: "
+            << ticker << ", is_trades: " << is_trades;
         impl& i = parsers[channel];
         i.security_id = get_security_id(ticker.begin(), ticker.end(), time, cfg);
         if(is_trades)
@@ -160,7 +161,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
-            mlog() << "lws proceed: " << str_holder(in, len);
+            mlog() << "bitfinex, lws proceed: " << str_holder(in, len);
         char_cit it = in, ie = it + len;
 
     rep:
@@ -185,7 +186,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             }
 
             if(ne != ie)
-                throw mexception(es() % "parsing market message error: " % str_holder(in, len));
+                throw_exception("bitfinex, parsing market message error: ", str_holder(in, len));
         }
         else if(*it == '{')
         {
@@ -218,10 +219,10 @@ struct lws_i : sec_id_by_name<lws_impl>
                     goto rep;
             }
             else
-                throw mexception(es() % "unsupported message: " % str_holder(it, len));
+                throw_exception("bitfinex, unsupported message: ", str_holder(it, len));
         }
         else
-            throw mexception(es() % "unsupported message: " % str_holder(it, len));
+            throw_exception("bitfinex, unsupported message: ", str_holder(it, len));
 
         if(!!ping)
         {

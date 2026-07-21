@@ -74,7 +74,7 @@ struct lws_i : sec_id_by_name<lws_impl>
         ask_count.value = -ask_count.value;
         skip_fixed(it, "],\"spread\",\"");
         if(*(ie - 1) != ']' || ie - it > 20)
-            throw mexception(es() % "parsing spread message error: " % str_holder(f, ie - f));
+            throw_exception("krakern, parsing spread: ", str_holder(f, ie));
         it = ie;
         
         add_order(security_id, 1, bid_price, bid_count, etime, time);
@@ -88,7 +88,7 @@ struct lws_i : sec_id_by_name<lws_impl>
 
         auto err = [&]()
         {
-            throw mexception(es() % "parsing book message error: " % str_holder(f, ie - f));
+            throw_exception(es() % "kraken, parsing book: ", str_holder(f, ie));
         };
 
         for(;;)
@@ -179,7 +179,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             else if(*it == 's')
                 dir = 2;
             else
-                throw mexception(es() % "unsupported trade direction, " % str_holder(f, ie - f));
+                throw_exception("kraken, bad direction, ", str_holder(f, ie));
 
             add_trade(security_id, t_price, t_count, dir, t_time, time);
             ++it;
@@ -197,14 +197,14 @@ struct lws_i : sec_id_by_name<lws_impl>
         ++it;
         skip_fixed(it, ",\"trade\",\"");
         if(*(ie - 1) != ']' || ie - it > 20)
-            throw mexception(es() % "parsing trade message error: " % str_holder(f, ie - f));
+            throw_exception("kraken, parsing trade: ", str_holder(f, ie));
         it = ie;
     }
     void proceed(lws*, char_cit in, size_t len)
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
-            mlog() << "lws proceed: " << str_holder(in, len);
+            mlog() << "kraken, lws proceed: " << str_holder(in, len);
         char_cit it = in, ie = it + len;
 
     rep:
@@ -242,7 +242,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             else if(type == "spread")
                 i.f = &lws_i::parse_spread;
             else
-                throw mexception(es() % "unsupported type: " % str_holder(in, len));
+                throw_exception("kraken, unsupported type: ", str_holder(in, len));
 
         }
         else if(skip_if_fixed(it, "{\"connectionID\":"))
@@ -257,7 +257,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             it = find(it, ie, '}') + 1;
         }
         else
-            throw mexception(es() % "parsing message error: " % str_holder(in, len));
+            throw_exception("kraken, parsing error: ", str_holder(in, len));
 
         if(it != ie)
             goto rep;

@@ -42,7 +42,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
-            mlog() << "lws proceed: " << str_holder(in, len);
+            mlog() << "binance, lws proceed: " << str_holder(in, len);
         char_cit it = in, ie = it + len;
         skip_fixed(it, "{\"");
         if(*it == 'u')
@@ -72,7 +72,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             skip_fixed(it, "}");
             
             if(it != ie) [[unlikely]]
-                throw mexception(es() % "parsing message error: " % str_holder(in, ie - in));
+                throw_exception("binance, parsing message error: ", str_holder(in, ie - in));
             
             add_order(security_id, 2, ap, ac, ttime_t(), time);
             add_order(security_id, 1, bp, bc, ttime_t(), time);
@@ -119,17 +119,17 @@ struct lws_i : sec_id_by_name<lws_impl>
                 direction = 2;
             }
             else 
-                throw mexception(es() % "parsing message error: " % str_holder(in, ie - in));
+                throw_exception("binance, parsing message error: ", str_holder(in, ie - in));
 
             ne = find(it, ie, '}');
             if(((ne - it) != 4 && (ne - it) != 5) || (ne + 1) != ie)
-                throw mexception(es() % "parsing message error: " % str_holder(in, ie - in));
+                throw_exception("binance, parsing message error: ", str_holder(in, ie - in));
 
             add_trade(security_id, p, c, direction, etime, time);
             send_messages();
         }
         else if(!skip_if_fixed(it, "result"))
-            throw mexception(es() % "unknown message type: " % str_holder(in, ie - in));
+            throw_exception("binance, unknown message type: ", str_holder(in, ie - in));
     }
 };
 

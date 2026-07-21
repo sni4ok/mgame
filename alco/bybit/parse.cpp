@@ -45,7 +45,7 @@ struct lws_i : sec_id_by_name<lws_impl>
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
-            mlog() << "lws proceed: " << str_holder(in, len);
+            mlog() << "bybit, lws proceed: " << str_holder(in, len);
 
         char_cit it = in, ie = it + len, ne;
 
@@ -54,7 +54,7 @@ struct lws_i : sec_id_by_name<lws_impl>
             if(*it == ',')
                 ++it;
             else
-                throw mexception(es() % "parsing error: " % str_holder(in, ie - in));
+                throw_exception("bybit, parsing error: ", str_holder(in, ie - in));
 
             goto rep;
         }
@@ -111,8 +111,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                     skip_fixed(it, "],\"u\":");
                 
                 if(ie - it > 50) [[unlikely]]
-                    throw mexception(es() % "parsing message error: "
-                        % str_holder(in, ie - in));
+                    throw_exception("bybit, parsing error: ", str_holder(in, ie - in));
                 
                 send_messages();
             }
@@ -142,8 +141,7 @@ struct lws_i : sec_id_by_name<lws_impl>
                     dir = 2;
 
                 else if(*it != 'B') [[unlikely]]
-                    throw mexception(es() % "unknown message type: "
-                        % str_holder(in, ie - in));
+                    throw_exception("bybit, unknown message type: ", str_holder(in, ie - in));
 
                 add_trade(security_id, p, c, dir, etime, time);
                 ne = it;
@@ -156,10 +154,10 @@ struct lws_i : sec_id_by_name<lws_impl>
                 send_messages();
             }
             else [[unlikely]]
-                throw mexception(es() % "unknown message type: " % str_holder(in, ie - in));
+                throw_exception("bybit, unknown message type: ", str_holder(in, ie - in));
         }
         else if(!skip_if_fixed(it, "success"))
-            throw mexception(es() % "unknown message type: " % str_holder(in, ie - in));
+            throw_exception("bybit, unknown message type: ", str_holder(in, ie - in));
     }
 };
 

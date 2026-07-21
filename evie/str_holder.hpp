@@ -49,6 +49,11 @@ public:
         ASSERT(size_);
         return *(end() - 1);
     }
+    constexpr auto& front() const
+    {
+        ASSERT(size_);
+        return *data;
+    }
     constexpr u64 size() const
     {
         return size_;

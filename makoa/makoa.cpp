@@ -17,7 +17,7 @@
 #include "../evie/string.hpp"
 #include "../evie/cond_stream.hpp"
 
-int main(int argc, char** argv)
+int main(int argc, char_cit* argv)
 {
     if(argc > 2)
     {

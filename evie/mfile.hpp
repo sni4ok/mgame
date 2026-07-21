@@ -11,6 +11,9 @@ struct mfile
 {
     int hfile;
 
+    mfile() : mfile(0)
+    {
+    }
     mfile(int hfile);
     mfile(char_cit file);
     mfile(const mfile&) = delete;

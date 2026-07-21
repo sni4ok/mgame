@@ -46,7 +46,7 @@ struct lws_i: sec_id_by_name<lws_impl>
     {
         ttime_t time = cur_ttime();
         if(cfg.log_lws)
-            mlog() << "lws proceed: " << str_holder(in, len);
+            mlog() << "crypcom, lws proceed: " << str_holder(in, len);
         char_cit it = in, ie = it + len;
         skip_fixed(it, "{\"id\":");
         char_cit ne = it;
@@ -185,7 +185,7 @@ struct lws_i: sec_id_by_name<lws_impl>
             send(wsi);
         }
         else
-            throw mexception(es() % "unsupported message: " % str_holder(in, len));
+            throw_exception("crypcom, unsupported message: ", str_holder(in, len));
     }
 };
 
