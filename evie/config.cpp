@@ -93,20 +93,22 @@ str_holder get_config_param_str(char_cit it, char_cit ie, str_holder tag, bool c
     return {it, to};
 }
 
-mvector<mstring> get_config_params(const mvector<char>& cfg, str_holder tag)
+mvector<mstring> get_config_params(const mvector<char>& cfg, str_holder tag, bool can_empty)
 {
     mvector<mstring> ret;
     auto [it, ie] = be(cfg);
     while(it != ie)
     {
-        char_cit ne = find_tag(it, ie, tag);
+        it = find_tag(it, ie, tag);
         if(it != ie)
         {
-            ne = ::find_if(it, ie, &is_endl);
+            char_cit ne = ::find_if(it, ie, &is_endl);
             ret.push_back({it, ne});
             it = ne;
         }
     }
+    if(!can_empty && ret.empty())
+        throw_exception("get_config_params, not found: ", tag);
     return ret;
 }
 

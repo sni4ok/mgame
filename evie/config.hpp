@@ -10,7 +10,7 @@ mstring get_log_name(str_holder fname);
 void print_init(int argc, char_cit* argv);
 mvector<str_holder> init_params(int argc, char_cit* argv, bool log_params = true);
 str_holder get_config_param_str(char_cit it, char_cit ie, str_holder tag, bool can_empty);
-mvector<mstring> get_config_params(const mvector<char>& cfg, str_holder tag);
+mvector<mstring> get_config_params(const mvector<char>& cfg, str_holder tag, bool can_empty = false);
 
 template<typename type>
 type get_config_param(char_cit it, char_cit ie, str_holder tag,
