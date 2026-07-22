@@ -45,7 +45,7 @@ struct zip_file
 {
     str_holder data;
     unique_ptr<zlibe> zip;
-    const char* data_it;
+    char_cit data_it;
     mfile f;
 
     operator bool() const
@@ -457,7 +457,7 @@ struct ifile
     }
 
     void parse_folder(const mstring& f, u64 tfrom, u64 tto,
-        const date& df, const date& dt, const mstring& dir, const u16* year = nullptr)
+        date df, date dt, const mstring& dir, const u16* year = nullptr)
     {
         dirent **ee;
         int n = scandir(dir.c_str(), &ee, NULL, alphasort);
@@ -675,7 +675,7 @@ struct ifiles_replay
         start_time = cur_ttime();
         b2.resize(files.size());
     }
-    u32 read(char* buf, u32 buf_size)
+    u32 read(char_it buf, u32 buf_size)
     {
     rep:
         for(u32 i = 0; i != files.size(); ++i)
@@ -762,7 +762,7 @@ struct ifiles_replay
 
 extern "C"
 {
-    void* files_replay_create(const char* params, volatile bool& can_run)
+    void* files_replay_create(char_cit params, volatile bool& can_run)
     {
         mvector<str_holder> p = split(_str_holder(params), ' ');
         if(p.empty() || p.size() > 4)
@@ -774,17 +774,17 @@ extern "C"
         return new ifiles_replay(can_run, files, tf, tt, speed);
     }
 
-    void files_replay_destroy(void *v)
+    void files_replay_destroy(void* v)
     {
         delete ((ifiles_replay*)v);
     }
 
-    u32 files_replay_read(void *v, char* buf, u32 buf_size)
+    u32 files_replay_read(void* v, char* buf, u32 buf_size)
     {
         return ((ifiles_replay*)v)->read(buf, buf_size);
     }
 
-    void* ifile_create(const char* params, volatile bool& can_run)
+    void* ifile_create(char_cit params, volatile bool& can_run)
     {
         mvector<str_holder> p = split(_str_holder(params), ' ');
         if(p.empty() || p.size() > 5)
@@ -808,7 +808,7 @@ extern "C"
         return new ifile(can_run, p[0], tf, tt, history);
     }
 
-    void* __ifile_create(const char* params, volatile bool& can_run, simple_log* sl)
+    void* __ifile_create(char_cit params, volatile bool& can_run, simple_log* sl)
     {
         if(sl)
             log_set(sl);
@@ -816,12 +816,12 @@ extern "C"
         return ifile_create(params, can_run);
     }
 
-    void ifile_destroy(void *v)
+    void ifile_destroy(void* v)
     {
         delete ((ifile*)v);
     }
 
-    u32 ifile_read(void *v, char* buf, u32 buf_size)
+    u32 ifile_read(void* v, char_it buf, u32 buf_size)
     {
         return ((ifile*)v)->read(buf, buf_size);
     }

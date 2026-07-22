@@ -183,14 +183,8 @@ struct exports_chain
 {
     static const u32 max_size = 20;
     exporter exporters[max_size];
-    u32 size;
+    u32 size = 0;
 
-    exports_chain() : size()
-    {
-    }
-    ~exports_chain()
-    {
-    }
     void proceed(const message* m, u32 count)
     {
         for(u32 i = 0; i != size; ++i)

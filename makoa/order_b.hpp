@@ -16,19 +16,13 @@ struct message_brief
     count_t count;
 };
 
-struct order_book_leaf
-{
-    count_t count;
-    ttime_t time;
-};
-
 void set_message_book_abs(price_t price, count_t count, ttime_t time, auto& asks, auto& bids)
 {
     MPROFILE("set_message_book_abs")
 
     if(count > count_t())
     {
-        order_book_leaf& b = bids[price];
+        book_leaf& b = bids[price];
         if(!b.count)
             asks.erase(price);
         b.count = count;
@@ -36,7 +30,7 @@ void set_message_book_abs(price_t price, count_t count, ttime_t time, auto& asks
     }
     else if(count < count_t())
     {
-        order_book_leaf& a = asks[price];
+        book_leaf& a = asks[price];
         if(!a.count)
             bids.erase(price);
         a.count = -count;
@@ -75,7 +69,7 @@ void add_message_book(price_t price, count_t count, ttime_t time, auto& asks, au
         }
         else
         {
-            order_book_leaf& b = t[price];
+            book_leaf& b = t[price];
             b.count += count;
             b.time = time;
         }
@@ -100,12 +94,12 @@ void proceed_message_bba(const message_book& mb, auto& asks, auto& bids)
             auto it = cont.begin();
             if(it->first == mb.price)
             {
-                it->second = order_book_leaf(count, mb.time);
+                it->second = book_leaf(count, mb.time);
                 return;
             }
             cont.erase(it);
         }
-        cont[mb.price] = order_book_leaf(count, mb.time);
+        cont[mb.price] = book_leaf(count, mb.time);
     };
 
     if(mb.level_id == 1)

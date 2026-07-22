@@ -90,12 +90,12 @@ struct unordered_orders_t
 struct order_book_ba : order_book<
 #ifdef USE_PRICE_MAP
     unordered_orders_t,
-    price_map<price_t, order_book_leaf>,
-    price_map<price_t, order_book_leaf, false>
+    price_map<price_t, book_leaf>,
+    price_map<price_t, book_leaf, false>
 #else
     unordered_orders_t,
-    fmap<price_t, order_book_leaf, less<price_t> >,
-    fmap<price_t, order_book_leaf, greater<price_t> >
+    fmap<price_t, book_leaf, less<price_t> >,
+    fmap<price_t, book_leaf, greater<price_t> >
 #endif
     >
 {

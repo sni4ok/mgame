@@ -143,8 +143,8 @@ struct decimal_fixed
 
 struct decimal_params
 {
-    u32 price_decimal = 0;
-    u32 count_decimal = 0;
+    u32 price_decimal = 0,
+        count_decimal = 0;
 
     u64 price_frac = __pow10[-price_t::exponent - price_decimal];
     u64 count_frac = __pow10[-count_t::exponent - count_decimal];
@@ -175,9 +175,9 @@ struct decimal_params
 
 struct time_params
 {
-    bool print_time = true;
+    bool print_time = true,
+         print_count = true;
     int mode = print_td::ms;
-    bool print_count = true;
 
     u32 time_size(bool pt) const
     {
@@ -276,19 +276,6 @@ struct mirror::impl
     
     order_book_ba* ob;
 
-    struct book
-    {
-        count_t count;
-        ttime_t time;
-        price_t price;
-
-        bool operator==(const book& b) const
-        {
-            return count == b.count && time == b.time
-                && price == b.price;
-        }
-    };
-
     mvector<book> books_printed;
     queue<message_trade>* trades;
     message_instr mi;
@@ -361,7 +348,7 @@ struct mirror::impl
             trades->pop_front(trades->size() + 1 - w.rows);
 
         auto& v = *trades->rbegin();
-        book tr{v.count, v.time, v.price};
+        book tr{v.price, v.count, v.time};
 
         if(tr == last_printed_trade)
             return;
@@ -417,10 +404,10 @@ struct mirror::impl
 
         last_printed_trade = std::move(tr);
     }
-    void print_book(bool bids, price_t price, const order_book_leaf& b,
+    void print_book(bool bids, price_t price, const book_leaf& b,
         window& w, u32& row)
     {
-        book bo{b.count, b.time, price};
+        book bo{price, b.count, b.time};
         dp.set(price, b.count);
 
         if(books_printed[row] != bo)
