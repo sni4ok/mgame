@@ -780,7 +780,7 @@ struct mirror::impl
                             c.sec.security_id = i->first;
                             c.set_instrument(i->second);
                             c.clear_view();
-                            clear_rectangle(w, rows_from(), __rows + 1, cols_from(), __cols);
+                            clear_rectangle(w, rows_from(), __rows, cols_from(), __cols);
                         }
                     }
                 }
