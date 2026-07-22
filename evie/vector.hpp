@@ -34,13 +34,13 @@ class mvector
 {
 protected:
     type* buf;
-    u64 size_, capacity_;
+    u64 __size, __capacity;
 
     void __clear()
     {
         buf = nullptr;
-        size_ = 0;
-        capacity_ = 0;
+        __size = 0;
+        __capacity = 0;
     }
 
     static const bool have_destructor = !is_trivially_destructible<type>::value;
@@ -60,7 +60,7 @@ protected:
     void __check_iterator(const type* it)
     {
         (void)it;
-        ASSERT(it >= buf && it <= buf + size_);
+        ASSERT(it >= buf && it <= buf + __size);
     }
 
 public:
@@ -124,21 +124,21 @@ public:
     template<bool fill_zero>
     void __resize(u64 new_size)
     {
-        if(new_size <= capacity_)
+        if(new_size <= __capacity)
         {
-            if(new_size < size_)
-                __destroy(begin() + new_size, begin() + size_);
-            else if(new_size > size_)
+            if(new_size < __size)
+                __destroy(begin() + new_size, begin() + __size);
+            else if(new_size > __size)
             {
                 if constexpr(fill_zero)
-                    memset((void*)(buf + size_), 0, (new_size - size_) * sizeof(type));
+                    memset((void*)(buf + __size), 0, (new_size - __size) * sizeof(type));
             }
         }
         else
         {
             void *new_ptr;
             if constexpr(tss_allocator)
-                new_ptr = tss_realloc((void*)buf, capacity_ * sizeof(type),
+                new_ptr = tss_realloc((void*)buf, __capacity * sizeof(type),
                     new_size * sizeof(type));
             else
                new_ptr = realloc((void*)buf, new_size * sizeof(type));
@@ -146,10 +146,10 @@ public:
                 throw bad_alloc();
             buf = (type*)new_ptr;
             if constexpr(fill_zero)
-                memset((void*)(buf + size_), 0, (new_size - size_) * sizeof(type));
-            capacity_ = new_size;
+                memset((void*)(buf + __size), 0, (new_size - __size) * sizeof(type));
+            __capacity = new_size;
         }
-        size_ = new_size;
+        __size = new_size;
     }
     void resize(u64 new_size)
     {
@@ -158,49 +158,49 @@ public:
     void compact()
     {
         if constexpr(tss_allocator)
-            buf = (type*)tss_realloc((void*)buf, capacity_ * sizeof(type),
-                size_ * sizeof(type));
+            buf = (type*)tss_realloc((void*)buf, __capacity * sizeof(type),
+                __size * sizeof(type));
         else
-            buf = (type*)realloc((void*)buf, size_ * sizeof(type));
-        capacity_ = size_;
+            buf = (type*)realloc((void*)buf, __size * sizeof(type));
+        __capacity = __size;
     }
     void swap(mvector& r)
     {
         simple_swap(buf, r.buf);
-        simple_swap(size_, r.size_);
-        simple_swap(capacity_, r.capacity_);
+        simple_swap(__size, r.__size);
+        simple_swap(__capacity, r.__capacity);
     }
     void reserve(u64 new_capacity)
     {
-        if(new_capacity <= capacity_)
+        if(new_capacity <= __capacity)
             return;
         void *new_ptr;
         if constexpr(tss_allocator)
-            new_ptr = tss_realloc((void*)buf, capacity_ * sizeof(type),
+            new_ptr = tss_realloc((void*)buf, __capacity * sizeof(type),
                 new_capacity * sizeof(type));
         else
             new_ptr = realloc((void*)buf, new_capacity * sizeof(type));
         if(!new_ptr)
             throw bad_alloc();
         buf = (type*)new_ptr;
-        capacity_ = new_capacity;
+        __capacity = new_capacity;
     }
     void clear()
     {
         __destroy(begin(), end());
-        size_ = 0;
+        __size = 0;
     }
     u64 size() const
     {
-        return size_;
+        return __size;
     }
     bool empty() const
     {
-        return !size_;
+        return !__size;
     }
     u64 capacity() const
     {
-        return capacity_;
+        return __capacity;
     }
     const_iterator begin() const
     {
@@ -216,15 +216,15 @@ public:
     }
     const_iterator end() const
     {
-        return buf + size_;
+        return buf + __size;
     }
     const_iterator cend() const
     {
-        return buf + size_;
+        return buf + __size;
     }
     iterator end()
     {
-        return buf + size_;
+        return buf + __size;
     }
     span<type> str() const
     {
@@ -258,46 +258,46 @@ public:
     {
         __destroy(begin(), end());
         if constexpr(tss_allocator)
-            tss_free(buf, capacity_ * sizeof(type));
+            tss_free(buf, __capacity * sizeof(type));
         else
             free(buf);
     }
     type& operator[](u64 elem)
     {
-        ASSERT(elem < size_);
+        ASSERT(elem < __size);
         return buf[elem];
     }
     const type& operator[](u64 elem) const
     {
-        ASSERT(elem < size_);
+        ASSERT(elem < __size);
         return buf[elem];
     }
     type& at(u64 elem)
     {
-        if(elem >= size_)
+        if(elem >= __size)
             throw str_exception("mvector<>::at()");
         return buf[elem];
     }
     const type& at(u64 elem) const
     {
-        if(elem >= size_)
+        if(elem >= __size)
             throw str_exception("mvector<>::at()");
         return buf[elem];
     }
     type& back()
     {
-        return buf[size_ - 1];
+        return buf[__size - 1];
     }
     const type& back() const
     {
-        return buf[size_ - 1];
+        return buf[__size - 1];
     }
     void __insert_impl(iterator& it)
     {
-        if(size_ == capacity_)
+        if(__size == __capacity)
         {
             u64 pos = it - buf;
-            reserve(capacity_ ? capacity_ * 2 : 32);
+            reserve(__capacity ? __capacity * 2 : 32);
             it = buf + pos;
         }
         __check_iterator(it);
@@ -309,69 +309,69 @@ public:
     {
         __insert_impl(it);
         *it = ::move(v);
-        ++size_;
+        ++__size;
         return it;
     }
     iterator insert(iterator it, const type& v)
     {
         __insert_impl(it);
         *it = v;
-        ++size_;
+        ++__size;
         return it;
     }
     void insert(const type* from, const type* to)
     {
-        u64 size = size_;
-        __resize<have_destructor>(to + size_ - from);
+        u64 size = __size;
+        __resize<have_destructor>(to + __size - from);
         copy(from, to, buf + size);
     }
     void insert(iterator it, const type* from, const type* to)
     {
-        u64 size = size_;
+        u64 size = __size;
         u64 pos = it - buf;
-        __resize<have_destructor>(to + size_ - from);
+        __resize<have_destructor>(to + __size - from);
         it = buf + pos;
         copy_backward(it, buf + size, it + (to - from));
         copy(from, to, it);
     }
     void __push_back_impl()
     {
-        if(size_ == capacity_)
-            reserve(capacity_ ? capacity_ * 2 : 32);
+        if(__size == __capacity)
+            reserve(__capacity ? __capacity * 2 : 32);
         if constexpr(have_destructor)
-            memset((void*)(buf + size_), 0, sizeof(type));
+            memset((void*)(buf + __size), 0, sizeof(type));
     }
     void push_back(type&& v)
     {
         __push_back_impl();
-        buf[size_] = ::move(v);
-        ++size_;
+        buf[__size] = ::move(v);
+        ++__size;
     }
     void push_back(const type& v)
     {
         __push_back_impl();
-        buf[size_] = v;
-        ++size_;
+        buf[__size] = v;
+        ++__size;
     }
     template<typename ... params>
     reference emplace_back(params&&... args)
     {
         __push_back_impl();
-        new(&buf[size_])type(args...);
-        ++size_;
-        return buf[size_ - 1];
+        new(&buf[__size])type(args...);
+        ++__size;
+        return buf[__size - 1];
     }
     void pop_back() {
-        ASSERT(size_);
-        __destroy(begin() + size_ - 1);
-        --size_;
+        ASSERT(__size);
+        __destroy(begin() + __size - 1);
+        --__size;
     }
     iterator erase(iterator it)
     {
         __check_iterator(it);
         __destroy(it);
         memmove((void*)it, it + 1, ((end() - it) - 1) * sizeof(type));
-        --size_;
+        --__size;
         return it;
     }
     iterator erase(iterator from, iterator to)
@@ -380,7 +380,7 @@ public:
         __check_iterator(to);
         __destroy(from, to);
         memmove((void*)from, to, (end() - to) * sizeof(type));
-        size_ -= to - from;
+        __size -= to - from;
         return from;
     }
     reverse_iterator erase(reverse_iterator it)

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "../evie/mlog.hpp"
+#include "../evie/vector.hpp"
 
 #include <curses.h>
 
@@ -18,13 +19,13 @@ struct ncurses_err
     ncurses_err& operator=(int ret)
     {
         if(ret != OK)
-            throw str_exception("ncurses error");
+            throw_exception("ncurses error");
         return *this;
     }
     ncurses_err& operator&(int ret)
     {
         if(ret != OK)
-            throw str_exception("ncurses error");
+            throw_exception("ncurses error");
         return *this;
     }
 
@@ -51,7 +52,7 @@ public:
     window() : w(initscr())
     {
         if(!w)
-            throw str_exception("initscr, error");
+            throw_exception("initscr, error");
 
         log_par = log_params();
         log_params() ^= mlog::always_cout;
@@ -67,13 +68,13 @@ public:
     {
         winsize size;
         if(ioctl(0, TIOCGWINSZ, (char*)&size) < 0)
-            throw str_exception("TIOCGWINSZ, error");
+            throw_exception("TIOCGWINSZ, error");
         
         rows = size.ws_row;
         cols = size.ws_col;
 
         blank_row.resize(cols);
-        fill(blank_row.begin(), blank_row.end(), ' ');
+        memset(blank_row.begin(), ' ', blank_row.size());
 
         e = wresize(w.get(), rows, cols);
     }

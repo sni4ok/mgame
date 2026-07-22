@@ -34,6 +34,8 @@ ELSE("${IS_CLANG}")
 
 ENDIF("${IS_CLANG}")
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wfatal-errors")
+
 SUBDIRS(evie makoa ying tyra viktor alco)
 
 IF(NOT CMAKE_BUILD_TYPE)

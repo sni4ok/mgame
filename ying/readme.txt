@@ -3,7 +3,7 @@ selected order_book state and last trades
 to STDOUT by ncurses library
 Usage in makoa_server.conf:
 
-export ying [security[ refresh_rate_ms[ params for glasses[|params for trades]]]]
+export ying [matrix ][security[ refresh_rate_ms[ params for glasses[|params for trades]]]]
 possible security:
     $0 first ticker from data,
     security_id
@@ -20,10 +20,16 @@ export ying
 export ying $0 100
 export ying $0 100 t1m2c0
 export ying $0 100 t0m0c1|t1m1c1e0
+export ying matrix:2x2
 
 hotkeys:
 a disable/enable autoscroll
 arrow left, arrow right prev and next tickers for view
 pgup, pgdown, arrow up, arrow down positioning for glass view when autoscroll disable
 p pause
+tab, shift + tab change current view
+8 add matrix row
+2 remove last matrix row
+6 add matrix column
+4 remove last matrix column
 
