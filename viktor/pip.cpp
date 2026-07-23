@@ -29,8 +29,6 @@ namespace pip
     };
 }
 
-const str_holder parser_name = "pip";
-
 #define PIP_HERE
 
 #define ns pip

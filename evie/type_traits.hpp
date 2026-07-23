@@ -136,7 +136,7 @@ template <typename type>
 inline const bool is_class_v = __is_class(type);
 
 template<typename type>
-concept __is_integral = !is_class_v<type> && 
+concept __is_integral_impl = !is_class_v<type> &&
     is_same_v<type, remove_reference_t<type> > && requires(remove_const_t<type> a, type b)
 {
     a = a << b - a;
@@ -145,14 +145,14 @@ concept __is_integral = !is_class_v<type> &&
 template<typename type>
 struct is_integral
 {
-    static const bool value = __is_integral<type>;
+    static const bool value = __is_integral_impl<type>;
 };
 
 template<typename type>
-static const bool is_integral_v = __is_integral<type>;
+static const bool is_integral_v = __is_integral_impl<type>;
 
 template<typename t>
-concept __make_signed =
+concept __make_signed_impl =
     is_same_v<t, remove_reference_t<t> > && requires(remove_const_t<t> a)
 {
     a = t() - t{1};
@@ -164,7 +164,7 @@ struct is_signed
 {
     static constexpr bool get()
     {
-        if constexpr(__make_signed<t>)
+        if constexpr(__make_signed_impl<t>)
             return t(t() - t{1}) < t();
         else
             return false;
@@ -341,7 +341,7 @@ template<int index, typename param, typename ... params>
 using conditional_multi_t = typename conditional_multi<index, param, params...>::type;
 
 template<typename t>
-requires(__is_integral<t> && !is_same_v<t, bool>)
+requires(__is_integral_impl<t> && !is_same_v<t, bool>)
 struct make_unsigned
 {
     typedef conditional_multi_t<sizeof(t) / 2, u8, u16, u32, void, u64
@@ -352,7 +352,7 @@ struct make_unsigned
 };
 
 template<typename t>
-requires(__is_integral<t> && !is_same_v<t, bool>)
+requires(__is_integral_impl<t> && !is_same_v<t, bool>)
 struct make_signed
 {
     typedef conditional_multi_t<sizeof(t) / 2, i8, i16, i32, void, i64
