@@ -12,7 +12,7 @@
 
 #include <unordered_map>
 
-#define USE_PRICE_MAP
+//#define USE_PRICE_MAP
 
 template<typename orders_t, typename asks_t, typename bids_t>
 struct order_book

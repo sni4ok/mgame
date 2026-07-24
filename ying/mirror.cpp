@@ -97,6 +97,7 @@ stream& operator<<(stream& s, print_dt v)
 
 void wstr(window& w, int y, int x, char_cit str, int n)
 {
+    MPROFILE("mirror, wstr")
     if(!n)
         return;
 
@@ -108,6 +109,7 @@ void wstr(window& w, int y, int x, char_cit str, int n)
 
 void clear_rectangle(window& w, int yf, int yn, int xf, int xn)
 {
+    MPROFILE("mirror, clear_rectangle")
     for(int y = yf; y != yf + yn; ++y)
         e = mvwaddnstr(w, y, xf, w.blank_row.begin(), xn);
 }
@@ -287,9 +289,9 @@ struct book_view
     mstring head_msg;
     bool head_msg_printed = false;
     price_t top_order_p = price_t();
-    book last_printed_trade;
+    book last_printed_trade = book();
 
-    book_view(const mstring& security = first_ticker) : sec(security)
+    book_view(const mstring& security = first_ticker) : sec(security), mi()
     {
     }
     void clear_view()
@@ -330,6 +332,7 @@ struct mirror::impl
          paused = false;
     volatile bool can_run = true;
     u32 trades_from, trades_width = 0;
+    bool have_updates = false;
 
     mstream bs;
     ttime_t dE = ttime_t(), dP = ttime_t();
@@ -415,8 +418,9 @@ struct mirror::impl
     {
         return x * __cols;
     }
-    void print_trades(window& w)
+    void print_trades(window& w, bool& r)
     {
+        MPROFILE("mirror, print_trades")
         book_view& c = cur_book();
         if(!c.trades)
             return;
@@ -429,6 +433,8 @@ struct mirror::impl
 
         if(tr == c.last_printed_trade || __cols <= trades_from + 1)
             return;
+
+        r = true;
 
         u32 i = rows_from() + 1, ie = i + __rows - 1;
         u32 trades_width_limit = __cols - trades_from - 1;
@@ -480,13 +486,15 @@ struct mirror::impl
         c.last_printed_trade = std::move(tr);
     }
     void print_book(book_view& c, window& w, bool bids, price_t price,
-        const book_leaf& b, u32& row, u32 row_f)
+        const book_leaf& b, u32& row, u32 row_f, bool& r)
     {
+        MPROFILE("mirror, print_book")
         book bo{price, b.count, b.time};
         dp.set(price, b.count);
 
         if(c.books_printed[row - row_f] != bo)
         {
+            r = true;
             e = attron(COLOR_PAIR(bids ? 2 : 3));
             if(gp.print_time)
                 bs << print_td(b.time, gp.mode) << " ";
@@ -513,12 +521,13 @@ struct mirror::impl
             }
             bs.clear();
             c.books_printed[row - row_f] = bo;
+            wredrawln(w, row, 1);
         }
-        wredrawln(w, row, 1);
         ++row;
     }
-    void print_order_book(window& w)
+    void print_order_book(window& w, bool& r)
     {
+        MPROFILE("mirror, print_order_book")
         book_view& c = cur_book();
         i32 it = get_top_order(c);
         e = attron(A_BOLD);
@@ -535,7 +544,7 @@ struct mirror::impl
             for(; row != re; --b)
             {
                 ASSERT(b->first != price_t());
-                print_book(c, w, true, b->first, b->second, row, row_f);
+                print_book(c, w, true, b->first, b->second, row, row_f, r);
                 if(b == i)
                     break;
             }
@@ -546,7 +555,7 @@ struct mirror::impl
             for(; row != re && b != i; ++b)
             {
                 ASSERT(b->first != price_t());
-                print_book(c, w, false, b->first, b->second, row, row_f);
+                print_book(c, w, false, b->first, b->second, row, row_f, r);
             }
         }
 
@@ -557,6 +566,7 @@ struct mirror::impl
         u32 cf = cols_from();
         for(; cr != c.books_printed.size(); ++cr, ++row)
         {
+            r = true;
             if(c.books_printed[cr] == book())
                 break;
 
@@ -564,10 +574,12 @@ struct mirror::impl
             wstr(w, row, cf, w.blank_row.begin(), trades_from);
         }
     }
-    void print_head(window& w)
+    void print_head(window& w, bool& r)
     {
+        MPROFILE("mirror, print_head")
         if(!dEdP_printed)
         {
+            r = true;
             bs << "dE: " << print_dt(dE.value) << ", dP: " << print_dt(dP.value);
             if(w.cols > bs.size())
                 wstr(w, w.rows - 1, w.cols - bs.size(), bs.begin(), bs.size());
@@ -577,7 +589,13 @@ struct mirror::impl
     }
     void refresh(window& w)
     {
+        MPROFILE("mirror, refresh")
         scoped_lock lock(mutex);
+        if(!have_updates)
+            return;
+
+        bool r = false;
+        have_updates = false;
         u32 cx = x, cy = y;
         for(u32 i = 0; i != x_views; ++i)
         for(u32 ii = 0; ii != y_views; ++ii)
@@ -588,6 +606,7 @@ struct mirror::impl
             book_view& c = cur_book();
             if(!c.head_msg_printed && !c.head_msg.empty())
             {
+                r = true;
                 if(x == cx && y == cy)
                     e = attron(COLOR_PAIR(4));
                 wstr(w, rows_from(), cols_from(), c.head_msg.begin(), c.head_msg.size());
@@ -595,235 +614,242 @@ struct mirror::impl
                     e = attron(COLOR_PAIR(1));
                 c.head_msg_printed = true;
             }
-            print_order_book(w);
-            print_trades(w);
-            print_head(w);
+            print_order_book(w, r);
+            print_trades(w, r);
+            print_head(w, r);
         }
 
         x = cx;
         y = cy;
 
         lock.unlock();
-        move(w.rows - 1, 0);
-        wrefresh(w);
+        if(r)
+        {
+            move(w.rows - 1, 0);
+            wrefresh(w);
+        }
+    }
+    void proceed_key(window& w, int key)
+    {
+        MPROFILE("mirror, proceed_key")
+        if(paused)
+            paused = false;
+        else if(key == 112) // 'p'
+        {
+            paused = true;
+            return;
+        }
+
+        scoped_lock lock(mutex);
+        //mlog() << "key: " << key;
+
+        if(key == KEY_RESIZE)
+        {
+            w.resize();
+            w.clear();
+            clear_trades();
+            clear_books_printed();
+            set_axis(w);
+            print_auto_scroll(w);
+            dEdP_printed = false;
+        }
+        else if(key == 97) // 'a'
+        {
+            auto_scroll = !auto_scroll;
+            print_auto_scroll(w);
+        }
+        else if(from_any(key, 9, 353)) // tab, shift + tab
+        {
+            if(x_views == 1 && y_views == 1)
+                return;
+
+            cur_book().head_msg_printed = false;
+
+            if(key == 9)
+            {
+                ++x;
+                if(x == x_views)
+                {
+                    x = 0;
+                    ++y;
+                    if(y == y_views)
+                        y = 0;
+                }
+            }
+            else
+            {
+                if(x)
+                    --x;
+                else
+                {
+                    x = x_views - 1;
+                    if(y)
+                        --y;
+                    else
+                        y = y_views - 1;
+                }
+            }
+
+            cur_book().head_msg_printed = false;
+        }
+        else if(from_any(key, 56, 50, 54, 52)) //8, 2, 6, 4
+        {
+            static const u32 max_x = 7, max_y = 7;
+
+            if(key == 56)
+            {
+                if(y_views >= max_y)
+                    return;
+
+                u32 f = views.size();
+                ++y_views;
+                views.resize(views.size() + x_views);
+                for(; f != views.size(); ++f)
+                {
+                    views[f].sec.init();
+                    views[f].set(views[0]);
+                }
+            }
+            else if(key == 50)
+            {
+                if(y_views == 1)
+                    return;
+
+                views.resize(u32(views.size() - x_views));
+                --y_views;
+
+                if(y == y_views)
+                {
+                    --y;
+                    cur_book().head_msg_printed = false;
+                }
+            }
+            else if(key == 54)
+            {
+                if(x_views >= max_x)
+                    return;
+
+                for(u32 i = y_views; i != 0; --i)
+                {
+                    auto it = views.insert(views.begin() + i * x_views, book_view());
+                    it->set(views[0]);
+                }
+                ++x_views;
+            }
+            else if(key == 52)
+            {
+                if(x_views == 1)
+                    return;
+
+                auto it = views.end() - 1;
+                for(u32 i = 0;; ++i)
+                {
+                    it = views.erase(it);
+                    if(i == y_views - 1)
+                        return;
+                    it -= x_views - 1;
+                }
+                --x_views;
+
+                if(x == x_views)
+                {
+                    --x;
+                    cur_book().head_msg_printed = false;
+                }
+            }
+
+            for(book_view& c: views)
+                c.clear_view();
+            set_axis(w);
+            w.clear();
+        }
+        else if(from_any(key, 260, 261)) //arrow left, arrow right
+        {
+            if(all_securities.size() == 1)
+                return;
+
+            book_view& c = cur_book();
+            if(!all_securities.empty() && c.sec.security_id)
+            {
+                auto i = all_securities.find(c.sec.security_id);
+                if(i != all_securities.end())
+                {
+                    if(key == 260)
+                    {
+                        if(i == all_securities.begin())
+                            i = all_securities.end() - 1;
+                        else
+                            --i;
+                    }
+                    else
+                    {
+                        ++i;
+                        if(i == all_securities.end())
+                            i = all_securities.begin();
+                    }
+
+                    auto& v = all_books[i->first];
+                    c.ob = &v.first;
+                    c.trades = &v.second;
+                    c.sec.security_id = i->first;
+                    c.set_instrument(i->second);
+                    c.clear_view();
+                    clear_rectangle(w, rows_from(), __rows, cols_from(), __cols);
+                }
+            }
+        }
+        // arrow up, page up, arrow down, page down
+        else if(from_any(key, 259, 339, 258, 338))
+        {
+            book_view& c = cur_book();
+            i32 it = get_top_order(c);
+            if(key == 259)
+                --it;
+            else if(key == 339)
+                it -= __rows;
+            else if(key == 258)
+                ++it;
+            else
+                it += __rows;
+            if(it <= 0)
+            {
+                if(!c.ob || c.ob->bids.empty())
+                    c.top_order_p = price_t();
+                else
+                {
+                    if(u32(-it) >= c.ob->bids.size())
+                        c.top_order_p = back(c.ob->bids).first;
+                    else
+                        c.top_order_p = advance(c.ob->bids.begin(), -it)->first;
+                }
+            }
+            else
+            {
+                if(!c.ob || c.ob->asks.empty())
+                    c.top_order_p = price_t();
+                else
+                {
+                    if(u32(it) >= c.ob->asks.size())
+                        c.top_order_p = back(c.ob->asks).first;
+                    else
+                        c.top_order_p = advance(c.ob->asks.begin(), it)->first;
+                }
+            }
+        }
     }
     void wait_input(window& w)
     {
-        u32 c = refresh_rate / 1000;
         int key = -1;
-        for(u32 i = 0; i != c; ++i)
         {
+            MPROFILE("mirror, getch")
             key = getch();
-            if(key == -1)
-                usleep(1000);
-            else
-            {
-                if(paused)
-                    paused = false;
-                else if(key == 112) // 'p'
-                    paused = true;
-
-                scoped_lock lock(mutex);
-                //mlog() << "key: " << key;
-
-                if(key == KEY_RESIZE)
-                {
-                    w.resize();
-                    w.clear();
-                    clear_trades();
-                    clear_books_printed();
-                    set_axis(w);
-                    print_auto_scroll(w);
-                    dEdP_printed = false;
-                    print_trades(w);
-                }
-                else if(paused)
-                    continue;
-                else if(key == 97) // 'a'
-                {
-                    auto_scroll = !auto_scroll;
-                    print_auto_scroll(w);
-                }
-                else if(from_any(key, 9, 353)) // tab, shift + tab
-                {
-                    if(x_views == 1 && y_views == 1)
-                        continue;
-
-                    cur_book().head_msg_printed = false;
-
-                    if(key == 9)
-                    {
-                        ++x;
-                        if(x == x_views)
-                        {
-                            x = 0;
-                            ++y;
-                            if(y == y_views)
-                                y = 0;
-                        }
-                    }
-                    else
-                    {
-                        if(x)
-                            --x;
-                        else
-                        {
-                            x = x_views - 1;
-                            if(y)
-                                --y;
-                            else
-                                y = y_views - 1;
-                        }
-                    }
-
-                    cur_book().head_msg_printed = false;
-                }
-                else if(from_any(key, 56, 50, 54, 52)) //8, 2, 6, 4
-                {
-                    static const u32 max_x = 7, max_y = 7;
-
-                    if(key == 56)
-                    {
-                        if(y_views >= max_y)
-                            break;
-
-                        u32 f = views.size();
-                        ++y_views;
-                        views.resize(views.size() + x_views);
-                        for(; f != views.size(); ++f)
-                        {
-                            views[f].sec.init();
-                            views[f].set(views[0]);
-                        }
-                    }
-                    else if(key == 50)
-                    {
-                        if(y_views == 1)
-                            break;
-
-                        views.resize(views.size() - x_views);
-                        --y_views;
-
-                        if(y == y_views)
-                        {
-                            --y;
-                            cur_book().head_msg_printed = false;
-                        }
-                    }
-                    else if(key == 54)
-                    {
-                        if(x_views >= max_x)
-                            break;
-
-                        for(u32 i = y_views; i != 0; --i)
-                        {
-                            auto it = views.insert(views.begin() + i * x_views, book_view());
-                            it->set(views[0]);
-                        }
-                        ++x_views;
-                    }
-                    else if(key == 52)
-                    {
-                        if(x_views == 1)
-                            break;
-
-                        auto it = views.end() - 1;
-                        for(u32 i = 0;; ++i)
-                        {
-                            it = views.erase(it);
-                            if(i == y_views - 1)
-                                break;
-                            it -= x_views - 1;
-                        }
-                        --x_views;
-
-                        if(x == x_views)
-                        {
-                            --x;
-                            cur_book().head_msg_printed = false;
-                        }
-                    }
-
-                    for(book_view& c: views)
-                        c.clear_view();
-                    set_axis(w);
-                    w.clear();
-                }
-                else if(from_any(key, 260, 261)) //arrow left, arrow right
-                {
-                    if(all_securities.size() == 1)
-                        break;
-
-                    book_view& c = cur_book();
-                    if(!all_securities.empty() && c.sec.security_id)
-                    {
-                        auto i = all_securities.find(c.sec.security_id);
-                        if(i != all_securities.end())
-                        {
-                            if(key == 260)
-                            {
-                                if(i == all_securities.begin())
-                                    i = all_securities.end() - 1;
-                                else
-                                    --i;
-                            }
-                            else
-                            {
-                                ++i;
-                                if(i == all_securities.end())
-                                    i = all_securities.begin();
-                            }
-
-                            auto& v = all_books[i->first];
-                            c.ob = &v.first;
-                            c.trades = &v.second;
-                            c.sec.security_id = i->first;
-                            c.set_instrument(i->second);
-                            c.clear_view();
-                            clear_rectangle(w, rows_from(), __rows, cols_from(), __cols);
-                        }
-                    }
-                }
-                // arrow up, page up, arrow down, page down
-                else if(from_any(key, 259, 339, 258, 338))
-                {
-                    book_view& c = cur_book();
-                    i32 it = get_top_order(c);
-                    if(key == 259)
-                        --it;
-                    else if(key == 339)
-                        it -= __rows;
-                    else if(key == 258)
-                        ++it;
-                    else
-                        it += __rows;
-                    if(it <= 0)
-                    {
-                        if(!c.ob || c.ob->bids.empty())
-                            c.top_order_p = price_t();
-                        else
-                        {
-                            if(u32(-it) >= c.ob->bids.size())
-                                c.top_order_p = back(c.ob->bids).first;
-                            else
-                                c.top_order_p = advance(c.ob->bids.begin(), -it)->first;
-                        }
-                    }
-                    else
-                    {
-                        if(!c.ob || c.ob->asks.empty())
-                            c.top_order_p = price_t();
-                        else
-                        {
-                            if(u32(it) >= c.ob->asks.size())
-                                c.top_order_p = back(c.ob->asks).first;
-                            else
-                                c.top_order_p = advance(c.ob->asks.begin(), it)->first;
-                        }
-                    }
-                }
-                break;
-            }
+        }
+        if(key == -1)
+            usleep(refresh_rate);
+        else
+        {
+            proceed_key(w, key);
+            have_updates = true;
         }
     }
     void refresh_thread()
@@ -842,9 +868,10 @@ struct mirror::impl
 
             while(can_run)
             {
+                wait_input(w);
+
                 if(!paused)
                     refresh(w);
-                wait_input(w);
             }
         }
         catch(exception& e)
@@ -854,11 +881,10 @@ struct mirror::impl
     }
     void proceed(const message& m)
     {
+        MPROFILE("mirror, proceed");
         if(m.id == msg_ping)
             return;
-
         u32 security_id = get_security_id(m);
-        scoped_lock lock(mutex);
         if(m.id == msg_instr)
             all_securities[security_id] = m.mi;
         if(m.id != msg_trade)
@@ -895,8 +921,10 @@ struct mirror::impl
     }
     void proceed(const message* m, u32 count)
     {
+        scoped_lock lock(mutex);
         for(u32 i = 0; i != count; ++i, ++m)
             proceed(*m);
+        have_updates = true;
     }
 };
 
